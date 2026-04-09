@@ -1,0 +1,20 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Milorg 2 Utforsker</title>
+    <script>
+      // Decode SPA redirect from 404.html
+      (function () {
+        var p = window.location.search.slice(1).split('&').filter(function (s) { return s.startsWith('p=') })[0]
+        if (p) window.history.replaceState(null, null, '/' + decodeURIComponent(p.slice(2)))
+      })()
+    </script>
+  </head>
+  <body>
+    <div id="app"></div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
