@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/forestboys/favicon.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Milorg 2 Utforsker</title>
+    <script>
+      // Decode SPA redirect from 404.html
+      (function () {
+        var p = window.location.search.slice(1).split('&').filter(function (s) { return s.startsWith('p=') })[0]
+        if (p) window.history.replaceState(null, null, '/' + decodeURIComponent(p.slice(2)))
+      })()
+    </script>
+    <script type="module" crossorigin src="/forestboys/assets/index-D2C0BgRC.js"></script>
+    <link rel="stylesheet" crossorigin href="/forestboys/assets/index-D2oDVLWy.css">
+  <script id="vite-plugin-pwa:register-sw" src="/forestboys/registerSW.js"></script></head>
+  <body>
+    <div id="app"></div>
+  </body>
+</html>
