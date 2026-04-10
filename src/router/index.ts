@@ -13,7 +13,9 @@ import OutlineDetail from '../pages/OutlineDetail.vue'
 import RegistreView  from '../pages/RegistreView.vue'
 import AboutView     from '../pages/AboutView.vue'
 
-export default createRouter({
+const MAP_PARAMS = ['lat', 'lng', 'z', 'orgs', 'dists', 'q', 'si']
+
+const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
   routes: [
     { path: '/',                        component: HomeView },
@@ -39,3 +41,15 @@ export default createRouter({
     { path: '/about',                   component: AboutView },
   ],
 })
+
+router.beforeEach((to, from) => {
+  const leavingMap = from.path.startsWith('/map')
+  const enteringMap = to.path.startsWith('/map')
+  if (leavingMap && !enteringMap && MAP_PARAMS.some(k => k in to.query)) {
+    const query = { ...to.query }
+    for (const k of MAP_PARAMS) delete query[k]
+    return { ...to, query }
+  }
+})
+
+export default router
