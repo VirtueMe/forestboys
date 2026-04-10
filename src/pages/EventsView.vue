@@ -15,7 +15,7 @@
         <button v-if="hasFilter" class="reset-btn" @click="resetFilters">Nullstill</button>
       </div>
 
-      <select :value="org" class="filter-select" @change="setOrg(($event.target as HTMLSelectElement).value)">
+      <select :value="org" :disabled="isDetail" class="filter-select" @change="setOrg(($event.target as HTMLSelectElement).value)">
         <option value="">Alle Organisasjoner</option>
         <option v-for="o in allOrgs" :key="o" :value="o">{{ o }}</option>
       </select>
@@ -130,7 +130,6 @@ function mountTimeline(evts: IdbEvent[]) {
   const startAtSlide = Math.max(0, startSlug ? evts.findIndex(e => e.slug === startSlug) : 0)
 
   const timelineData = buildTimelineData(evts)
-  console.log(JSON.stringify(timelineData, null, 2))
 
   const tl = new Timeline('timeline-embed', timelineData, {
     language:         'no',
@@ -141,20 +140,17 @@ function mountTimeline(evts: IdbEvent[]) {
 
   tlInstance = tl
   const slugSet = new Set(evts.map(e => e.slug))
-  let initFired = false
 
-  tl.on('change', ({ unique_id }) => {
-    if (!initFired) { initFired = true; return }
-    if (externalChange) { externalChange = false; return }
-    if (!unique_id || !slugSet.has(unique_id)) return
-    const currentSlug = (route.params.slug as string | undefined) ?? ''
-    if (!currentSlug) {
+  tl.on('ready', () => {
+    let initFired = false
+    tl.on('change', ({ unique_id }) => {
+      if (!initFired) { initFired = true; return }   // skip post-ready init event
+      if (externalChange) { externalChange = false; return }
+      if (!unique_id || !slugSet.has(unique_id)) return
+      const currentSlug = (route.params.slug as string | undefined) ?? ''
+      if (unique_id === currentSlug) return
       void router.push({ path: `/events/${unique_id}`, query: route.query })
-    } else if (unique_id === currentSlug) {
-      void router.replace({ hash: '' })
-    } else {
-      void router.replace({ hash: '#' + unique_id })
-    }
+    })
   })
 }
 
