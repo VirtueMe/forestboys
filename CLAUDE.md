@@ -42,7 +42,7 @@ Sanity CMS project `7r6kqtqy`, dataset `production`.
 - `src/composables/useLocationCache.ts` — all IndexedDB ops + background sync
 - `src/composables/useEventsContext.ts` — all /events state, filters, hash navigation
 - `src/utils/portableText.ts` — blocksToHtml() + blocksToText(); see docs/PORTABLETEXT.md
-- `vite.config.ts` — Sanity proxy + ngrok allowedHosts
+- `vite.config.ts` — Sanity proxy
 
 ---
 

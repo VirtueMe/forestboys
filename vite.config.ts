@@ -4,12 +4,10 @@ import { VitePWA } from 'vite-plugin-pwa'
 
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '')
-  const ngrokHost = env.NGROK ? new URL(env.NGROK).hostname : undefined
 
   return {
     base: '/forestboys/',
     server: {
-      allowedHosts: ngrokHost ? [ngrokHost] : [],
       cors: true,
       proxy: {
         '/sanity': {
