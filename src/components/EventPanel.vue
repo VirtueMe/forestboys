@@ -229,7 +229,7 @@ function handleInternalLinks(e: MouseEvent) {
   font-size: 14px;
   line-height: 1.75;
   color: var(--color-text);
-  white-space: pre-line;
+  white-space: pre-wrap;
 }
 .portable-text :deep(p:last-child) { margin-bottom: 0; }
 .portable-text :deep(strong) { font-weight: 600; color: var(--color-text); }
@@ -245,6 +245,17 @@ function handleInternalLinks(e: MouseEvent) {
   content: ' ↗';
   font-size: 11px;
   opacity: 0.6;
+}
+.portable-text :deep(ul),
+.portable-text :deep(ol) {
+  margin: 0 0 0.75em 1.25em;
+  padding: 0;
+}
+.portable-text :deep(li) {
+  font-size: 14px;
+  line-height: 1.75;
+  color: var(--color-text);
+  white-space: pre-wrap;
 }
 
 /* ── Links ────────────────────────────────────────────────── */
