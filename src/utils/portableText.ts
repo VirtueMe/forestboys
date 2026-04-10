@@ -91,6 +91,8 @@ export function blocksToHtml(blocks?: SanityBlock[] | unknown | null): string {
         case 'h1':         parts.push(`<h1>${inner}</h1>`); break
         case 'h2':         parts.push(`<h2>${inner}</h2>`); break
         case 'h3':         parts.push(`<h3>${inner}</h3>`); break
+        case 'h4':         parts.push(`<h4>${inner}</h4>`); break
+        case 'h5':         parts.push(`<h5>${inner}</h5>`); break
         case 'blockquote': parts.push(`<blockquote>${inner}</blockquote>`); break
         default:           if (inner) parts.push(`<p>${inner}</p>`)
       }

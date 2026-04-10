@@ -232,6 +232,18 @@ function handleInternalLinks(e: MouseEvent) {
   white-space: pre-wrap;
 }
 .portable-text :deep(p:last-child) { margin-bottom: 0; }
+.portable-text :deep(h1) { font-size: 20px; font-weight: 700; margin: 0.75em 0 0.4em; color: var(--color-text); }
+.portable-text :deep(h2) { font-size: 17px; font-weight: 700; margin: 0.75em 0 0.4em; color: var(--color-text); }
+.portable-text :deep(h3) { font-size: 15px; font-weight: 700; margin: 0.75em 0 0.4em; color: var(--color-text); }
+.portable-text :deep(h4) { font-size: 14px; font-weight: 700; margin: 0.75em 0 0.4em; color: var(--color-text); }
+.portable-text :deep(h5) { font-size: 13px; font-weight: 700; margin: 0.75em 0 0.4em; color: var(--color-text); }
+.portable-text :deep(blockquote) {
+  border-left: 3px solid var(--color-border-mid);
+  margin: 0.75em 0;
+  padding: 0.25em 0 0.25em 1em;
+  color: var(--color-muted);
+  font-style: italic;
+}
 .portable-text :deep(strong) { font-weight: 600; color: var(--color-text); }
 .portable-text :deep(u) { text-decoration: underline; }
 .portable-text :deep(em) { font-style: italic; }
