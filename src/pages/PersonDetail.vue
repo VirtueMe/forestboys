@@ -13,15 +13,16 @@
       <!-- Header -->
       <div class="page-header">
         <RouterLink to="/registre" class="back-link">&#x2039; Tilbake</RouterLink>
-        <h1 class="person-name">{{ person.name }}</h1>
-        <p v-if="person.secretName" class="person-alias">Dekknavn: {{ person.secretName }}</p>
-        <p v-if="meta" class="person-meta">{{ meta }}</p>
+        <h1 class="person-name">{{ personTitle }}</h1>
+        <p v-if="person.home" class="person-meta">{{ person.home }}</p>
       </div>
 
       <!-- Beskrivelse -->
-      <section v-if="person.description" class="section">
+      <section v-if="person.descriptionHtml || person.description" class="section">
         <h3 class="section-heading">Beskrivelse</h3>
-        <p class="plain-text">{{ person.description }}</p>
+        <!-- eslint-disable-next-line vue/no-v-html -->
+        <div v-if="person.descriptionHtml" class="rich-text" v-html="person.descriptionHtml" />
+        <p v-else class="plain-text">{{ person.description }}</p>
       </section>
 
       <!-- Hendelser -->
@@ -41,6 +42,9 @@
           >
             <span class="event-date">{{ formatDate(event.date) }}</span>
             <span class="event-title">{{ event.title }}</span>
+            <span v-if="eventTags(event).length" class="event-tags">
+              <span v-for="tag in eventTags(event)" :key="tag" class="event-tag">{{ tag }}</span>
+            </span>
           </RouterLink>
         </div>
       </section>
@@ -139,6 +143,7 @@ import { ref, computed, onMounted } from 'vue'
 import { useRoute, RouterLink } from 'vue-router'
 import { useLocationCache } from '../composables/useLocationCache.ts'
 import { SANITY_IMG } from '../config/sanity.ts'
+import type { IdbEvent } from '../types/idb.ts'
 
 const route = useRoute()
 const { people, loading, init } = useLocationCache()
@@ -149,12 +154,12 @@ const person = computed(() =>
   people.value.find(p => p.slug === (route.params.slug as string)) ?? null,
 )
 
-const meta = computed(() => {
-  if (!person.value) return null
-  const parts: string[] = []
-  if (person.value.birthYear) parts.push(`f. ${person.value.birthYear}`)
-  if (person.value.home) parts.push(person.value.home)
-  return parts.join(' · ') || null
+const personTitle = computed(() => {
+  if (!person.value) return ''
+  let t = person.value.name
+  if (person.value.secretName) t += ` (${person.value.secretName})`
+  if (person.value.birthYear) t += ` - født i ${person.value.birthYear}`
+  return t
 })
 
 const MONTHS = ['januar','februar','mars','april','mai','juni','juli','august','september','oktober','november','desember']
@@ -163,6 +168,10 @@ function formatDate(iso?: string): string {
   if (!iso) return '–'
   const [y, m, d] = iso.split('-').map(Number)
   return `${d}. ${MONTHS[m - 1]} ${y}`
+}
+
+function eventTags(event: IdbEvent): string[] {
+  return [...new Set([event.organization, event.district].filter(Boolean) as string[])]
 }
 
 const eventSortAsc = ref(true)
@@ -174,16 +183,7 @@ const sortedEvents = computed(() => {
     : evts.sort((a, b) => (b.date ?? '').localeCompare(a.date ?? ''))
 })
 
-const outlines = computed<{ title: string; slug: string }[]>(() => {
-  const raw = person.value?.outlines
-  if (!Array.isArray(raw)) return []
-  return raw.filter(
-    (o): o is { title: string; slug: string } =>
-      o !== null && typeof o === 'object' &&
-      typeof (o as Record<string, unknown>).title === 'string' &&
-      typeof (o as Record<string, unknown>).slug === 'string',
-  )
-})
+const outlines = computed(() => person.value?.outlines ?? [])
 
 const heroUrl = computed<string | null>(() => {
   const thumb = person.value?.thumbnailUrl
@@ -233,6 +233,7 @@ function nextImage() {
   max-width: 1320px;
 }
 
+
 /* ── Status ─────────────────────────────────────────────────── */
 .status {
   padding: 48px 20px;
@@ -280,13 +281,6 @@ function nextImage() {
   line-height: 1.25;
 }
 
-.person-alias {
-  font-size: 13px;
-  color: var(--color-muted);
-  font-style: italic;
-  margin: 0 0 2px;
-}
-
 .person-meta {
   font-size: 12px;
   color: var(--color-muted);
@@ -302,6 +296,10 @@ function nextImage() {
 
 .section + .section {
   border-top: none;
+}
+
+.section:last-of-type {
+  margin-bottom: 48px;
 }
 
 .section-header-row {
@@ -341,6 +339,29 @@ function nextImage() {
   margin: 0;
   white-space: pre-line;
 }
+
+.rich-text {
+  font-size: 14px;
+  line-height: 1.75;
+  color: var(--color-text);
+}
+.rich-text :deep(p)          { margin: 0 0 0.75em; }
+.rich-text :deep(p:last-child) { margin-bottom: 0; }
+.rich-text :deep(h1),
+.rich-text :deep(h2),
+.rich-text :deep(h3),
+.rich-text :deep(h4)         { font-weight: 700; margin: 1em 0 0.4em; color: var(--color-text); }
+.rich-text :deep(h2)         { font-size: 16px; }
+.rich-text :deep(h3)         { font-size: 14px; }
+.rich-text :deep(ul),
+.rich-text :deep(ol)         { padding-left: 1.4em; margin: 0.5em 0; }
+.rich-text :deep(li)         { margin: 0.2em 0; }
+.rich-text :deep(strong)     { font-weight: 700; }
+.rich-text :deep(em)         { font-style: italic; }
+.rich-text :deep(blockquote) { border-left: 3px solid var(--color-border-mid); margin: 0.75em 0; padding-left: 12px; color: var(--color-muted); font-style: italic; }
+.rich-text :deep(a.internal-link),
+.rich-text :deep(a.external-link) { color: var(--color-navy); text-decoration: underline; }
+.rich-text :deep(code)       { font-family: monospace; font-size: 0.9em; background: var(--color-border); padding: 1px 4px; border-radius: 3px; }
 
 /* ── Link list ──────────────────────────────────────────────── */
 .link-list {
@@ -389,6 +410,27 @@ function nextImage() {
   color: var(--color-navy);
   flex: 1;
   min-width: 0;
+}
+
+.event-tags {
+  display: flex;
+  gap: 4px;
+  flex-shrink: 0;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.event-tag {
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--color-muted);
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: 3px;
+  padding: 1px 5px;
+  white-space: nowrap;
 }
 
 /* ── External links ─────────────────────────────────────────── */

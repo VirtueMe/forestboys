@@ -2,6 +2,7 @@ import { openDB, type IDBPDatabase, type DBSchema } from 'idb'
 import { ref } from 'vue'
 import { SANITY_CDN, SANITY_IMG } from '../config/sanity.ts'
 import type { IdbLocation, IdbStation, IdbPerson, IdbEvent, IdbTransport, IdbOutline, IdbCache, IdbEventDetail, SavedPosition, SavedMapState } from '../types/idb.ts'
+import { blocksToHtml } from '../utils/portableText.ts'
 
 interface MilorgDB extends DBSchema {
   cache: {
@@ -21,7 +22,7 @@ interface MilorgDB extends DBSchema {
 const DB_NAME = 'milorg-v7'
 const DB_VERSION = 1
 const STORE = 'cache' as const
-const CACHE_KEY = 'v14'
+const CACHE_KEY = 'v16'
 const MAX_AGE_MS = 5 * 60 * 1000 // 5 minutes
 
 // Convert Sanity Portable Text block array to a plain string.
@@ -190,9 +191,9 @@ async function fetchFromSanity(): Promise<IdbCache> {
         "organization": organization->name,
         "district": district->name
       },
-      "locations": locations[]->{_id, title, "slug": slug.current},
-      "stations": stations[]->{_id, title, "slug": slug.current},
-      outlines,
+      "locations": *[_type == "location" && references(^._id)]{_id, title, "slug": slug.current} | order(title asc),
+      "stations": *[_type == "station" && ^._id in people[]._ref]{_id, title, "slug": slug.current} | order(title asc),
+      "outlines": *[_type == "outline" && references(^._id)]{_id, title, "slug": slug.current} | order(title asc),
       "gallery": gallery[]{_key, asset, caption},
       movie,
       "links": links[]{ _key, title, "url": link }
@@ -276,9 +277,10 @@ async function fetchFromSanity(): Promise<IdbCache> {
     people: rawPeople
       .map(p => ({
         ...p,
-        description:  blocksToText(p.description),
-        thumbnailUrl: galleryThumb(p.gallery),
-        events:       (p.events as IdbEvent[] | null) ?? [],
+        description:     blocksToText(p.description),
+        descriptionHtml: blocksToHtml(p.description) || undefined,
+        thumbnailUrl:    galleryThumb(p.gallery),
+        events:          (p.events as IdbEvent[] | null) ?? [],
       })) as unknown as IdbPerson[],
     events,
     transport: rawTransport

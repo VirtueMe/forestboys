@@ -23,10 +23,11 @@ export interface SanityBlock {
 
 function renderSpans(children: SanitySpan[], linkMap: Record<string, string>): string {
   return (children ?? []).map(child => {
-    let t = child.text
+    let t = (child.text ?? '')
       .replace(/&/g, '&amp;')
       .replace(/</g, '&lt;')
       .replace(/>/g, '&gt;')
+      .replace(/\n/g, '<br>')
 
     if (child.marks?.includes('strong'))    t = `<strong>${t}</strong>`
     if (child.marks?.includes('em'))        t = `<em>${t}</em>`

@@ -65,10 +65,11 @@ export interface IdbPerson {
   birthYear?: number
   thumbnailUrl?: string
   description?: string
+  descriptionHtml?: string
   events?: IdbEvent[]
   locations?: { _id: string; title: string; slug: string }[]
   stations?: { _id: string; title: string; slug: string }[]
-  outlines?: unknown[]
+  outlines?: { _id: string; title: string; slug: string }[]
   gallery?: IdbGalleryImage[]
   movie?: string
   links?: IdbLink[]
