@@ -1,5 +1,5 @@
 <template>
-  <div class="person-page">
+  <div class="person-page" itemscope itemtype="https://schema.org/Person">
     <div v-if="loading" class="status">Laster…</div>
 
     <div v-else-if="!person" class="status">Person ikke funnet.</div>
@@ -7,21 +7,23 @@
     <template v-else>
       <!-- Hero image -->
       <div v-if="heroUrl" class="hero">
-        <img :src="heroUrl" :alt="person.name" class="hero-img" />
+        <img :src="heroUrl" :alt="person.name" class="hero-img" itemprop="image" />
       </div>
 
       <!-- Header -->
       <div class="page-header">
         <RouterLink to="/registre" class="back-link">&#x2039; Tilbake</RouterLink>
-        <h1 class="person-name">{{ personTitle }}</h1>
-        <p v-if="person.home" class="person-meta">{{ person.home }}</p>
+        <h1 class="person-name" itemprop="name">{{ personTitle }}</h1>
+        <meta v-if="person.secretName" :content="person.secretName" itemprop="alternateName" />
+        <meta v-if="person.birthYear" :content="String(person.birthYear)" itemprop="birthDate" />
+        <p v-if="person.home" class="person-meta" itemprop="homeLocation">{{ person.home }}</p>
       </div>
 
       <!-- Beskrivelse -->
       <section v-if="person.descriptionHtml || person.description" class="section">
         <h3 class="section-heading">Beskrivelse</h3>
         <!-- eslint-disable-next-line vue/no-v-html -->
-        <div v-if="person.descriptionHtml" class="rich-text" v-html="person.descriptionHtml" />
+        <div v-if="person.descriptionHtml" class="rich-text" itemprop="description" v-html="person.descriptionHtml" />
         <p v-else class="plain-text">{{ person.description }}</p>
       </section>
 
@@ -153,6 +155,7 @@ onMounted(async () => { await init() })
 const person = computed(() =>
   people.value.find(p => p.slug === (route.params.slug as string)) ?? null,
 )
+
 
 const personTitle = computed(() => {
   if (!person.value) return ''
