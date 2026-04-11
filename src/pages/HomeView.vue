@@ -1,12 +1,10 @@
 <template>
   <div class="home">
-
     <div v-if="loading" class="status">Laster…</div>
 
     <div v-else-if="error" class="status error">Kunne ikke laste innhold.</div>
 
     <template v-else-if="home">
-
       <!-- Intro -->
       <div v-if="home.description" class="intro">
         <p class="intro-text">{{ home.description }}</p>
@@ -28,16 +26,16 @@
                 class="card-img"
                 loading="lazy"
               />
-              <div v-else class="card-img-placeholder" />
+              <div v-else class="card-img-placeholder"></div>
             </div>
             <div class="card-body">
               <h2 class="card-title">{{ card.title }}</h2>
               <div
-                  v-if="card.descriptionHtml"
-                  class="card-desc portable-text"
-                  v-html="card.descriptionHtml"
-                  @click.capture="handleInternalLinks"
-                />
+                v-if="card.descriptionHtml"
+                class="card-desc portable-text"
+                @click.capture="handleInternalLinks"
+                v-html="card.descriptionHtml"
+              ></div>
             </div>
           </div>
         </div>
@@ -59,23 +57,21 @@
                 class="card-img"
                 loading="lazy"
               />
-              <div v-else class="card-img-placeholder" />
+              <div v-else class="card-img-placeholder"></div>
             </div>
             <div class="card-body">
               <h2 class="card-title">{{ card.title }}</h2>
               <div
-                  v-if="card.descriptionHtml"
-                  class="card-desc portable-text"
-                  v-html="card.descriptionHtml"
-                  @click.capture="handleInternalLinks"
-                />
+                v-if="card.descriptionHtml"
+                class="card-desc portable-text"
+                @click.capture="handleInternalLinks"
+                v-html="card.descriptionHtml"
+              ></div>
             </div>
           </div>
         </div>
       </section>
-
     </template>
-
   </div>
 </template>
 
@@ -117,7 +113,7 @@ function parseCard(raw: unknown): HomeCard {
 }
 
 function handleInternalLinks(e: MouseEvent) {
-  const link = (e.target as HTMLElement).closest('a.internal-link') as HTMLAnchorElement | null
+  const link = (e.target as HTMLElement).closest('a.internal-link')
   if (link) {
     e.preventDefault()
     router.push(link.getAttribute('href') ?? '/')

@@ -178,7 +178,7 @@ const containerRef    = ref<HTMLElement | null>(null)
 let listAbsoluteTop   = 0
 
 function getPageContent(): HTMLElement | null {
-  return document.querySelector('.page-content') as HTMLElement | null
+  return document.querySelector('.page-content')
 }
 
 function computeListOffset() {

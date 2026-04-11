@@ -54,7 +54,7 @@ export function blocksToHtml(blocks?: SanityBlock[] | unknown | null): string {
   if (!Array.isArray(blocks) || blocks.length === 0) return ''
 
   const parts: string[] = []
-  let listStack: { tag: string; level: number }[] = []
+  const listStack: { tag: string; level: number }[] = []
 
   function closeLists(toLevel = 0) {
     while (listStack.length > 0 && listStack[listStack.length - 1].level >= toLevel) {

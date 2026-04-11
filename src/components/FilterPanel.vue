@@ -26,7 +26,9 @@
                 : { borderColor: orgColors[org] ?? '#d4c9b0', color: orgColors[org] ?? '#8a7a60' }"
               :title="org"
               @click="toggleOrg(org)"
-            >{{ org }}</button>
+            >
+              {{ org }}
+            </button>
           </div>
           <!-- Mobile: trigger + dropdown -->
           <div class="mobile-only">
@@ -59,7 +61,9 @@
                 : { borderColor: districtColors[d] ?? '#d4c9b0', color: districtColors[d] ?? '#8a7a60' }"
               :title="d"
               @click="toggleDistrict(d)"
-            >{{ d }}</button>
+            >
+              {{ d }}
+            </button>
           </div>
           <!-- Mobile: trigger + dropdown -->
           <div class="mobile-only">
@@ -82,10 +86,10 @@
         <section class="filter-section">
           <div class="section-label">Søk</div>
           <input
+            v-model="localSearch"
             class="search-input"
             type="search"
             placeholder="Søk…"
-            v-model="localSearch"
             @keydown.enter="commitSearch"
           />
           <div class="search-types">

@@ -80,10 +80,10 @@ export function useEventsContext() {
     const curDist = route.query.district
       ? (route.query.district as string).split(',').filter(Boolean)
       : []
-    if (org === curOrg && (districts as string[]).join(',') === curDist.join(',')) return
+    if (org === curOrg && (districts).join(',') === curDist.join(',')) return
     const q: Record<string, string> = {}
     if (org) q.org = org
-    if ((districts as string[]).length) q.district = (districts as string[]).join(',')
+    if ((districts).length) q.district = (districts).join(',')
     void router.push({ path: '/events', query: q })
   })
 

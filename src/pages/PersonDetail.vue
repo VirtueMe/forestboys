@@ -23,7 +23,7 @@
       <section v-if="person.descriptionHtml || person.description" class="section">
         <h3 class="section-heading">Beskrivelse</h3>
         <!-- eslint-disable-next-line vue/no-v-html -->
-        <div v-if="person.descriptionHtml" class="rich-text" itemprop="description" v-html="person.descriptionHtml" />
+        <div v-if="person.descriptionHtml" class="rich-text" itemprop="description" v-html="person.descriptionHtml"></div>
         <p v-else class="plain-text">{{ person.description }}</p>
       </section>
 

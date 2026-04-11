@@ -25,7 +25,7 @@ const router = createRouter({
     { path: '/events/:slug',            component: EventsView },
     // Redirects — old URL shapes
     { path: '/event/:slug/:child?', redirect: to => ({
-      path: `/events/${to.params.slug}${to.params.child ? '/' + to.params.child : ''}`,
+      path: `/events/${[to.params.slug].flat()[0]}${to.params.child ? `/${[to.params.child].flat()[0]}` : ''}`,
       query: to.query,
     })},
     { path: '/directory', redirect: '/events' },

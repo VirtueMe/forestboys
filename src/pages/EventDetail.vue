@@ -1,13 +1,11 @@
 <template>
   <div class="event-page">
-
     <button class="back-btn" @click="router.back()">&#x2039; Tilbake</button>
 
     <div v-if="loading" class="status">Laster hendelse…</div>
     <div v-else-if="error" class="status error">Hendelsen ble ikke funnet.</div>
 
     <template v-else-if="event">
-
       <!-- Timeline.js section -->
       <section class="timeline-section">
         <h2 class="timeline-heading">Tidslinjeutforsker</h2>
@@ -28,7 +26,6 @@
 
       <!-- Article -->
       <article class="article">
-
         <h2 class="event-title">{{ event.title }}</h2>
 
         <!-- Beskrivelse -->
@@ -36,9 +33,9 @@
           <h2 class="section-heading">Beskrivelse</h2>
           <div
             class="portable-text"
-            v-html="blocksToHtml(event.description)"
             @click.capture="handleInternalLinks"
-          />
+            v-html="blocksToHtml(event.description)"
+          ></div>
         </section>
 
         <!-- Fra Sted -->
@@ -77,7 +74,9 @@
               :key="person.slug"
               :to="`/person/${person.slug}`"
               class="section-link"
-            >{{ person.name }}</RouterLink>
+            >
+              {{ person.name }}
+            </RouterLink>
           </div>
         </section>
 
@@ -90,7 +89,9 @@
               :key="t.slug"
               :to="`/transport/${t.slug}`"
               class="section-link"
-            >{{ t.name }}</RouterLink>
+            >
+              {{ t.name }}
+            </RouterLink>
           </div>
         </section>
 
@@ -102,7 +103,9 @@
               v-if="event.gallery.length > 1"
               class="carousel-btn carousel-prev"
               @click="prevImage"
-            >&#x2039;</button>
+            >
+              &#x2039;
+            </button>
             <img
               :src="currentImageUrl"
               :alt="`${event.title} bilde ${currentImageIndex + 1}`"
@@ -112,7 +115,9 @@
               v-if="event.gallery.length > 1"
               class="carousel-btn carousel-next"
               @click="nextImage"
-            >&#x203a;</button>
+            >
+              &#x203a;
+            </button>
           </div>
           <p v-if="event.gallery.length > 1" class="carousel-count">
             {{ currentImageIndex + 1 }} / {{ event.gallery.length }}
@@ -133,7 +138,6 @@
             >{{ link.title || link.link }} <span class="ext-icon">↗</span></a>
           </div>
         </section>
-
       </article>
     </template>
   </div>
@@ -173,7 +177,7 @@ function nextImage() {
 }
 
 function handleInternalLinks(e: MouseEvent) {
-  const link = (e.target as HTMLElement).closest('a.internal-link') as HTMLAnchorElement | null
+  const link = (e.target as HTMLElement).closest('a.internal-link')
   if (link) {
     e.preventDefault()
     router.push(link.getAttribute('href') ?? '/')
