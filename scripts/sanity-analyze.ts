@@ -17,11 +17,13 @@ type Group =
   | 'SeaPatrol'
   | 'MaritimeCraft'
   | 'StationOperation'
+  | 'CommandoRaid'
   | 'EscapeRoute'
   | 'Meeting'
   | 'Training'
   | 'Raid'
   | 'Sabotage'
+  | 'Narrative'
   | 'Unknown'
 
 interface EventMeta {
@@ -54,19 +56,30 @@ function classify(title: string): Group {
   if (t.startsWith('AVRO'))                                                 return 'AirMission'
   if (/^SUB\d/.test(t))                                                     return 'AirMission'  // submarine ops
   if (t.startsWith('NNIU'))                                                 return 'NNIUMission'
+  if (t.startsWith('COHQ'))                                                 return 'CommandoRaid'
   if (t.startsWith('MTB'))                                                  return 'SeaPatrol'
-  if (t.startsWith('MK ') || t.startsWith('MK\t'))                        return 'MaritimeCraft'
   if (t.startsWith('MSP'))                                                  return 'SeaPatrol'
+  if (t.startsWith('AU '))                                                  return 'SeaPatrol'
+  if (t.startsWith('CONVOY'))                                               return 'SeaPatrol'
   if (t.startsWith('HMSRN') || t.startsWith('HNOMS'))                     return 'SeaPatrol'
+  if (t.startsWith('BALDER'))                                               return 'SeaPatrol'
+  if (/^MK[-\s\t]/.test(t))                                                return 'MaritimeCraft'
+  if (t.startsWith('MÅ ') || t.startsWith('SV ') || t.startsWith('RNA ') ||
+      t.startsWith('OSELVAR') || t.startsWith('SPISSGATTER') ||
+      t.startsWith('KNARR') || /^D\/?S\b/.test(t))                        return 'MaritimeCraft'
   if (/^(SOE|SIS) STATION/.test(t))                                        return 'RadioStation'
+  if (/^(XU|USSR) (STATION|SENDER)/.test(t))                               return 'RadioStation'
+  if (/^RUSSISK STASJON/.test(t))                                          return 'RadioStation'
   if (/^WT\b/.test(t))                                                      return 'RadioStation'
-  if (t.startsWith('SOE') || t.startsWith('SIS'))                          return 'StationOperation'
+  if (t.startsWith('SOE') || t.startsWith('SIS') || t.startsWith('SO2'))  return 'StationOperation'
+  if (t.startsWith('BAR-XU') || t.startsWith('EB-XU'))                    return 'StationOperation'
+  if (t.startsWith('FROSTFILET') || t.startsWith('KLADD'))                 return 'StationOperation'
   if (t.startsWith('SVERIGE') || t.startsWith('KURS') && t.includes('SVERIGE')) return 'EscapeRoute'
   if (t.startsWith('ANCC') || t.startsWith('MØTE') || t.includes('MEETING')) return 'Meeting'
   if (t.startsWith('KURS') || t.startsWith('SPESIALKURS'))                 return 'Training'
   if (t.startsWith('RAZZIA') || t.startsWith('TELAVÅG'))                  return 'Raid'
   if (t.startsWith('SABOTASJE') || t.startsWith('TIRPITZ') || t.startsWith('PLANET')) return 'Sabotage'
-  return 'Unknown'
+  return 'Narrative'
 }
 
 // ── Extractors (per group) ────────────────────────────────────────────────────
@@ -202,6 +215,18 @@ function extractMaritimeCraft(title: string, _text: string, issues: string[]) {
   return extracted
 }
 
+function extractCommandoRaid(title: string, _text: string, issues: string[]) {
+  const extracted: Record<string, unknown> = {}
+  // COHQ operation name: "COHQ Operation MUSKETOON"
+  const opMatch = title.match(/COHQ\s+Operation\s+([A-ZÆØÅ]+)/i)
+  if (opMatch) extracted['operationName'] = opMatch[1].toUpperCase()
+  else issues.push('Could not parse COHQ operation name')
+  // Norwegian name in parentheses: "(Lofotraid I)"
+  const noMatch = title.match(/\(([^)]+)\)/)
+  if (noMatch) extracted['norwegianName'] = noMatch[1].trim()
+  return extracted
+}
+
 function extractGeneric(title: string, _text: string, issues: string[]) {
   const extracted: Record<string, unknown> = {}
   const opMatch = title.match(/(?:SOE|SIS)\s+(?:Operation|operasjon)\s+([A-ZÆØÅ]+)/i)
@@ -231,12 +256,14 @@ for (const event of events) {
 
   const extracted: Record<string, unknown> = (() => {
     switch (group) {
-      case 'AirMission':       return extractAirMission(title, text, issues)
-      case 'RadioStation':     return extractRadioStation(title, text, issues)
-      case 'NNIUMission':      return extractNNIUMission(title, text, issues)
-      case 'SeaPatrol':        return extractSeaPatrol(title, text, issues)
-      case 'MaritimeCraft':    return extractMaritimeCraft(title, text, issues)
-      default:                 return extractGeneric(title, text, issues)
+      case 'AirMission':    return extractAirMission(title, text, issues)
+      case 'RadioStation':  return extractRadioStation(title, text, issues)
+      case 'NNIUMission':   return extractNNIUMission(title, text, issues)
+      case 'SeaPatrol':     return extractSeaPatrol(title, text, issues)
+      case 'MaritimeCraft': return extractMaritimeCraft(title, text, issues)
+      case 'CommandoRaid':  return extractCommandoRaid(title, text, issues)
+      case 'Narrative':     return {}
+      default:              return extractGeneric(title, text, issues)
     }
   })()
 
