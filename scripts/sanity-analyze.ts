@@ -115,7 +115,7 @@ function extractAirMission(title: string, text: string, issues: string[]) {
   const packMatch = text.match(/(\d+)\s+pack(?:age)?/i)
   if (packMatch) extracted['packages'] = parseInt(packMatch[1])
 
-  if (!extracted['bbcSignal'] && !extracted['aircraft']?.length && !extracted['operationName']) {
+  if (!extracted['bbcSignal'] && !(extracted['aircraft'] as unknown[])?.length && !extracted['operationName']) {
     issues.push('No BBC signal, aircraft or operation name found in description')
   }
 

@@ -128,7 +128,7 @@ async function load(slug: string) {
     relatedEvents.value = related
 
     // Co-located events (same station or location)
-    const colocated = await neo4jQuery<{ slug: string; title: string; date: string; group: string }>(
+    const colocated = await neo4jQuery<RelatedEvent>(
       `MATCH (e:Event {slug: $slug})-[:ORIGIN|DESTINATION|DEPARTED_FROM|ARRIVED_AT]->(place)
               <-[:ORIGIN|DESTINATION|DEPARTED_FROM|ARRIVED_AT]-(r:Event)
        WHERE r.slug <> $slug
