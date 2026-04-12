@@ -20,6 +20,19 @@
 
     <PhotoStrip v-if="gallery.length" :images="gallery" @open="openPhoto" />
 
+    <!-- People section -->
+    <div v-if="people.length" class="people-section">
+      <span class="section-label">Tilknyttede personer</span>
+      <div class="people-list">
+        <RouterLink
+          v-for="p in people"
+          :key="p._id"
+          :to="`/person/${p.slug}`"
+          class="person-chip"
+        >{{ p.name }}</RouterLink>
+      </div>
+    </div>
+
     <!-- Events section -->
     <div class="events-section">
       <div class="events-header">
@@ -48,6 +61,7 @@
 
 <script setup lang="ts">
 import { ref, computed } from 'vue'
+import { RouterLink } from 'vue-router'
 import { SANITY_IMG } from '../config/sanity.ts'
 import type { IdbLocation, IdbStation, IdbPerson, IdbEvent, IdbGalleryImage } from '../types/idb.ts'
 import PhotoStrip from './PhotoStrip.vue'
@@ -99,6 +113,10 @@ const meta = computed(() => {
 })
 
 const description = computed<string | null>(() => props.item.description ?? null)
+
+const people = computed<{ _id: string; name: string; slug: string }[]>(
+  () => ('people' in props.item ? props.item.people ?? [] : []),
+)
 
 const events = computed<IdbEvent[]>(() => props.item.events ?? [])
 const eventPages = computed(() => Math.ceil(events.value.length / PER_PAGE) || 1)
@@ -175,6 +193,39 @@ function openPhoto(_photoIndex: number) {
   margin: 0;
   white-space: pre-line;
 }
+
+/* People section */
+.people-section {
+  flex-shrink: 0;
+  border-top: 0.5px solid var(--color-border);
+  padding: 10px 10px 8px;
+}
+
+.section-label {
+  display: block;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--color-muted);
+  margin-bottom: 8px;
+}
+
+.people-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.person-chip {
+  font-size: 12px;
+  color: var(--color-navy);
+  background: var(--color-border);
+  padding: 4px 10px;
+  border-radius: 12px;
+  text-decoration: none;
+}
+.person-chip:hover { background: var(--color-border-mid); }
 
 /* Events section */
 .events-section {
