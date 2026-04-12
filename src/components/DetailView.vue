@@ -29,7 +29,9 @@
           :key="p._id"
           :to="`/person/${p.slug}`"
           class="person-chip"
-        >{{ p.name }}</RouterLink>
+        >
+          {{ p.name }}
+        </RouterLink>
       </div>
     </div>
 
