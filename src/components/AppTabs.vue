@@ -5,10 +5,11 @@
         v-for="tab in tabs"
         :key="tab.id"
         class="tab-btn"
-        :class="{ active: modelValue === tab.id }"
+        :class="{ active: modelValue === tab.id, disabled: tab.disabled }"
+        :disabled="tab.disabled"
         role="tab"
         :aria-selected="modelValue === tab.id"
-        @click="emit('update:modelValue', tab.id)"
+        @click="!tab.disabled && emit('update:modelValue', tab.id)"
       >
         {{ tab.label }}
       </button>
@@ -21,7 +22,7 @@
 
 <script setup lang="ts">
 defineProps<{
-  tabs: { id: string; label: string }[]
+  tabs: { id: string; label: string; disabled?: boolean }[]
   modelValue: string
 }>()
 
@@ -63,7 +64,13 @@ const emit = defineEmits<{ 'update:modelValue': [id: string] }>()
   border-bottom-color: var(--color-accent, #e8a020);
 }
 
-.tab-btn:not(.active):hover {
+.tab-btn:not(.active):not(.disabled):hover {
   color: var(--color-text, #fff);
+}
+
+.tab-btn.disabled {
+  color: var(--color-border, #444);
+  cursor: not-allowed;
+  opacity: 0.5;
 }
 </style>

@@ -126,21 +126,38 @@ import { blocksToHtml } from '../utils/portableText.ts'
 import type { IdbEventDetail } from '../types/idb.ts'
 import AppTabs from './AppTabs.vue'
 import EnrichedEvent from './EnrichedEvent.vue'
-
-const TABS = [
-  { id: 'original', label: 'Original' },
-  { id: 'enriched', label: 'Beriket' },
-]
+import { neo4jQuery } from '../composables/useNeo4j.ts'
 
 const props = defineProps<{ event: IdbEventDetail }>()
 const emit  = defineEmits<{ 'select-event-slug': [slug: string] }>()
 const router = useRouter()
-const activeTab = ref('original')
+const activeTab        = ref('original')
+const enrichedHasData  = ref<boolean | null>(null) // null = checking, true/false = known
 const currentImageIndex = ref(0)
 
-watch(() => props.event.slug, () => { activeTab.value = 'original' })
+const TABS = computed(() => [
+  { id: 'original', label: 'Original' },
+  { id: 'enriched', label: 'Beriket', disabled: enrichedHasData.value === false },
+])
 
-watch(() => props.event.slug, () => { currentImageIndex.value = 0 })
+async function checkEnrichedData(slug: string) {
+  enrichedHasData.value = null
+  try {
+    const rows = await neo4jQuery<{ n: number }>(
+      `MATCH (e:Event {slug: $slug})-[r]-() RETURN count(r) AS n LIMIT 1`,
+      { slug },
+    )
+    enrichedHasData.value = (rows[0]?.n ?? 0) > 0
+  } catch {
+    enrichedHasData.value = false
+  }
+}
+
+watch(() => props.event.slug, slug => {
+  activeTab.value = 'original'
+  currentImageIndex.value = 0
+  void checkEnrichedData(slug)
+}, { immediate: true })
 
 const currentImageUrl = computed<string>(() => {
   const gallery = props.event.gallery

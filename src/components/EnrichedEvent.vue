@@ -69,7 +69,10 @@ import { RouterLink } from 'vue-router'
 import { neo4jQuery } from '../composables/useNeo4j.ts'
 
 const props = defineProps<{ slug: string; group?: string }>()
-const emit  = defineEmits<{ 'select-event-slug': [slug: string] }>()
+const emit  = defineEmits<{
+  'select-event-slug': [slug: string]
+  'has-data': [value: boolean]
+}>()
 
 const loading = ref(false)
 const error   = ref<string | null>(null)
@@ -147,8 +150,10 @@ async function load(slug: string) {
       { slug },
     )
     peopleNetwork.value = people
+    emit('has-data', related.length > 0 || colocated.length > 0 || people.length > 0)
   } catch (err) {
     error.value = err instanceof Error ? err.message : 'Graf-feil'
+    emit('has-data', false)
   } finally {
     loading.value = false
   }
