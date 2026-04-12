@@ -22,7 +22,7 @@ interface MilorgDB extends DBSchema {
 const DB_NAME = 'milorg-v7'
 const DB_VERSION = 1
 const STORE = 'cache' as const
-const CACHE_KEY = 'v16'
+const CACHE_KEY = 'v17'
 const MAX_AGE_MS = 5 * 60 * 1000 // 5 minutes
 
 // Convert Sanity Portable Text block array to a plain string.
