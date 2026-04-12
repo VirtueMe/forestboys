@@ -26,12 +26,21 @@ type Group =
   | 'Narrative'
   | 'Unknown'
 
+export interface LogEntry {
+  date: string              // ISO-8601: YYYY-MM-DD
+  text: string
+  type: 'report' | 'arrest' // report = leading-date ANCC log; arrest = trailing-date person record
+}
+
 interface EventMeta {
   _id: string
   slug: string
   title: string
   group: Group
   extracted: Record<string, unknown>
+  sections: Record<string, string>   // Norwegian section headers parsed from description
+  content: string                    // uncategorized description text, markdown-formatted
+  logEntries: LogEntry[]             // dated ANCC / station log entries
   issues: string[]
 }
 
@@ -43,6 +52,187 @@ function toText(blocks: unknown): string {
     .filter(b => b['_type'] === 'block')
     .map(b => ((b['children'] as Record<string, unknown>[]) ?? []).map(c => (c['text'] as string) ?? '').join(''))
     .join('\n')
+}
+
+// ── Section header detection ───────────────────────────────────────────────────
+
+// Maps recognizable header keywords → canonical key in extracted{}
+const SECTION_HEADER_MAP: Record<string, string> = {
+  oppdrag:          'oppdrag',
+  oppdraget:        'oppdrag',
+  objective:        'oppdrag',
+  deltakere:        'deltakere',
+  personell:        'personell',
+  personnel:        'personell',
+  tidsrommet:       'tidsrommet',
+  arbeidsomr:       'arbeidsomraade',   // prefix match for Arbeidsområdet/Arbeidsomrade
+  resultat:         'resultat',
+}
+
+interface SanityBlock {
+  _type: string
+  style?: string
+  children?: Array<{ text?: string }>
+}
+
+function blockText(b: SanityBlock): string {
+  return (b.children ?? []).map(c => c.text ?? '').join('').trim()
+}
+
+/** Convert a single portable-text block to a markdown string */
+function blockToMarkdown(b: SanityBlock): string {
+  const text = blockText(b)
+  if (!text) return ''
+  switch (b.style) {
+    case 'h1': return `# ${text}`
+    case 'h2': return `## ${text}`
+    case 'h3': return `### ${text}`
+    case 'h4': return `#### ${text}`
+    case 'h5': return `##### ${text}`
+    case 'blockquote': return text.split('\n').map(l => `> ${l}`).join('\n')
+    default: return text
+  }
+}
+
+// Leading date: "DD/MM-YY  TEXT..." — ANCC / station log reports
+const LOG_DATE_RE = /^(\d{1,2})\/(\d{1,2})-(\d{2,4})\s+(.+)/
+// Trailing date: "Person Name  DD/M-YY" — arrest / person records
+const ARREST_DATE_RE = /^([A-ZÆØÅ][^\d\n]{2,}?)\s{1,}(\d{1,2})\/(\d{1,2})-(\d{2,4})\s*$/
+
+/** Parse a date string components → ISO "YYYY-MM-DD" */
+function parseLogDate(d: string, m: string, y: string): string {
+  const year  = y.length === 2 ? 1900 + parseInt(y) : parseInt(y)
+  const month = parseInt(m).toString().padStart(2, '0')
+  const day   = parseInt(d).toString().padStart(2, '0')
+  return `${year}-${month}-${day}`
+}
+
+/**
+ * Extract dated entries from blocks:
+ *  - "DD/MM-YY  TEXT..."   → type:'report'  (ANCC / station log)
+ *  - "Person Name  DD/M-YY" → type:'arrest' (person arrest record)
+ * Continuation lines (no date) are appended to the previous report entry.
+ */
+function extractLogEntries(blocks: unknown): LogEntry[] {
+  if (!Array.isArray(blocks)) return []
+  const entries: LogEntry[] = []
+  let current: LogEntry | null = null
+
+  for (const b of (blocks as SanityBlock[]).filter(b => b._type === 'block')) {
+    for (const rawLine of blockText(b).split('\n')) {
+      const line = rawLine.trim()
+      if (!line) continue
+
+      const report = line.match(LOG_DATE_RE)
+      if (report) {
+        current = { date: parseLogDate(report[1], report[2], report[3]), text: report[4].trim(), type: 'report' }
+        entries.push(current)
+        continue
+      }
+
+      const arrest = line.match(ARREST_DATE_RE)
+      if (arrest) {
+        // Arrest entries don't have continuations — reset current
+        current = null
+        entries.push({ date: parseLogDate(arrest[2], arrest[3], arrest[4]), text: arrest[1].trim(), type: 'arrest' })
+        continue
+      }
+
+      // Continuation of previous report entry
+      if (current?.type === 'report') {
+        current.text += ' ' + line
+      }
+    }
+  }
+
+  // Deduplicate by (date + first 60 chars of text) — Sanity descriptions sometimes
+  // contain the same log block in multiple places (editing artefact)
+  const seen = new Set<string>()
+  return entries.filter(e => {
+    const key = `${e.date}::${e.text.slice(0, 60)}`
+    if (seen.has(key)) return false
+    seen.add(key)
+    return true
+  })
+}
+
+/**
+ * Parse Norwegian section headers and collect uncategorized content from
+ * portable text blocks.
+ *
+ * Returns:
+ *   sections  — named section key → text (first occurrence wins)
+ *   content   — all blocks NOT consumed by a named section, markdown-formatted
+ *               with log-entry lines stripped (those live in logEntries)
+ *
+ * Works line-by-line so it handles both standalone header blocks and
+ * inline headers ("Oppdraget: text\nmore text" in a single block).
+ */
+function extractSections(blocks: unknown): { sections: Record<string, string>; content: string } {
+  if (!Array.isArray(blocks)) return { sections: {}, content: '' }
+  const typedBlocks = (blocks as SanityBlock[]).filter(b => b._type === 'block')
+
+  const sections: Record<string, string> = {}
+  let currentKey: string | null = null
+  const currentLines: string[] = []
+  const contentParts: string[] = []   // uncategorized blocks as markdown
+
+  function flush() {
+    if (currentKey && currentLines.length) {
+      const text = currentLines.join('\n').trim()
+      if (text && !sections[currentKey]) sections[currentKey] = text
+    }
+    currentLines.length = 0
+  }
+
+  function handleLine(line: string, mdLine: string) {
+    const stripped = line.replace(/^["«\u201c\u201d\s]+/, '')
+    if (!stripped) return
+
+    const lc = stripped.toLowerCase()
+    let matchedKey: string | null = null
+    let afterHeader = ''
+
+    for (const [prefix, key] of Object.entries(SECTION_HEADER_MAP)) {
+      if (lc.startsWith(prefix)) {
+        const afterPrefix = stripped.slice(prefix.length)
+        if (!afterPrefix || /^[:\s.]+/.test(afterPrefix)) {
+          matchedKey = key
+          afterHeader = afterPrefix.replace(/^[:\s.]+/, '').trim()
+          break
+        }
+      }
+    }
+
+    if (matchedKey) {
+      flush()
+      currentKey = matchedKey
+      if (afterHeader) currentLines.push(afterHeader)
+    } else if (currentKey) {
+      currentLines.push(line)
+    } else {
+      // Not under any named section — goes to uncategorized content
+      // Skip log-entry lines (they become LogEntry nodes)
+      if (!LOG_DATE_RE.test(stripped)) {
+        contentParts.push(mdLine)
+      }
+    }
+  }
+
+  for (const b of typedBlocks) {
+    const raw = blockText(b)
+    if (!raw) continue
+    const md  = blockToMarkdown(b)
+    const rawLines = raw.split('\n')
+    const mdLines  = md.split('\n')
+
+    for (let i = 0; i < rawLines.length; i++) {
+      handleLine(rawLines[i], mdLines[i] ?? rawLines[i])
+    }
+  }
+  flush()
+
+  return { sections, content: contentParts.join('\n\n').trim() }
 }
 
 // ── Classifier ────────────────────────────────────────────────────────────────
@@ -267,7 +457,10 @@ for (const event of events) {
     }
   })()
 
-  results.push({ _id: id, slug, title, group, extracted, issues })
+  const { sections, content } = extractSections(event['description'])
+  const logEntries = extractLogEntries(event['description'])
+
+  results.push({ _id: id, slug, title, group, extracted, sections, content, logEntries, issues })
 }
 
 // ── Write output ──────────────────────────────────────────────────────────────
@@ -295,3 +488,21 @@ for (const r of withIssues) {
     console.log(`    → ${r.title}`)
   }
 }
+
+// ── Section summary ───────────────────────────────────────────────────────────
+const sectionCounts: Record<string, number> = {}
+for (const r of results) {
+  for (const key of Object.keys(r.sections)) {
+    sectionCounts[key] = (sectionCounts[key] ?? 0) + 1
+  }
+}
+console.log('\nSections extracted:')
+for (const [key, count] of Object.entries(sectionCounts).sort((a, b) => b[1] - a[1])) {
+  console.log(`  ${key.padEnd(20)} ${String(count).padStart(5)}`)
+}
+
+const withContent    = results.filter(r => r.content.length > 0).length
+const totalLogEntries = results.reduce((n, r) => n + r.logEntries.length, 0)
+const withLogEntries  = results.filter(r => r.logEntries.length > 0).length
+console.log(`\nUncategorized content: ${withContent} events`)
+console.log(`Log entries: ${totalLogEntries} total across ${withLogEntries} events`)

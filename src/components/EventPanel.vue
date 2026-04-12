@@ -112,6 +112,7 @@
         v-else
         :slug="event.slug"
         @select-event-slug="slug => emit('select-event-slug', slug)"
+        @select-date="date => emit('select-date', date)"
       />
     </AppTabs>
   </div>
@@ -128,7 +129,10 @@ import EnrichedEvent from './EnrichedEvent.vue'
 import { neo4jQuery } from '../composables/useNeo4j.ts'
 
 const props = defineProps<{ event: IdbEventDetail }>()
-const emit  = defineEmits<{ 'select-event-slug': [slug: string] }>()
+const emit  = defineEmits<{
+  'select-event-slug': [slug: string]
+  'select-date':       [date: string]
+}>()
 const router = useRouter()
 const activeTab        = ref('original')
 const enrichedHasData  = ref<boolean | null>(null) // null = checking, true/false = known

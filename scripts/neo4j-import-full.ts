@@ -32,9 +32,76 @@ const rawPeople    = load<SanityDoc>('sanity-person.json')
 const rawTransport = load<SanityDoc>('sanity-transport.json')
 const rawOrgs      = load<SanityDoc>('sanity-organization.json')
 const rawDistricts = load<SanityDoc>('sanity-district.json')
-const eventMeta    = load<{ _id: string; group: string }>('sanity-event-meta.json')
+const eventMeta    = load<{
+  _id: string
+  group: string
+  sections: Record<string, string>
+  content: string
+  logEntries: Array<{ date: string; text: string; type: 'report' | 'arrest' }>
+}>('sanity-event-meta.json')
 
 const metaById = new Map(eventMeta.map(m => [m._id, m]))
+
+// ── Section metadata ──────────────────────────────────────────────────────────
+
+const SECTION_META: Record<string, { heading: string; importance: number }> = {
+  oppdrag:        { heading: 'Oppdrag',        importance: 1 },
+  personell:      { heading: 'Personell',      importance: 2 },
+  deltakere:      { heading: 'Deltakere',      importance: 3 },
+  tidsrommet:     { heading: 'Tidsrommet',     importance: 4 },
+  arbeidsomraade: { heading: 'Arbeidsområde',  importance: 5 },
+  resultat:       { heading: 'Resultat',       importance: 6 },
+}
+
+interface SectionRow {
+  id: string         // eventSlug::type — stable merge key
+  type: string
+  heading: string
+  body: string
+  importance: number
+}
+
+/** Convert sections map + content → ordered SectionRow array */
+function buildSectionRows(
+  evSlug: string,
+  sections: Record<string, string> | undefined,
+  content: string | undefined,
+): SectionRow[] {
+  const rows: SectionRow[] = []
+
+  // Named sections
+  for (const [key, text] of Object.entries(sections ?? {})) {
+    if (!text.trim()) continue
+    const meta = SECTION_META[key] ?? { heading: key, importance: 98 }
+    rows.push({
+      id:         `${evSlug}::${key}`,
+      type:       key,
+      heading:    meta.heading,
+      body:       text.trim(),
+      importance: meta.importance,
+    })
+  }
+
+  // Uncategorized content — stored last, no heading
+  if (content?.trim()) {
+    rows.push({
+      id:         `${evSlug}::content`,
+      type:       'content',
+      heading:    '',
+      body:       content.trim(),
+      importance: 99,
+    })
+  }
+
+  return rows.sort((a, b) => a.importance - b.importance)
+}
+
+interface LogEntryRow {
+  id:   string   // eventSlug::date::index — stable merge key
+  date: string
+  text: string
+  type: string   // 'report' | 'arrest'
+}
 
 // ── Location type classifier ──────────────────────────────────────────────────
 
@@ -109,6 +176,8 @@ async function main() {
       'CREATE CONSTRAINT station_slug   IF NOT EXISTS FOR (s:Station)      REQUIRE s.slug IS UNIQUE',
       'CREATE CONSTRAINT org_name       IF NOT EXISTS FOR (o:Organization) REQUIRE o.name IS UNIQUE',
       'CREATE CONSTRAINT district_name  IF NOT EXISTS FOR (d:District)     REQUIRE d.name IS UNIQUE',
+      'CREATE CONSTRAINT section_id     IF NOT EXISTS FOR (s:Section)      REQUIRE s.id IS UNIQUE',
+      'CREATE CONSTRAINT log_entry_id   IF NOT EXISTS FOR (l:LogEntry)     REQUIRE l.id IS UNIQUE',
     ]
     for (const c of constraints) await session.run(c)
 
@@ -230,6 +299,52 @@ async function main() {
             group: meta?.group ?? 'Unknown',
           },
         )
+
+        // Section nodes (named sections + uncategorized content)
+        const sectionRows = buildSectionRows(evSlug, meta?.sections, meta?.content)
+        if (sectionRows.length) {
+          await tx.run(
+            `MATCH (e:Event {slug: $evSlug})
+             UNWIND $rows AS row
+             MERGE (s:Section {id: row.id})
+             SET s.type       = row.type,
+                 s.heading    = row.heading,
+                 s.body       = row.body,
+                 s.importance = row.importance
+             MERGE (e)-[:HAS_SECTION]->(s)`,
+            { evSlug, rows: sectionRows },
+          )
+          relCount += sectionRows.length
+        }
+
+        // LogEntry nodes — delete stale entries first, then recreate
+        const logRows: LogEntryRow[] = (meta?.logEntries ?? []).map((le, i) => ({
+          id:   `${evSlug}::log::${le.date}::${i}`,
+          date: le.date,
+          text: le.text,
+          type: le.type,
+        }))
+        // Remove any LogEntry nodes for this event that are NOT in the current set
+        // (handles deduplication: stale nodes from old positional indices are cleaned up)
+        await tx.run(
+          `MATCH (e:Event {slug: $evSlug})-[:HAS_LOG_ENTRY]->(l:LogEntry)
+           WHERE NOT l.id IN $ids
+           DETACH DELETE l`,
+          { evSlug, ids: logRows.map(r => r.id) },
+        )
+        if (logRows.length) {
+          await tx.run(
+            `MATCH (e:Event {slug: $evSlug})
+             UNWIND $rows AS row
+             MERGE (l:LogEntry {id: row.id})
+             SET l.date = row.date,
+                 l.text = row.text,
+                 l.type = row.type
+             MERGE (e)-[:HAS_LOG_ENTRY]->(l)`,
+            { evSlug, rows: logRows },
+          )
+          relCount += logRows.length
+        }
 
         // Organization
         const orgName = orgNameById.get(ref(event['organization']) ?? '')

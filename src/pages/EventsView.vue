@@ -39,7 +39,13 @@
     <div v-if="isDetail" class="panels">
       <div v-if="loadingDetail" class="status">Laster hendelse…</div>
       <div v-else-if="detailError" class="status error">Hendelsen ble ikke funnet.</div>
-      <EventPanel v-else-if="visibleDetail" :event="visibleDetail" class="panel" />
+      <EventPanel
+        v-else-if="visibleDetail"
+        :event="visibleDetail"
+        class="panel"
+        @select-event-slug="slug => router.push(`/events/${slug}`)"
+        @select-date="openDateModal"
+      />
     </div>
 
     <!-- Event list -->
@@ -88,6 +94,16 @@
         </div>
       </div>
     </template>
+
+    <!-- Date modal — outside v-if/v-else chain, teleports to body -->
+    <AppModal v-model="dateModalOpen" :title="dateModalTitle">
+      <DatePanel
+        v-if="dateModalDate"
+        :date="dateModalDate"
+        @select-event-slug="slug => { dateModalOpen = false; router.push(`/events/${slug}`) }"
+        @navigate="d => { dateModalDate = d }"
+      />
+    </AppModal>
   </div>
 </template>
 
@@ -96,6 +112,8 @@ import { ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue'
 import { useRoute, useRouter, RouterLink, onBeforeRouteUpdate } from 'vue-router'
 import { useEventsContext } from '../composables/useEventsContext.ts'
 import EventPanel from '../components/EventPanel.vue'
+import AppModal   from '../components/AppModal.vue'
+import DatePanel  from '../components/DatePanel.vue'
 import CustomSelect from '../components/CustomSelect.vue'
 import { Timeline } from '@knight-lab/timelinejs'
 import '@knight-lab/timelinejs/dist/css/timeline.css'
@@ -103,6 +121,22 @@ import type { IdbEvent } from '../types/idb.ts'
 
 const route  = useRoute()
 const router = useRouter()
+
+// ── Date modal ────────────────────────────────────────────────
+const dateModalOpen  = ref(false)
+const dateModalDate  = ref<string | null>(null)
+
+const MONTHS = ['jan','feb','mar','apr','mai','jun','jul','aug','sep','okt','nov','des']
+const dateModalTitle = computed(() => {
+  if (!dateModalDate.value) return ''
+  const [y, m, d] = dateModalDate.value.split('-').map(Number)
+  return `${d}. ${MONTHS[m - 1]} ${y}`
+})
+
+function openDateModal(date: string) {
+  dateModalDate.value = date
+  dateModalOpen.value = true
+}
 
 const {
   loading, init,
