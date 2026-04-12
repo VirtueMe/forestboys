@@ -3,7 +3,7 @@
     <img
       v-for="(img, i) in visible"
       :key="img._key"
-      :src="imgUrl(img, 80)"
+      :src="imgUrl(img, 180)"
       :alt="`Bilde ${i + 1}`"
       class="thumb"
       loading="lazy"
@@ -40,15 +40,16 @@ function imgUrl(img: IdbGalleryImage, size: number): string {
 <style scoped>
 .photo-strip {
   display: flex;
+  flex-shrink: 0;
   gap: 6px;
-  padding: 8px 12px;
+  padding: 8px 12px 16px;
   overflow-x: auto;
   scrollbar-width: none;
 }
 .photo-strip::-webkit-scrollbar { display: none; }
 .thumb {
-  width: 60px;
-  height: 60px;
+  width: 90px;
+  height: 90px;
   object-fit: cover;
   border-radius: 4px;
   flex-shrink: 0;
@@ -56,8 +57,8 @@ function imgUrl(img: IdbGalleryImage, size: number): string {
   border: 1px solid var(--color-border);
 }
 .more {
-  width: 60px;
-  height: 60px;
+  width: 90px;
+  height: 90px;
   flex-shrink: 0;
   border: 1px solid var(--color-border);
   border-radius: 4px;

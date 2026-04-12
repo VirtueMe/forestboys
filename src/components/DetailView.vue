@@ -200,7 +200,7 @@ function openPhoto(_photoIndex: number) {
 .people-section {
   flex-shrink: 0;
   border-top: 0.5px solid var(--color-border);
-  padding: 10px 10px 8px;
+  padding: 12px 10px 10px;
 }
 
 .section-label {
@@ -233,7 +233,7 @@ function openPhoto(_photoIndex: number) {
 .events-section {
   flex-shrink: 0;
   border-top: 0.5px solid var(--color-border);
-  padding: 10px 10px 6px;
+  padding: 10px 10px 16px;
   display: flex;
   flex-direction: column;
   gap: 6px;
