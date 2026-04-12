@@ -12,8 +12,8 @@ function getDriver(): Driver {
     driver = neo4j.driver(
       import.meta.env['VITE_NEO4J_URI'] as string,
       neo4j.auth.basic(
-        import.meta.env['VITE_NEO4J_USERNAME'] as string,
-        import.meta.env['VITE_NEO4J_PASSWORD'] as string,
+        import.meta.env['VITE_NEO4J_READER'] as string,
+        import.meta.env['VITE_NEO4J_READER_PASSWORD'] as string,
       ),
       { disableLosslessIntegers: true },
     )
