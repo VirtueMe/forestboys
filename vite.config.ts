@@ -6,7 +6,7 @@ export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '')
 
   return {
-    base: '/forestboys/',
+    base: env.VITE_BASE_PATH ?? '/',
     server: {
       cors: true,
       proxy: {
