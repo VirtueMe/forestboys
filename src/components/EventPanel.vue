@@ -111,7 +111,6 @@
       <EnrichedEvent
         v-else
         :slug="event.slug"
-        :group="event.group"
         @select-event-slug="slug => emit('select-event-slug', slug)"
       />
     </AppTabs>
@@ -148,7 +147,8 @@ async function checkEnrichedData(slug: string) {
       { slug },
     )
     enrichedHasData.value = (rows[0]?.n ?? 0) > 0
-  } catch {
+  } catch (err) {
+    console.error('[Neo4j] checkEnrichedData failed for', slug, err)
     enrichedHasData.value = false
   }
 }

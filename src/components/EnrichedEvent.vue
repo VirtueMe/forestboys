@@ -68,14 +68,15 @@ import { ref, watch, computed } from 'vue'
 import { RouterLink } from 'vue-router'
 import { neo4jQuery } from '../composables/useNeo4j.ts'
 
-const props = defineProps<{ slug: string; group?: string }>()
+const props = defineProps<{ slug: string }>()
 const emit  = defineEmits<{
   'select-event-slug': [slug: string]
   'has-data': [value: boolean]
 }>()
 
-const loading = ref(false)
-const error   = ref<string | null>(null)
+const loading   = ref(false)
+const error     = ref<string | null>(null)
+const eventGroup = ref<string | null>(null)
 
 interface RelatedEvent { slug: string; title: string; date: string; group: string; shared: number }
 interface PersonNode   { slug: string; name: string; shared: number }
@@ -100,21 +101,29 @@ const GROUP_LABELS: Record<string, string> = {
   Narrative:        'Historisk kontekst',
 }
 
-const groupLabel = computed(() => GROUP_LABELS[props.group ?? ''] ?? props.group ?? 'Ukjent')
+const groupLabel = computed(() => GROUP_LABELS[eventGroup.value ?? ''] ?? eventGroup.value ?? 'Ukjent')
 
 function groupClass_(g: string) {
   return `group-${g?.toLowerCase().replace(/[^a-z]/g, '') ?? 'unknown'}`
 }
-const groupClass = computed(() => groupClass_(props.group ?? ''))
+const groupClass = computed(() => groupClass_(eventGroup.value ?? ''))
 
 async function load(slug: string) {
   loading.value = true
   error.value   = null
+  eventGroup.value      = null
   relatedEvents.value   = []
   colocatedEvents.value = []
   peopleNetwork.value   = []
 
   try {
+    // Fetch event group
+    const meta = await neo4jQuery<{ group: string }>(
+      `MATCH (e:Event {slug: $slug}) RETURN e.group AS group`,
+      { slug },
+    )
+    eventGroup.value = meta[0]?.group ?? null
+
     // Related events via shared people
     const related = await neo4jQuery<{ slug: string; title: string; date: string; group: string; shared: number }>(
       `MATCH (e:Event {slug: $slug})-[:INVOLVED]->(p:Person)<-[:INVOLVED]-(r:Event)
