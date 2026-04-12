@@ -6,118 +6,115 @@
       <p v-if="meta" class="event-meta">{{ meta }}</p>
     </div>
 
-    <!-- Beskrivelse -->
-    <section v-if="event.description?.length" class="section">
-      <h3 class="section-heading">Beskrivelse</h3>
-      <!-- eslint-disable vue/no-v-html -->
-      <div
-        class="portable-text"
-        @click.capture="handleInternalLinks"
-        v-html="blocksToHtml(event.description)"
-      ></div>
-      <!-- eslint-enable vue/no-v-html -->
-    </section>
+    <AppTabs v-model="activeTab" :tabs="TABS">
+      <!-- ── Original (Sanity) ─────────────────────────────── -->
+      <template v-if="activeTab === 'original'">
+        <!-- Beskrivelse -->
+        <section v-if="event.description?.length" class="section">
+          <h3 class="section-heading">Beskrivelse</h3>
+          <!-- eslint-disable vue/no-v-html -->
+          <div
+            class="portable-text"
+            @click.capture="handleInternalLinks"
+            v-html="blocksToHtml(event.description)"
+          ></div>
+          <!-- eslint-enable vue/no-v-html -->
+        </section>
 
-    <!-- Fra Sted -->
-    <section v-if="event.locationFrom" class="section">
-      <h3 class="section-heading">Fra Sted</h3>
-      <RouterLink :to="`/map/${event.locationFrom.slug}`" class="section-link">
-        {{ event.locationFrom.title }}
-      </RouterLink>
-    </section>
+        <!-- Fra Sted -->
+        <section v-if="event.locationFrom" class="section">
+          <h3 class="section-heading">Fra Sted</h3>
+          <RouterLink :to="`/map/${event.locationFrom.slug}`" class="section-link">
+            {{ event.locationFrom.title }}
+          </RouterLink>
+        </section>
 
-    <!-- Til Sted -->
-    <section v-if="event.locationTo" class="section">
-      <h3 class="section-heading">Til Sted</h3>
-      <RouterLink :to="`/map/${event.locationTo.slug}`" class="section-link">
-        {{ event.locationTo.title }}
-      </RouterLink>
-    </section>
+        <!-- Til Sted -->
+        <section v-if="event.locationTo" class="section">
+          <h3 class="section-heading">Til Sted</h3>
+          <RouterLink :to="`/map/${event.locationTo.slug}`" class="section-link">
+            {{ event.locationTo.title }}
+          </RouterLink>
+        </section>
 
-    <!-- Fra Base -->
-    <section v-if="event.stationFrom || event.stationTo" class="section">
-      <h3 class="section-heading">Fra Base</h3>
-      <RouterLink v-if="event.stationFrom" :to="`/station/${event.stationFrom.slug}`" class="section-link">
-        {{ event.stationFrom.title }}
-      </RouterLink>
-      <RouterLink v-if="event.stationTo" :to="`/station/${event.stationTo.slug}`" class="section-link">
-        {{ event.stationTo.title }}
-      </RouterLink>
-    </section>
+        <!-- Fra Base -->
+        <section v-if="event.stationFrom || event.stationTo" class="section">
+          <h3 class="section-heading">Fra Base</h3>
+          <RouterLink v-if="event.stationFrom" :to="`/station/${event.stationFrom.slug}`" class="section-link">
+            {{ event.stationFrom.title }}
+          </RouterLink>
+          <RouterLink v-if="event.stationTo" :to="`/station/${event.stationTo.slug}`" class="section-link">
+            {{ event.stationTo.title }}
+          </RouterLink>
+        </section>
 
-    <!-- Deltakere -->
-    <section v-if="event.people?.length" class="section">
-      <h3 class="section-heading">Deltakere</h3>
-      <div class="link-list">
-        <RouterLink
-          v-for="person in event.people"
-          :key="person.slug"
-          :to="`/person/${person.slug}`"
-          class="section-link"
-        >
-          {{ person.name }}
-        </RouterLink>
-      </div>
-    </section>
+        <!-- Deltakere -->
+        <section v-if="event.people?.length" class="section">
+          <h3 class="section-heading">Deltakere</h3>
+          <div class="link-list">
+            <RouterLink
+              v-for="person in event.people"
+              :key="person.slug"
+              :to="`/person/${person.slug}`"
+              class="section-link"
+            >
+              {{ person.name }}
+            </RouterLink>
+          </div>
+        </section>
 
-    <!-- Transportmiddel -->
-    <section v-if="event.transport?.length" class="section">
-      <h3 class="section-heading">Transportmiddel</h3>
-      <div class="link-list">
-        <RouterLink
-          v-for="t in event.transport"
-          :key="t.slug"
-          :to="`/transport/${t.slug}`"
-          class="section-link"
-        >
-          {{ t.name }}
-        </RouterLink>
-      </div>
-    </section>
+        <!-- Transportmiddel -->
+        <section v-if="event.transport?.length" class="section">
+          <h3 class="section-heading">Transportmiddel</h3>
+          <div class="link-list">
+            <RouterLink
+              v-for="t in event.transport"
+              :key="t.slug"
+              :to="`/transport/${t.slug}`"
+              class="section-link"
+            >
+              {{ t.name }}
+            </RouterLink>
+          </div>
+        </section>
 
-    <!-- Galleri -->
-    <section v-if="event.gallery?.length" class="section">
-      <h3 class="section-heading">Galleri</h3>
-      <div class="carousel">
-        <button
-          v-if="event.gallery.length > 1"
-          class="carousel-btn"
-          @click="prevImage"
-        >
-          &#x2039;
-        </button>
-        <img
-          :src="currentImageUrl"
-          :alt="`${event.title} bilde ${currentImageIndex + 1}`"
-          class="carousel-img"
-        />
-        <button
-          v-if="event.gallery.length > 1"
-          class="carousel-btn"
-          @click="nextImage"
-        >
-          &#x203a;
-        </button>
-      </div>
-      <p v-if="event.gallery.length > 1" class="carousel-count">
-        {{ currentImageIndex + 1 }} / {{ event.gallery.length }}
-      </p>
-    </section>
+        <!-- Galleri -->
+        <section v-if="event.gallery?.length" class="section">
+          <h3 class="section-heading">Galleri</h3>
+          <div class="carousel">
+            <button v-if="event.gallery.length > 1" class="carousel-btn" @click="prevImage">&#x2039;</button>
+            <img :src="currentImageUrl" :alt="`${event.title} bilde ${currentImageIndex + 1}`" class="carousel-img" />
+            <button v-if="event.gallery.length > 1" class="carousel-btn" @click="nextImage">&#x203a;</button>
+          </div>
+          <p v-if="event.gallery.length > 1" class="carousel-count">
+            {{ currentImageIndex + 1 }} / {{ event.gallery.length }}
+          </p>
+        </section>
 
-    <!-- Nyttige lenker -->
-    <section v-if="event.links?.length" class="section">
-      <h3 class="section-heading">Nyttige lenker</h3>
-      <div class="link-list">
-        <a
-          v-for="link in event.links"
-          :key="link.link"
-          :href="link.link"
-          target="_blank"
-          rel="noopener noreferrer"
-          class="ext-link"
-        >{{ link.title || link.link }} <span class="ext-icon">↗</span></a>
-      </div>
-    </section>
+        <!-- Nyttige lenker -->
+        <section v-if="event.links?.length" class="section">
+          <h3 class="section-heading">Nyttige lenker</h3>
+          <div class="link-list">
+            <a
+              v-for="link in event.links"
+              :key="link.link"
+              :href="link.link"
+              target="_blank"
+              rel="noopener noreferrer"
+              class="ext-link"
+            >{{ link.title || link.link }} <span class="ext-icon">↗</span></a>
+          </div>
+        </section>
+      </template>
+
+      <!-- ── Enriched (Neo4j) ──────────────────────────────── -->
+      <EnrichedEvent
+        v-else
+        :slug="event.slug"
+        :group="event.group"
+        @select-event-slug="slug => emit('select-event-slug', slug)"
+      />
+    </AppTabs>
   </div>
 </template>
 
@@ -127,10 +124,21 @@ import { useRouter, RouterLink } from 'vue-router'
 import { SANITY_IMG } from '../config/sanity.ts'
 import { blocksToHtml } from '../utils/portableText.ts'
 import type { IdbEventDetail } from '../types/idb.ts'
+import AppTabs from './AppTabs.vue'
+import EnrichedEvent from './EnrichedEvent.vue'
+
+const TABS = [
+  { id: 'original', label: 'Original' },
+  { id: 'enriched', label: 'Beriket' },
+]
 
 const props = defineProps<{ event: IdbEventDetail }>()
+const emit  = defineEmits<{ 'select-event-slug': [slug: string] }>()
 const router = useRouter()
+const activeTab = ref('original')
 const currentImageIndex = ref(0)
+
+watch(() => props.event.slug, () => { activeTab.value = 'original' })
 
 watch(() => props.event.slug, () => { currentImageIndex.value = 0 })
 

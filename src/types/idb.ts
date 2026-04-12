@@ -110,6 +110,7 @@ export interface IdbEventDetail {
   date?: string
   organization?: string
   district?: string
+  group?: string
   description?: unknown[]   // raw SanityBlock[] — not pre-flattened
   thumbnailUrl?: string
   gallery?: IdbGalleryImage[]
