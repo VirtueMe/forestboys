@@ -33,11 +33,13 @@ const rawTransport = load<SanityDoc>('sanity-transport.json')
 const rawOrgs      = load<SanityDoc>('sanity-organization.json')
 const rawDistricts = load<SanityDoc>('sanity-district.json')
 const eventMeta    = load<{
-  _id: string
-  group: string
-  sections: Record<string, string>
-  content: string
-  logEntries: Array<{ date: string; text: string; type: 'report' | 'arrest' }>
+  _id:        string
+  group:      string
+  sections:   Record<string, string>
+  content:    string
+  logEntries: Array<{ date: string; text: string; type: 'report' | 'arrest'; offset: number }>
+  startDate?: string
+  endDate?:   string
 }>('sanity-event-meta.json')
 
 const metaById = new Map(eventMeta.map(m => [m._id, m]))
@@ -97,7 +99,7 @@ function buildSectionRows(
 }
 
 interface LogEntryRow {
-  id:   string   // eventSlug::date::index — stable merge key
+  id:   string   // eventSlug::log::date::charOffset — stable content+position key
   date: string
   text: string
   type: string   // 'report' | 'arrest'
@@ -287,16 +289,20 @@ async function main() {
         // Event node
         await tx.run(
           `MERGE (e:Event {slug: $slug})
-           SET e.title    = $title,
-               e.date     = $date,
-               e.sanityId = $id,
-               e.group    = $group`,
+           SET e.title     = $title,
+               e.date      = $date,
+               e.sanityId  = $id,
+               e.group     = $group,
+               e.startDate = $startDate,
+               e.endDate   = $endDate`,
           {
-            slug:  evSlug,
-            title: event['title'] as string,
-            date:  (event['date'] as string) ?? null,
-            id:    event['_id'] as string,
-            group: meta?.group ?? 'Unknown',
+            slug:      evSlug,
+            title:     event['title'] as string,
+            date:      (event['date'] as string) ?? null,
+            id:        event['_id'] as string,
+            group:     meta?.group ?? 'Unknown',
+            startDate: meta?.startDate ?? null,
+            endDate:   meta?.endDate   ?? null,
           },
         )
 
@@ -318,8 +324,8 @@ async function main() {
         }
 
         // LogEntry nodes — delete stale entries first, then recreate
-        const logRows: LogEntryRow[] = (meta?.logEntries ?? []).map((le, i) => ({
-          id:   `${evSlug}::log::${le.date}::${i}`,
+        const logRows: LogEntryRow[] = (meta?.logEntries ?? []).map(le => ({
+          id:   `${evSlug}::log::${le.date}::${le.offset}`,
           date: le.date,
           text: le.text,
           type: le.type,

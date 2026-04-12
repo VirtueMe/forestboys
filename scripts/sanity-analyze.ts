@@ -27,21 +27,24 @@ type Group =
   | 'Unknown'
 
 export interface LogEntry {
-  date: string              // ISO-8601: YYYY-MM-DD
-  text: string
-  type: 'report' | 'arrest' // report = leading-date ANCC log; arrest = trailing-date person record
+  date:   string              // ISO-8601: YYYY-MM-DD
+  text:   string
+  type:   'report' | 'arrest' // report = leading-date ANCC log; arrest = trailing-date person record
+  offset: number              // char offset of this line in the concatenated block text — stable ID component
 }
 
 interface EventMeta {
-  _id: string
-  slug: string
-  title: string
-  group: Group
-  extracted: Record<string, unknown>
-  sections: Record<string, string>   // Norwegian section headers parsed from description
-  content: string                    // uncategorized description text, markdown-formatted
-  logEntries: LogEntry[]             // dated ANCC / station log entries
-  issues: string[]
+  _id:        string
+  slug:       string
+  title:      string
+  group:      Group
+  extracted:  Record<string, unknown>
+  sections:   Record<string, string>   // Norwegian section headers parsed from description
+  content:    string                   // uncategorized description text, markdown-formatted
+  logEntries: LogEntry[]               // dated ANCC / station log entries
+  startDate?: string                   // ISO date — extracted from title or tidsrommet section
+  endDate?:   string                   // ISO date — end of operation/active period
+  issues:     string[]
 }
 
 // ── Portable text → plain text ────────────────────────────────────────────────
@@ -117,24 +120,30 @@ function extractLogEntries(blocks: unknown): LogEntry[] {
   if (!Array.isArray(blocks)) return []
   const entries: LogEntry[] = []
   let current: LogEntry | null = null
+  let charOffset = 0   // running char position through all block text
 
   for (const b of (blocks as SanityBlock[]).filter(b => b._type === 'block')) {
-    for (const rawLine of blockText(b).split('\n')) {
+    const raw = blockText(b)
+    const rawLines = raw.split('\n')
+
+    for (const rawLine of rawLines) {
+      const lineOffset = charOffset
+      charOffset += rawLine.length + 1  // +1 for the newline
+
       const line = rawLine.trim()
       if (!line) continue
 
       const report = line.match(LOG_DATE_RE)
       if (report) {
-        current = { date: parseLogDate(report[1], report[2], report[3]), text: report[4].trim(), type: 'report' }
+        current = { date: parseLogDate(report[1], report[2], report[3]), text: report[4].trim(), type: 'report', offset: lineOffset }
         entries.push(current)
         continue
       }
 
       const arrest = line.match(ARREST_DATE_RE)
       if (arrest) {
-        // Arrest entries don't have continuations — reset current
         current = null
-        entries.push({ date: parseLogDate(arrest[2], arrest[3], arrest[4]), text: arrest[1].trim(), type: 'arrest' })
+        entries.push({ date: parseLogDate(arrest[2], arrest[3], arrest[4]), text: arrest[1].trim(), type: 'arrest', offset: lineOffset })
         continue
       }
 
@@ -143,10 +152,12 @@ function extractLogEntries(blocks: unknown): LogEntry[] {
         current.text += ' ' + line
       }
     }
+
+    charOffset += 1  // block separator
   }
 
-  // Deduplicate by (date + first 60 chars of text) — Sanity descriptions sometimes
-  // contain the same log block in multiple places (editing artefact)
+  // Deduplicate by (date + first 60 chars of text) — guards against Sanity
+  // descriptions that contain the same log block in multiple places
   const seen = new Set<string>()
   return entries.filter(e => {
     const key = `${e.date}::${e.text.slice(0, 60)}`
@@ -425,6 +436,46 @@ function extractGeneric(title: string, _text: string, issues: string[]) {
   return extracted
 }
 
+// ── Date range extraction ─────────────────────────────────────────────────────
+
+/** Parse "DD/M-YY" or "D/M-YYYY" title date format → ISO "YYYY-MM-DD" */
+function parseTitleDate(s: string): string | null {
+  const m = s.trim().match(/^(\d{1,2})\/(\d{1,2})-(\d{2,4})$/)
+  if (!m) return null
+  return parseLogDate(m[1], m[2], m[3])
+}
+
+/**
+ * Extract a date range from:
+ *  1. RadioStation title: "S: DD/M-YY til DD/M-YY"
+ *  2. tidsrommet section: free text containing "DD/M-YY til DD/M-YY"
+ */
+function extractDateRange(
+  title: string,
+  sections: Record<string, string>,
+): { startDate?: string; endDate?: string } {
+  // Pattern 1 — RadioStation: "S: 31/1-43 til 21/5-45" or "S: 31/1-43 - 21/5-45"
+  const stationMatch = title.match(/S:\s*(\d{1,2}\/\d{1,2}-\d{2,4})\s+(?:til|-)\s+(\d{1,2}\/\d{1,2}-\d{2,4})/i)
+  if (stationMatch) {
+    const s = parseTitleDate(stationMatch[1])
+    const e = parseTitleDate(stationMatch[2])
+    if (s || e) return { ...(s ? { startDate: s } : {}), ...(e ? { endDate: e } : {}) }
+  }
+
+  // Pattern 2 — tidsrommet section: "DD/M-YY til DD/M-YY" or "DD/M-YY - DD/M-YY"
+  const tids = sections['tidsrommet']
+  if (tids) {
+    const tidsMatch = tids.match(/([\d]{1,2}\/[\d]{1,2}-[\d]{2,4})\s+(?:til|-+)\s+([\d]{1,2}\/[\d]{1,2}-[\d]{2,4})/i)
+    if (tidsMatch) {
+      const s = parseTitleDate(tidsMatch[1])
+      const e = parseTitleDate(tidsMatch[2])
+      if (s || e) return { ...(s ? { startDate: s } : {}), ...(e ? { endDate: e } : {}) }
+    }
+  }
+
+  return {}
+}
+
 // ── Main ──────────────────────────────────────────────────────────────────────
 
 const events = JSON.parse(
@@ -459,8 +510,9 @@ for (const event of events) {
 
   const { sections, content } = extractSections(event['description'])
   const logEntries = extractLogEntries(event['description'])
+  const { startDate, endDate } = extractDateRange(title, sections)
 
-  results.push({ _id: id, slug, title, group, extracted, sections, content, logEntries, issues })
+  results.push({ _id: id, slug, title, group, extracted, sections, content, logEntries, startDate, endDate, issues })
 }
 
 // ── Write output ──────────────────────────────────────────────────────────────
