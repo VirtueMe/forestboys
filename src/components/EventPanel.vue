@@ -122,7 +122,7 @@
 
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue'
-import { useRouter, RouterLink } from 'vue-router'
+import { useRoute, useRouter, RouterLink } from 'vue-router'
 import { SANITY_IMG } from '../config/sanity.ts'
 import { blocksToHtml } from '../utils/portableText.ts'
 import type { IdbEventDetail } from '../types/idb.ts'
@@ -135,8 +135,17 @@ const emit  = defineEmits<{
   'select-event-slug': [slug: string]
   'select-date':       [date: string]
 }>()
+const route  = useRoute()
 const router = useRouter()
 const activeTab        = ref('original')
+
+/** Only sync hash when event is identified by path param, not by hash */
+const canSyncHash = computed(() => !!route.params['slug'])
+
+watch(activeTab, tab => {
+  if (!canSyncHash.value) return
+  void router.replace({ hash: tab === 'enriched' ? '#beriket' : '' })
+})
 const enrichedHasData  = ref<boolean | null>(null) // null = checking, true/false = known
 const currentImageIndex = ref(0)
 
@@ -160,7 +169,7 @@ async function checkEnrichedData(slug: string) {
 }
 
 watch(() => props.event.slug, slug => {
-  activeTab.value = 'original'
+  activeTab.value = route.hash === '#beriket' ? 'enriched' : 'original'
   currentImageIndex.value = 0
   void checkEnrichedData(slug)
 }, { immediate: true })

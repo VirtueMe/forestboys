@@ -65,12 +65,19 @@ interface EventMeta {
 
 // ── Portable text → plain text ────────────────────────────────────────────────
 
+/** Join PDF line-break hyphens: "Johan-\nnessen" → "Johannessen" */
+function dehyphenate(text: string): string {
+  return text.replace(/-\n([a-zæøåA-ZÆØÅ])/g, '$1')
+}
+
 function toText(blocks: unknown): string {
   if (!Array.isArray(blocks)) return ''
-  return (blocks as Record<string, unknown>[])
-    .filter(b => b['_type'] === 'block')
-    .map(b => ((b['children'] as Record<string, unknown>[]) ?? []).map(c => (c['text'] as string) ?? '').join(''))
-    .join('\n')
+  return dehyphenate(
+    (blocks as Record<string, unknown>[])
+      .filter(b => b['_type'] === 'block')
+      .map(b => ((b['children'] as Record<string, unknown>[]) ?? []).map(c => (c['text'] as string) ?? '').join(''))
+      .join('\n')
+  )
 }
 
 // ── Section header detection ───────────────────────────────────────────────────
@@ -112,7 +119,7 @@ interface SanityBlock {
 }
 
 function blockText(b: SanityBlock): string {
-  return (b.children ?? []).map(c => c.text ?? '').join('').trim()
+  return dehyphenate((b.children ?? []).map(c => c.text ?? '').join('').trim())
 }
 
 /** Convert a single portable-text block to a markdown string */
