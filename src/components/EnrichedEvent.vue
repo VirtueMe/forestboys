@@ -324,15 +324,8 @@ watch(() => props.slug, slug => { void load(slug) }, { immediate: true })
   border-top: none;
   padding-left: 16px;
 }
-.mission-brief .section-text {
-  max-height: 240px;
-  overflow-y: auto;
-}
-
 /* ── Content section ──────────────────────────────────────────── */
 .content-section .section-text {
-  max-height: 180px;
-  overflow-y: auto;
   color: var(--color-muted);
   font-size: 12px;
 }

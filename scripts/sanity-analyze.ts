@@ -8,6 +8,14 @@
 import { readFileSync, writeFileSync } from 'fs'
 import { resolve } from 'path'
 
+// ── People-section headers ─────────────────────────────────────────────────────
+
+/** Section keys that contain person names and should be matched against the person DB */
+const PEOPLE_SECTION_KEYS = new Set([
+  'bemanning', 'crew', 'mannskap', 'styrke', 'agenter',
+  'passasjerer', 'landsatte', 'personell', 'deltakere', 'squad',
+])
+
 // ── Types ─────────────────────────────────────────────────────────────────────
 
 type Group =
@@ -33,18 +41,26 @@ export interface LogEntry {
   offset: number              // char offset of this line in the concatenated block text — stable ID component
 }
 
-interface EventMeta {
-  _id:        string
+export interface MentionedPerson {
   slug:       string
-  title:      string
-  group:      Group
-  extracted:  Record<string, unknown>
-  sections:   Record<string, string>   // Norwegian section headers parsed from description
-  content:    string                   // uncategorized description text, markdown-formatted
-  logEntries: LogEntry[]               // dated ANCC / station log entries
-  startDate?: string                   // ISO date — extracted from title or tidsrommet section
-  endDate?:   string                   // ISO date — end of operation/active period
-  issues:     string[]
+  name:       string
+  section:    string              // which section header the name was found in
+  confidence: 'high' | 'medium'  // high = exact name match; medium = unique last-name match
+}
+
+interface EventMeta {
+  _id:              string
+  slug:             string
+  title:            string
+  group:            Group
+  extracted:        Record<string, unknown>
+  sections:         Record<string, string>   // Norwegian section headers parsed from description
+  content:          string                   // uncategorized description text, markdown-formatted
+  logEntries:       LogEntry[]               // dated ANCC / station log entries
+  mentionedPeople:  MentionedPerson[]        // people named in sections, matched against person DB
+  startDate?:       string                   // ISO date — extracted from title or tidsrommet section
+  endDate?:         string                   // ISO date — end of operation/active period
+  issues:           string[]
 }
 
 // ── Portable text → plain text ────────────────────────────────────────────────
@@ -70,6 +86,23 @@ const SECTION_HEADER_MAP: Record<string, string> = {
   tidsrommet:       'tidsrommet',
   arbeidsomr:       'arbeidsomraade',   // prefix match for Arbeidsområdet/Arbeidsomrade
   resultat:         'resultat',
+  // Source citations
+  kilde:            'kilde',
+  kilder:           'kilde',
+  source:           'kilde',
+  sources:          'kilde',
+  // People-bearing sections
+  bemanning:        'bemanning',
+  crew:             'crew',
+  mannskap:         'mannskap',
+  styrke:           'styrke',
+  agenter:          'agenter',
+  agents:           'agenter',
+  passasjerer:      'passasjerer',
+  passengers:       'passasjerer',
+  landsatte:        'landsatte',
+  landsatt:         'landsatte',
+  squad:            'squad',
 }
 
 interface SanityBlock {
@@ -476,11 +509,139 @@ function extractDateRange(
   return {}
 }
 
+// ── Person name matching ──────────────────────────────────────────────────────
+
+interface PersonRecord { slug: string; name: string }
+
+/** Rank/role prefixes to strip before attempting name match */
+const RANK_RE = /^(?:captain|capt\.?|lt\.?|col\.?|major|sgt\.?|cpl\.?|pvt\.?|f\/o|w\/o|p\/o|f\/lt|s\/ldr|g\/cpt|f\/sgt|flt\.?|sqn\/ldr|wof|flg\s*off|air\s*cdre?|cmdr?|mr\.?|mrs\.?|ms\.?|1\.\s*off(?:icer)?|kvm|k\/v|kaptein|kpl|løytnant|fenrik|sjømann|telegrafist|styrmann|rorsmann|navigatør|mekaniker|maskinmester|motormann|skipsfører|k\/o|o\/c)\s+/i
+
+function normalizeName(s: string): string {
+  return s.trim().toLowerCase()
+    .replace(/\./g, ' ')
+    .replace(/[,;/-]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+}
+
+function cleanCandidate(line: string): string {
+  return line
+    .replace(/^[a-z]\/[a-z][:\s]+/i, '')  // strip inline role labels: k/o:, a:, b:
+    .replace(RANK_RE, '')                  // strip rank prefix (requires trailing whitespace)
+    .replace(/^[a-z]{1,4}[:\s]+/, '')      // strip remaining lowercase short role labels (kvm:, etc.)
+    .replace(/\(.*?\)/g, '')               // strip parentheticals
+    .replace(/\b\d{2,}\b/g, '')            // strip numbers ≥2 digits (serial numbers, years)
+    .replace(/[,;/]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+}
+
+interface PersonIndex {
+  byNormName: Map<string, PersonRecord[]>
+  byLastWord: Map<string, PersonRecord[]>
+}
+
+/**
+ * Strip trailing all-caps tokens (rank/org suffixes like "NNIU", "Lt", "Kpl")
+ * that editors sometimes append to person names in the DB.
+ * e.g. "Per Danielsen  NNIU" → "Per Danielsen"
+ */
+function stripTrailingSuffix(s: string): string {
+  return s.replace(/\s+[A-ZÆØÅ][A-ZÆØÅ./-]{0,20}(\s+[A-ZÆØÅ][A-ZÆØÅ./-]{0,20})*\s*$/, '').trim()
+}
+
+function buildPersonIndex(people: PersonRecord[]): PersonIndex {
+  const byNormName = new Map<string, PersonRecord[]>()
+  const byLastWord = new Map<string, PersonRecord[]>()
+
+  for (const p of people) {
+    const norm = normalizeName(p.name)
+    // Also index by name with trailing suffixes stripped
+    const normCleaned = normalizeName(stripTrailingSuffix(p.name.replace(RANK_RE, '')))
+    // Strip rank from the DB name before indexing by last word
+    const stripped = normCleaned
+
+    for (const key of new Set([norm, normCleaned])) {
+      if (!byNormName.has(key)) byNormName.set(key, [])
+      if (!byNormName.get(key)!.find(x => x.slug === p.slug))
+        byNormName.get(key)!.push(p)
+    }
+
+    const words = stripped.split(' ').filter(w => w.length >= 2)
+    if (words.length > 0) {
+      const last = words[words.length - 1]
+      if (!byLastWord.has(last)) byLastWord.set(last, [])
+      if (!byLastWord.get(last)!.find(x => x.slug === p.slug))
+        byLastWord.get(last)!.push(p)
+    }
+  }
+
+  return { byNormName, byLastWord }
+}
+
+function matchPeopleInSections(
+  sections: Record<string, string>,
+  index: PersonIndex,
+): MentionedPerson[] {
+  const results: MentionedPerson[] = []
+  const seenSlugs = new Set<string>()
+
+  for (const [sectionKey, sectionText] of Object.entries(sections)) {
+    if (!PEOPLE_SECTION_KEYS.has(sectionKey)) continue
+
+    const candidates = sectionText
+      .split('\n')
+      .map(l => l.trim())
+      .filter(l => l.length > 2 && !/^\d/.test(l))
+
+    for (const raw of candidates) {
+      const cleaned = cleanCandidate(raw)
+      if (!cleaned || cleaned.length < 3) continue
+
+      const norm = normalizeName(cleaned)
+
+      // 1. Exact normalized full-name match
+      const exact = index.byNormName.get(norm)
+      if (exact?.length === 1) {
+        const p = exact[0]
+        if (!seenSlugs.has(p.slug)) {
+          seenSlugs.add(p.slug)
+          results.push({ slug: p.slug, name: p.name, section: sectionKey, confidence: 'high' })
+        }
+        continue
+      }
+
+      // 2. Unique last-word (last name) match
+      const words = norm.split(' ').filter(w => w.length >= 2)
+      if (words.length === 0) continue
+      const lastWord = words[words.length - 1]
+      const byLast = index.byLastWord.get(lastWord)
+      if (byLast?.length === 1) {
+        const p = byLast[0]
+        if (!seenSlugs.has(p.slug)) {
+          seenSlugs.add(p.slug)
+          results.push({ slug: p.slug, name: p.name, section: sectionKey, confidence: 'medium' })
+        }
+      }
+    }
+  }
+
+  return results
+}
+
 // ── Main ──────────────────────────────────────────────────────────────────────
 
 const events = JSON.parse(
   readFileSync(resolve(process.cwd(), 'data/sanity-event.json'), 'utf-8')
 ) as Record<string, unknown>[]
+
+const rawPeople = JSON.parse(
+  readFileSync(resolve(process.cwd(), 'data/sanity-person.json'), 'utf-8')
+) as Array<{ name?: string; slug?: { current?: string } }>
+const personRecords: PersonRecord[] = rawPeople
+  .filter(p => p.name && p.slug?.current)
+  .map(p => ({ name: p.name!.trim(), slug: p.slug!.current! }))
+const personIndex = buildPersonIndex(personRecords)
 
 const groupCounts: Record<string, number> = {}
 const results: EventMeta[] = []
@@ -509,10 +670,11 @@ for (const event of events) {
   })()
 
   const { sections, content } = extractSections(event['description'])
-  const logEntries = extractLogEntries(event['description'])
+  const logEntries      = extractLogEntries(event['description'])
+  const mentionedPeople = matchPeopleInSections(sections, personIndex)
   const { startDate, endDate } = extractDateRange(title, sections)
 
-  results.push({ _id: id, slug, title, group, extracted, sections, content, logEntries, startDate, endDate, issues })
+  results.push({ _id: id, slug, title, group, extracted, sections, content, logEntries, mentionedPeople, startDate, endDate, issues })
 }
 
 // ── Write output ──────────────────────────────────────────────────────────────
@@ -553,8 +715,12 @@ for (const [key, count] of Object.entries(sectionCounts).sort((a, b) => b[1] - a
   console.log(`  ${key.padEnd(20)} ${String(count).padStart(5)}`)
 }
 
-const withContent    = results.filter(r => r.content.length > 0).length
-const totalLogEntries = results.reduce((n, r) => n + r.logEntries.length, 0)
-const withLogEntries  = results.filter(r => r.logEntries.length > 0).length
+const withContent         = results.filter(r => r.content.length > 0).length
+const totalLogEntries     = results.reduce((n, r) => n + r.logEntries.length, 0)
+const withLogEntries      = results.filter(r => r.logEntries.length > 0).length
+const totalMentioned      = results.reduce((n, r) => n + r.mentionedPeople.length, 0)
+const withMentioned       = results.filter(r => r.mentionedPeople.length > 0).length
+const highConf            = results.reduce((n, r) => n + r.mentionedPeople.filter(p => p.confidence === 'high').length, 0)
 console.log(`\nUncategorized content: ${withContent} events`)
 console.log(`Log entries: ${totalLogEntries} total across ${withLogEntries} events`)
+console.log(`Mentioned people: ${totalMentioned} matches (${highConf} high-confidence) across ${withMentioned} events`)
