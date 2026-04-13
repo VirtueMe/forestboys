@@ -211,6 +211,11 @@ function normName(s: string): string {
   return s.trim().toLowerCase().replace(/[.,\-/]/g, ' ').replace(/\s+/g, ' ')
 }
 
+/** Collapse consecutive duplicate consonants: "Johannessen" → "Johannesen" */
+function dedup(s: string): string {
+  return s.replace(/([bcdfghjklmnpqrstvwxyzæøå])\1+/gi, '$1')
+}
+
 /** Try to match a short string against directPeople; returns slug or null */
 function matchPerson(line: string): { text: string; slug: string | null } {
   const clean = line.trim()
@@ -218,11 +223,17 @@ function matchPerson(line: string): { text: string; slug: string | null } {
   const norm = normName(clean)
   for (const p of directPeople.value) {
     const pNorm = normName(p.name)
+    // 1. Exact normalized match
     if (pNorm === norm) return { text: p.name, slug: p.slug }
-    const cLast = norm.split(' ').filter(w => w.length >= 2).at(-1)
-    const pLast = pNorm.split(' ').filter(w => w.length >= 2).at(-1)
-    if (cLast && pLast && cLast === pLast && norm.length > 2)
-      return { text: p.name, slug: p.slug }
+    const cWords = norm.split(' ').filter(w => w.length >= 2)
+    const pWords = pNorm.split(' ').filter(w => w.length >= 2)
+    const cLast = cWords.at(-1)
+    const pLast = pWords.at(-1)
+    if (!cLast || !pLast) continue
+    // 2. Unique last-word match
+    if (cLast === pLast && norm.length > 2) return { text: p.name, slug: p.slug }
+    // 3. Double-consonant normalised last-word (Johannessen ↔ Johannesen)
+    if (dedup(cLast) === dedup(pLast) && norm.length > 2) return { text: p.name, slug: p.slug }
   }
   return { text: clean, slug: null }
 }
