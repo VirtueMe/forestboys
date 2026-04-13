@@ -1,0 +1,8 @@
+name = "forestboys"
+compatibility_date = "2024-01-01"
+pages_build_output_dir = "dist"
+
+[[d1_databases]]
+binding = "milorg_users"
+database_name = "milorg-users"
+database_id = "c84e9e9e-47aa-4dc0-9e6d-fc7ab7497326"
