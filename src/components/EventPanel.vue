@@ -112,6 +112,7 @@
         v-else
         :slug="event.slug"
         :gallery="event.gallery"
+        :links="event.links"
         @select-event-slug="slug => emit('select-event-slug', slug)"
         @select-date="date => emit('select-date', date)"
       />

@@ -21,7 +21,20 @@
         :class="{ 'mission-brief': sec.type === 'oppdrag' }"
       >
         <h3 class="section-heading">{{ sec.heading }}</h3>
-        <p class="section-text">{{ sec.body }}</p>
+        <!-- People-bearing sections: segmented name list + narrative -->
+        <div v-if="PEOPLE_SECTION_KEYS.has(sec.type)" class="people-section-body">
+          <template v-for="(seg, i) in segmentPeopleSection(sec.body)" :key="i">
+            <RouterLink
+              v-if="seg.type === 'name-linked'"
+              :to="`/person/${seg.slug}`"
+              class="people-name people-name--linked"
+            >{{ seg.text }}</RouterLink>
+            <span v-else-if="seg.type === 'name-plain'" class="people-name people-name--plain">{{ seg.text }}</span>
+            <p v-else-if="seg.type === 'note'" class="people-note">{{ seg.text }}</p>
+            <p v-else class="people-prose">{{ seg.text }}</p>
+          </template>
+        </div>
+        <p v-else class="section-text">{{ sec.body }}</p>
       </section>
 
       <!-- Uncategorized description content -->
@@ -98,10 +111,19 @@
         </div>
       </section>
 
-      <!-- Sources (kilde) -->
-      <section v-if="kildeSection" class="section kilde-section">
+      <!-- Sources (nyttige lenker) -->
+      <section v-if="links?.length" class="section kilde-section">
         <h3 class="section-heading">Kilder</h3>
-        <p class="kilde-text">{{ kildeSection.body }}</p>
+        <div class="kilde-list">
+          <a
+            v-for="link in links"
+            :key="link._key"
+            :href="link.link"
+            target="_blank"
+            rel="noopener noreferrer"
+            class="kilde-link"
+          >{{ link.title || link.link }} <span class="kilde-ext">↗</span></a>
+        </div>
       </section>
 
       <!-- Gallery -->
@@ -138,9 +160,12 @@ import { neo4jQuery } from '../composables/useNeo4j.ts'
 import { SANITY_IMG } from '../config/sanity.ts'
 import type { IdbGalleryImage } from '../types/idb.ts'
 
+interface EventLink { _key: string; title?: string; link: string }
+
 const props = defineProps<{
   slug:     string
   gallery?: IdbGalleryImage[]
+  links?:   EventLink[]
 }>()
 const emit  = defineEmits<{
   'select-event-slug': [slug: string]
@@ -163,20 +188,86 @@ const eventGroup = ref<string | null>(null)
 const startDate  = ref<string | null>(null)
 const endDate    = ref<string | null>(null)
 
-interface SectionNode  { type: string; heading: string; body: string; importance: number }
-interface LogEntryNode { date: string; text: string; type: string }
-interface RelatedEvent { slug: string; title: string; date: string; group: string; shared: number }
-interface PersonNode   { slug: string; name: string; shared: number }
+interface SectionNode      { type: string; heading: string; body: string; importance: number }
+interface LogEntryNode     { date: string; text: string; type: string }
+interface RelatedEvent     { slug: string; title: string; date: string; group: string; shared: number }
+interface PersonNode       { slug: string; name: string; shared: number }
+interface DirectPersonNode { slug: string; name: string }
+
+const PEOPLE_SECTION_KEYS = new Set([
+  'bemanning', 'crew', 'mannskap', 'styrke', 'agenter',
+  'passasjerer', 'landsatte', 'personell', 'deltakere', 'squad',
+])
 
 const allSections     = ref<SectionNode[]>([])
 const logEntries      = ref<LogEntryNode[]>([])
 const relatedEvents   = ref<RelatedEvent[]>([])
 const colocatedEvents = ref<RelatedEvent[]>([])
 const peopleNetwork   = ref<PersonNode[]>([])
+const directPeople    = ref<DirectPersonNode[]>([])
+
+/** Normalise a name for loose matching: lowercase, collapse whitespace, strip punctuation */
+function normName(s: string): string {
+  return s.trim().toLowerCase().replace(/[.,\-/]/g, ' ').replace(/\s+/g, ' ')
+}
+
+/** Try to match a short string against directPeople; returns slug or null */
+function matchPerson(line: string): { text: string; slug: string | null } {
+  const clean = line.trim()
+  if (!clean) return { text: clean, slug: null }
+  const norm = normName(clean)
+  for (const p of directPeople.value) {
+    const pNorm = normName(p.name)
+    if (pNorm === norm) return { text: p.name, slug: p.slug }
+    const cLast = norm.split(' ').filter(w => w.length >= 2).at(-1)
+    const pLast = pNorm.split(' ').filter(w => w.length >= 2).at(-1)
+    if (cLast && pLast && cLast === pLast && norm.length > 2)
+      return { text: p.name, slug: p.slug }
+  }
+  return { text: clean, slug: null }
+}
+
+type LineType = 'name-linked' | 'name-plain' | 'note' | 'prose'
+interface SectionLine { type: LineType; text: string; slug?: string }
+
+/** Segment a people-bearing section body into typed lines for rendering */
+function segmentPeopleSection(body: string): SectionLine[] {
+  const result: SectionLine[] = []
+  for (const raw of body.split('\n')) {
+    const line = raw.trim()
+    if (!line) continue
+
+    // Parenthetical editorial notes
+    if (line.startsWith('(')) {
+      result.push({ type: 'note', text: line })
+      continue
+    }
+
+    // Try person match
+    const m = matchPerson(line)
+    if (m.slug) {
+      result.push({ type: 'name-linked', text: m.text, slug: m.slug })
+      continue
+    }
+
+    // Short capitalised line with no sentence structure → unlinked name
+    const looksLikeName =
+      line.length <= 55 &&
+      /^[A-ZÆØÅ]/.test(line) &&
+      !/\s(var|ble|har|som|og|med|til|fra|på|i|er|det|han|hun|de|den)\s/.test(line)
+
+    if (looksLikeName) {
+      result.push({ type: 'name-plain', text: line })
+      continue
+    }
+
+    result.push({ type: 'prose', text: line })
+  }
+  return result
+}
 
 const namedSections  = computed(() => allSections.value.filter(s => s.type !== 'content' && s.type !== 'kilde'))
 const contentSection = computed(() => allSections.value.find(s => s.type === 'content') ?? null)
-const kildeSection   = computed(() => allSections.value.find(s => s.type === 'kilde') ?? null)
 
 const isEmpty = computed(() =>
   !namedSections.value.length &&
@@ -185,7 +276,7 @@ const isEmpty = computed(() =>
   !relatedEvents.value.length &&
   !colocatedEvents.value.length &&
   !peopleNetwork.value.length &&
-  !kildeSection.value &&
+  !props.links?.length &&
   !props.gallery?.length,
 )
 
@@ -230,9 +321,10 @@ async function load(slug: string) {
   relatedEvents.value   = []
   colocatedEvents.value = []
   peopleNetwork.value   = []
+  directPeople.value    = []
 
   try {
-    const [meta, secs, logs, related, colocated, people] = await Promise.all([
+    const [meta, secs, logs, related, colocated, people, direct] = await Promise.all([
       // Event group + date range
       neo4jQuery<{ group: string; startDate: string | null; endDate: string | null }>(
         `MATCH (e:Event {slug: $slug}) RETURN e.group AS group, e.startDate AS startDate, e.endDate AS endDate`,
@@ -282,6 +374,13 @@ async function load(slug: string) {
          LIMIT 12`,
         { slug },
       ),
+      // Direct participants
+      neo4jQuery<DirectPersonNode>(
+        `MATCH (e:Event {slug: $slug})-[:INVOLVED]->(p:Person)
+         RETURN p.slug AS slug, p.name AS name
+         ORDER BY p.name`,
+        { slug },
+      ),
     ])
 
     eventGroup.value      = meta[0]?.group ?? null
@@ -292,6 +391,7 @@ async function load(slug: string) {
     relatedEvents.value   = related
     colocatedEvents.value = colocated
     peopleNetwork.value   = people
+    directPeople.value    = direct
 
     emit('has-data',
       secs.length > 0 || logs.length > 0 ||
@@ -530,17 +630,66 @@ watch(() => props.slug, slug => { void load(slug) }, { immediate: true })
   border-radius: 8px;
 }
 
+/* ── People section body ──────────────────────────────────────── */
+.people-section-body {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.people-name {
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.6;
+}
+.people-name--linked {
+  color: var(--color-navy);
+  text-decoration: none;
+}
+.people-name--linked:hover { text-decoration: underline; }
+.people-name--plain {
+  color: var(--color-text);
+}
+
+.people-note {
+  font-size: 12px;
+  color: var(--color-muted);
+  font-style: italic;
+  margin: 6px 0 2px;
+  line-height: 1.6;
+}
+
+.people-prose {
+  font-size: 13px;
+  color: var(--color-text);
+  line-height: 1.75;
+  margin: 6px 0 0;
+  white-space: pre-wrap;
+}
+
 /* ── Sources (kilde) ──────────────────────────────────────────── */
 .kilde-section {
   background: color-mix(in srgb, var(--color-border) 30%, var(--color-surface));
 }
 
-.kilde-text {
-  font-size: 11px;
-  line-height: 1.7;
-  color: var(--color-muted);
-  margin: 0;
-  white-space: pre-wrap;
+.kilde-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.kilde-link {
+  font-size: 12px;
+  color: var(--color-navy);
+  text-decoration: none;
+  line-height: 1.5;
+  word-break: break-word;
+}
+.kilde-link:hover { text-decoration: underline; }
+
+.kilde-ext {
+  font-size: 10px;
+  opacity: 0.6;
 }
 
 /* ── Gallery ──────────────────────────────────────────────────── */
