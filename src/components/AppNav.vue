@@ -16,6 +16,19 @@
         </router-link>
       </div>
 
+      <!-- Login / access button -->
+      <router-link to="/access" class="access-btn" :aria-label="user ? user.name : 'Logg inn'">
+        <template v-if="user">
+          <span class="access-initials">{{ user.name.charAt(0).toUpperCase() }}</span>
+        </template>
+        <template v-else>
+          <svg class="access-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+            <circle cx="12" cy="8" r="4" />
+            <path d="M4 20c0-4 3.6-7 8-7s8 3 8 7" />
+          </svg>
+        </template>
+      </router-link>
+
       <!-- Mobile hamburger -->
       <button class="burger" :aria-label="open ? 'Lukk meny' : 'Åpne meny'" @click="open = !open">
         <span class="burger-icon">{{ open ? '✕' : '≡' }}</span>
@@ -44,6 +57,7 @@
 <script setup lang="ts">
 import { ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
+import { useAuth } from '../composables/useAuth.ts'
 
 interface NavItem {
   label: string
@@ -62,6 +76,7 @@ const navItems: NavItem[] = [
 
 const route = useRoute()
 const open = ref(false)
+const { user } = useAuth()
 
 watch(() => route.path, () => { open.value = false })
 
@@ -145,12 +160,48 @@ function isActive(item: NavItem): boolean {
   background: var(--color-bg);
 }
 
+/* Access / login button */
+.access-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-left: auto;
+  flex-shrink: 0;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  color: var(--color-navy);
+  text-decoration: none;
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  transition: opacity 0.1s;
+}
+
+.access-btn:hover { opacity: 0.75; }
+.access-btn.router-link-active { border-color: var(--color-navy); }
+
+.access-initials {
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.access-icon {
+  width: 16px;
+  height: 16px;
+}
+
+@media (min-width: 768px) {
+  .access-btn {
+    margin-left: 0;
+  }
+}
+
 /* Mobile hamburger */
 .burger {
   display: flex;
   align-items: center;
   justify-content: center;
-  margin-left: auto;
   background: none;
   border: none;
   cursor: pointer;

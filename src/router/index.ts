@@ -12,6 +12,7 @@ import OutlinesView  from '../pages/OutlinesView.vue'
 import OutlineDetail from '../pages/OutlineDetail.vue'
 import RegistreView  from '../pages/RegistreView.vue'
 import AboutView     from '../pages/AboutView.vue'
+import AccessView    from '../pages/AccessView.vue'
 
 const MAP_PARAMS = ['lat', 'lng', 'z', 'orgs', 'dists', 'q', 'si']
 
@@ -39,6 +40,7 @@ const router = createRouter({
     { path: '/outlines/:slug',          component: OutlineDetail },
     { path: '/registre',               component: RegistreView },
     { path: '/about',                   component: AboutView },
+    { path: '/access',                  component: AccessView },
   ],
 })
 
