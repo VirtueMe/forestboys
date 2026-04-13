@@ -33,13 +33,14 @@ const rawTransport = load<SanityDoc>('sanity-transport.json')
 const rawOrgs      = load<SanityDoc>('sanity-organization.json')
 const rawDistricts = load<SanityDoc>('sanity-district.json')
 const eventMeta    = load<{
-  _id:        string
-  group:      string
-  sections:   Record<string, string>
-  content:    string
-  logEntries: Array<{ date: string; text: string; type: 'report' | 'arrest'; offset: number }>
-  startDate?: string
-  endDate?:   string
+  _id:             string
+  group:           string
+  sections:        Record<string, string>
+  content:         string
+  logEntries:      Array<{ date: string; text: string; type: 'report' | 'arrest'; offset: number }>
+  mentionedPeople: Array<{ slug: string; name: string; section: string; confidence: 'high' | 'medium' }>
+  startDate?:      string
+  endDate?:        string
 }>('sanity-event-meta.json')
 
 const metaById = new Map(eventMeta.map(m => [m._id, m]))
@@ -400,7 +401,7 @@ async function main() {
           }
         }
 
-        // People
+        // People — structured refs from Sanity
         const people = (event['people'] ?? []) as SanityDoc[]
         for (const person of people) {
           const pSlug = personSlugById.get(ref(person) ?? '')
@@ -409,6 +410,16 @@ async function main() {
             `MATCH (e:Event {slug: $evSlug}), (p:Person {slug: $pSlug})
              MERGE (e)-[:INVOLVED]->(p)`,
             { evSlug, pSlug },
+          )
+          relCount++
+        }
+
+        // People — text-extracted mentions from description sections
+        for (const mention of (meta?.mentionedPeople ?? [])) {
+          await tx.run(
+            `MATCH (e:Event {slug: $evSlug}), (p:Person {slug: $pSlug})
+             MERGE (e)-[:INVOLVED]->(p)`,
+            { evSlug, pSlug: mention.slug },
           )
           relCount++
         }

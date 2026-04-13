@@ -111,6 +111,7 @@
       <EnrichedEvent
         v-else
         :slug="event.slug"
+        :gallery="event.gallery"
         @select-event-slug="slug => emit('select-event-slug', slug)"
         @select-date="date => emit('select-date', date)"
       />

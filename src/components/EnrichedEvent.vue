@@ -1,8 +1,12 @@
 <template>
   <div class="enriched-event">
-    <!-- Group badge -->
+    <!-- Group badge + date range -->
     <div class="group-badge-row">
       <span class="group-badge" :class="groupClass">{{ groupLabel }}</span>
+      <span v-if="startDate || endDate" class="date-range">
+        {{ startDate ? formatDate(startDate) : '?' }}
+        <span v-if="endDate"> — {{ formatDate(endDate) }}</span>
+      </span>
     </div>
 
     <div v-if="loading" class="loading">Laster graf…</div>
@@ -94,6 +98,32 @@
         </div>
       </section>
 
+      <!-- Sources (kilde) -->
+      <section v-if="kildeSection" class="section kilde-section">
+        <h3 class="section-heading">Kilder</h3>
+        <p class="kilde-text">{{ kildeSection.body }}</p>
+      </section>
+
+      <!-- Gallery -->
+      <section v-if="gallery?.length" class="section">
+        <h3 class="section-heading">Bilder ({{ gallery.length }})</h3>
+        <div class="gallery-strip">
+          <div
+            v-for="(img, i) in gallery"
+            :key="img._key"
+            class="gallery-item"
+            :class="{ 'gallery-item--active': i === activeImage }"
+            @click="activeImage = i"
+          >
+            <img :src="imageUrl(img)" :alt="img.caption ?? ''" class="gallery-thumb" />
+          </div>
+        </div>
+        <div v-if="gallery.length > 0" class="gallery-full">
+          <img :src="imageUrl(gallery[activeImage])" :alt="gallery[activeImage].caption ?? ''" class="gallery-main" />
+          <p v-if="gallery[activeImage].caption" class="gallery-caption">{{ gallery[activeImage].caption }}</p>
+        </div>
+      </section>
+
       <p v-if="isEmpty" class="empty">
         Ingen graf-relasjoner funnet for denne hendelsen.
       </p>
@@ -105,17 +135,33 @@
 import { ref, watch, computed } from 'vue'
 import { RouterLink } from 'vue-router'
 import { neo4jQuery } from '../composables/useNeo4j.ts'
+import { SANITY_IMG } from '../config/sanity.ts'
+import type { IdbGalleryImage } from '../types/idb.ts'
 
-const props = defineProps<{ slug: string }>()
+const props = defineProps<{
+  slug:     string
+  gallery?: IdbGalleryImage[]
+}>()
 const emit  = defineEmits<{
   'select-event-slug': [slug: string]
   'select-date':       [date: string]   // ISO date clicked in log
   'has-data':          [value: boolean]
 }>()
 
+const activeImage = ref(0)
+
+function imageUrl(img: IdbGalleryImage): string {
+  const path = (img.asset._ref).replace(/^image-/, '').replace(/-([a-z]+)$/, '.$1')
+  return `${SANITY_IMG}/${path}?w=900&auto=format`
+}
+
+watch(() => props.slug, () => { activeImage.value = 0 })
+
 const loading    = ref(false)
 const error      = ref<string | null>(null)
 const eventGroup = ref<string | null>(null)
+const startDate  = ref<string | null>(null)
+const endDate    = ref<string | null>(null)
 
 interface SectionNode  { type: string; heading: string; body: string; importance: number }
 interface LogEntryNode { date: string; text: string; type: string }
@@ -128,8 +174,9 @@ const relatedEvents   = ref<RelatedEvent[]>([])
 const colocatedEvents = ref<RelatedEvent[]>([])
 const peopleNetwork   = ref<PersonNode[]>([])
 
-const namedSections  = computed(() => allSections.value.filter(s => s.type !== 'content'))
+const namedSections  = computed(() => allSections.value.filter(s => s.type !== 'content' && s.type !== 'kilde'))
 const contentSection = computed(() => allSections.value.find(s => s.type === 'content') ?? null)
+const kildeSection   = computed(() => allSections.value.find(s => s.type === 'kilde') ?? null)
 
 const isEmpty = computed(() =>
   !namedSections.value.length &&
@@ -137,7 +184,9 @@ const isEmpty = computed(() =>
   !logEntries.value.length &&
   !relatedEvents.value.length &&
   !colocatedEvents.value.length &&
-  !peopleNetwork.value.length,
+  !peopleNetwork.value.length &&
+  !kildeSection.value &&
+  !props.gallery?.length,
 )
 
 const GROUP_LABELS: Record<string, string> = {
@@ -174,6 +223,8 @@ async function load(slug: string) {
   loading.value = true
   error.value   = null
   eventGroup.value      = null
+  startDate.value       = null
+  endDate.value         = null
   allSections.value     = []
   logEntries.value      = []
   relatedEvents.value   = []
@@ -182,9 +233,9 @@ async function load(slug: string) {
 
   try {
     const [meta, secs, logs, related, colocated, people] = await Promise.all([
-      // Event group
-      neo4jQuery<{ group: string }>(
-        `MATCH (e:Event {slug: $slug}) RETURN e.group AS group`,
+      // Event group + date range
+      neo4jQuery<{ group: string; startDate: string | null; endDate: string | null }>(
+        `MATCH (e:Event {slug: $slug}) RETURN e.group AS group, e.startDate AS startDate, e.endDate AS endDate`,
         { slug },
       ),
       // Section nodes ordered by importance
@@ -234,6 +285,8 @@ async function load(slug: string) {
     ])
 
     eventGroup.value      = meta[0]?.group ?? null
+    startDate.value       = meta[0]?.startDate ?? null
+    endDate.value         = meta[0]?.endDate ?? null
     allSections.value     = secs
     logEntries.value      = logs
     relatedEvents.value   = related
@@ -260,6 +313,15 @@ watch(() => props.slug, slug => { void load(slug) }, { immediate: true })
 
 .group-badge-row {
   padding: 12px 20px 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.date-range {
+  font-size: 11px;
+  color: var(--color-muted);
 }
 
 .group-badge {
@@ -466,5 +528,68 @@ watch(() => props.slug, slug => { void load(slug) }, { immediate: true })
   background: var(--color-surface);
   padding: 1px 5px;
   border-radius: 8px;
+}
+
+/* ── Sources (kilde) ──────────────────────────────────────────── */
+.kilde-section {
+  background: color-mix(in srgb, var(--color-border) 30%, var(--color-surface));
+}
+
+.kilde-text {
+  font-size: 11px;
+  line-height: 1.7;
+  color: var(--color-muted);
+  margin: 0;
+  white-space: pre-wrap;
+}
+
+/* ── Gallery ──────────────────────────────────────────────────── */
+.gallery-strip {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  padding-bottom: 6px;
+  margin-bottom: 10px;
+}
+
+.gallery-item {
+  flex-shrink: 0;
+  width: 64px;
+  height: 64px;
+  border-radius: 4px;
+  overflow: hidden;
+  cursor: pointer;
+  border: 2px solid transparent;
+  opacity: 0.65;
+  transition: opacity 0.15s, border-color 0.15s;
+}
+
+.gallery-item--active,
+.gallery-item:hover {
+  opacity: 1;
+  border-color: var(--color-navy);
+}
+
+.gallery-thumb {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.gallery-main {
+  width: 100%;
+  max-height: 340px;
+  object-fit: contain;
+  display: block;
+  border-radius: 4px;
+  background: var(--color-border);
+}
+
+.gallery-caption {
+  font-size: 11px;
+  color: var(--color-muted);
+  text-align: center;
+  margin: 6px 0 0;
 }
 </style>
