@@ -303,10 +303,14 @@ function nextImage() {
 
 .hero-img {
   width: 100%;
-  height: 340px;
+  height: 280px;
   object-fit: cover;
   object-position: center 20%;
   display: block;
+}
+
+@media (max-width: 480px) {
+  .hero-img { height: 200px; }
 }
 
 /* ── Page header ────────────────────────────────────────────── */
@@ -317,12 +321,14 @@ function nextImage() {
 }
 
 .back-link {
-  display: inline-block;
+  display: inline-flex;
+  align-items: center;
+  min-height: 36px;
   font-size: 13px;
   font-weight: 600;
   color: var(--color-navy);
   text-decoration: none;
-  margin-bottom: 10px;
+  margin-bottom: 6px;
 }
 .back-link:hover { text-decoration: underline; }
 
@@ -332,6 +338,7 @@ function nextImage() {
   color: var(--color-text);
   margin: 0 0 4px;
   line-height: 1.25;
+  overflow-wrap: break-word;
 }
 
 .person-meta {
@@ -378,9 +385,10 @@ function nextImage() {
   font-size: 11px;
   font-weight: 600;
   color: var(--color-muted);
-  padding: 2px 8px;
+  padding: 6px 10px;
   cursor: pointer;
   white-space: nowrap;
+  touch-action: manipulation;
 }
 .sort-btn:hover { border-color: var(--color-navy); color: var(--color-navy); }
 
@@ -436,8 +444,9 @@ function nextImage() {
 .event-item {
   display: flex;
   align-items: baseline;
-  gap: 10px;
-  padding: 6px 8px;
+  flex-wrap: wrap;
+  gap: 4px 10px;
+  padding: 8px 8px;
   margin: 0 -8px;
   text-decoration: none;
   color: var(--color-text);
@@ -471,6 +480,15 @@ function nextImage() {
   flex-shrink: 0;
   flex-wrap: wrap;
   justify-content: flex-end;
+  margin-left: auto;
+}
+
+@media (max-width: 480px) {
+  .event-tags {
+    width: 100%;
+    justify-content: flex-start;
+    margin-left: 0;
+  }
 }
 
 .event-tag {
@@ -526,9 +544,9 @@ function nextImage() {
   background: none;
   border: 1px solid var(--color-border);
   border-radius: 50%;
-  width: 32px;
-  height: 32px;
-  font-size: 20px;
+  width: 44px;
+  height: 44px;
+  font-size: 22px;
   color: var(--color-navy);
   cursor: pointer;
   display: flex;
@@ -536,6 +554,7 @@ function nextImage() {
   justify-content: center;
   flex-shrink: 0;
   line-height: 1;
+  touch-action: manipulation;
 }
 .carousel-btn:hover { border-color: var(--color-border-mid); }
 

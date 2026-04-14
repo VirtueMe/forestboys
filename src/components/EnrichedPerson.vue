@@ -398,8 +398,9 @@ watch(() => props.slug, slug => { void load(slug) }, { immediate: true })
 .event-row {
   display: flex;
   align-items: baseline;
-  gap: 8px;
-  padding: 5px 0;
+  flex-wrap: wrap;
+  gap: 4px 8px;
+  padding: 6px 0;
   cursor: pointer;
   border-radius: 4px;
 }
@@ -410,9 +411,7 @@ watch(() => props.slug, slug => { void load(slug) }, { immediate: true })
   color: var(--color-text);
   flex: 1;
   min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  word-break: break-word;
 }
 
 .event-date {
