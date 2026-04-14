@@ -231,20 +231,27 @@ function matchPerson(line: string): { text: string; slug: string | null } {
   const clean = line.trim()
   if (!clean) return { text: clean, slug: null }
   const norm = normName(clean)
+  const cLast = norm.split(' ').filter(w => w.length >= 2).at(-1)
+
+  const lastWordMatches: DirectPersonNode[] = []
+  const dedupMatches:    DirectPersonNode[] = []
+
   for (const p of directPeople.value) {
     const pNorm = normName(p.name)
-    // 1. Exact normalized match
+    // 1. Exact normalized match — return immediately
     if (pNorm === norm) return { text: p.name, slug: p.slug }
-    const cWords = norm.split(' ').filter(w => w.length >= 2)
-    const pWords = pNorm.split(' ').filter(w => w.length >= 2)
-    const cLast = cWords.at(-1)
-    const pLast = pWords.at(-1)
-    if (!cLast || !pLast) continue
-    // 2. Unique last-word match
-    if (cLast === pLast && norm.length > 2) return { text: p.name, slug: p.slug }
-    // 3. Double-consonant normalised last-word (Johannessen ↔ Johannesen)
-    if (dedup(cLast) === dedup(pLast) && norm.length > 2) return { text: p.name, slug: p.slug }
+    if (!cLast) continue
+    const pLast = pNorm.split(' ').filter(w => w.length >= 2).at(-1)
+    if (!pLast) continue
+    // Collect candidates for last-word matching
+    if (cLast === pLast)                    lastWordMatches.push(p)
+    else if (dedup(cLast) === dedup(pLast)) dedupMatches.push(p)
   }
+
+  // 2. Unique last-word match
+  if (lastWordMatches.length === 1) return { text: lastWordMatches[0].name, slug: lastWordMatches[0].slug }
+  // 3. Unique double-consonant-normalised last-word (Johannessen ↔ Johannesen)
+  if (dedupMatches.length === 1)    return { text: dedupMatches[0].name,    slug: dedupMatches[0].slug }
   return { text: clean, slug: null }
 }
 

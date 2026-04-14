@@ -337,7 +337,8 @@ function classify(title: string): Group {
   if (t.startsWith('ANCC') || t.startsWith('MØTE') || t.includes('MEETING')) return 'Meeting'
   if (t.startsWith('KURS') || t.startsWith('SPESIALKURS'))                 return 'Training'
   if (t.startsWith('RAZZIA') || t.startsWith('TELAVÅG'))                  return 'Raid'
-  if (t.startsWith('SABOTASJE') || t.startsWith('TIRPITZ') || t.startsWith('PLANET')) return 'Sabotage'
+  if (t.startsWith('SABOTASJE') || t.startsWith('TIRPITZ')) return 'Sabotage'
+  if (t.startsWith('PLANET')) return 'StationOperation'
   return 'Narrative'
 }
 
@@ -654,6 +655,88 @@ function matchPeopleInSections(
   return results
 }
 
+// ── Planet roster extraction ──────────────────────────────────────────────────
+
+/**
+ * Extract person names from Planet operation roster tables.
+ *
+ * Rows come in two tab-layout variants:
+ *   A) "PlanetName [«Codename»]\t PersonName \t dd.mm.yyyy [\t dd.mm.yyyy]"
+ *      — tab separates planet+codename from the name column (first 8 rows)
+ *   B) "PlanetName [«Codename»]    PersonName    dd.mm.yyyy\t dd.mm.yyyy"
+ *      — tab is only between the two date columns; name is fused into the first cell
+ *
+ * Strategy: try variant A first (name is cols[1] and is not a date).
+ * Fall back to variant B: strip the planet-prefix and trailing dates from cols[0].
+ */
+const PLANET_ROW_START_RE = /^[A-ZÆØÅ][a-zæøå]+[\s\t]/
+// Strips "PlanetName [«Codename»] " from the start of a string
+const PLANET_PREFIX_RE   = /^[A-ZÆØÅ][a-zæøå]+\s+(?:[«""\u201c][^»""\u201d\t]+[»""\u201d]\s*)?/
+// Strips one or more trailing dd.mm.yyyy dates (and surrounding whitespace)
+const TRAILING_DATE_RE   = /(\s+\d{2}\.\d{2}\.\d{4})+\s*$/
+const DATE_COL_RE        = /^\d{2}\.\d{2}\.\d{4}/
+
+function extractPlanetPeople(content: string, index: PersonIndex): MentionedPerson[] {
+  const results: MentionedPerson[] = []
+  const seenSlugs = new Set<string>()
+
+  for (const rawLine of content.split('\n')) {
+    const line = rawLine.trim()
+    if (!PLANET_ROW_START_RE.test(line)) continue
+
+    const cols = line.split('\t').map(c => c.trim()).filter(Boolean)
+    if (cols.length < 2) continue
+
+    let rawName = ''
+
+    // Variant A: cols[1] is the name (not a date)
+    if (!DATE_COL_RE.test(cols[1])) {
+      rawName = cols[1].replace(TRAILING_DATE_RE, '').trim()
+    }
+
+    // Variant B: name is embedded in cols[0] with planet-prefix and trailing date
+    if (!rawName) {
+      rawName = cols[0]
+        .replace(PLANET_PREFIX_RE, '')   // strip "Venus «Codename» "
+        .replace(TRAILING_DATE_RE, '')   // strip trailing dates
+        .trim()
+    }
+
+    if (!rawName) continue
+
+    const cleaned = cleanCandidate(rawName)
+    if (!cleaned || cleaned.length < 3) continue
+
+    const norm = normalizeName(cleaned)
+
+    // 1. Exact full-name match
+    const exact = index.byNormName.get(norm)
+    if (exact?.length === 1) {
+      const p = exact[0]
+      if (!seenSlugs.has(p.slug)) {
+        seenSlugs.add(p.slug)
+        results.push({ slug: p.slug, name: p.name, section: 'planet-roster', confidence: 'high' })
+      }
+      continue
+    }
+
+    // 2. Unique last-name match
+    const words = norm.split(' ').filter(w => w.length >= 2)
+    if (!words.length) continue
+    const lastWord = words[words.length - 1]
+    const byLast = index.byLastWord.get(lastWord)
+    if (byLast?.length === 1) {
+      const p = byLast[0]
+      if (!seenSlugs.has(p.slug)) {
+        seenSlugs.add(p.slug)
+        results.push({ slug: p.slug, name: p.name, section: 'planet-roster', confidence: 'medium' })
+      }
+    }
+  }
+
+  return results
+}
+
 // ── Main ──────────────────────────────────────────────────────────────────────
 
 const events = JSON.parse(
@@ -697,6 +780,14 @@ for (const event of events) {
   const { sections, content } = extractSections(event['description'])
   const logEntries      = extractLogEntries(event['description'])
   const mentionedPeople = matchPeopleInSections(sections, personIndex)
+
+  // Planet operation rosters use a tab-separated table in free content
+  if (title.toUpperCase().startsWith('PLANET')) {
+    for (const p of extractPlanetPeople(content, personIndex)) {
+      if (!mentionedPeople.some(mp => mp.slug === p.slug)) mentionedPeople.push(p)
+    }
+  }
+
   const { startDate, endDate } = extractDateRange(title, sections)
 
   results.push({ _id: id, slug, title, group, extracted, sections, content, logEntries, mentionedPeople, startDate, endDate, issues })
