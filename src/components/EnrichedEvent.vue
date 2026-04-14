@@ -26,7 +26,7 @@
           <template v-for="(seg, i) in segmentPeopleSection(sec.body)" :key="i">
             <RouterLink
               v-if="seg.type === 'name-linked'"
-              :to="`/person/${seg.slug}`"
+              :to="`/person/${seg.slug}#beriket`"
               class="people-name people-name--linked"
             >{{ seg.text }}</RouterLink>
             <span v-else-if="seg.type === 'name-plain'" class="people-name people-name--plain">{{ seg.text }}</span>
@@ -51,13 +51,23 @@
             v-for="entry in logEntries"
             :key="entry.date + entry.text.slice(0,20)"
             class="log-entry"
-            :class="{ 'log-entry--arrest': entry.type === 'arrest' }"
+            :class="{
+              'log-entry--arrest':     entry.type === 'arrest',
+              'log-entry--executed':   entry.type === 'executed',
+              'log-entry--combat':     entry.type === 'killed-combat',
+              'log-entry--flight':     entry.type === 'killed-flight',
+              'log-entry--checkpoint': entry.type === 'killed-checkpoint',
+            }"
           >
             <button class="log-date" @click="emit('select-date', entry.date)">
               {{ formatDate(entry.date) }}
             </button>
             <span class="log-text">
-              <span v-if="entry.type === 'arrest'" class="arrest-label">arrestert</span>
+              <span v-if="entry.type === 'arrest'"             class="entry-label label--arrest">arrestert</span>
+              <span v-else-if="entry.type === 'executed'"          class="entry-label label--executed">henrettet</span>
+              <span v-else-if="entry.type === 'killed-combat'"     class="entry-label label--combat">falt i kamp</span>
+              <span v-else-if="entry.type === 'killed-flight'"     class="entry-label label--flight">under flukt</span>
+              <span v-else-if="entry.type === 'killed-checkpoint'" class="entry-label label--checkpoint">kontroll/razzia</span>
               {{ entry.text }}
             </span>
           </div>
@@ -102,7 +112,7 @@
           <RouterLink
             v-for="p in peopleNetwork"
             :key="p.slug"
-            :to="`/person/${p.slug}`"
+            :to="`/person/${p.slug}#beriket`"
             class="person-chip"
           >
             {{ p.name }}
@@ -541,30 +551,34 @@ watch(() => props.slug, slug => { void load(slug) }, { immediate: true })
   color: var(--color-text);
 }
 
-.log-entry--arrest .log-date {
-  border-color: #7a2020;
-  color: #f07070;
-}
-.log-entry--arrest .log-date:hover {
-  background: rgba(240, 112, 112, 0.08);
-  border-color: #f07070;
-}
-.log-entry--arrest .log-text {
-  color: var(--color-muted);
-}
+.log-entry--arrest     .log-date { border-color: #7a4020; color: #f09050; }
+.log-entry--executed   .log-date { border-color: #7a2020; color: #f07070; }
+.log-entry--combat     .log-date { border-color: #6a2020; color: #e06060; }
+.log-entry--flight     .log-date { border-color: #2a4060; color: #70a0c0; }
+.log-entry--checkpoint .log-date { border-color: #6a3010; color: #e0a060; }
 
-.arrest-label {
+.log-entry--arrest     .log-text,
+.log-entry--executed   .log-text,
+.log-entry--combat     .log-text,
+.log-entry--flight     .log-text,
+.log-entry--checkpoint .log-text { color: var(--color-muted); }
+
+.entry-label {
+  display: inline-block;
   font-size: 9px;
   font-weight: 700;
   letter-spacing: 0.06em;
   text-transform: uppercase;
-  color: #f07070;
-  background: rgba(240, 112, 112, 0.12);
   border-radius: 4px;
   padding: 1px 5px;
   margin-right: 4px;
   vertical-align: middle;
 }
+.label--arrest     { color: #f09050; background: rgba(240, 144,  80, 0.12); }
+.label--executed   { color: #f07070; background: rgba(240, 112, 112, 0.12); }
+.label--combat     { color: #e06060; background: rgba(200,  80,  80, 0.12); }
+.label--flight     { color: #70a0c0; background: rgba( 80, 140, 180, 0.12); }
+.label--checkpoint { color: #e0a060; background: rgba(200, 140,  60, 0.12); }
 
 /* ── Related events ───────────────────────────────────────────── */
 .related-row {

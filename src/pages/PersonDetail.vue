@@ -19,141 +19,191 @@
         <p v-if="person.home" class="person-meta" itemprop="homeLocation">{{ person.home }}</p>
       </div>
 
-      <!-- Beskrivelse -->
-      <section v-if="person.descriptionHtml || person.description" class="section">
-        <h3 class="section-heading">Beskrivelse</h3>
-        <!-- eslint-disable-next-line vue/no-v-html -->
-        <div v-if="person.descriptionHtml" class="rich-text" itemprop="description" v-html="person.descriptionHtml"></div>
-        <p v-else class="plain-text">{{ person.description }}</p>
-      </section>
+      <AppTabs v-model="activeTab" :tabs="TABS">
+        <!-- ── Original (Sanity) ──────────────────────────────── -->
+        <template v-if="activeTab === 'original'">
+          <!-- Beskrivelse -->
+          <section v-if="person.descriptionHtml || person.description" class="section">
+            <h3 class="section-heading">Beskrivelse</h3>
+            <!-- eslint-disable-next-line vue/no-v-html -->
+            <div v-if="person.descriptionHtml" class="rich-text" itemprop="description" v-html="person.descriptionHtml"></div>
+            <p v-else class="plain-text">{{ person.description }}</p>
+          </section>
 
-      <!-- Hendelser -->
-      <section v-if="person.events?.length" class="section">
-        <div class="section-header-row">
-          <h3 class="section-heading">Hendelser ({{ person.events.length }})</h3>
-          <button class="sort-btn" @click="eventSortAsc = !eventSortAsc">
-            Dato {{ eventSortAsc ? '↑' : '↓' }}
-          </button>
-        </div>
-        <div class="link-list">
-          <RouterLink
-            v-for="event in sortedEvents"
-            :key="event.slug"
-            :to="`/events/${event.slug}`"
-            class="event-item"
-          >
-            <span class="event-date">{{ formatDate(event.date) }}</span>
-            <span class="event-title">{{ event.title }}</span>
-            <span v-if="eventTags(event).length" class="event-tags">
-              <span v-for="tag in eventTags(event)" :key="tag" class="event-tag">{{ tag }}</span>
-            </span>
-          </RouterLink>
-        </div>
-      </section>
+          <!-- Hendelser -->
+          <section v-if="person.events?.length" class="section">
+            <div class="section-header-row">
+              <h3 class="section-heading">Hendelser ({{ person.events.length }})</h3>
+              <button class="sort-btn" @click="eventSortAsc = !eventSortAsc">
+                Dato {{ eventSortAsc ? '↑' : '↓' }}
+              </button>
+            </div>
+            <div class="link-list">
+              <RouterLink
+                v-for="event in sortedEvents"
+                :key="event.slug"
+                :to="`/events/${event.slug}`"
+                class="event-item"
+              >
+                <span class="event-date">{{ formatDate(event.date) }}</span>
+                <span class="event-title">{{ event.title }}</span>
+                <span v-if="eventTags(event).length" class="event-tags">
+                  <span v-for="tag in eventTags(event)" :key="tag" class="event-tag">{{ tag }}</span>
+                </span>
+              </RouterLink>
+            </div>
+          </section>
 
-      <!-- Steder -->
-      <section v-if="person.locations?.length" class="section">
-        <h3 class="section-heading">Vært stasjonert på</h3>
-        <div class="link-list">
-          <RouterLink
-            v-for="loc in person.locations"
-            :key="loc.slug"
-            :to="`/map/${loc.slug}`"
-            class="section-link"
-          >
-            {{ loc.title }}
-          </RouterLink>
-        </div>
-      </section>
+          <!-- Steder -->
+          <section v-if="person.locations?.length" class="section">
+            <h3 class="section-heading">Vært stasjonert på</h3>
+            <div class="link-list">
+              <RouterLink
+                v-for="loc in person.locations"
+                :key="loc.slug"
+                :to="`/map/${loc.slug}`"
+                class="section-link"
+              >
+                {{ loc.title }}
+              </RouterLink>
+            </div>
+          </section>
 
-      <!-- Baser -->
-      <section v-if="person.stations?.length" class="section">
-        <h3 class="section-heading">Gjennomgått trening på</h3>
-        <div class="link-list">
-          <RouterLink
-            v-for="s in person.stations"
-            :key="s.slug"
-            :to="`/station/${s.slug}`"
-            class="section-link"
-          >
-            {{ s.title }}
-          </RouterLink>
-        </div>
-      </section>
+          <!-- Baser -->
+          <section v-if="person.stations?.length" class="section">
+            <h3 class="section-heading">Gjennomgått trening på</h3>
+            <div class="link-list">
+              <RouterLink
+                v-for="s in person.stations"
+                :key="s.slug"
+                :to="`/station/${s.slug}`"
+                class="section-link"
+              >
+                {{ s.title }}
+              </RouterLink>
+            </div>
+          </section>
 
-      <!-- Annen informasjon -->
-      <section v-if="outlines.length" class="section">
-        <h3 class="section-heading">Annen informasjon</h3>
-        <div class="link-list">
-          <RouterLink
-            v-for="o in outlines"
-            :key="o.slug"
-            :to="`/outlines/${o.slug}`"
-            class="section-link"
-          >
-            {{ o.title }}
-          </RouterLink>
-        </div>
-      </section>
+          <!-- Annen informasjon -->
+          <section v-if="outlines.length" class="section">
+            <h3 class="section-heading">Annen informasjon</h3>
+            <div class="link-list">
+              <RouterLink
+                v-for="o in outlines"
+                :key="o.slug"
+                :to="`/outlines/${o.slug}`"
+                class="section-link"
+              >
+                {{ o.title }}
+              </RouterLink>
+            </div>
+          </section>
 
-      <!-- Video -->
-      <section v-if="person.movie" class="section">
-        <h3 class="section-heading">Video</h3>
-        <video controls class="video-player">
-          <source :src="person.movie" type="video/mp4" />
-        </video>
-      </section>
+          <!-- Video -->
+          <section v-if="person.movie" class="section">
+            <h3 class="section-heading">Video</h3>
+            <video controls class="video-player">
+              <source :src="person.movie" type="video/mp4" />
+            </video>
+          </section>
 
-      <!-- Galleri -->
-      <section v-if="person.gallery?.length" class="section">
-        <h3 class="section-heading">Galleri</h3>
-        <div class="carousel">
-          <button v-if="person.gallery.length > 1" class="carousel-btn" @click="prevImage">&#x2039;</button>
-          <img
-            :src="currentImageUrl"
-            :alt="`${person.name} bilde ${currentImageIndex + 1}`"
-            class="carousel-img"
-          />
-          <button v-if="person.gallery.length > 1" class="carousel-btn" @click="nextImage">&#x203a;</button>
-        </div>
-        <p v-if="person.gallery.length > 1" class="carousel-count">
-          {{ currentImageIndex + 1 }} / {{ person.gallery.length }}
-        </p>
-        <p v-if="currentCaption" class="carousel-caption">{{ currentCaption }}</p>
-      </section>
+          <!-- Galleri -->
+          <section v-if="person.gallery?.length" class="section">
+            <h3 class="section-heading">Galleri</h3>
+            <div class="carousel">
+              <button v-if="person.gallery.length > 1" class="carousel-btn" @click="prevImage">&#x2039;</button>
+              <img
+                :src="currentImageUrl"
+                :alt="`${person.name} bilde ${currentImageIndex + 1}`"
+                class="carousel-img"
+              />
+              <button v-if="person.gallery.length > 1" class="carousel-btn" @click="nextImage">&#x203a;</button>
+            </div>
+            <p v-if="person.gallery.length > 1" class="carousel-count">
+              {{ currentImageIndex + 1 }} / {{ person.gallery.length }}
+            </p>
+            <p v-if="currentCaption" class="carousel-caption">{{ currentCaption }}</p>
+          </section>
 
-      <!-- Lenker -->
-      <section v-if="person.links?.length" class="section">
-        <h3 class="section-heading">Nyttige lenker</h3>
-        <div class="link-list">
-          <a
-            v-for="link in person.links"
-            :key="link.url"
-            :href="link.url"
-            target="_blank"
-            rel="noopener noreferrer"
-            class="ext-link"
-          >{{ link.title || link.url }} <span class="ext-icon">↗</span></a>
-        </div>
-      </section>
+          <!-- Lenker -->
+          <section v-if="person.links?.length" class="section">
+            <h3 class="section-heading">Nyttige lenker</h3>
+            <div class="link-list">
+              <a
+                v-for="link in person.links"
+                :key="link.url"
+                :href="link.url"
+                target="_blank"
+                rel="noopener noreferrer"
+                class="ext-link"
+              >{{ link.title || link.url }} <span class="ext-icon">↗</span></a>
+            </div>
+          </section>
+        </template>
+
+        <!-- ── Enriched (Neo4j) ───────────────────────────────── -->
+        <EnrichedPerson
+          v-else
+          :slug="person.slug"
+          :gallery="person.gallery"
+          :links="person.links"
+          @select-event-slug="slug => router.push(`/events/${slug}`)"
+          @has-data="v => (enrichedHasData = v)"
+        />
+      </AppTabs>
     </template>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
-import { useRoute, RouterLink } from 'vue-router'
+import { ref, computed, onMounted, watch } from 'vue'
+import { useRoute, useRouter, RouterLink } from 'vue-router'
 import { useLocationCache } from '../composables/useLocationCache.ts'
+import { neo4jQuery } from '../composables/useNeo4j.ts'
 import { SANITY_IMG } from '../config/sanity.ts'
 import type { IdbEvent } from '../types/idb.ts'
+import AppTabs from '../components/AppTabs.vue'
+import EnrichedPerson from '../components/EnrichedPerson.vue'
 
-const route = useRoute()
+const route  = useRoute()
+const router = useRouter()
 const { people, loading, init } = useLocationCache()
 
 onMounted(async () => { await init() })
 
 const person = computed(() =>
   people.value.find(p => p.slug === (route.params.slug as string)) ?? null,
+)
+
+// Tabs
+const activeTab       = ref('original')
+const enrichedHasData = ref<boolean | null>(null)
+
+const TABS = computed(() => [
+  { id: 'original', label: 'Original' },
+  { id: 'enriched', label: 'Beriket', disabled: enrichedHasData.value === false },
+])
+
+async function checkEnrichedData(slug: string) {
+  enrichedHasData.value = null
+  try {
+    const rows = await neo4jQuery<{ n: number }>(
+      `MATCH (p:Person {slug: $slug})<-[:INVOLVED]-() RETURN count(*) AS n LIMIT 1`,
+      { slug },
+    )
+    enrichedHasData.value = (rows[0]?.n ?? 0) > 0
+  } catch {
+    enrichedHasData.value = false
+  }
+}
+
+watch(
+  () => person.value?.slug,
+  slug => {
+    activeTab.value = route.hash === '#beriket' ? 'enriched' : 'original'
+    if (slug) void checkEnrichedData(slug)
+  },
+  { immediate: true },
 )
 
 

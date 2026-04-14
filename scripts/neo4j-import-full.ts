@@ -37,13 +37,24 @@ const eventMeta    = load<{
   group:           string
   sections:        Record<string, string>
   content:         string
-  logEntries:      Array<{ date: string; text: string; type: 'report' | 'arrest'; offset: number }>
+  logEntries:      Array<{ date: string; text: string; type: string; offset: number }>
   mentionedPeople: Array<{ slug: string; name: string; section: string; confidence: 'high' | 'medium' }>
   startDate?:      string
   endDate?:        string
 }>('sanity-event-meta.json')
 
 const metaById = new Map(eventMeta.map(m => [m._id, m]))
+
+const personMeta = load<{
+  _id:        string
+  slug:       string
+  bornDate?:  string
+  diedDate?:  string
+  diedType?:  string
+  logEntries: Array<{ date: string; text: string; type: string }>
+}>('sanity-person-meta.json')
+
+const personMetaBySlug = new Map(personMeta.map(m => [m.slug, m]))
 
 // ── Section metadata ──────────────────────────────────────────────────────────
 
@@ -246,16 +257,52 @@ async function main() {
            p.sanityId   = row.id,
            p.secretName = row.secretName,
            p.birthYear  = row.birthYear,
-           p.home       = row.home`,
-      d => ({
-        slug:       slug(d),
-        name:       d['name'] as string,
-        id:         d['_id'] as string,
-        secretName: d['secretName'] as string ?? null,
-        birthYear:  d['birthYear'] as number ?? null,
-        home:       d['home'] as string ?? null,
-      }),
+           p.home       = row.home,
+           p.bornDate   = row.bornDate,
+           p.diedDate   = row.diedDate,
+           p.diedType   = row.diedType`,
+      d => {
+        const pSlug = slug(d)
+        const meta  = personMetaBySlug.get(pSlug)
+        return {
+          slug:       pSlug,
+          name:       d['name'] as string,
+          id:         d['_id'] as string,
+          secretName: d['secretName'] as string ?? null,
+          birthYear:  d['birthYear'] as number ?? null,
+          home:       d['home'] as string ?? null,
+          bornDate:   meta?.bornDate ?? null,
+          diedDate:   meta?.diedDate ?? null,
+          diedType:   meta?.diedType ?? null,
+        }
+      },
     )
+
+    // Person log entries
+    console.log('Importing person log entries…')
+    for (const meta of personMeta) {
+      if (!meta.logEntries.length) continue
+      const tx = session.beginTransaction()
+      try {
+        // Clear old log entries for this person
+        await tx.run(
+          `MATCH (p:Person {slug: $slug})-[:HAS_LOG_ENTRY]->(l:PersonLogEntry) DETACH DELETE l`,
+          { slug: meta.slug },
+        )
+        for (const entry of meta.logEntries) {
+          await tx.run(
+            `MATCH (p:Person {slug: $slug})
+             CREATE (l:PersonLogEntry { date: $date, text: $text, type: $type })
+             MERGE (p)-[:HAS_LOG_ENTRY]->(l)`,
+            { slug: meta.slug, date: entry.date, text: entry.text, type: entry.type },
+          )
+        }
+        await tx.commit()
+      } catch (err) {
+        await tx.rollback()
+        console.warn(`  failed log entries for ${meta.slug}:`, err)
+      }
+    }
 
     await batch(session, 'Transport', rawTransport,
       `UNWIND $rows AS row

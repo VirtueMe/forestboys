@@ -37,7 +37,7 @@ type Group =
 export interface LogEntry {
   date:   string              // ISO-8601: YYYY-MM-DD
   text:   string
-  type:   'report' | 'arrest' // report = leading-date ANCC log; arrest = trailing-date person record
+  type:   'report' | 'arrest' | 'executed' | 'killed-combat' | 'killed-flight' | 'killed-checkpoint' // report = ANCC log entry; others = person fate records
   offset: number              // char offset of this line in the concatenated block text — stable ID component
 }
 
@@ -150,10 +150,26 @@ function parseLogDate(d: string, m: string, y: string): string {
   return `${year}-${month}-${day}`
 }
 
+const ARREST_KEYWORDS            = /arrestert|arrestasjon/i
+const EXECUTED_KEYWORDS          = /henrettet|skutt og drept|likvidert|hengt/i
+const KILLED_COMBAT_KEYWORDS     = /falt i kamp|drept i kamp|omkom i kamp|falt under kamp|drept under kamp|falt i aksjon/i
+const KILLED_FLIGHT_KEYWORDS     = /drept under flukt|omkom under flukt|drept under overgang|omkom under overgang|skutt under flukt/i
+const KILLED_CHECKPOINT_KEYWORDS = /drept ved kontroll|skutt ved kontroll|drept under razzia|omkom under razzia|drept i razzia/i
+
+/** Classify a log entry text by the type of event it describes */
+function classifyLogText(text: string): LogEntry['type'] {
+  if (ARREST_KEYWORDS.test(text))            return 'arrest'
+  if (EXECUTED_KEYWORDS.test(text))          return 'executed'
+  if (KILLED_COMBAT_KEYWORDS.test(text))     return 'killed-combat'
+  if (KILLED_FLIGHT_KEYWORDS.test(text))     return 'killed-flight'
+  if (KILLED_CHECKPOINT_KEYWORDS.test(text)) return 'killed-checkpoint'
+  return 'report'
+}
+
 /**
  * Extract dated entries from blocks:
- *  - "DD/MM-YY  TEXT..."   → type:'report'  (ANCC / station log)
- *  - "Person Name  DD/M-YY" → type:'arrest' (person arrest record)
+ *  - "DD/MM-YY  TEXT..."   → type:'report'|'arrest'|'executed' (ANCC / station log)
+ *  - "Person Name  DD/M-YY" → type:'arrest'|'executed' (trailing-date person record)
  * Continuation lines (no date) are appended to the previous report entry.
  */
 function extractLogEntries(blocks: unknown): LogEntry[] {
@@ -175,7 +191,8 @@ function extractLogEntries(blocks: unknown): LogEntry[] {
 
       const report = line.match(LOG_DATE_RE)
       if (report) {
-        current = { date: parseLogDate(report[1], report[2], report[3]), text: report[4].trim(), type: 'report', offset: lineOffset }
+        const text = report[4].trim()
+        current = { date: parseLogDate(report[1], report[2], report[3]), text, type: classifyLogText(text), offset: lineOffset }
         entries.push(current)
         continue
       }
@@ -183,7 +200,8 @@ function extractLogEntries(blocks: unknown): LogEntry[] {
       const arrest = line.match(ARREST_DATE_RE)
       if (arrest) {
         current = null
-        entries.push({ date: parseLogDate(arrest[2], arrest[3], arrest[4]), text: arrest[1].trim(), type: 'arrest', offset: lineOffset })
+        const text = arrest[1].trim()
+        entries.push({ date: parseLogDate(arrest[2], arrest[3], arrest[4]), text, type: classifyLogText(text), offset: lineOffset })
         continue
       }
 
