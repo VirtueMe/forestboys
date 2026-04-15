@@ -12,6 +12,7 @@
     "prepare": "husky"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.89.0",
     "@knight-lab/timelinejs": "^3.9.10",
     "dotenv": "^17.4.1",
     "idb": "^8.0.3",
