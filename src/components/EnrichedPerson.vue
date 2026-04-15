@@ -274,14 +274,14 @@ async function load(slug: string) {
       ),
       // Events via graph
       neo4jQuery<EventRow>(
-        `MATCH (p:Person {slug: $slug})<-[:INVOLVED]-(e:Event)
+        `MATCH (p:Person {slug: $slug})-[:PARTICIPATED_IN]->(e:Event)
          RETURN e.slug AS slug, e.title AS title, e.date AS date, e.group AS group
          ORDER BY e.date ASC`,
         { slug },
       ),
       // Co-participants
       neo4jQuery<CoParticipant>(
-        `MATCH (p:Person {slug: $slug})<-[:INVOLVED]-(e:Event)-[:INVOLVED]->(col:Person)
+        `MATCH (p:Person {slug: $slug})-[:PARTICIPATED_IN]->(e:Event)<-[:PARTICIPATED_IN]-(col:Person)
          WHERE col.slug <> $slug
          RETURN col.slug AS slug, col.name AS name, count(DISTINCT e) AS shared
          ORDER BY shared DESC
@@ -290,7 +290,7 @@ async function load(slug: string) {
       ),
       // Activity date range
       neo4jQuery<{ earliest: string | null; latest: string | null; total: number }>(
-        `MATCH (p:Person {slug: $slug})<-[:INVOLVED]-(e:Event)
+        `MATCH (p:Person {slug: $slug})-[:PARTICIPATED_IN]->(e:Event)
          RETURN min(e.date) AS earliest, max(e.date) AS latest, count(e) AS total`,
         { slug },
       ),

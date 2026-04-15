@@ -6,6 +6,13 @@
  *   npx tsx scripts/neo4j-import-full.ts
  *
  * Safe to re-run — uses MERGE so nothing is duplicated.
+ *
+ * Schema (Option B):
+ *   Primary key on all nodes: sanityId (Sanity _id)
+ *   slug kept as indexed property for URL routing
+ *   district → (:Unit)
+ *   Event-[:IN_DISTRICT]->District  → Event-[:PART_OF]->Unit
+ *   Event-[:INVOLVED]->Person       → Person-[:PARTICIPATED_IN]->Event
  */
 
 import { readFileSync } from 'fs'
@@ -22,8 +29,8 @@ function load<T>(name: string): T[] {
   return JSON.parse(readFileSync(resolve(dataDir, name), 'utf-8')) as T[]
 }
 
-type SanityDoc  = Record<string, unknown>
-type GeoPoint   = { _type: string; lat: number; lng: number; alt?: number }
+type SanityDoc = Record<string, unknown>
+type GeoPoint  = { _type: string; lat: number; lng: number; alt?: number }
 
 const rawEvents    = load<SanityDoc>('sanity-event.json')
 const rawLocations = load<SanityDoc>('sanity-location.json')
@@ -32,7 +39,8 @@ const rawPeople    = load<SanityDoc>('sanity-person.json')
 const rawTransport = load<SanityDoc>('sanity-transport.json')
 const rawOrgs      = load<SanityDoc>('sanity-organization.json')
 const rawDistricts = load<SanityDoc>('sanity-district.json')
-const eventMeta    = load<{
+
+const eventMeta = load<{
   _id:             string
   group:           string
   sections:        Record<string, string>
@@ -54,7 +62,11 @@ const personMeta = load<{
   logEntries: Array<{ date: string; text: string; type: string }>
 }>('sanity-person-meta.json')
 
-const personMetaBySlug = new Map(personMeta.map(m => [m.slug, m]))
+// Keyed by _id (= sanityId) for the new schema
+const personMetaById = new Map(personMeta.map(m => [m._id, m]))
+
+// Slug → _id for resolving text-extracted person mentions (mentionedPeople uses slugs)
+const personIdBySlug = new Map(rawPeople.map(d => [slug(d), d['_id'] as string]))
 
 // ── Section metadata ──────────────────────────────────────────────────────────
 
@@ -68,53 +80,35 @@ const SECTION_META: Record<string, { heading: string; importance: number }> = {
 }
 
 interface SectionRow {
-  id: string         // eventSlug::type — stable merge key
-  type: string
-  heading: string
-  body: string
+  id:         string
+  type:       string
+  heading:    string
+  body:       string
   importance: number
 }
 
-/** Convert sections map + content → ordered SectionRow array */
 function buildSectionRows(
   evSlug: string,
   sections: Record<string, string> | undefined,
   content: string | undefined,
 ): SectionRow[] {
   const rows: SectionRow[] = []
-
-  // Named sections
   for (const [key, text] of Object.entries(sections ?? {})) {
     if (!text.trim()) continue
     const meta = SECTION_META[key] ?? { heading: key, importance: 98 }
-    rows.push({
-      id:         `${evSlug}::${key}`,
-      type:       key,
-      heading:    meta.heading,
-      body:       text.trim(),
-      importance: meta.importance,
-    })
+    rows.push({ id: `${evSlug}::${key}`, type: key, heading: meta.heading, body: text.trim(), importance: meta.importance })
   }
-
-  // Uncategorized content — stored last, no heading
   if (content?.trim()) {
-    rows.push({
-      id:         `${evSlug}::content`,
-      type:       'content',
-      heading:    '',
-      body:       content.trim(),
-      importance: 99,
-    })
+    rows.push({ id: `${evSlug}::content`, type: 'content', heading: '', body: content.trim(), importance: 99 })
   }
-
   return rows.sort((a, b) => a.importance - b.importance)
 }
 
 interface LogEntryRow {
-  id:   string   // eventSlug::log::date::charOffset — stable content+position key
+  id:   string
   date: string
   text: string
-  type: string   // 'report' | 'arrest'
+  type: string
 }
 
 // ── Location type classifier ──────────────────────────────────────────────────
@@ -128,8 +122,8 @@ function locationTypeOf(title: string): string | null {
   if (/\bBA[\s\-_\d]/.test(t) || t.includes('BUVASSFARET') || t.includes('VASSFARET') ||
       t.includes('BASE ELG') || t.includes('BASE ORM') || t.includes('BREIESLEIREN') ||
       t.includes('EUREKA') || (t.includes('LEIR') && !t.includes('FANGELEIR')))  return 'ResistanceBase'
-  if (t.includes('FANGELEIR'))                                                return 'PrisonerCamp'
-  if (t.includes('HAVN') || t.includes('BRYGGE') || t.includes('KAI'))      return 'Harbour'
+  if (t.includes('FANGELEIR'))  return 'PrisonerCamp'
+  if (t.includes('HAVN') || t.includes('BRYGGE') || t.includes('KAI'))  return 'Harbour'
   return null
 }
 
@@ -150,16 +144,16 @@ function ref(val: unknown): string | null {
   return (val as SanityDoc)['_ref'] as string ?? null
 }
 
-// ── ID lookup maps (resolved after entities are defined) ──────────────────────
+// ── Batch helper ──────────────────────────────────────────────────────────────
 
-const locationSlugById  = new Map(rawLocations.map(d => [d['_id'] as string, slug(d)]))
-const stationSlugById   = new Map(rawStations.map(d =>  [d['_id'] as string, slug(d)]))
-const personSlugById    = new Map(rawPeople.map(d =>    [d['_id'] as string, slug(d)]))
-const transportSlugById = new Map(rawTransport.map(d => [d['_id'] as string, slug(d)]))
-const orgNameById       = new Map(rawOrgs.map(d =>      [d['_id'] as string, d['name'] as string]))
-const districtNameById  = new Map(rawDistricts.map(d => [d['_id'] as string, d['name'] as string]))
-
-async function batch(session: Session, label: string, docs: SanityDoc[], cypher: string, mapper: (d: SanityDoc) => Record<string, unknown>, size = 500) {
+async function batch(
+  session: Session,
+  label: string,
+  docs: SanityDoc[],
+  cypher: string,
+  mapper: (d: SanityDoc) => Record<string, unknown>,
+  size = 500,
+) {
   let count = 0
   for (let i = 0; i < docs.length; i += size) {
     const chunk = docs.slice(i, i + size).map(mapper)
@@ -180,48 +174,64 @@ async function main() {
   const session = driver.session()
 
   try {
-    // ── Constraints ────────────────────────────────────────────────────────────
-    console.log('Ensuring constraints…')
-    const constraints = [
-      'CREATE CONSTRAINT event_slug     IF NOT EXISTS FOR (e:Event)        REQUIRE e.slug IS UNIQUE',
-      'CREATE CONSTRAINT person_slug    IF NOT EXISTS FOR (p:Person)       REQUIRE p.slug IS UNIQUE',
-      'CREATE CONSTRAINT transport_slug IF NOT EXISTS FOR (t:Transport)    REQUIRE t.slug IS UNIQUE',
-      'CREATE CONSTRAINT location_slug  IF NOT EXISTS FOR (l:Location)     REQUIRE l.slug IS UNIQUE',
-      'CREATE CONSTRAINT station_slug   IF NOT EXISTS FOR (s:Station)      REQUIRE s.slug IS UNIQUE',
-      'CREATE CONSTRAINT org_name       IF NOT EXISTS FOR (o:Organization) REQUIRE o.name IS UNIQUE',
-      'CREATE CONSTRAINT district_name  IF NOT EXISTS FOR (d:District)     REQUIRE d.name IS UNIQUE',
-      'CREATE CONSTRAINT section_id     IF NOT EXISTS FOR (s:Section)      REQUIRE s.id IS UNIQUE',
-      'CREATE CONSTRAINT log_entry_id   IF NOT EXISTS FOR (l:LogEntry)     REQUIRE l.id IS UNIQUE',
+    // ── Constraints + indexes ──────────────────────────────────────────────────
+    console.log('Ensuring constraints and indexes…')
+    const ddl = [
+      // Unique constraints on sanityId (primary key)
+      'CREATE CONSTRAINT event_sanity_id     IF NOT EXISTS FOR (e:Event)        REQUIRE e.sanityId IS UNIQUE',
+      'CREATE CONSTRAINT person_sanity_id    IF NOT EXISTS FOR (p:Person)       REQUIRE p.sanityId IS UNIQUE',
+      'CREATE CONSTRAINT transport_sanity_id IF NOT EXISTS FOR (t:Transport)    REQUIRE t.sanityId IS UNIQUE',
+      'CREATE CONSTRAINT location_sanity_id  IF NOT EXISTS FOR (l:Location)     REQUIRE l.sanityId IS UNIQUE',
+      'CREATE CONSTRAINT station_sanity_id   IF NOT EXISTS FOR (s:Station)      REQUIRE s.sanityId IS UNIQUE',
+      'CREATE CONSTRAINT org_sanity_id       IF NOT EXISTS FOR (o:Organization) REQUIRE o.sanityId IS UNIQUE',
+      'CREATE CONSTRAINT unit_sanity_id      IF NOT EXISTS FOR (u:Unit)         REQUIRE u.sanityId IS UNIQUE',
+      'CREATE CONSTRAINT section_id          IF NOT EXISTS FOR (s:Section)      REQUIRE s.id IS UNIQUE',
+      'CREATE CONSTRAINT log_entry_id        IF NOT EXISTS FOR (l:LogEntry)     REQUIRE l.id IS UNIQUE',
+      // Indexes on slug for URL routing
+      'CREATE INDEX event_slug     IF NOT EXISTS FOR (e:Event)     ON (e.slug)',
+      'CREATE INDEX person_slug    IF NOT EXISTS FOR (p:Person)    ON (p.slug)',
+      'CREATE INDEX location_slug  IF NOT EXISTS FOR (l:Location)  ON (l.slug)',
+      'CREATE INDEX station_slug   IF NOT EXISTS FOR (s:Station)   ON (s.slug)',
+      'CREATE INDEX transport_slug IF NOT EXISTS FOR (t:Transport) ON (t.slug)',
     ]
-    for (const c of constraints) await session.run(c)
+    for (const c of ddl) await session.run(c)
 
     // ── Reference nodes ────────────────────────────────────────────────────────
     console.log('\nImporting reference nodes…')
 
     await batch(session, 'Organization', rawOrgs,
-      `UNWIND $rows AS row MERGE (o:Organization {name: row.name}) SET o.color = row.color`,
-      d => ({ name: d['name'] as string, color: ((d['color'] as SanityDoc)?.['hex'] as string) ?? null }),
+      `UNWIND $rows AS row
+       MERGE (o:Organization {sanityId: row.id})
+       SET o.name  = row.name,
+           o.color = row.color`,
+      d => ({
+        id:    d['_id'] as string,
+        name:  d['name'] as string,
+        color: ((d['color'] as SanityDoc)?.['hex'] as string) ?? null,
+      }),
     )
 
-    await batch(session, 'District', rawDistricts,
-      `UNWIND $rows AS row MERGE (d:District {name: row.name})`,
-      d => ({ name: d['name'] as string }),
+    await batch(session, 'Unit', rawDistricts,
+      `UNWIND $rows AS row
+       MERGE (u:Unit {sanityId: row.id})
+       SET u.name = row.name`,
+      d => ({ id: d['_id'] as string, name: d['name'] as string }),
     )
 
     await batch(session, 'Location', rawLocations,
       `UNWIND $rows AS row
-       MERGE (l:Location {slug: row.slug})
-       SET l.title       = row.title,
-           l.sanityId    = row.id,
-           l.lat         = row.lat,
-           l.lng         = row.lng,
+       MERGE (l:Location {sanityId: row.id})
+       SET l.title        = row.title,
+           l.slug         = row.slug,
+           l.lat          = row.lat,
+           l.lng          = row.lng,
            l.locationType = row.locationType`,
       d => {
         const coords = geo(d)
         return {
+          id:           d['_id'] as string,
           slug:         slug(d),
           title:        d['title'] as string,
-          id:           d['_id'] as string,
           lat:          coords?.lat ?? null,
           lng:          coords?.lng ?? null,
           locationType: locationTypeOf(d['title'] as string),
@@ -231,19 +241,19 @@ async function main() {
 
     await batch(session, 'Station', rawStations,
       `UNWIND $rows AS row
-       MERGE (s:Station {slug: row.slug})
-       SET s.title    = row.title,
-           s.sanityId = row.id,
-           s.type     = row.type,
-           s.lat      = row.lat,
-           s.lng      = row.lng`,
+       MERGE (s:Station {sanityId: row.id})
+       SET s.title = row.title,
+           s.slug  = row.slug,
+           s.type  = row.type,
+           s.lat   = row.lat,
+           s.lng   = row.lng`,
       d => {
         const coords = geo(d)
         return {
+          id:    d['_id'] as string,
           slug:  slug(d),
           title: d['title'] as string,
-          id:    d['_id'] as string,
-          type:  d['type'] as string ?? null,
+          type:  (d['type'] as string) ?? null,
           lat:   coords?.lat ?? null,
           lng:   coords?.lng ?? null,
         }
@@ -252,9 +262,9 @@ async function main() {
 
     await batch(session, 'Person', rawPeople,
       `UNWIND $rows AS row
-       MERGE (p:Person {slug: row.slug})
+       MERGE (p:Person {sanityId: row.id})
        SET p.name       = row.name,
-           p.sanityId   = row.id,
+           p.slug       = row.slug,
            p.secretName = row.secretName,
            p.birthYear  = row.birthYear,
            p.home       = row.home,
@@ -262,15 +272,14 @@ async function main() {
            p.diedDate   = row.diedDate,
            p.diedType   = row.diedType`,
       d => {
-        const pSlug = slug(d)
-        const meta  = personMetaBySlug.get(pSlug)
+        const meta = personMetaById.get(d['_id'] as string)
         return {
-          slug:       pSlug,
-          name:       d['name'] as string,
           id:         d['_id'] as string,
-          secretName: d['secretName'] as string ?? null,
-          birthYear:  d['birthYear'] as number ?? null,
-          home:       d['home'] as string ?? null,
+          slug:       slug(d),
+          name:       d['name'] as string,
+          secretName: (d['secretName'] as string) ?? null,
+          birthYear:  (d['birthYear'] as number) ?? null,
+          home:       (d['home'] as string) ?? null,
           bornDate:   meta?.bornDate ?? null,
           diedDate:   meta?.diedDate ?? null,
           diedType:   meta?.diedType ?? null,
@@ -284,17 +293,16 @@ async function main() {
       if (!meta.logEntries.length) continue
       const tx = session.beginTransaction()
       try {
-        // Clear old log entries for this person
         await tx.run(
-          `MATCH (p:Person {slug: $slug})-[:HAS_LOG_ENTRY]->(l:PersonLogEntry) DETACH DELETE l`,
-          { slug: meta.slug },
+          `MATCH (p:Person {sanityId: $id})-[:HAS_LOG_ENTRY]->(l:PersonLogEntry) DETACH DELETE l`,
+          { id: meta._id },
         )
         for (const entry of meta.logEntries) {
           await tx.run(
-            `MATCH (p:Person {slug: $slug})
+            `MATCH (p:Person {sanityId: $id})
              CREATE (l:PersonLogEntry { date: $date, text: $text, type: $type })
              MERGE (p)-[:HAS_LOG_ENTRY]->(l)`,
-            { slug: meta.slug, date: entry.date, text: entry.text, type: entry.type },
+            { id: meta._id, date: entry.date, text: entry.text, type: entry.type },
           )
         }
         await tx.commit()
@@ -306,19 +314,19 @@ async function main() {
 
     await batch(session, 'Transport', rawTransport,
       `UNWIND $rows AS row
-       MERGE (t:Transport {slug: row.slug})
+       MERGE (t:Transport {sanityId: row.id})
        SET t.name   = row.name,
-           t.sanityId = row.id,
+           t.slug   = row.slug,
            t.type   = row.type,
            t.unit   = row.unit,
            t.regser = row.regser`,
       d => ({
-        slug:  slug(d),
-        name:  d['name'] as string,
-        id:    d['_id'] as string,
-        type:  d['type'] as string ?? null,
-        unit:  d['unit'] as string ?? null,
-        regser: d['regser'] as string ?? null,
+        id:     d['_id'] as string,
+        slug:   slug(d),
+        name:   d['name'] as string,
+        type:   (d['type'] as string) ?? null,
+        unit:   (d['unit'] as string) ?? null,
+        regser: (d['regser'] as string) ?? null,
       }),
     )
 
@@ -329,36 +337,37 @@ async function main() {
     let failed     = 0
 
     for (const event of rawEvents) {
-      const meta  = metaById.get(event['_id'] as string)
+      const evId   = event['_id'] as string
       const evSlug = slug(event)
-      const tx    = session.beginTransaction()
+      const meta   = metaById.get(evId)
+      const tx     = session.beginTransaction()
 
       try {
         // Event node
         await tx.run(
-          `MERGE (e:Event {slug: $slug})
+          `MERGE (e:Event {sanityId: $id})
            SET e.title     = $title,
+               e.slug      = $slug,
                e.date      = $date,
-               e.sanityId  = $id,
                e.group     = $group,
                e.startDate = $startDate,
                e.endDate   = $endDate`,
           {
+            id:        evId,
             slug:      evSlug,
             title:     event['title'] as string,
             date:      (event['date'] as string) ?? null,
-            id:        event['_id'] as string,
             group:     meta?.group ?? 'Unknown',
             startDate: meta?.startDate ?? null,
             endDate:   meta?.endDate   ?? null,
           },
         )
 
-        // Section nodes (named sections + uncategorized content)
+        // Section nodes
         const sectionRows = buildSectionRows(evSlug, meta?.sections, meta?.content)
         if (sectionRows.length) {
           await tx.run(
-            `MATCH (e:Event {slug: $evSlug})
+            `MATCH (e:Event {sanityId: $evId})
              UNWIND $rows AS row
              MERGE (s:Section {id: row.id})
              SET s.type       = row.type,
@@ -366,70 +375,66 @@ async function main() {
                  s.body       = row.body,
                  s.importance = row.importance
              MERGE (e)-[:HAS_SECTION]->(s)`,
-            { evSlug, rows: sectionRows },
+            { evId, rows: sectionRows },
           )
           relCount += sectionRows.length
         }
 
-        // LogEntry nodes — delete stale entries first, then recreate
+        // LogEntry nodes
         const logRows: LogEntryRow[] = (meta?.logEntries ?? []).map(le => ({
           id:   `${evSlug}::log::${le.date}::${le.offset}`,
           date: le.date,
           text: le.text,
           type: le.type,
         }))
-        // Remove any LogEntry nodes for this event that are NOT in the current set
-        // (handles deduplication: stale nodes from old positional indices are cleaned up)
         await tx.run(
-          `MATCH (e:Event {slug: $evSlug})-[:HAS_LOG_ENTRY]->(l:LogEntry)
+          `MATCH (e:Event {sanityId: $evId})-[:HAS_LOG_ENTRY]->(l:LogEntry)
            WHERE NOT l.id IN $ids
            DETACH DELETE l`,
-          { evSlug, ids: logRows.map(r => r.id) },
+          { evId, ids: logRows.map(r => r.id) },
         )
         if (logRows.length) {
           await tx.run(
-            `MATCH (e:Event {slug: $evSlug})
+            `MATCH (e:Event {sanityId: $evId})
              UNWIND $rows AS row
              MERGE (l:LogEntry {id: row.id})
-             SET l.date = row.date,
-                 l.text = row.text,
-                 l.type = row.type
+             SET l.date = row.date, l.text = row.text, l.type = row.type
              MERGE (e)-[:HAS_LOG_ENTRY]->(l)`,
-            { evSlug, rows: logRows },
+            { evId, rows: logRows },
           )
           relCount += logRows.length
         }
 
-        // Organization
-        const orgName = orgNameById.get(ref(event['organization']) ?? '')
-        if (orgName) {
+        // Organization — _ref IS the sanityId
+        const orgId = ref(event['organization'])
+        if (orgId) {
           await tx.run(
-            `MATCH (e:Event {slug: $slug}), (o:Organization {name: $name})
+            `MATCH (e:Event {sanityId: $evId}), (o:Organization {sanityId: $orgId})
              MERGE (e)-[:ORGANISED_BY]->(o)`,
-            { slug: evSlug, name: orgName },
+            { evId, orgId },
           )
           relCount++
         }
 
-        // District
-        const districtName = districtNameById.get(ref(event['district']) ?? '')
-        if (districtName) {
+        // Unit (was District) — _ref IS the sanityId
+        const unitId = ref(event['district'])
+        if (unitId) {
           await tx.run(
-            `MATCH (e:Event {slug: $slug}), (d:District {name: $name})
-             MERGE (e)-[:IN_DISTRICT]->(d)`,
-            { slug: evSlug, name: districtName },
+            `MATCH (e:Event {sanityId: $evId}), (u:Unit {sanityId: $unitId})
+             MERGE (e)-[:PART_OF]->(u)`,
+            { evId, unitId },
           )
           relCount++
         }
 
         // locationFrom / locationTo
         for (const [field, rel] of [['locationFrom', 'ORIGIN'], ['locationTo', 'DESTINATION']] as const) {
-          const locSlug = locationSlugById.get(ref(event[field]) ?? '')
-          if (locSlug) {
+          const locId = ref(event[field])
+          if (locId) {
             await tx.run(
-              `MATCH (e:Event {slug: $evSlug}), (l:Location {slug: $locSlug})
+              `MATCH (e:Event {sanityId: $evId}), (l:Location {sanityId: $locId})
                MERGE (e)-[:${rel}]->(l)`,
-              { evSlug, locSlug },
+              { evId, locId },
             )
             relCount++
           }
@@ -437,36 +442,38 @@ async function main() {
 
         // stationFrom / stationTo
         for (const [field, rel] of [['stationFrom', 'DEPARTED_FROM'], ['stationTo', 'ARRIVED_AT']] as const) {
-          const stSlug = stationSlugById.get(ref(event[field]) ?? '')
-          if (stSlug) {
+          const stId = ref(event[field])
+          if (stId) {
             await tx.run(
-              `MATCH (e:Event {slug: $evSlug}), (s:Station {slug: $stSlug})
+              `MATCH (e:Event {sanityId: $evId}), (s:Station {sanityId: $stId})
                MERGE (e)-[:${rel}]->(s)`,
-              { evSlug, stSlug },
+              { evId, stId },
             )
             relCount++
           }
         }
 
-        // People — structured refs from Sanity
+        // People — structured refs (Person→Event direction)
         const people = (event['people'] ?? []) as SanityDoc[]
         for (const person of people) {
-          const pSlug = personSlugById.get(ref(person) ?? '')
-          if (!pSlug) continue
+          const pId = ref(person)
+          if (!pId) continue
           await tx.run(
-            `MATCH (e:Event {slug: $evSlug}), (p:Person {slug: $pSlug})
-             MERGE (e)-[:INVOLVED]->(p)`,
-            { evSlug, pSlug },
+            `MATCH (e:Event {sanityId: $evId}), (p:Person {sanityId: $pId})
+             MERGE (p)-[:PARTICIPATED_IN]->(e)`,
+            { evId, pId },
           )
           relCount++
         }
 
-        // People — text-extracted mentions from description sections
+        // People — text-extracted mentions (resolve slug → sanityId)
         for (const mention of (meta?.mentionedPeople ?? [])) {
+          const pId = personIdBySlug.get(mention.slug)
+          if (!pId) continue
           await tx.run(
-            `MATCH (e:Event {slug: $evSlug}), (p:Person {slug: $pSlug})
-             MERGE (e)-[:INVOLVED]->(p)`,
-            { evSlug, pSlug: mention.slug },
+            `MATCH (e:Event {sanityId: $evId}), (p:Person {sanityId: $pId})
+             MERGE (p)-[:PARTICIPATED_IN]->(e)`,
+            { evId, pId },
           )
           relCount++
         }
@@ -474,12 +481,12 @@ async function main() {
         // Transport
         const transport = (event['transport'] ?? []) as SanityDoc[]
         for (const t of transport) {
-          const tSlug = transportSlugById.get(ref(t) ?? '')
-          if (!tSlug) continue
+          const tId = ref(t)
+          if (!tId) continue
           await tx.run(
-            `MATCH (e:Event {slug: $evSlug}), (t:Transport {slug: $tSlug})
+            `MATCH (e:Event {sanityId: $evId}), (t:Transport {sanityId: $tId})
              MERGE (e)-[:USED]->(t)`,
-            { evSlug, tSlug },
+            { evId, tId },
           )
           relCount++
         }
@@ -495,9 +502,9 @@ async function main() {
     }
 
     // ── Summary ────────────────────────────────────────────────────────────────
-    console.log(`\n── Done ──────────────────────────────────────────────────────────`)
+    console.log(`\n── Done ───────────────────────────────────────────────────────────`)
     console.log(`  Organizations  ${rawOrgs.length}`)
-    console.log(`  Districts      ${rawDistricts.length}`)
+    console.log(`  Units          ${rawDistricts.length}`)
     console.log(`  Locations      ${rawLocations.length}`)
     console.log(`  Stations       ${rawStations.length}`)
     console.log(`  People         ${rawPeople.length}`)

@@ -13,10 +13,8 @@
     <div v-else-if="error" class="error">{{ error }}</div>
 
     <template v-else>
-
       <!-- ══ Planet operation view ════════════════════════════════ -->
       <template v-if="eventGroup === 'PlanetOperation'">
-
         <!-- Header: name + region + system label -->
         <div class="planet-header">
           <span v-if="planetName" class="planet-name">{{ planetName }}</span>
@@ -76,7 +74,6 @@
             </div>
           </div>
         </section>
-
       </template>
       <!-- ══ end Planet ═══════════════════════════════════════════ -->
 
@@ -95,7 +92,9 @@
               v-if="seg.type === 'name-linked'"
               :to="`/person/${seg.slug}#beriket`"
               class="people-name people-name--linked"
-            >{{ seg.text }}</RouterLink>
+            >
+              {{ seg.text }}
+            </RouterLink>
             <span v-else-if="seg.type === 'name-plain'" class="people-name people-name--plain">{{ seg.text }}</span>
             <p v-else-if="seg.type === 'note'" class="people-note">{{ seg.text }}</p>
             <p v-else class="people-prose">{{ seg.text }}</p>
@@ -121,10 +120,10 @@
             :key="entry.date + entry.text.slice(0,20)"
             class="log-entry"
             :class="{
-              'log-entry--arrest':     entry.type === 'arrest',
-              'log-entry--executed':   entry.type === 'executed',
-              'log-entry--combat':     entry.type === 'killed-combat',
-              'log-entry--flight':     entry.type === 'killed-flight',
+              'log-entry--arrest': entry.type === 'arrest',
+              'log-entry--executed': entry.type === 'executed',
+              'log-entry--combat': entry.type === 'killed-combat',
+              'log-entry--flight': entry.type === 'killed-flight',
               'log-entry--checkpoint': entry.type === 'killed-checkpoint',
             }"
           >
@@ -132,10 +131,10 @@
               {{ formatDate(entry.date) }}
             </button>
             <span class="log-text">
-              <span v-if="entry.type === 'arrest'"             class="entry-label label--arrest">arrestert</span>
-              <span v-else-if="entry.type === 'executed'"          class="entry-label label--executed">henrettet</span>
-              <span v-else-if="entry.type === 'killed-combat'"     class="entry-label label--combat">falt i kamp</span>
-              <span v-else-if="entry.type === 'killed-flight'"     class="entry-label label--flight">under flukt</span>
+              <span v-if="entry.type === 'arrest'" class="entry-label label--arrest">arrestert</span>
+              <span v-else-if="entry.type === 'executed'" class="entry-label label--executed">henrettet</span>
+              <span v-else-if="entry.type === 'killed-combat'" class="entry-label label--combat">falt i kamp</span>
+              <span v-else-if="entry.type === 'killed-flight'" class="entry-label label--flight">under flukt</span>
               <span v-else-if="entry.type === 'killed-checkpoint'" class="entry-label label--checkpoint">kontroll/razzia</span>
               {{ entry.text }}
             </span>
@@ -461,7 +460,8 @@ async function load(slug: string) {
       ),
       // Related events via shared people
       neo4jQuery<RelatedEvent>(
-        `MATCH (e:Event {slug: $slug})-[:INVOLVED]->(p:Person)<-[:INVOLVED]-(r:Event)
+        `MATCH (p:Person)-[:PARTICIPATED_IN]->(e:Event {slug: $slug})
+         MATCH (p)-[:PARTICIPATED_IN]->(r:Event)
          WHERE r.slug <> $slug
          RETURN r.slug AS slug, r.title AS title, r.date AS date, r.group AS group,
                 count(p) AS shared
@@ -481,9 +481,9 @@ async function load(slug: string) {
       ),
       // People network
       neo4jQuery<{ slug: string; name: string; shared: number }>(
-        `MATCH (e:Event {slug: $slug})-[:INVOLVED]->(p:Person)
-                <-[:INVOLVED]-(r:Event)-[:INVOLVED]->(colleague:Person)
-         WHERE NOT (e)-[:INVOLVED]->(colleague) AND colleague.slug <> p.slug
+        `MATCH (p:Person)-[:PARTICIPATED_IN]->(e:Event {slug: $slug})
+         MATCH (p)-[:PARTICIPATED_IN]->(r:Event)<-[:PARTICIPATED_IN]-(colleague:Person)
+         WHERE NOT (colleague)-[:PARTICIPATED_IN]->(e) AND colleague.slug <> p.slug
          RETURN colleague.slug AS slug, colleague.name AS name, count(DISTINCT r) AS shared
          ORDER BY shared DESC
          LIMIT 12`,
@@ -491,7 +491,7 @@ async function load(slug: string) {
       ),
       // Direct participants
       neo4jQuery<DirectPersonNode>(
-        `MATCH (e:Event {slug: $slug})-[:INVOLVED]->(p:Person)
+        `MATCH (p:Person)-[:PARTICIPATED_IN]->(e:Event {slug: $slug})
          RETURN p.slug AS slug, p.name AS name
          ORDER BY p.name`,
         { slug },
@@ -527,7 +527,7 @@ async function load(slug: string) {
         neo4jQuery<{ personSlug: string; name: string; codename: string | null; arrivedSweden: string | null; aahlyDate: string | null; batchId: string | null }>(
           `MATCH (e:Event {slug: $slug})-[:DESCRIBES]->(o:Operation)
            MATCH (p:Person)-[m:MEMBER_OF]->(o)
-           OPTIONAL MATCH (p)-[r:PARTICIPATED_IN]->(b:TrainingBatch)-[:PREPARED_FOR]->(o)
+           OPTIONAL MATCH (p)-[r:TRAINED_IN]->(b:TrainingBatch)-[:PREPARED_FOR]->(o)
            RETURN p.slug AS personSlug, p.name AS name, m.codename AS codename,
                   r.arrived_sweden AS arrivedSweden, b.date AS aahlyDate, b.id AS batchId
            ORDER BY p.name`,
