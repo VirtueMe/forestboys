@@ -1,6 +1,9 @@
 /**
  * Read-only Neo4j connection for browser queries.
  * Uses the VITE_NEO4J_* env vars (read-only user, never admin credentials).
+ *
+ * Write operations (e.g. review approve/reject) go through
+ * /api/review-item — a Cloudflare Pages Function that holds write credentials.
  */
 
 import neo4j, { type Driver, type RecordShape } from 'neo4j-driver'

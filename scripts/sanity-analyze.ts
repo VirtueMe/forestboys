@@ -25,6 +25,7 @@ type Group =
   | 'SeaPatrol'
   | 'MaritimeCraft'
   | 'StationOperation'
+  | 'PlanetOperation'
   | 'CommandoRaid'
   | 'EscapeRoute'
   | 'Meeting'
@@ -48,6 +49,27 @@ export interface MentionedPerson {
   confidence: 'high' | 'medium'  // high = exact name match; medium = unique last-name match
 }
 
+export interface PlanetRosterEntry {
+  codename:      string | null  // "Ole"
+  rawName:       string         // "Rolf Odden" as written in source
+  arrivedSweden: string | null  // ISO date: "1944-10-25"
+  aahlyDate:     string | null  // ISO date: "1944-11-08" (Åhlby training batch date)
+}
+
+export interface PlanetLocationEntry {
+  kmlName: string        // name to match against KML, e.g. "Venus amøbe D243"
+  type:    string        // "HQ" | "Depot" | "Amøbe" | "Bi-celle"
+  status:  string        // "Aktiv" | "Planlagt" | "Oppløst" | "Fullført"
+  note:    string | null // narrative note, e.g. "Ble flytta til Grøtdalen..."
+}
+
+export interface PlanetExtracted {
+  operationName: string               // "Venus"
+  region:        string               // "SE" | "NO"
+  roster:        PlanetRosterEntry[]
+  locations:     PlanetLocationEntry[]
+}
+
 interface EventMeta {
   _id:              string
   slug:             string
@@ -61,6 +83,7 @@ interface EventMeta {
   startDate?:       string                   // ISO date — extracted from title or tidsrommet section
   endDate?:         string                   // ISO date — end of operation/active period
   issues:           string[]
+  planet?:          PlanetExtracted          // only present when group === 'PlanetOperation'
 }
 
 // ── Portable text → plain text ────────────────────────────────────────────────
@@ -338,7 +361,7 @@ function classify(title: string): Group {
   if (t.startsWith('KURS') || t.startsWith('SPESIALKURS'))                 return 'Training'
   if (t.startsWith('RAZZIA') || t.startsWith('TELAVÅG'))                  return 'Raid'
   if (t.startsWith('SABOTASJE') || t.startsWith('TIRPITZ')) return 'Sabotage'
-  if (t.startsWith('PLANET')) return 'StationOperation'
+  if (t.startsWith('PLANET')) return 'PlanetOperation'
   return 'Narrative'
 }
 
@@ -737,6 +760,141 @@ function extractPlanetPeople(content: string, index: PersonIndex): MentionedPers
   return results
 }
 
+// ── Planet structured extraction ──────────────────────────────────────────────
+
+/** dd.mm.yyyy → "YYYY-MM-DD" */
+function parseDMY(d: string, m: string, y: string): string {
+  return `${y}-${m.padStart(2,'0')}-${d.padStart(2,'0')}`
+}
+
+const DMY_RE = /(\d{1,2})\.(\d{1,2})\.(\d{4})/g
+
+/**
+ * Parse the roster table from Planet event content.
+ * Rows like:
+ *   Venus «Ole»    Rolf Odden    25.10.1944    08.11.1944
+ *   Venus "Pelle"  Andreas Bakken  12.07.1944
+ *   Venus          Arne Arnesen    30.11.1944  27.12.1944
+ */
+function extractPlanetRoster(content: string): PlanetRosterEntry[] {
+  const results: PlanetRosterEntry[] = []
+
+  for (const rawLine of content.split('\n')) {
+    const line = rawLine.trim()
+    if (!PLANET_ROW_START_RE.test(line)) continue
+
+    // Codename: any quoted text with « » or " " or " " etc.
+    const codenameMatch = line.match(/[«""\u201c\u2018']([^»""\u201d\u2019'\t]{1,20})[»""\u201d\u2019']/)
+    const codename = codenameMatch ? codenameMatch[1].trim() : null
+
+    // Dates (dd.mm.yyyy) — first = arrived Sweden, second = Åhlby
+    const dateMatches = [...line.matchAll(DMY_RE)]
+    const arrivedSweden = dateMatches[0] ? parseDMY(dateMatches[0][1], dateMatches[0][2], dateMatches[0][3]) : null
+    const aahlyDate     = dateMatches[1] ? parseDMY(dateMatches[1][1], dateMatches[1][2], dateMatches[1][3]) : null
+
+    // Name: same two-variant logic as extractPlanetPeople
+    const cols = line.split('\t').map(c => c.trim()).filter(Boolean)
+    let rawName = ''
+    if (cols.length >= 2 && !DATE_COL_RE.test(cols[1])) {
+      rawName = cols[1].replace(TRAILING_DATE_RE, '').trim()
+    }
+    if (!rawName) {
+      rawName = cols[0]
+        .replace(PLANET_PREFIX_RE, '')
+        .replace(TRAILING_DATE_RE, '')
+        .trim()
+    }
+    // Strip WT suffix (radio operator designator that leaked into name column)
+    rawName = rawName.replace(/\s+WT\s*$/, '').trim()
+
+    // Require at least one date — filters out narrative and header lines
+    if (!arrivedSweden) continue
+    if (!rawName || rawName.length < 3) continue
+
+    results.push({ codename, rawName, arrivedSweden, aahlyDate })
+  }
+
+  return results
+}
+
+/**
+ * Parse location hierarchy lines from Planet event content.
+ * Lines like:
+ *   Venus SE  HQ   Aktiv  Ble flytta til Grøtdalen...
+ *   Venus depot  Vest Femunden
+ *   Venus amøbe D243 PLANLAGT
+ *   Venus bi-cell Alvdal PLANLAGT
+ */
+function extractPlanetLocations(content: string, opName: string): PlanetLocationEntry[] {
+  const results: PlanetLocationEntry[] = []
+  const nameLc = opName.toLowerCase()
+
+  for (const rawLine of content.split('\n')) {
+    const line = rawLine.trim()
+    if (!line.toLowerCase().startsWith(nameLc)) continue
+
+    const lc = line.toLowerCase()
+
+    function extractStatus(s: string): string {
+      if (/\bplanlagt\b/i.test(s)) return 'Planlagt'
+      if (/\boppløst\b/i.test(s))  return 'Oppløst'
+      if (/\bfullført\b/i.test(s)) return 'Fullført'
+      return 'Aktiv'
+    }
+
+    let type = ''
+    let kmlName = ''
+    let status = 'Aktiv'
+    let note: string | null = null
+
+    if (/\b(se|no)\s+hq\b/i.test(lc) || /\bhq\b.*\baktiv\b/i.test(lc) || /\bhq\b/i.test(lc)) {
+      type   = 'HQ'
+      const region = /\bno\b/i.test(lc.split('hq')[0]) ? 'NO' : 'SE'
+      kmlName = `${opName} ${region}`
+      status  = extractStatus(line)
+      // Everything after the status keyword is a note
+      const statusRe = /\b(PLANLAGT|Oppløst|Fullført|Aktiv)\b/i
+      const sm = line.match(statusRe)
+      if (sm) note = line.slice((sm.index ?? 0) + sm[0].length).trim() || null
+    } else if (/\bdepot\b/i.test(lc)) {
+      type    = 'Depot'
+      kmlName = `${opName} depot`
+      status  = extractStatus(line)
+    } else if (/\bamøbe\b/i.test(lc)) {
+      type  = 'Amøbe'
+      // Capture district code: "amøbe D243"
+      const dm = line.match(/amøbe\s+(\S+)/i)
+      kmlName = dm ? `${opName} amøbe ${dm[1]}` : `${opName} amøbe`
+      status  = extractStatus(line)
+    } else if (/\bbi-celle?\b/i.test(lc)) {
+      type  = 'Bi-celle'
+      // Capture place name: "bi-cell Alvdal" or "bi-celle OS"
+      const pm = line.match(/bi-celle?\s+(\S+)/i)
+      const place = pm?.[1] ?? ''
+      kmlName = `${opName} bi-celle ${place}`
+      status  = extractStatus(line)
+    }
+
+    if (type) {
+      results.push({ kmlName, type, status, note })
+    }
+  }
+
+  return results
+}
+
+/**
+ * Extract operation name and region from a Planet event title.
+ * "Planet VENUS (SE)" → { operationName: "Venus", region: "SE" }
+ */
+function extractPlanetMeta(title: string): { operationName: string; region: string } {
+  const m = title.match(/PLANET\s+([A-ZÆØÅ]+)\s*\(?(SE|NO)\)?/i)
+  return {
+    operationName: m ? m[1].charAt(0).toUpperCase() + m[1].slice(1).toLowerCase() : title,
+    region:        m?.[2]?.toUpperCase() ?? 'SE',
+  }
+}
+
 // ── Main ──────────────────────────────────────────────────────────────────────
 
 const events = JSON.parse(
@@ -781,16 +939,24 @@ for (const event of events) {
   const logEntries      = extractLogEntries(event['description'])
   const mentionedPeople = matchPeopleInSections(sections, personIndex)
 
-  // Planet operation rosters use a tab-separated table in free content
-  if (title.toUpperCase().startsWith('PLANET')) {
+  let planet: PlanetExtracted | undefined
+
+  if (group === 'PlanetOperation') {
     for (const p of extractPlanetPeople(content, personIndex)) {
       if (!mentionedPeople.some(mp => mp.slug === p.slug)) mentionedPeople.push(p)
+    }
+    const { operationName, region } = extractPlanetMeta(title)
+    planet = {
+      operationName,
+      region,
+      roster:    extractPlanetRoster(content),
+      locations: extractPlanetLocations(content, operationName),
     }
   }
 
   const { startDate, endDate } = extractDateRange(title, sections)
 
-  results.push({ _id: id, slug, title, group, extracted, sections, content, logEntries, mentionedPeople, startDate, endDate, issues })
+  results.push({ _id: id, slug, title, group, extracted, sections, content, logEntries, mentionedPeople, startDate, endDate, issues, planet })
 }
 
 // ── Write output ──────────────────────────────────────────────────────────────

@@ -2,7 +2,25 @@
   <div class="person-page" itemscope itemtype="https://schema.org/Person">
     <div v-if="loading" class="status">Laster…</div>
 
-    <div v-else-if="!person" class="status">Person ikke funnet.</div>
+    <div v-else-if="!person && !isAutoSlug" class="status">Person ikke funnet.</div>
+
+    <!-- Auto-generated stub (not in Sanity) -->
+    <template v-else-if="isAutoSlug">
+      <div class="page-header">
+        <RouterLink to="/registre" class="back-link">&#x2039; Tilbake</RouterLink>
+        <div class="person-name-row">
+          <h1 class="person-name">{{ autoPersonName || route.params.slug }}</h1>
+          <span class="auto-badge">Autogenerert</span>
+        </div>
+        <p class="person-meta">Ikke registrert i kildebasen ennå.</p>
+      </div>
+      <EnrichedPerson
+        :slug="route.params.slug as string"
+        :gallery="[]"
+        :links="[]"
+        @select-event-slug="s => router.push(`/events/${s}`)"
+      />
+    </template>
 
     <template v-else>
       <!-- Hero image -->
@@ -169,10 +187,28 @@ const route  = useRoute()
 const router = useRouter()
 const { people, loading, init } = useLocationCache()
 
-onMounted(async () => { await init() })
+const isAutoSlug = computed(() => (route.params.slug as string).startsWith('auto-'))
+const autoPersonName = ref<string | null>(null)
+
+onMounted(async () => {
+  await init()
+  if (isAutoSlug.value) {
+    try {
+      const rows = await neo4jQuery<{ name: string }>(
+        `MATCH (p:Person {slug: $slug}) RETURN p.name AS name LIMIT 1`,
+        { slug: route.params.slug as string },
+      )
+      autoPersonName.value = rows[0]?.name ?? null
+    } catch {
+      autoPersonName.value = null
+    }
+  }
+})
 
 const person = computed(() =>
-  people.value.find(p => p.slug === (route.params.slug as string)) ?? null,
+  isAutoSlug.value
+    ? null
+    : (people.value.find(p => p.slug === (route.params.slug as string)) ?? null),
 )
 
 // Tabs
@@ -345,6 +381,28 @@ function nextImage() {
   font-size: 12px;
   color: var(--color-muted);
   margin: 0;
+}
+
+.person-name-row {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.auto-badge {
+  display: inline-block;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #7a4f00;
+  background: #fff3cd;
+  border: 1px solid #f0c040;
+  border-radius: 3px;
+  padding: 2px 7px;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 /* ── Sections ───────────────────────────────────────────────── */

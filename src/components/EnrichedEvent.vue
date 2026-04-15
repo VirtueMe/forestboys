@@ -13,6 +13,73 @@
     <div v-else-if="error" class="error">{{ error }}</div>
 
     <template v-else>
+
+      <!-- ══ Planet operation view ════════════════════════════════ -->
+      <template v-if="eventGroup === 'PlanetOperation'">
+
+        <!-- Header: name + region + system label -->
+        <div class="planet-header">
+          <span v-if="planetName" class="planet-name">{{ planetName }}</span>
+          <span v-if="planetRegion" class="planet-region-badge">{{ planetRegion }}</span>
+          <span class="planet-system">Planetgrupper · FO4 UK / MI4 Stockholm</span>
+        </div>
+
+        <!-- Location hierarchy -->
+        <section v-if="planetLocations.length" class="section">
+          <h3 class="section-heading">Organisasjon</h3>
+          <div class="planet-hierarchy">
+            <template v-for="loc in planetLocations" :key="loc.id">
+              <div class="planet-loc" :class="`planet-loc--${loc.type.toLowerCase().replace(/[^a-z]/g,'')}`">
+                <span class="planet-loc-type">{{ loc.type }}</span>
+                <span class="planet-loc-name">{{ loc.name }}</span>
+                <span class="planet-loc-status" :class="loc.status === 'Aktiv' ? 'status--aktiv' : 'status--planlagt'">
+                  {{ loc.status }}
+                </span>
+                <span v-if="loc.lat" class="planet-loc-coords">{{ loc.lat.toFixed(4) }}, {{ loc.lng?.toFixed(4) }}</span>
+              </div>
+            </template>
+          </div>
+        </section>
+
+        <!-- Personnel roster -->
+        <section v-if="planetMembers.length" class="section">
+          <h3 class="section-heading">Mannskap ({{ planetMembers.length }})</h3>
+          <div class="planet-roster">
+            <div
+              v-for="m in planetMembers"
+              :key="m.personSlug"
+              class="planet-roster-row"
+            >
+              <RouterLink :to="`/person/${m.personSlug}#beriket`" class="planet-roster-name">
+                {{ m.name }}
+              </RouterLink>
+              <span v-if="m.codename" class="planet-codename">«{{ m.codename }}»</span>
+              <span v-if="m.arrivedSweden" class="planet-date">{{ formatDate(m.arrivedSweden) }}</span>
+            </div>
+          </div>
+        </section>
+
+        <!-- Training batches -->
+        <section v-if="planetBatches.length" class="section">
+          <h3 class="section-heading">Åhlby-kull</h3>
+          <div class="planet-batches">
+            <div v-for="batch in planetBatches" :key="batch.id" class="planet-batch">
+              <div class="planet-batch-date">{{ formatDate(batch.date) }}</div>
+              <div class="planet-batch-members">
+                <template v-for="(m, i) in batch.members" :key="m.personSlug">
+                  <RouterLink :to="`/person/${m.personSlug}#beriket`" class="planet-batch-member">
+                    {{ m.name }}<span v-if="m.codename"> «{{ m.codename }}»</span>
+                  </RouterLink>
+                  <span v-if="i < batch.members.length - 1" class="planet-batch-sep">, </span>
+                </template>
+              </div>
+            </div>
+          </div>
+        </section>
+
+      </template>
+      <!-- ══ end Planet ═══════════════════════════════════════════ -->
+
       <!-- Named sections (Oppdrag, Personell, etc.) -->
       <section
         v-for="sec in namedSections"
@@ -34,13 +101,15 @@
             <p v-else class="people-prose">{{ seg.text }}</p>
           </template>
         </div>
+        <pre v-else-if="sec.body.includes('\t')" class="section-pre">{{ sec.body }}</pre>
         <p v-else class="section-text">{{ sec.body }}</p>
       </section>
 
       <!-- Uncategorized description content -->
       <section v-if="contentSection" class="section content-section">
         <h3 class="section-heading">Beskrivelse</h3>
-        <p class="section-text">{{ contentSection.body }}</p>
+        <pre v-if="contentSection.body.includes('\t')" class="section-pre">{{ contentSection.body.replace(/^([^\n]*\t[^\n]*)\n\n(?=[^\n]*\t)/gm, '$1\n') }}</pre>
+        <p v-else class="section-text">{{ contentSection.body }}</p>
       </section>
 
       <!-- Dated log entries -->
@@ -204,6 +273,11 @@ interface RelatedEvent     { slug: string; title: string; date: string; group: s
 interface PersonNode       { slug: string; name: string; shared: number }
 interface DirectPersonNode { slug: string; name: string }
 
+// Planet-specific
+interface PlanetLocation   { id: string; name: string; type: string; status: string; lat: number | null; lng: number | null }
+interface PlanetMember     { personSlug: string; name: string; codename: string | null; arrivedSweden: string | null; aahlyDate: string | null; batchId: string | null }
+interface PlanetBatch      { id: string; date: string; members: PlanetMember[] }
+
 const PEOPLE_SECTION_KEYS = new Set([
   'bemanning', 'crew', 'mannskap', 'styrke', 'agenter',
   'passasjerer', 'landsatte', 'personell', 'deltakere', 'squad',
@@ -215,6 +289,13 @@ const relatedEvents   = ref<RelatedEvent[]>([])
 const colocatedEvents = ref<RelatedEvent[]>([])
 const peopleNetwork   = ref<PersonNode[]>([])
 const directPeople    = ref<DirectPersonNode[]>([])
+
+// Planet-specific
+const planetName      = ref<string | null>(null)
+const planetRegion    = ref<string | null>(null)
+const planetLocations = ref<PlanetLocation[]>([])
+const planetMembers   = ref<PlanetMember[]>([])
+const planetBatches   = ref<PlanetBatch[]>([])
 
 /** Normalise a name for loose matching: lowercase, collapse whitespace, strip punctuation */
 function normName(s: string): string {
@@ -315,6 +396,7 @@ const GROUP_LABELS: Record<string, string> = {
   SeaPatrol:        'Sjøpatrulje',
   MaritimeCraft:    'Fartøy',
   StationOperation: 'SOE/SIS Operasjon',
+  PlanetOperation:  'Planet-operasjon',
   CommandoRaid:     'Kommandoangrep',
   EscapeRoute:      'Fluktrute',
   Meeting:          'Møte',
@@ -350,6 +432,11 @@ async function load(slug: string) {
   colocatedEvents.value = []
   peopleNetwork.value   = []
   directPeople.value    = []
+  planetName.value      = null
+  planetRegion.value    = null
+  planetLocations.value = []
+  planetMembers.value   = []
+  planetBatches.value   = []
 
   try {
     const [meta, secs, logs, related, colocated, people, direct] = await Promise.all([
@@ -421,9 +508,53 @@ async function load(slug: string) {
     peopleNetwork.value   = people
     directPeople.value    = direct
 
+    // Planet-specific data
+    if (meta[0]?.group === 'PlanetOperation') {
+      const [opMeta, locs, members] = await Promise.all([
+        neo4jQuery<{ name: string; region: string }>(
+          `MATCH (e:Event {slug: $slug})-[:DESCRIBES]->(o:Operation)
+           RETURN o.name AS name, o.region AS region`,
+          { slug },
+        ),
+        neo4jQuery<PlanetLocation>(
+          `MATCH (e:Event {slug: $slug})-[:DESCRIBES]->(o:Operation)
+           MATCH (o)-[:HQ_AT|HAS_UNIT]->(l:Location)
+           RETURN l.id AS id, l.name AS name, l.type AS type,
+                  l.status AS status, l.lat AS lat, l.lng AS lng
+           ORDER BY l.type`,
+          { slug },
+        ),
+        neo4jQuery<{ personSlug: string; name: string; codename: string | null; arrivedSweden: string | null; aahlyDate: string | null; batchId: string | null }>(
+          `MATCH (e:Event {slug: $slug})-[:DESCRIBES]->(o:Operation)
+           MATCH (p:Person)-[m:MEMBER_OF]->(o)
+           OPTIONAL MATCH (p)-[r:PARTICIPATED_IN]->(b:TrainingBatch)-[:PREPARED_FOR]->(o)
+           RETURN p.slug AS personSlug, p.name AS name, m.codename AS codename,
+                  r.arrived_sweden AS arrivedSweden, b.date AS aahlyDate, b.id AS batchId
+           ORDER BY p.name`,
+          { slug },
+        ),
+      ])
+
+      planetName.value   = opMeta[0]?.name   ?? null
+      planetRegion.value = opMeta[0]?.region ?? null
+      planetLocations.value = locs
+
+      planetMembers.value = members
+      // Build training batches: group members by aahlyDate
+      const batchMap = new Map<string, PlanetBatch>()
+      for (const m of members) {
+        if (m.aahlyDate && m.batchId) {
+          if (!batchMap.has(m.batchId)) batchMap.set(m.batchId, { id: m.batchId, date: m.aahlyDate, members: [] })
+          batchMap.get(m.batchId)!.members.push(m)
+        }
+      }
+      planetBatches.value = [...batchMap.values()].sort((a, b) => a.date.localeCompare(b.date))
+    }
+
     emit('has-data',
       secs.length > 0 || logs.length > 0 ||
-      related.length > 0 || colocated.length > 0 || people.length > 0,
+      related.length > 0 || colocated.length > 0 || people.length > 0 ||
+      planetMembers.value.length > 0,
     )
   } catch (err) {
     error.value = err instanceof Error ? err.message : 'Graf-feil'
@@ -505,6 +636,19 @@ watch(() => props.slug, slug => { void load(slug) }, { immediate: true })
   color: var(--color-text);
   margin: 0;
   white-space: pre-wrap;
+}
+
+.section-pre {
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 11px;
+  white-space: pre-wrap;
+  overflow-x: auto;
+  background: color-mix(in srgb, var(--color-border) 50%, var(--color-surface));
+  border-radius: 3px;
+  padding: 8px 10px;
+  line-height: 1.65;
+  color: var(--color-text);
+  margin: 0;
 }
 
 /* ── Mission brief ────────────────────────────────────────────── */
@@ -773,4 +917,151 @@ watch(() => props.slug, slug => { void load(slug) }, { immediate: true })
   text-align: center;
   margin: 6px 0 0;
 }
+
+/* ── Planet operation display ─────────────────────────────────────────────── */
+.planet-header {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 14px 20px 10px;
+  border-bottom: 0.5px solid var(--color-border);
+}
+
+.planet-name {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--color-text);
+}
+
+.planet-region-badge {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  padding: 2px 8px;
+  border-radius: 10px;
+  background: #1a2e4a;
+  color: #5aa8f0;
+}
+
+.planet-system {
+  font-size: 11px;
+  color: var(--color-muted);
+  margin-left: auto;
+}
+
+/* Hierarchy */
+.planet-hierarchy {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.planet-loc {
+  display: grid;
+  grid-template-columns: 60px 1fr auto auto;
+  align-items: baseline;
+  gap: 8px;
+  padding: 3px 0;
+  font-size: 13px;
+}
+
+.planet-loc--hq { padding-left: 0; }
+.planet-loc--depot { padding-left: 8px; }
+.planet-loc--amøbe { padding-left: 16px; }
+.planet-loc--bicelle { padding-left: 28px; }
+
+.planet-loc-type {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--color-muted);
+}
+
+.planet-loc-name {
+  color: var(--color-text);
+  font-weight: 500;
+}
+
+.planet-loc-coords {
+  font-size: 10px;
+  color: var(--color-muted);
+  font-family: 'Courier New', monospace;
+}
+
+.status--aktiv    { font-size: 10px; color: #5af0a0; }
+.status--planlagt { font-size: 10px; color: var(--color-muted); }
+
+/* Roster */
+.planet-roster {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.planet-roster-row {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.planet-roster-name {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--color-navy);
+  text-decoration: none;
+}
+.planet-roster-name:hover { text-decoration: underline; }
+
+.planet-codename {
+  font-size: 12px;
+  color: var(--color-muted);
+  font-style: italic;
+}
+
+.planet-date {
+  font-size: 11px;
+  color: var(--color-muted);
+  margin-left: auto;
+}
+
+/* Training batches */
+.planet-batches {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.planet-batch {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 10px;
+  align-items: baseline;
+}
+
+.planet-batch-date {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--color-navy);
+  border: 1px solid var(--color-border);
+  border-radius: 4px;
+  padding: 2px 6px;
+  white-space: nowrap;
+}
+
+.planet-batch-members {
+  font-size: 12px;
+  color: var(--color-text);
+  line-height: 1.6;
+}
+
+.planet-batch-member {
+  color: var(--color-navy);
+  text-decoration: none;
+}
+.planet-batch-member:hover { text-decoration: underline; }
+
+.planet-batch-sep { color: var(--color-muted); }
 </style>

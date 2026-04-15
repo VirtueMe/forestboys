@@ -298,6 +298,20 @@ function handleInternalLinks(e: MouseEvent) {
   font-size: 11px;
   opacity: 0.6;
 }
+.portable-text :deep(pre.pre-table) {
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 11px;
+  tab-size: 4;
+  white-space: pre-wrap;
+  overflow-x: auto;
+  background: color-mix(in srgb, var(--color-border) 50%, var(--color-surface));
+  border-radius: 3px;
+  padding: 8px 10px;
+  line-height: 1.65;
+  color: var(--color-text);
+  margin: 0 0 0.75em;
+}
+
 .portable-text :deep(ul),
 .portable-text :deep(ol) {
   margin: 0 0 0.75em 1.25em;

@@ -71,6 +71,7 @@ const navItems: NavItem[] = [
   { label: 'Hendelsekatalog',   path: '/events',   detail: '/events' },
   { label: 'Kart',              path: '/map' },
   { label: 'Registre',          path: '/registre', detail: '/registre' },
+  { label: 'Gjennomgang',       path: '/review' },
   { label: 'Om oss',            path: '/about' },
 ]
 
