@@ -26,3 +26,22 @@ data/
 *.njsproj
 *.sln
 *.sw?
+
+# Clojure / Calva / Clojure-LSP / Portal / Clerk — tool caches and REPL state
+.clj-kondo/
+.lsp/
+.calva/
+.cpcache/
+.nrepl-port
+.portal/
+.clerk/
+target/
+out/
+
+# Cloudflare Wrangler — local secrets for Pages Functions dev
+.dev.vars
+.dev.vars.*
+
+# TypeScript incremental build info (regenerated on every build)
+tsconfig.tsbuildinfo
+*.tsbuildinfo
