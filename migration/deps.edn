@@ -1,0 +1,19 @@
+{:paths ["src"]
+
+ :deps {org.clojure/clojure {:mvn/version "1.12.0"}
+        cheshire/cheshire   {:mvn/version "5.13.0"}}
+
+ :aliases
+ {:dev
+  {:extra-paths ["dev" "notebooks"]
+   :extra-deps  {djblue/portal              {:mvn/version "0.58.5"}
+                 io.github.nextjournal/clerk {:mvn/version "0.17.1102"}}}
+
+  ;; Run round-0 as a script:  clj -M:run
+  :run
+  {:main-opts ["-m" "linge.round-zero"]}}}
+
+;; Notes:
+;; - Versions above are reasonable recent choices. Verify/bump as needed.
+;; - Calva "Jack-in" injects cider-nrepl middleware automatically — no :nrepl alias needed.
+;; - Pick the :dev alias in the jack-in dialog to include Portal and Clerk.
