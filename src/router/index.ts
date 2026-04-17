@@ -12,6 +12,8 @@ import OutlinesView  from '../pages/OutlinesView.vue'
 import OutlineDetail from '../pages/OutlineDetail.vue'
 import RegistreView  from '../pages/RegistreView.vue'
 import AboutView     from '../pages/AboutView.vue'
+import OrganizationDetail from '../pages/OrganizationDetail.vue'
+import DistrictDetail     from '../pages/DistrictDetail.vue'
 import AccessView    from '../pages/AccessView.vue'
 import ReviewView    from '../pages/ReviewView.vue'
 
@@ -39,6 +41,8 @@ const router = createRouter({
     { path: '/transport/:slug/:child?', component: TransportDetail },
     { path: '/outlines',                component: OutlinesView },
     { path: '/outlines/:slug',          component: OutlineDetail },
+    { path: '/organization/:slug',      component: OrganizationDetail },
+    { path: '/district/:slug',           component: DistrictDetail },
     { path: '/registre',               component: RegistreView },
     { path: '/about',                   component: AboutView },
     { path: '/access',                  component: AccessView },

@@ -173,7 +173,7 @@ MERGE (org:Organization {sanityId: "${id}"})
 SET org.name = "${esc(parsed.name)}"
 SET org.slug = "${esc(parsed.slug)}"${setLine('formalName', parsed.formalName, 'org')}${setLine('abbreviation', parsed.abbreviation, 'org')}${setLine('sortingName', parsed.sortingName, 'org')}${hex ? `\nSET org.color = "${hex}"` : ''}
 
-MERGE (org)-[:EXTRACTED_FROM]->(src)`
+MERGE (org)-[:EXTRACTED_FROM]->(src);`
   }).join('\n\n')
 }
 
@@ -191,7 +191,7 @@ MERGE (u:Unit {sanityId: "${id}"})
 SET u.name = "${esc(parsed.name)}"
 SET u.slug = "${esc(parsed.slug)}"${setLine('formalName', parsed.formalName, 'u')}${setLine('abbreviation', parsed.abbreviation, 'u')}${setLine('sortingName', parsed.sortingName, 'u')}
 
-MERGE (u)-[:EXTRACTED_FROM]->(src)`
+MERGE (u)-[:EXTRACTED_FROM]->(src);`
   }).join('\n\n')
 }
 

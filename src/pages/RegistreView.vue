@@ -73,12 +73,30 @@
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import { RouterLink } from 'vue-router'
 import { useLocationCache } from '../composables/useLocationCache.ts'
+import { neo4jQuery } from '../composables/useNeo4j.ts'
 import CustomSelect from '../components/CustomSelect.vue'
 
 const { stations, people, transport, outlines, loading, init } = useLocationCache()
 
+const neo4jOrgs      = ref<{ name: string; slug: string; color: string | null }[]>([])
+const neo4jDistricts = ref<{ name: string; slug: string }[]>([])
+
 onMounted(async () => {
   await init()
+  try {
+    const [orgs, dists] = await Promise.all([
+      neo4jQuery<{ name: string; slug: string; color: string | null }>(
+        `MATCH (o:Organization) RETURN o.name AS name, o.slug AS slug, o.color AS color ORDER BY o.name`,
+      ),
+      neo4jQuery<{ name: string; slug: string }>(
+        `MATCH (u:Unit) RETURN u.name AS name, u.slug AS slug ORDER BY u.name`,
+      ),
+    ])
+    neo4jOrgs.value      = orgs
+    neo4jDistricts.value = dists
+  } catch (err) {
+    console.error('Registre: Neo4j fetch failed', err)
+  }
   if (containerRef.value) {
     ro = new ResizeObserver(entries => {
       containerHeight.value = entries[0].contentRect.height
@@ -88,9 +106,11 @@ onMounted(async () => {
 })
 
 // ── Type config ───────────────────────────────────────────────
-const TYPE_OPTIONS = ['Stasjon', 'Person', 'Fremkomstmiddel', 'Informasjon']
+const TYPE_OPTIONS = ['Organisasjon', 'Avdeling', 'Stasjon', 'Person', 'Fremkomstmiddel', 'Informasjon']
 
 const TYPE_COLORS: Record<string, string> = {
+  Organisasjon:    'var(--color-orange, #e38924)',
+  Avdeling:        'var(--color-teal, #047485)',
   Stasjon:         'var(--color-navy)',
   Person:          'var(--color-green)',
   Fremkomstmiddel: 'var(--color-red)',
@@ -98,6 +118,8 @@ const TYPE_COLORS: Record<string, string> = {
 }
 
 const TYPE_KEY: Record<string, string> = {
+  Organisasjon:    'organization',
+  Avdeling:        'district',
   Stasjon:         'station',
   Person:          'person',
   Fremkomstmiddel: 'transport',
@@ -125,6 +147,14 @@ interface Entry {
 
 const allEntries = computed<Entry[]>(() => {
   const entries: Entry[] = [
+    ...neo4jOrgs.value.map(o => ({
+      type: 'organization', label: 'Organisasjon',
+      name: o.name, slug: o.slug, route: `/organization/${o.slug}`,
+    })),
+    ...neo4jDistricts.value.map(d => ({
+      type: 'district', label: 'Avdeling',
+      name: d.name, slug: d.slug, route: `/district/${d.slug}`,
+    })),
     ...stations.value.map(s => ({
       type: 'station', label: 'Stasjon',
       name: s.title, slug: s.slug, route: `/station/${s.slug}`,
