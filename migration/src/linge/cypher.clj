@@ -36,9 +36,27 @@
 ;; Statement builders.
 
 (defn merge-node
-  "Emit  MERGE (:Label {prop: val, ...});"
+  "Emit  MERGE (n:Label {identity}) SET n.other = ...;
+
+   Identity key is :slug if present, else :id, else the first key.
+   Everything else becomes SET clauses. This makes MERGE idempotent
+   across rounds — round-1 correctly updates round-0 nodes instead of
+   creating duplicates when property sets differ."
   [label props]
-  (str "MERGE (:" (name label) " {" (props->str props) "});\n"))
+  (let [id-key (cond
+                 (contains? props :slug) :slug
+                 (contains? props :id)   :id
+                 :else                   (first (keys props)))
+        id-val (get props id-key)
+        updates (into {} (remove (fn [[_ v]] (nil? v)) (dissoc props id-key)))]
+    (str "MERGE (n:" (name label) " {" (name id-key) ": " (literal id-val) "})\n"
+         (if (seq updates)
+           (str "SET "
+                (->> updates
+                     (map (fn [[k v]] (str "n." (name k) " = " (literal v))))
+                     (str/join ", "))
+                ";\n")
+           ";\n"))))
 
 (defn merge-edge
   "Emit MATCH ... MERGE (a)-[r:REL]->(b) ON CREATE SET r.k = v ...;"

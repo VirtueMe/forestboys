@@ -11,7 +11,15 @@
 
   ;; Run round-0 as a script:  clj -M:run
   :run
-  {:main-opts ["-m" "linge.round-zero"]}}}
+  {:main-opts ["-m" "linge.round-zero"]}
+
+  ;; Run round-1 as a script:  clj -M:run-1
+  :run-1
+  {:main-opts ["-m" "linge.round-one"]}
+
+  ;; Run round-1.5 (pages CMS migration):  clj -M:run-1-5
+  :run-1-5
+  {:main-opts ["-m" "linge.pages"]}}}
 
 ;; Notes:
 ;; - Versions above are reasonable recent choices. Verify/bump as needed.
