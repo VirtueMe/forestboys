@@ -37,14 +37,18 @@
     (cy/merge-node :Organization
                    {:slug "soe" :canonicalName "SOE" :type "allied-agency" :country "UK"
                     :foundedDate "1940-07-22" :dissolvedDate "1946-01-15"})
-    (cy/merge-node :Organization
-                   {:slug "kompani-linge" :canonicalName "Kompani Linge" :type "military-unit"
+    ;; Kompani Linge is a Unit (a SOE-formation), not an Organization.
+    ;; Units nest recursively via PART_OF; the type property ("company",
+    ;; "troop", "team", "patrol", "squadron", "flotilla", "cell", "district")
+    ;; discriminates scale.
+    (cy/merge-node :Unit
+                   {:slug "kompani-linge" :canonicalName "Kompani Linge" :type "company"
                     :country "UK-NO" :color "#e35c24" :foundedDate "1940-08-01"
                     :names [{:value "Norwegian Independent Company 1" :type "formal"
                              :language "en" :period "1941–1945" :context "SOE"}
                             {:value "NOR.I.C.1"     :type "formal-cover" :language "en"}
                             {:value "Kompani Linge" :type "primary"      :language "no"}]})
-    (cy/merge-edge {:from {:label :Organization :match {:slug "kompani-linge"}}
+    (cy/merge-edge {:from {:label :Unit         :match {:slug "kompani-linge"}}
                     :to   {:label :Organization :match {:slug "soe"}}
                     :rel  :PART_OF})
     (cy/merge-node :Organization {:slug "haeren"  :canonicalName "Hæren"  :type "military-branch" :country "NO"})
@@ -118,7 +122,7 @@
               ["menig" (san-mig-ref sanity-id "default:menig-soldier-baseline")])]
         (str
           (cy/merge-edge {:from {:label :Person :match {:slug slug}}
-                          :to   {:label :Organization :match {:slug "kompani-linge"}}
+                          :to   {:label :Unit :match {:slug "kompani-linge"}}
                           :rel  :MEMBER_OF
                           :props {:state "verified" :sourceRef "linge-outline-membership"}})
           (cy/merge-edge {:from {:label :Person :match {:slug slug}}

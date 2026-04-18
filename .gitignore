@@ -45,3 +45,6 @@ out/
 # TypeScript incremental build info (regenerated on every build)
 tsconfig.tsbuildinfo
 *.tsbuildinfo
+
+# Page bundles exported from Neo4j (regenerated via `clj -M:export-pages`)
+/public/pages/

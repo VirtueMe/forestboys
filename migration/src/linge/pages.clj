@@ -76,12 +76,28 @@
                (remove nil?)
                vec)})
 
-(defn about-page [about]
+(defn partner->card
+  "Turn a Sanity `partner` document into a partner-type card for the About page.
+   Lives in the 'bottom' section — no need for a dedicated 'partners' section;
+   the card's type is enough for renderers to pick the grid layout."
+  [section-order p]
+  (let [asset-ref (get-in p [:image :asset :_ref])]
+    {:title         (:title p)
+     :blocks        (:description p)
+     :image-ref     asset-ref
+     :image-url     (sanity-image-url asset-ref)
+     :type          "partner"
+     :section       "bottom"
+     :section-order section-order}))
+
+(defn about-page [about partners]
   {:slug "about"
    :title "Om prosjektet"
    :author "jan"
    :updatedAt (:_updatedAt about)
-   :cards [(prose-blocks->card "middle" 1 (:description about))]})
+   :cards (vec (concat
+                 [(prose-blocks->card "middle" 1 (:description about))]
+                 (map-indexed #(partner->card (inc %1) %2) partners)))})
 
 ;; ── Cypher emitters ──────────────────────────────────────────────────────
 
@@ -156,13 +172,14 @@
 ;; ── Orchestration ────────────────────────────────────────────────────────
 
 (defn build []
-  (let [home (load-json "sanity-home.json")
-        about (load-json "sanity-about.json")
-        pages [(home-page home) (about-page about)]]
-    {:pages pages
-     :counts {:pages        (count pages)
-              :cards        (count (mapcat :cards pages))
-              :hero-images  (count (keep :image-ref (mapcat :cards pages)))}
+  (let [home     (load-json "sanity-home.json")
+        about    (load-json "sanity-about.json")
+        partners (load-json "sanity-partner.json")
+        pages    [(home-page home) (about-page about partners)]]
+    {:pages    pages
+     :counts   {:pages        (count pages)
+                :cards        (count (mapcat :cards pages))
+                :hero-images  (count (keep :image-ref (mapcat :cards pages)))}
      :files {"00-pages.cypher"             (pages-cypher pages)
              "01-cards.cypher"             (cards-cypher pages)
              "02-page-descriptions.cypher" (descriptions-cypher pages)}}))

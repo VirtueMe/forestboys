@@ -19,7 +19,23 @@
 
   ;; Run round-1.5 (pages CMS migration):  clj -M:run-1-5
   :run-1-5
-  {:main-opts ["-m" "linge.pages"]}}}
+  {:main-opts ["-m" "linge.pages"]}
+
+  ;; Export page bundles for the Vue consumer:  clj -M:export-pages
+  :export-pages
+  {:main-opts ["-m" "linge.export-pages"]}
+
+  ;; Round 2 — classify 29 outlines into Unit/Operation/EquipmentType/Source/Article
+  :run-2
+  {:main-opts ["-m" "linge.outlines"]}
+
+  ;; Round 2.1 — Kompani Linge's 30 training courses (from the outline table)
+  :run-2-1
+  {:main-opts ["-m" "linge.courses"]}
+
+  ;; Indexes + unique constraints — idempotent, safe to re-run
+  :indexes
+  {:main-opts ["-m" "linge.indexes"]}}}
 
 ;; Notes:
 ;; - Versions above are reasonable recent choices. Verify/bump as needed.
