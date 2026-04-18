@@ -72,30 +72,77 @@
 <script setup lang="ts">
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import { RouterLink } from 'vue-router'
-import { useLocationCache } from '../composables/useLocationCache.ts'
 import { neo4jQuery } from '../composables/useNeo4j.ts'
 import CustomSelect from '../components/CustomSelect.vue'
 
-const { stations, people, transport, outlines, loading, init } = useLocationCache()
+// Registre runs entirely on Neo4j — no Sanity, no useLocationCache.
+// Each category gets its own small query; "Informasjon" unions the
+// four outline-descended types (Article / Operation / EquipmentType / Source).
 
-const neo4jOrgs      = ref<{ name: string; slug: string; color: string | null }[]>([])
-const neo4jDistricts = ref<{ name: string; slug: string }[]>([])
+interface NeoRow { name: string; slug: string; color?: string | null; entityType?: string }
+
+const neoOrgs         = ref<NeoRow[]>([])
+const neoUnits        = ref<NeoRow[]>([])
+const neoStations     = ref<NeoRow[]>([])
+const neoPeople       = ref<NeoRow[]>([])
+const neoTransport    = ref<NeoRow[]>([])
+const neoInformasjon  = ref<NeoRow[]>([])
+const loading         = ref(true)
 
 onMounted(async () => {
-  await init()
   try {
-    const [orgs, dists] = await Promise.all([
-      neo4jQuery<{ name: string; slug: string; color: string | null }>(
-        `MATCH (o:Organization) RETURN o.name AS name, o.slug AS slug, o.color AS color ORDER BY o.name`,
-      ),
-      neo4jQuery<{ name: string; slug: string }>(
-        `MATCH (u:Unit) RETURN u.name AS name, u.slug AS slug ORDER BY u.name`,
-      ),
+    const [orgs, units, stations, people, transport, articles, operations, equipment, sources] = await Promise.all([
+      // Top-level Organizations only (sub-orgs surfaced via PART_OF* on demand).
+      neo4jQuery<NeoRow>(
+        `MATCH (o:Organization)
+         WHERE NOT (o)-[:PART_OF]->(:Organization)
+         RETURN o.canonicalName AS name, o.slug AS slug, o.color AS color
+         ORDER BY name`),
+      // Top-level Units only.
+      neo4jQuery<NeoRow>(
+        `MATCH (u:Unit)
+         WHERE NOT (u)-[:PART_OF]->(:Unit)
+         RETURN u.canonicalName AS name, u.slug AS slug
+         ORDER BY name`),
+      neo4jQuery<NeoRow>(
+        `MATCH (s:Station)
+         RETURN s.canonicalName AS name, s.slug AS slug
+         ORDER BY name`),
+      neo4jQuery<NeoRow>(
+        `MATCH (p:Person)
+         RETURN p.canonicalName AS name, p.slug AS slug
+         ORDER BY name`),
+      neo4jQuery<NeoRow>(
+        `MATCH (t:Transport)
+         RETURN t.canonicalName AS name, t.slug AS slug
+         ORDER BY name`),
+      neo4jQuery<NeoRow>(
+        `MATCH (a:Article) RETURN a.title AS name, a.slug AS slug ORDER BY name`),
+      neo4jQuery<NeoRow>(
+        `MATCH (op:Operation) RETURN op.codeName AS name, op.slug AS slug ORDER BY name`),
+      neo4jQuery<NeoRow>(
+        `MATCH (e:EquipmentType) RETURN e.canonicalName AS name, e.slug AS slug ORDER BY name`),
+      neo4jQuery<NeoRow>(
+        // Only substantive citations — skip photograph, artifact, and migration-origin Sources.
+        `MATCH (src:Source)
+         WHERE src.type IN ['book','report','newspaper','archive','interview','manual','document','correspondence','rank-table']
+         RETURN src.title AS name, src.id AS slug ORDER BY name`),
     ])
-    neo4jOrgs.value      = orgs
-    neo4jDistricts.value = dists
+    neoOrgs.value         = orgs
+    neoUnits.value        = units
+    neoStations.value     = stations
+    neoPeople.value       = people
+    neoTransport.value    = transport
+    neoInformasjon.value  = [
+      ...articles.map(x => ({ ...x, entityType: 'article' })),
+      ...operations.map(x => ({ ...x, entityType: 'operation' })),
+      ...equipment.map(x => ({ ...x, entityType: 'equipment' })),
+      ...sources.map(x => ({ ...x, entityType: 'source' })),
+    ]
   } catch (err) {
     console.error('Registre: Neo4j fetch failed', err)
+  } finally {
+    loading.value = false
   }
   if (containerRef.value) {
     ro = new ResizeObserver(entries => {
@@ -145,38 +192,45 @@ interface Entry {
   thumbnailUrl?: string
 }
 
+function informasjonRoute(e: NeoRow): string {
+  // Entity-specific detail routes (may not all be built yet — fine for now).
+  switch (e.entityType) {
+    case 'article':   return `/article/${e.slug}`
+    case 'operation': return `/operation/${e.slug}`
+    case 'equipment': return `/equipment/${e.slug}`
+    case 'source':    return `/source/${e.slug}`
+    default:          return `/outlines/${e.slug}`
+  }
+}
+
 const allEntries = computed<Entry[]>(() => {
   const entries: Entry[] = [
-    ...neo4jOrgs.value.map(o => ({
+    ...neoOrgs.value.map(o => ({
       type: 'organization', label: 'Organisasjon',
       name: o.name, slug: o.slug, route: `/organization/${o.slug}`,
     })),
-    ...neo4jDistricts.value.map(d => ({
+    ...neoUnits.value.map(u => ({
       type: 'district', label: 'Avdeling',
-      name: d.name, slug: d.slug, route: `/district/${d.slug}`,
+      name: u.name, slug: u.slug, route: `/district/${u.slug}`,
     })),
-    ...stations.value.map(s => ({
+    ...neoStations.value.map(s => ({
       type: 'station', label: 'Stasjon',
-      name: s.title, slug: s.slug, route: `/station/${s.slug}`,
-      thumbnailUrl: s.thumbnailUrl,
+      name: s.name, slug: s.slug, route: `/station/${s.slug}`,
     })),
-    ...people.value.map(p => ({
+    ...neoPeople.value.map(p => ({
       type: 'person', label: 'Person',
       name: p.name, slug: p.slug, route: `/person/${p.slug}`,
-      thumbnailUrl: p.thumbnailUrl,
     })),
-    ...transport.value.map(t => ({
+    ...neoTransport.value.map(t => ({
       type: 'transport', label: 'Fremkomstmiddel',
       name: t.name, slug: t.slug, route: `/transport/${t.slug}`,
-      thumbnailUrl: t.thumbnailUrl,
     })),
-    ...outlines.value.map(o => ({
+    ...neoInformasjon.value.map(i => ({
       type: 'outline', label: 'Informasjon',
-      name: o.title, slug: o.slug, route: `/outlines/${o.slug}`,
-      thumbnailUrl: o.thumbnailUrl,
+      name: i.name, slug: i.slug, route: informasjonRoute(i),
     })),
   ]
-  return entries.sort((a, b) => a.name.localeCompare(b.name, 'nb'))
+  return entries.sort((a, b) => (a.name ?? '').localeCompare(b.name ?? '', 'nb'))
 })
 
 const filtered = computed<Entry[]>(() => {

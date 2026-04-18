@@ -78,7 +78,7 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { SANITY_CDN } from '../config/sanity.ts'
+import { neo4jQuery } from '../composables/useNeo4j.ts'
 import { blocksToHtml, blocksToText } from '../utils/portableText.ts'
 
 interface HomeCard {
@@ -93,6 +93,25 @@ interface HomeData {
   bottomCards?: HomeCard[]
 }
 
+interface CardRow {
+  section: string
+  sectionOrder: number
+  title: string | null
+  type: string | null
+  content: string | null
+  imageUrl: string | null
+}
+
+const PAGE_QUERY = `
+MATCH (p:Page {slug: "home"})-[:HAS_CARD]->(c:Card)
+OPTIONAL MATCH (c)-[:HAS_CONTENT]->(d:Description)
+OPTIONAL MATCH (c)-[:HAS_HERO_IMAGE]->(s:Source)
+RETURN c.section AS section, c.sectionOrder AS sectionOrder,
+       c.title AS title, c.type AS type,
+       d.content AS content, s.url AS imageUrl
+ORDER BY c.section, c.sectionOrder
+`
+
 const router = useRouter()
 const home = ref<HomeData | null>(null)
 const loading = ref(true)
@@ -102,13 +121,18 @@ function cardSrc(url: string): string {
   return `${url}?w=700&auto=format`
 }
 
-function parseCard(raw: unknown): HomeCard {
-  const c = raw as { title?: string; description?: unknown; imageUrl?: string }
-  const html = blocksToHtml(c.description)
+function parseBlocks(content: string | null): unknown[] | undefined {
+  if (!content) return undefined
+  try { return JSON.parse(content) as unknown[] } catch { return undefined }
+}
+
+function rowToCard(r: CardRow): HomeCard {
+  const blocks = parseBlocks(r.content)
+  const html = blocksToHtml(blocks)
   return {
-    title: c.title ?? '',
+    title: r.title ?? '',
     descriptionHtml: html || undefined,
-    imageUrl: c.imageUrl,
+    imageUrl: r.imageUrl ?? undefined,
   }
 }
 
@@ -122,20 +146,17 @@ function handleInternalLinks(e: MouseEvent) {
 
 onMounted(async () => {
   try {
-    const query = `*[_type == "home"][0]{
-      description,
-      "topCards": topCards[]{ title, description, "imageUrl": image.asset->url },
-      "bottomCards": bottomCards[]{ title, description, "imageUrl": image.asset->url }
-    }`
-    const res = await fetch(`${SANITY_CDN}?query=${encodeURIComponent(query)}`)
-    if (!res.ok) throw new Error(`${res.status}`)
-    const data = await res.json()
-    const raw = data.result as { description?: unknown; topCards?: unknown[]; bottomCards?: unknown[] } | null
-    if (!raw) { error.value = true; return }
+    const rows = await neo4jQuery<CardRow>(PAGE_QUERY)
+    if (!rows.length) { error.value = true; return }
+
+    const middle = rows.find(r => r.section === 'middle')
+    const topRows = rows.filter(r => r.section === 'top')
+    const bottomRows = rows.filter(r => r.section === 'bottom')
+
     home.value = {
-      description: blocksToText(raw.description) || undefined,
-      topCards: (raw.topCards ?? []).map(parseCard),
-      bottomCards: (raw.bottomCards ?? []).map(parseCard),
+      description: blocksToText(parseBlocks(middle?.content ?? null)) || undefined,
+      topCards: topRows.map(rowToCard),
+      bottomCards: bottomRows.map(rowToCard),
     }
   } catch {
     error.value = true

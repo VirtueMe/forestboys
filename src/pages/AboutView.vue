@@ -52,7 +52,7 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { SANITY_CDN } from '../config/sanity.ts'
+import { neo4jQuery } from '../composables/useNeo4j.ts'
 import { blocksToHtml } from '../utils/portableText.ts'
 
 interface Partner {
@@ -61,11 +61,35 @@ interface Partner {
   imageUrl?: string
 }
 
+interface CardRow {
+  section: string
+  sectionOrder: number
+  title: string | null
+  type: string | null
+  content: string | null
+  imageUrl: string | null
+}
+
+const PAGE_QUERY = `
+MATCH (p:Page {slug: "about"})-[:HAS_CARD]->(c:Card)
+OPTIONAL MATCH (c)-[:HAS_CONTENT]->(d:Description)
+OPTIONAL MATCH (c)-[:HAS_HERO_IMAGE]->(s:Source)
+RETURN c.section AS section, c.sectionOrder AS sectionOrder,
+       c.title AS title, c.type AS type,
+       d.content AS content, s.url AS imageUrl
+ORDER BY c.section, c.sectionOrder
+`
+
 const router = useRouter()
 const loading = ref(true)
 const error = ref(false)
 const descriptionHtml = ref<string | null>(null)
 const partners = ref<Partner[]>([])
+
+function parseBlocks(content: string | null): unknown[] | undefined {
+  if (!content) return undefined
+  try { return JSON.parse(content) as unknown[] } catch { return undefined }
+}
 
 function handleInternalLinks(e: MouseEvent) {
   const link = (e.target as HTMLElement).closest('a.internal-link')
@@ -77,26 +101,18 @@ function handleInternalLinks(e: MouseEvent) {
 
 onMounted(async () => {
   try {
-    const query = `{
-      "about": *[_type == "aboutUs"][0]{ description },
-      "partners": *[_type == "partner"]{ title, description, "imageUrl": image.asset->url }
-    }`
-    const res = await fetch(`${SANITY_CDN}?query=${encodeURIComponent(query)}`)
-    if (!res.ok) throw new Error(`${res.status}`)
-    const data = await res.json()
-    const result = data.result as {
-      about?: { description?: unknown }
-      partners?: { title?: string; description?: unknown; imageUrl?: string }[]
-    } | null
-    if (!result) { error.value = true; return }
+    const rows = await neo4jQuery<CardRow>(PAGE_QUERY)
+    if (!rows.length) { error.value = true; return }
 
-    const html = blocksToHtml(result.about?.description)
-    descriptionHtml.value = html || null
+    const prose = rows.find(r => r.section === 'middle' && r.type === 'prose')
+    const partnerRows = rows.filter(r => r.type === 'partner')
 
-    partners.value = (result.partners ?? []).map(p => ({
-      title: p.title ?? '',
-      descriptionHtml: blocksToHtml(p.description) || undefined,
-      imageUrl: p.imageUrl,
+    descriptionHtml.value = blocksToHtml(parseBlocks(prose?.content ?? null)) || null
+
+    partners.value = partnerRows.map(r => ({
+      title: r.title ?? '',
+      descriptionHtml: blocksToHtml(parseBlocks(r.content)) || undefined,
+      imageUrl: r.imageUrl ?? undefined,
     }))
   } catch {
     error.value = true

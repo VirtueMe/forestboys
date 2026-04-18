@@ -19,16 +19,9 @@
       <!-- Beskrivelse -->
       <section v-if="description" class="section">
         <h3 class="section-heading">Beskrivelse</h3>
-        <blockquote v-if="description.source && description.source !== 'contributor'" class="quote-block">
-          <p class="plain-text">{{ description.markdown }}</p>
-          <cite v-if="description.sourceUrl" class="quote-source">
-            <a :href="description.sourceUrl" target="_blank" rel="noopener noreferrer">
-              {{ description.source }} <span class="ext-icon">↗</span>
-            </a>
-          </cite>
-          <cite v-else class="quote-source">{{ description.source }}</cite>
-        </blockquote>
-        <p v-else class="plain-text">{{ description.markdown }}</p>
+        <!-- eslint-disable vue/no-v-html -->
+        <div class="portable-text" v-html="description.html"></div>
+        <!-- eslint-enable vue/no-v-html -->
       </section>
 
       <!-- Underavdelinger -->
@@ -42,6 +35,21 @@
             class="section-link"
           >
             {{ u.name }}
+          </RouterLink>
+        </div>
+      </section>
+
+      <!-- Operasjoner -->
+      <section v-if="operations.length" class="section">
+        <h3 class="section-heading">Operasjoner ({{ operations.length }})</h3>
+        <div class="link-list">
+          <RouterLink
+            v-for="op in operations"
+            :key="op.slug"
+            :to="`/operation/${op.slug}`"
+            class="section-link"
+          >
+            {{ op.name }}
           </RouterLink>
         </div>
       </section>
@@ -90,6 +98,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRoute, RouterLink } from 'vue-router'
 import { neo4jQuery } from '../composables/useNeo4j.ts'
+import { blocksToHtml } from '../utils/portableText.ts'
 
 const route   = useRoute()
 const loading = ref(true)
@@ -102,59 +111,80 @@ interface OrgNode {
   color: string | null
 }
 
-interface TextNode {
-  markdown: string
-  source: string | null
-  sourceUrl: string | null
+interface DescriptionNode {
+  html: string
 }
 
-const org         = ref<OrgNode | null>(null)
-const description = ref<TextNode | null>(null)
-const units       = ref<{ name: string; slug: string }[]>([])
-const events      = ref<{ slug: string; title: string; date: string | null }[]>([])
-const people      = ref<{ slug: string; name: string; eventCount: number }[]>([])
+const org          = ref<OrgNode | null>(null)
+const description  = ref<DescriptionNode | null>(null)
+const units        = ref<{ name: string; slug: string }[]>([])
+const operations   = ref<{ name: string; slug: string }[]>([])
+const events       = ref<{ slug: string; title: string; date: string | null }[]>([])
+const people       = ref<{ slug: string; name: string; eventCount: number }[]>([])
 
 onMounted(async () => {
   const slug = route.params.slug as string
   try {
-    const [orgRows, descRows, unitRows, eventRows, peopleRows] = await Promise.all([
+    const [orgRows, descRows, unitRows, opRows, eventRows, peopleRows] = await Promise.all([
       neo4jQuery<OrgNode>(
         `MATCH (o:Organization {slug: $slug})
-         RETURN o.name AS name, o.formalName AS formalName, o.abbreviation AS abbreviation,
-                o.sortingName AS sortingName, o.color AS color`,
+         RETURN o.canonicalName AS name,
+                o.formalName    AS formalName,
+                o.abbreviation  AS abbreviation,
+                o.sortingName   AS sortingName,
+                o.color         AS color`,
         { slug },
       ),
-      neo4jQuery<TextNode>(
-        `MATCH (o:Organization {slug: $slug})-[:DESCRIBED_BY]->(t:Text)
-         RETURN t.markdown AS markdown, t.source AS source, t.sourceUrl AS sourceUrl
-         LIMIT 1`,
+      // Descriptions attached to this org (Outline migrations + future editorial).
+      neo4jQuery<{ content: string | null }>(
+        `MATCH (d:Description)-[:ABOUT]->(o:Organization {slug: $slug})
+         RETURN d.content AS content
+         ORDER BY d.recordedDate DESC LIMIT 1`,
         { slug },
       ),
       neo4jQuery<{ name: string; slug: string }>(
         `MATCH (u:Unit)-[:PART_OF]->(o:Organization {slug: $slug})
-         RETURN u.name AS name, u.slug AS slug
-         ORDER BY u.name`,
+         RETURN u.canonicalName AS name, u.slug AS slug
+         ORDER BY name`,
         { slug },
       ),
+      // Operations orchestrated by this org (round-2 classified outlines).
+      neo4jQuery<{ name: string; slug: string }>(
+        `MATCH (op:Operation)-[:ORCHESTRATED_BY]->(o:Organization {slug: $slug})
+         RETURN op.codeName AS name, op.slug AS slug
+         ORDER BY name`,
+        { slug },
+      ),
+      // Incidents orchestrated by this org (round-3 pending — empty for now).
       neo4jQuery<{ slug: string; title: string; date: string | null }>(
-        `MATCH (e:Event)-[:ORGANISED_BY]->(o:Organization {slug: $slug})
-         RETURN e.slug AS slug, e.title AS title, e.date AS date
-         ORDER BY e.date`,
+        `MATCH (i:Incident)-[:ORCHESTRATED_BY]->(o:Organization {slug: $slug})
+         RETURN i.slug AS slug, i.title AS title, i.date AS date
+         ORDER BY i.date`,
         { slug },
       ),
+      // Participants reached via Incidents (empty until round 3).
       neo4jQuery<{ slug: string; name: string; eventCount: number }>(
-        `MATCH (o:Organization {slug: $slug})<-[:ORGANISED_BY]-(e:Event)-[:INVOLVED]->(p:Person)
-         RETURN DISTINCT p.slug AS slug, p.name AS name, count(e) AS eventCount
+        `MATCH (o:Organization {slug: $slug})<-[:ORCHESTRATED_BY]-(i:Incident)<-[:INVOLVED_IN]-(p:Person)
+         RETURN DISTINCT p.slug AS slug, p.canonicalName AS name, count(i) AS eventCount
          ORDER BY eventCount DESC`,
         { slug },
       ),
     ])
 
-    org.value         = orgRows[0] ?? null
-    description.value = descRows[0] ?? null
-    units.value       = unitRows
-    events.value      = eventRows
-    people.value      = peopleRows
+    org.value        = orgRows[0] ?? null
+    operations.value = opRows
+    units.value      = unitRows
+    events.value     = eventRows
+    people.value     = peopleRows
+
+    const descRow = descRows[0]
+    if (descRow?.content) {
+      try {
+        const blocks = JSON.parse(descRow.content) as unknown[]
+        const html = blocksToHtml(blocks)
+        description.value = html ? { html } : null
+      } catch { description.value = null }
+    }
   } catch (err) {
     console.error('OrganizationDetail fetch error:', err)
     org.value = null
@@ -308,7 +338,48 @@ const sortedEvents = computed(() => {
 }
 .sort-btn:hover { border-color: var(--color-navy); color: var(--color-navy); }
 
-/* ── Description ────────────────────────────────────────────── */
+/* ── Portable text (Description rendering) ──────────────────── */
+.portable-text { margin-top: 10px; }
+
+.portable-text :deep(p) {
+  margin: 0 0 0.75em;
+  font-size: 14px;
+  line-height: 1.65;
+  color: var(--color-text);
+}
+.portable-text :deep(p:last-child) { margin-bottom: 0; }
+
+.portable-text :deep(ul),
+.portable-text :deep(ol) {
+  margin: 0.5em 0 0.75em;
+  padding-left: 1.5em;
+}
+.portable-text :deep(li) {
+  margin: 0.25em 0;
+  font-size: 14px;
+  line-height: 1.65;
+  color: var(--color-text);
+}
+
+.portable-text :deep(h1),
+.portable-text :deep(h2),
+.portable-text :deep(h3),
+.portable-text :deep(h4) {
+  font-size: 14px;
+  font-weight: 700;
+  margin: 1em 0 0.4em;
+  color: var(--color-navy);
+}
+
+.portable-text :deep(strong) { font-weight: 600; }
+.portable-text :deep(em)     { font-style: italic; }
+.portable-text :deep(a) {
+  color: var(--color-navy);
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+/* ── Description (legacy plain-text quote) ──────────────────── */
 .plain-text {
   font-size: 14px;
   line-height: 1.75;

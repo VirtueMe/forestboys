@@ -19,19 +19,83 @@
       <!-- Beskrivelse -->
       <section v-if="description" class="section">
         <h3 class="section-heading">Beskrivelse</h3>
-        <blockquote v-if="description.source && description.source !== 'contributor'" class="quote-block">
-          <p class="plain-text">{{ description.markdown }}</p>
-          <cite v-if="description.sourceUrl" class="quote-source">
-            <a :href="description.sourceUrl" target="_blank" rel="noopener noreferrer">
-              {{ description.source }} <span class="ext-icon">↗</span>
-            </a>
-          </cite>
-          <cite v-else class="quote-source">{{ description.source }}</cite>
-        </blockquote>
-        <p v-else class="plain-text">{{ description.markdown }}</p>
+        <!-- eslint-disable vue/no-v-html -->
+        <div class="portable-text" v-html="description.html"></div>
+        <!-- eslint-enable vue/no-v-html -->
       </section>
 
-      <!-- Hendelser -->
+      <!-- Underavdelinger (non-course sub-units) -->
+      <section v-if="subUnits.length" class="section">
+        <h3 class="section-heading">Underavdelinger ({{ subUnits.length }})</h3>
+        <div class="link-list">
+          <RouterLink
+            v-for="sub in subUnits"
+            :key="sub.slug"
+            :to="`/district/${sub.slug}`"
+            class="section-link"
+          >
+            {{ sub.name }}
+          </RouterLink>
+        </div>
+      </section>
+
+      <!-- Kurs — training cohorts (Course-typed sub-units) -->
+      <section v-if="courses.length" class="section">
+        <h3 class="section-heading">Kurs ({{ courses.length }})</h3>
+        <div class="course-table-wrap">
+          <table class="course-table">
+            <thead>
+              <tr>
+                <th>Kurs</th>
+                <th>Oppstart</th>
+                <th class="num">Elever</th>
+                <th class="num">Mangler</th>
+                <th>Gruppe</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="c in courses" :key="c.slug">
+                <td>
+                  <RouterLink :to="`/district/${c.slug}`" class="course-link">{{ c.letter }}</RouterLink>
+                </td>
+                <td class="course-date">{{ c.startDate ?? '—' }}</td>
+                <td class="num">{{ c.studentCount }}</td>
+                <td class="num">{{ c.missingCount > 0 ? c.missingCount : '—' }}</td>
+                <td class="course-group">{{ c.targetGroup ?? '—' }}</td>
+              </tr>
+            </tbody>
+            <tfoot>
+              <tr class="course-total">
+                <td>Sum</td>
+                <td></td>
+                <td class="num">{{ courseTotals.students }}</td>
+                <td class="num">{{ courseTotals.missing > 0 ? courseTotals.missing : '—' }}</td>
+                <td></td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+      </section>
+
+      <!-- Medlemmer -->
+      <section v-if="members.length" class="section">
+        <h3 class="section-heading">Medlemmer ({{ members.length }})</h3>
+        <div class="link-list">
+          <RouterLink
+            v-for="p in members"
+            :key="p.slug"
+            :to="`/person/${p.slug}`"
+            class="person-item"
+          >
+            <span class="person-name">{{ p.name }}</span>
+            <span v-if="p.status === 'KIA'" class="status-marker status-marker--kia" title="Falt">✝</span>
+            <span v-else-if="p.status === 'ambiguous'" class="status-marker status-marker--ambig" title="Uavklart skjebne">∞</span>
+            <span v-if="p.rank" class="rank-badge">{{ p.rank }}</span>
+          </RouterLink>
+        </div>
+      </section>
+
+      <!-- Hendelser (empty until round 3) -->
       <section v-if="events.length" class="section">
         <div class="section-header-row">
           <h3 class="section-heading">Hendelser ({{ events.length }})</h3>
@@ -51,22 +115,6 @@
           </RouterLink>
         </div>
       </section>
-
-      <!-- Deltakere -->
-      <section v-if="people.length" class="section">
-        <h3 class="section-heading">Deltakere ({{ people.length }})</h3>
-        <div class="link-list">
-          <RouterLink
-            v-for="p in people"
-            :key="p.slug"
-            :to="`/person/${p.slug}`"
-            class="person-item"
-          >
-            <span class="person-name">{{ p.name }}</span>
-            <span class="person-count">{{ p.eventCount }} hendelser</span>
-          </RouterLink>
-        </div>
-      </section>
     </template>
   </div>
 </template>
@@ -75,6 +123,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRoute, RouterLink } from 'vue-router'
 import { neo4jQuery } from '../composables/useNeo4j.ts'
+import { blocksToHtml } from '../utils/portableText.ts'
 
 const route   = useRoute()
 const loading = ref(true)
@@ -82,14 +131,11 @@ const loading = ref(true)
 interface UnitNode {
   name: string
   formalName: string | null
-  abbreviation: string | null
-  sortingName: string | null
+  type: string | null
 }
 
-interface TextNode {
-  markdown: string
-  source: string | null
-  sourceUrl: string | null
+interface DescriptionNode {
+  html: string
 }
 
 interface ParentOrg {
@@ -99,51 +145,95 @@ interface ParentOrg {
 }
 
 const unit        = ref<UnitNode | null>(null)
-const description = ref<TextNode | null>(null)
+const description = ref<DescriptionNode | null>(null)
 const parentOrg   = ref<ParentOrg | null>(null)
+const subUnits    = ref<{ name: string; slug: string }[]>([])
+const courses     = ref<{ slug: string; letter: string; startDate: string | null; studentCount: number; missingCount: number; targetGroup: string | null }[]>([])
+const members     = ref<{ slug: string; name: string; rank: string | null; status: string | null }[]>([])
 const events      = ref<{ slug: string; title: string; date: string | null }[]>([])
-const people      = ref<{ slug: string; name: string; eventCount: number }[]>([])
 
 onMounted(async () => {
   const slug = route.params.slug as string
   try {
-    const [unitRows, descRows, parentRows, eventRows, peopleRows] = await Promise.all([
+    const [unitRows, descRows, parentRows, subUnitRows, memberRows, eventRows, courseRows] = await Promise.all([
       neo4jQuery<UnitNode>(
         `MATCH (u:Unit {slug: $slug})
-         RETURN u.name AS name, u.formalName AS formalName, u.abbreviation AS abbreviation,
-                u.sortingName AS sortingName`,
+         RETURN u.canonicalName AS name,
+                u.formalName    AS formalName,
+                u.type          AS type`,
         { slug },
       ),
-      neo4jQuery<TextNode>(
-        `MATCH (u:Unit {slug: $slug})-[:DESCRIBED_BY]->(t:Text)
-         RETURN t.markdown AS markdown, t.source AS source, t.sourceUrl AS sourceUrl
+      // Descriptions attached to this unit (from outline migration or editorial).
+      neo4jQuery<{ content: string | null }>(
+        `MATCH (d:Description)-[:ABOUT]->(u:Unit {slug: $slug})
+         RETURN d.content AS content
+         ORDER BY d.recordedDate DESC LIMIT 1`,
+        { slug },
+      ),
+      // Parent — Organization OR another Unit. Return both fields, pick whichever is set.
+      neo4jQuery<ParentOrg>(
+        `MATCH (u:Unit {slug: $slug})-[:PART_OF]->(parent)
+         WHERE parent:Organization OR parent:Unit
+         RETURN parent.canonicalName AS name, parent.slug AS slug, parent.color AS color
          LIMIT 1`,
         { slug },
       ),
-      neo4jQuery<ParentOrg>(
-        `MATCH (u:Unit {slug: $slug})-[:PART_OF]->(o:Organization)
-         RETURN o.name AS name, o.slug AS slug, o.color AS color`,
+      // Sub-units — any Units PART_OF this one, EXCEPT training courses
+      // (courses get their own table below).
+      neo4jQuery<{ name: string; slug: string }>(
+        `MATCH (child:Unit)-[:PART_OF]->(u:Unit {slug: $slug})
+         WHERE child.type IS NULL OR child.type <> 'course'
+         RETURN child.canonicalName AS name, child.slug AS slug
+         ORDER BY name`,
         { slug },
       ),
+      // Members — persons with MEMBER_OF edge (including nested sub-units), plus
+      // their rank (skip the default Menig baseline) and status marker (KIA etc.).
+      neo4jQuery<{ slug: string; name: string; rank: string | null; status: string | null }>(
+        `MATCH (p:Person)-[:MEMBER_OF]->(:Unit)-[:PART_OF*0..]->(u:Unit {slug: $slug})
+         OPTIONAL MATCH (p)-[:HELD_RANK]->(r:Rank)
+         WHERE r.canonicalName <> 'Menig'
+         RETURN DISTINCT p.slug AS slug, p.canonicalName AS name,
+                         r.abbreviation AS rank, p.status AS status
+         ORDER BY name`,
+        { slug },
+      ),
+      // Incidents this unit's members participated in (empty until round 3).
       neo4jQuery<{ slug: string; title: string; date: string | null }>(
-        `MATCH (e:Event)-[:PART_OF]->(u:Unit {slug: $slug})
-         RETURN e.slug AS slug, e.title AS title, e.date AS date
-         ORDER BY e.date`,
+        `MATCH (:Unit {slug: $slug})<-[:MEMBER_OF]-(p:Person)-[:INVOLVED_IN]->(i:Incident)
+         RETURN DISTINCT i.slug AS slug, i.title AS title, i.date AS date
+         ORDER BY date`,
         { slug },
       ),
-      neo4jQuery<{ slug: string; name: string; eventCount: number }>(
-        `MATCH (u:Unit {slug: $slug})<-[:PART_OF]-(e:Event)-[:INVOLVED]->(p:Person)
-         RETURN DISTINCT p.slug AS slug, p.name AS name, count(e) AS eventCount
-         ORDER BY eventCount DESC`,
+      // Training courses — Unit{type:"course"} sub-units with rich metadata.
+      // Sort by the explicit `order` integer. Order was assigned at migration time
+      // by (length of courseLetter, alphabetical) — scales to any naming scheme,
+      // editable per-course if Jan wants to reposition one.
+      neo4jQuery<{ slug: string; letter: string; startDate: string | null; studentCount: number; missingCount: number; targetGroup: string | null }>(
+        `MATCH (c:Unit {type: 'course'})-[:PART_OF]->(u:Unit {slug: $slug})
+         RETURN c.slug AS slug, c.courseLetter AS letter,
+                c.startDate AS startDate, c.studentCount AS studentCount,
+                c.missingCount AS missingCount, c.targetGroup AS targetGroup
+         ORDER BY c.order`,
         { slug },
       ),
     ])
 
-    unit.value        = unitRows[0] ?? null
-    description.value = descRows[0] ?? null
-    parentOrg.value   = parentRows[0] ?? null
-    events.value      = eventRows
-    people.value      = peopleRows
+    unit.value      = unitRows[0] ?? null
+    parentOrg.value = parentRows[0] ?? null
+    subUnits.value  = subUnitRows
+    members.value   = memberRows
+    events.value    = eventRows
+    courses.value   = courseRows
+
+    const descRow = descRows[0]
+    if (descRow?.content) {
+      try {
+        const blocks = JSON.parse(descRow.content) as unknown[]
+        const html = blocksToHtml(blocks)
+        description.value = html ? { html } : null
+      } catch { description.value = null }
+    }
   } catch (err) {
     console.error('DistrictDetail fetch error:', err)
     unit.value = null
@@ -168,6 +258,11 @@ const sortedEvents = computed(() => {
     ? evts.sort((a, b) => (a.date ?? '').localeCompare(b.date ?? ''))
     : evts.sort((a, b) => (b.date ?? '').localeCompare(a.date ?? ''))
 })
+
+const courseTotals = computed(() => ({
+  students: courses.value.reduce((sum, c) => sum + (c.studentCount ?? 0), 0),
+  missing:  courses.value.reduce((sum, c) => sum + (c.missingCount ?? 0), 0),
+}))
 </script>
 
 <style scoped>
@@ -355,8 +450,7 @@ const sortedEvents = computed(() => {
 /* ── Person items ───────────────────────────────────────────── */
 .person-item {
   display: flex;
-  align-items: baseline;
-  justify-content: space-between;
+  align-items: center;
   gap: 10px;
   padding: 4px 8px;
   margin: 0 -8px;
@@ -370,7 +464,33 @@ const sortedEvents = computed(() => {
 .person-name {
   font-size: 13px;
   color: var(--color-navy);
+  /* natural width — no flex-grow — so status marker sits right after the name */
 }
+
+.rank-badge {
+  display: inline-block;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--color-navy);
+  background: var(--color-bg);
+  border: 1px solid var(--color-border-mid);
+  border-radius: 3px;
+  padding: 2px 6px;
+  white-space: nowrap;
+  flex-shrink: 0;
+  margin-left: auto;       /* pushes rank to the right edge */
+}
+
+.status-marker {
+  font-size: 14px;
+  flex-shrink: 0;
+  line-height: 1;
+}
+
+.status-marker--kia   { color: var(--color-red); }
+.status-marker--ambig { color: var(--color-muted); }
 
 .person-count {
   font-size: 11px;
@@ -380,4 +500,106 @@ const sortedEvents = computed(() => {
 }
 
 .ext-icon { font-size: 11px; opacity: 0.6; }
+
+/* ── Portable text (Description rendering) ──────────────────── */
+.portable-text { margin-top: 10px; }
+
+.portable-text :deep(p) {
+  margin: 0 0 0.75em;
+  font-size: 14px;
+  line-height: 1.65;
+  color: var(--color-text);
+}
+.portable-text :deep(p:last-child) { margin-bottom: 0; }
+
+.portable-text :deep(ul),
+.portable-text :deep(ol) {
+  margin: 0.5em 0 0.75em;
+  padding-left: 1.5em;
+}
+.portable-text :deep(li) {
+  margin: 0.25em 0;
+  font-size: 14px;
+  line-height: 1.65;
+  color: var(--color-text);
+}
+
+.portable-text :deep(h1),
+.portable-text :deep(h2),
+.portable-text :deep(h3),
+.portable-text :deep(h4) {
+  font-size: 14px;
+  font-weight: 700;
+  margin: 1em 0 0.4em;
+  color: var(--color-navy);
+}
+
+.portable-text :deep(strong) { font-weight: 600; }
+.portable-text :deep(em)     { font-style: italic; }
+.portable-text :deep(a) {
+  color: var(--color-navy);
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+/* ── Course table ───────────────────────────────────────────── */
+.course-table-wrap { overflow-x: auto; }
+
+.course-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+
+.course-table th,
+.course-table td {
+  padding: 6px 10px;
+  text-align: left;
+  border-bottom: 1px solid var(--color-border);
+  white-space: nowrap;
+}
+
+.course-table th {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--color-muted);
+  background: var(--color-bg);
+}
+
+.course-table td.num,
+.course-table th.num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.course-link {
+  display: inline-block;
+  font-weight: 700;
+  color: var(--color-navy);
+  text-decoration: none;
+  min-width: 26px;
+}
+.course-link:hover { text-decoration: underline; }
+
+.course-date {
+  color: var(--color-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.course-group {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--color-muted);
+}
+
+.course-total td {
+  font-weight: 700;
+  border-top: 2px solid var(--color-border-mid);
+  border-bottom: none;
+  color: var(--color-text);
+  background: var(--color-bg);
+}
 </style>
