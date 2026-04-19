@@ -1,8 +1,8 @@
 import { openDB, type IDBPDatabase, type DBSchema } from 'idb'
 import { ref } from 'vue'
-import { SANITY_CDN, SANITY_IMG } from '../config/sanity.ts'
+import { SANITY_CDN } from '../config/sanity.ts'
+import { neo4jQuery } from './useNeo4j.ts'
 import type { IdbLocation, IdbStation, IdbPerson, IdbEvent, IdbTransport, IdbOutline, IdbCache, IdbEventDetail, SavedPosition, SavedMapState } from '../types/idb.ts'
-import { blocksToHtml } from '../utils/portableText.ts'
 
 interface MilorgDB extends DBSchema {
   cache: {
@@ -22,7 +22,9 @@ interface MilorgDB extends DBSchema {
 const DB_NAME = 'milorg-v7'
 const DB_VERSION = 1
 const STORE = 'cache' as const
-const CACHE_KEY = 'v17'
+// CACHE_KEY bumped: data now sourced from Neo4j (round-3 schema); invalidates
+// any v17 Sanity-shaped cache from previous deployments.
+const CACHE_KEY = 'v18-neo4j'
 const MAX_AGE_MS = 5 * 60 * 1000 // 5 minutes
 
 // Convert Sanity Portable Text block array to a plain string.
@@ -112,29 +114,6 @@ function sanityUrl(query: string): string {
   return `${SANITY_CDN}?query=${encodeURIComponent(query)}`
 }
 
-async function fetchAll<T>(query: string): Promise<T[]> {
-  let results: T[] = []
-  let lastId = ''
-  const pageSize = 500
-
-  while (true) {
-    const paginated = lastId
-      ? `${query} | order(_id asc) [_id > "${lastId}"] [0...${pageSize}]`
-      : `${query} | order(_id asc) [0...${pageSize}]`
-
-    const res = await fetch(sanityUrl(paginated))
-    if (!res.ok) throw new Error(`Sanity ${res.status}`)
-    const data = await res.json()
-    const batch: T[] = data.result ?? []
-    if (batch.length === 0) break
-    results = results.concat(batch)
-    // @ts-expect-error dynamic
-    lastId = batch[batch.length - 1]._id
-    if (batch.length < pageSize) break
-  }
-  return results
-}
-
 function isValidCoord(lat: unknown, lng: unknown): boolean {
   return (
     typeof lat === 'number' && typeof lng === 'number' &&
@@ -144,14 +123,181 @@ function isValidCoord(lat: unknown, lng: unknown): boolean {
   )
 }
 
-// Confirmed field names from curl against live API:
-//   organization documents use "name" (not "title")
-//   district documents use "name" (not "title")
-//   coordinates is a geopoint: { _type, lat, lng }
-//   gallery items: { _key, _type: "image", asset: { _ref: "image-{hash}-{WxH}-{ext}", _type: "reference" } }
-//   events are reverse-referenced via *[_type == "event" && references(^._id)]
+// ── Neo4j-backed cache build ─────────────────────────────────────────────
+// Same IdbCache output shape as the original Sanity fetch so all consumers
+// (MapView, PeopleView, EventsView, every detail page) work unchanged.
+//
+// Coverage gaps vs the prior Sanity build (filled by future rounds):
+//   - thumbnailUrl: always undefined (galleries not migrated yet — round-5
+//     image work moves them to R2 with proper Source nodes)
+//   - description: undefined for Person/Location/Station/Transport (those
+//     descriptions weren't migrated yet; only Page/Unit/Org/Incident have
+//     Description nodes today). Detail views render whatever's there.
+//   - outlines: empty array (the Sanity "outline" concept is now split into
+//     Article/Operation/EquipmentType/Source — see Registre's Informasjon
+//     category for the new home)
+//   - person.locations / person.stations / person.outlines: empty arrays
+//     (these were Sanity reverse-refs; equivalent graph edges TBD)
 
-async function fetchFromSanity(): Promise<IdbCache> {
+interface IncidentRow {
+  _id: string
+  slug: string
+  title: string
+  date: string | null
+  organization: string | null
+  district: string | null
+}
+
+async function fetchFromNeo4j(): Promise<IdbCache> {
+  const [
+    rawLocations, rawStations, rawPeople, rawTransport,
+    rawEvents, rawOrgs, rawDistricts,
+  ] = await Promise.all([
+    neo4jQuery<{ _id: string; slug: string; title: string; lat: number; lng: number; events: IncidentRow[] }>(
+      `MATCH (l:Location)
+       OPTIONAL MATCH (l)<-[:FROM|TO]-(i:Incident)
+       OPTIONAL MATCH (i)-[:ORCHESTRATED_BY]->(org:Organization)
+       OPTIONAL MATCH (i)-[:IN_DISTRICT]->(dist:Unit)
+       WITH l,
+            collect(CASE WHEN i IS NOT NULL THEN
+              {_id: i.sanityId, slug: i.slug, title: i.title, date: i.date,
+               organization: org.canonicalName, district: dist.canonicalName}
+            END) AS events
+       RETURN l.sanityId AS _id, l.slug AS slug, l.canonicalName AS title,
+              l.lat AS lat, l.lng AS lng,
+              [e IN events WHERE e IS NOT NULL] AS events`),
+
+    neo4jQuery<{ _id: string; slug: string; title: string; type: string | null; lat: number; lng: number; events: IncidentRow[] }>(
+      `MATCH (s:Station)
+       OPTIONAL MATCH (s)<-[:FROM_STATION|TO_STATION]-(i:Incident)
+       OPTIONAL MATCH (i)-[:ORCHESTRATED_BY]->(org:Organization)
+       OPTIONAL MATCH (i)-[:IN_DISTRICT]->(dist:Unit)
+       WITH s,
+            collect(CASE WHEN i IS NOT NULL THEN
+              {_id: i.sanityId, slug: i.slug, title: i.title, date: i.date,
+               organization: org.canonicalName, district: dist.canonicalName}
+            END) AS events
+       RETURN s.sanityId AS _id, s.slug AS slug, s.canonicalName AS title,
+              s.type AS type, s.lat AS lat, s.lng AS lng,
+              [e IN events WHERE e IS NOT NULL] AS events`),
+
+    neo4jQuery<{ _id: string; slug: string; name: string; secretName: string | null; home: string | null; birthYear: number | null; events: IncidentRow[] }>(
+      `MATCH (p:Person)
+       OPTIONAL MATCH (p)-[:INVOLVED_IN]->(i:Incident)
+       OPTIONAL MATCH (i)-[:ORCHESTRATED_BY]->(org:Organization)
+       OPTIONAL MATCH (i)-[:IN_DISTRICT]->(dist:Unit)
+       WITH p,
+            collect(CASE WHEN i IS NOT NULL THEN
+              {_id: i.sanityId, slug: i.slug, title: i.title, date: i.date,
+               organization: org.canonicalName, district: dist.canonicalName}
+            END) AS events
+       RETURN p.sanityId AS _id, p.slug AS slug, p.canonicalName AS name,
+              p.secretName AS secretName, p.home AS home, p.birthYear AS birthYear,
+              [e IN events WHERE e IS NOT NULL] AS events`),
+
+    neo4jQuery<{ _id: string; slug: string; name: string; type: string | null; unit: string | null; regser: string | null; reserve: string | null; events: IncidentRow[] }>(
+      `MATCH (t:Transport)
+       OPTIONAL MATCH (t)<-[:USED]-(i:Incident)
+       OPTIONAL MATCH (i)-[:ORCHESTRATED_BY]->(org:Organization)
+       OPTIONAL MATCH (i)-[:IN_DISTRICT]->(dist:Unit)
+       WITH t,
+            collect(CASE WHEN i IS NOT NULL THEN
+              {_id: i.sanityId, slug: i.slug, title: i.title, date: i.date,
+               organization: org.canonicalName, district: dist.canonicalName}
+            END) AS events
+       RETURN t.sanityId AS _id, t.slug AS slug, t.canonicalName AS name,
+              t.type AS type, t.rawUnit AS unit, t.regser AS regser, t.reserve AS reserve,
+              [e IN events WHERE e IS NOT NULL] AS events`),
+
+    // Lean events — for the global event list (timeline, filters, etc.).
+    neo4jQuery<IncidentRow>(
+      `MATCH (i:Incident)
+       OPTIONAL MATCH (i)-[:ORCHESTRATED_BY]->(org:Organization)
+       OPTIONAL MATCH (i)-[:IN_DISTRICT]->(dist:Unit)
+       RETURN i.sanityId AS _id, i.slug AS slug, i.title AS title, i.date AS date,
+              org.canonicalName AS organization, dist.canonicalName AS district
+       ORDER BY i.date`),
+
+    neo4jQuery<{ name: string; color: string | null }>(
+      `MATCH (o:Organization) WHERE o.color IS NOT NULL
+       RETURN o.canonicalName AS name, o.color AS color`),
+
+    // District colours: for each district, take its most-frequent org's colour.
+    neo4jQuery<{ district: string; color: string }>(
+      `MATCH (i:Incident)-[:IN_DISTRICT]->(d:Unit)
+       MATCH (i)-[:ORCHESTRATED_BY]->(o:Organization)
+       WHERE d.canonicalName IS NOT NULL AND o.color IS NOT NULL
+       WITH d.canonicalName AS district, o.color AS color, count(*) AS n
+       ORDER BY district, n DESC
+       RETURN district, head(collect(color)) AS color`),
+  ])
+
+  const orgColors: Record<string, string> = {}
+  for (const r of rawOrgs) if (r.color) orgColors[r.name] = r.color
+
+  const districtColors: Record<string, string> = {}
+  for (const r of rawDistricts) districtColors[r.district] = r.color
+
+  const events: IdbEvent[] = rawEvents.map(e => ({
+    _id: e._id, title: e.title, slug: e.slug, date: e.date ?? '',
+    organization: e.organization ?? undefined,
+    district: e.district ?? undefined,
+    thumbnailUrl: undefined,
+  } as unknown as IdbEvent))
+
+  return {
+    version: 1,
+    indexedAt: new Date().toISOString(),
+    locations: rawLocations
+      .filter(l => isValidCoord(l.lat, l.lng))
+      .map(l => ({
+        _id: l._id, title: l.title, slug: l.slug,
+        coordinates: { lat: l.lat, lng: l.lng },
+        description: undefined,
+        thumbnailUrl: undefined,
+        events: l.events,
+        organizations: [...new Set(l.events.map(e => e.organization).filter((x): x is string => Boolean(x)))],
+        districts:     [...new Set(l.events.map(e => e.district).filter((x): x is string => Boolean(x)))],
+      } as unknown as IdbLocation)),
+    stations: rawStations
+      .filter(s => isValidCoord(s.lat, s.lng))
+      .map(s => ({
+        _id: s._id, title: s.title, slug: s.slug, type: s.type ?? undefined,
+        coordinates: { lat: s.lat, lng: s.lng },
+        description: undefined,
+        thumbnailUrl: undefined,
+        events: s.events,
+      } as unknown as IdbStation)),
+    people: rawPeople.map(p => ({
+      _id: p._id, name: p.name, slug: p.slug,
+      secretName: p.secretName ?? undefined,
+      home: p.home ?? undefined,
+      birthYear: p.birthYear ?? undefined,
+      description: undefined, descriptionHtml: undefined,
+      thumbnailUrl: undefined,
+      events: p.events,
+    } as unknown as IdbPerson)),
+    events,
+    transport: rawTransport
+      .map(t => ({
+        _id: t._id, name: t.name, slug: t.slug, type: t.type ?? undefined,
+        unit: t.unit ?? undefined,
+        regser: t.regser ?? undefined,
+        reserve: t.reserve ?? undefined,
+        description: undefined, thumbnailUrl: undefined,
+        events: t.events,
+      } as unknown as IdbTransport))
+      .sort((a, b) => String(a.name ?? '').localeCompare(String(b.name ?? ''), 'nb')),
+    outlines: [] as IdbOutline[],
+    orgColors,
+    districtColors,
+  }
+}
+
+// ── Legacy Sanity fetch (no longer called; kept as a documentation record
+// of what the previous shape was — delete once Neo4j path proves out in
+// production for a full deploy cycle).
+async function fetchFromSanityUnused(): Promise<IdbCache> {
   const [rawLocations, rawStations, rawPeople, rawOrgs, rawEvents, rawTransport, rawOutlines] = await Promise.all([
     fetchAll<Record<string, unknown>>(`*[_type == "location"]{
       _id, title, "slug": slug.current,
@@ -393,8 +539,8 @@ export function useLocationCache() {
           void backgroundSync()
         }
       } else {
-        console.log('[cache] miss — fetching from Sanity')
-        const fresh = await fetchFromSanity()
+        console.log('[cache] miss — fetching from Neo4j')
+        const fresh = await fetchFromNeo4j()
         console.log(`[cache] fetched ${fresh.locations.length} locations`)
 
         // Set data first — visible immediately even if IDB write fails
@@ -420,7 +566,7 @@ export function useLocationCache() {
   async function backgroundSync() {
     try {
       console.log('[cache] background sync starting')
-      const fresh = await fetchFromSanity()
+      const fresh = await fetchFromNeo4j()
       locations.value = fresh.locations
       stations.value = fresh.stations
       people.value = fresh.people
