@@ -8,13 +8,19 @@
         </keep-alive>
       </RouterView>
     </main>
+    <AppFooter v-if="!isMap" />
   </div>
 </template>
 
 <script setup lang="ts">
-import { RouterView } from 'vue-router'
+import { computed } from 'vue'
+import { RouterView, useRoute } from 'vue-router'
 import AppNav from './components/AppNav.vue'
+import AppFooter from './components/AppFooter.vue'
 import { useLocationCache } from './composables/useLocationCache.ts'
+
+const route = useRoute()
+const isMap = computed(() => route.path.startsWith('/map'))
 
 // Kick off cache warm-up on app start, regardless of which page loads first.
 useLocationCache()
