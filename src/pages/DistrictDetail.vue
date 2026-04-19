@@ -196,7 +196,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { useRoute, RouterLink } from 'vue-router'
 import { neo4jQuery } from '../composables/useNeo4j.ts'
 import { blocksToHtml } from '../utils/portableText.ts'
@@ -272,8 +272,23 @@ const events      = ref<{ slug: string; title: string; date: string | null }[]>(
 const externalRefs = ref<{ id: string; title: string | null; url: string; type: string; domain: string | null; nbBacked: boolean }[]>([])
 const galleryImages = ref<SlideImage[]>([])
 
-onMounted(async () => {
-  const slug = route.params.slug as string
+// Re-fetch whenever the :slug route param changes — the component instance
+// is reused across /district/:slug navigations (kept alive by App.vue),
+// so onMounted alone wouldn't pick up the new target.
+async function loadUnit(slug: string) {
+  if (!slug) return
+  loading.value      = true
+  unit.value         = null
+  description.value  = null
+  parents.value      = []
+  subUnits.value     = []
+  courses.value      = []
+  members.value      = []
+  events.value       = []
+  externalRefs.value = []
+  galleryImages.value = []
+  expandedParent.value = null
+  expandedMember.value = null
   try {
     const [unitRows, descRows, parentRows, subUnitRows, memberRows, eventRows, courseRows, refRows, galleryRows] = await Promise.all([
       neo4jQuery<UnitNode>(
@@ -482,7 +497,9 @@ onMounted(async () => {
   } finally {
     loading.value = false
   }
-})
+}
+
+watch(() => route.params.slug as string, loadUnit, { immediate: true })
 
 const MONTHS = ['januar','februar','mars','april','mai','juni','juli','august','september','oktober','november','desember']
 

@@ -200,7 +200,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, watch } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { useRoute, useRouter, RouterLink } from 'vue-router'
 import { useLocationCache } from '../composables/useLocationCache.ts'
 import { neo4jQuery } from '../composables/useNeo4j.ts'
@@ -252,9 +252,18 @@ const ROLE_LABEL: Record<string, string> = {
   member:         'medlem',
 }
 
-onMounted(async () => {
+// Re-fetch whenever the :slug route param changes — the component instance
+// is reused across /person/:slug navigations (kept alive by App.vue),
+// so onMounted alone wouldn't pick up the new target.
+async function loadPerson(slug: string) {
+  if (!slug) return
   await init()
-  const slug = route.params.slug as string
+  heroImage.value     = null
+  galleryImages.value = []
+  externalRefs.value  = []
+  memberships.value   = []
+  autoPersonName.value = null
+  expandedMembership.value = null
   if (isAutoSlug.value) {
     try {
       const rows = await neo4jQuery<{ name: string }>(
@@ -368,7 +377,9 @@ onMounted(async () => {
   } catch (err) {
     console.error('PersonDetail hero/gallery fetch error:', err)
   }
-})
+}
+
+watch(() => route.params.slug as string, loadPerson, { immediate: true })
 
 const person = computed(() =>
   isAutoSlug.value
