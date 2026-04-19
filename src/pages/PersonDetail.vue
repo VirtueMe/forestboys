@@ -2,227 +2,196 @@
   <DetailPage
     :load="loadPerson"
     :reset="resetPerson"
-    :not-found="!person && !isAutoSlug"
+    :not-found="!person"
     not-found-text="Person ikke funnet."
     page-class="person-page"
   >
-    <div itemscope itemtype="https://schema.org/Person">
-      <!-- Auto-generated stub (not in Sanity) -->
-      <template v-if="isAutoSlug">
-        <div class="page-header">
-          <RouterLink to="/registre" class="back-link">&#x2039; Tilbake</RouterLink>
-          <div class="person-name-row">
-            <h1 class="person-name">{{ autoPersonName || route.params.slug }}</h1>
-            <span class="auto-badge">Autogenerert</span>
-          </div>
-          <p class="person-meta">Ikke registrert i kildebasen ennå.</p>
-        </div>
-        <EnrichedPerson
-          :slug="route.params.slug as string"
-          :gallery="[]"
-          :links="[]"
-          @select-event-slug="s => router.push(`/events/${s}`)"
+    <div v-if="person" itemscope itemtype="https://schema.org/Person">
+      <!-- Hero image (reserves the same vertical space when no image exists) -->
+      <div class="hero" :class="{ 'hero--empty': !heroUrl }">
+        <img
+          v-if="heroUrl"
+          :src="heroUrl"
+          :alt="person.name"
+          class="hero-img"
+          itemprop="image"
         />
-      </template>
+        <span v-else class="hero-placeholder" aria-hidden="true">{{ personInitials }}</span>
+      </div>
 
-      <template v-else>
-        <!-- Hero image (reserves the same vertical space when no image exists) -->
-        <div class="hero" :class="{ 'hero--empty': !heroUrl }">
-          <img
-            v-if="heroUrl"
-            :src="heroUrl"
-            :alt="person.name"
-            class="hero-img"
-            itemprop="image"
-          />
-          <span v-else class="hero-placeholder" aria-hidden="true">{{ personInitials }}</span>
+      <!-- Header -->
+      <div class="page-header">
+        <RouterLink to="/registre" class="back-link">&#x2039; Tilbake</RouterLink>
+        <h1 class="person-name" itemprop="name">{{ personTitle }}</h1>
+        <meta v-if="person.secretName" :content="person.secretName" itemprop="alternateName" />
+        <meta v-if="person.birthYear" :content="String(person.birthYear)" itemprop="birthDate" />
+        <p v-if="person.home" class="person-meta" itemprop="homeLocation">{{ person.home }}</p>
+      </div>
+
+      <!-- Beskrivelse -->
+      <section v-if="person.descriptionHtml || person.description" class="section">
+        <h3 class="section-heading">Beskrivelse</h3>
+        <!-- eslint-disable-next-line vue/no-v-html -->
+        <div v-if="person.descriptionHtml" class="rich-text" itemprop="description" v-html="person.descriptionHtml"></div>
+        <p v-else class="plain-text">{{ person.description }}</p>
+      </section>
+
+      <!-- Medlemskap (MEMBER_OF units with role / period / info marker) -->
+      <section v-if="memberships.length" class="section">
+        <h3 class="section-heading">Medlemskap ({{ memberships.length }})</h3>
+        <div class="relation-list">
+          <div v-for="m in memberships" :key="m.unitSlug" class="relation-row">
+            <RouterLink :to="`/district/${m.unitSlug}`" class="relation-link">{{ m.unitName }}</RouterLink>
+            <span v-if="m.role" class="relation-role">{{ ROLE_LABEL[m.role] ?? m.role }}</span>
+            <span v-if="membershipPeriod(m)" class="member-period">{{ membershipPeriod(m) }}</span>
+            <button
+              v-if="m.description"
+              class="info-marker"
+              type="button"
+              :aria-expanded="expandedMembership === m.unitSlug"
+              aria-label="Vis forklaring"
+              @click="toggleMembership(m.unitSlug)"
+            >
+              i
+            </button>
+            <div v-if="m.description && expandedMembership === m.unitSlug" class="relation-desc">
+              <p class="relation-desc-text">{{ m.description }}</p>
+              <SourceRef v-if="m.sourceRefs?.length" :refs="m.sourceRefs" />
+            </div>
+          </div>
         </div>
+      </section>
 
-        <!-- Header -->
-        <div class="page-header">
-          <RouterLink to="/registre" class="back-link">&#x2039; Tilbake</RouterLink>
-          <h1 class="person-name" itemprop="name">{{ personTitle }}</h1>
-          <meta v-if="person.secretName" :content="person.secretName" itemprop="alternateName" />
-          <meta v-if="person.birthYear" :content="String(person.birthYear)" itemprop="birthDate" />
-          <p v-if="person.home" class="person-meta" itemprop="homeLocation">{{ person.home }}</p>
+      <!-- Hendelser -->
+      <section v-if="person.events?.length" class="section">
+        <div class="section-header-row">
+          <h3 class="section-heading">Hendelser ({{ person.events.length }})</h3>
+          <button class="sort-btn" @click="eventSortAsc = !eventSortAsc">
+            Dato {{ eventSortAsc ? '↑' : '↓' }}
+          </button>
         </div>
+        <div class="link-list">
+          <RouterLink
+            v-for="event in sortedEvents"
+            :key="event.slug"
+            :to="`/events/${event.slug}`"
+            class="event-item"
+          >
+            <span class="event-date">{{ formatDate(event.date) }}</span>
+            <span class="event-title">{{ event.title }}</span>
+            <span v-if="eventTags(event).length" class="event-tags">
+              <span v-for="tag in eventTags(event)" :key="tag" class="event-tag">{{ tag }}</span>
+            </span>
+          </RouterLink>
+        </div>
+      </section>
 
-        <AppTabs v-model="activeTab" :tabs="TABS">
-          <!-- ── Original (Sanity) ──────────────────────────────── -->
-          <template v-if="activeTab === 'original'">
-            <!-- Beskrivelse -->
-            <section v-if="person.descriptionHtml || person.description" class="section">
-              <h3 class="section-heading">Beskrivelse</h3>
-              <!-- eslint-disable-next-line vue/no-v-html -->
-              <div v-if="person.descriptionHtml" class="rich-text" itemprop="description" v-html="person.descriptionHtml"></div>
-              <p v-else class="plain-text">{{ person.description }}</p>
-            </section>
+      <!-- Steder -->
+      <section v-if="person.locations?.length" class="section">
+        <h3 class="section-heading">Vært stasjonert på</h3>
+        <div class="link-list">
+          <RouterLink
+            v-for="loc in person.locations"
+            :key="loc.slug"
+            :to="`/map/${loc.slug}`"
+            class="section-link"
+          >
+            {{ loc.title }}
+          </RouterLink>
+        </div>
+      </section>
 
-            <!-- Medlemskap (MEMBER_OF units with role / period / info marker) -->
-            <section v-if="memberships.length" class="section">
-              <h3 class="section-heading">Medlemskap ({{ memberships.length }})</h3>
-              <div class="relation-list">
-                <div v-for="m in memberships" :key="m.unitSlug" class="relation-row">
-                  <RouterLink :to="`/district/${m.unitSlug}`" class="relation-link">{{ m.unitName }}</RouterLink>
-                  <span v-if="m.role" class="relation-role">{{ ROLE_LABEL[m.role] ?? m.role }}</span>
-                  <span v-if="membershipPeriod(m)" class="member-period">{{ membershipPeriod(m) }}</span>
-                  <button
-                    v-if="m.description"
-                    class="info-marker"
-                    type="button"
-                    :aria-expanded="expandedMembership === m.unitSlug"
-                    aria-label="Vis forklaring"
-                    @click="toggleMembership(m.unitSlug)"
-                  >
-                    i
-                  </button>
-                  <div v-if="m.description && expandedMembership === m.unitSlug" class="relation-desc">
-                    <p class="relation-desc-text">{{ m.description }}</p>
-                    <SourceRef v-if="m.sourceRefs?.length" :refs="m.sourceRefs" />
-                  </div>
-                </div>
-              </div>
-            </section>
+      <!-- Baser -->
+      <section v-if="person.stations?.length" class="section">
+        <h3 class="section-heading">Gjennomgått trening på</h3>
+        <div class="link-list">
+          <RouterLink
+            v-for="s in person.stations"
+            :key="s.slug"
+            :to="`/station/${s.slug}`"
+            class="section-link"
+          >
+            {{ s.title }}
+          </RouterLink>
+        </div>
+      </section>
 
-            <!-- Hendelser -->
-            <section v-if="person.events?.length" class="section">
-              <div class="section-header-row">
-                <h3 class="section-heading">Hendelser ({{ person.events.length }})</h3>
-                <button class="sort-btn" @click="eventSortAsc = !eventSortAsc">
-                  Dato {{ eventSortAsc ? '↑' : '↓' }}
-                </button>
-              </div>
-              <div class="link-list">
-                <RouterLink
-                  v-for="event in sortedEvents"
-                  :key="event.slug"
-                  :to="`/events/${event.slug}`"
-                  class="event-item"
-                >
-                  <span class="event-date">{{ formatDate(event.date) }}</span>
-                  <span class="event-title">{{ event.title }}</span>
-                  <span v-if="eventTags(event).length" class="event-tags">
-                    <span v-for="tag in eventTags(event)" :key="tag" class="event-tag">{{ tag }}</span>
-                  </span>
-                </RouterLink>
-              </div>
-            </section>
+      <!-- Annen informasjon -->
+      <section v-if="outlines.length" class="section">
+        <h3 class="section-heading">Annen informasjon</h3>
+        <div class="link-list">
+          <RouterLink
+            v-for="o in outlines"
+            :key="o.slug"
+            :to="`/outlines/${o.slug}`"
+            class="section-link"
+          >
+            {{ o.title }}
+          </RouterLink>
+        </div>
+      </section>
 
-            <!-- Steder -->
-            <section v-if="person.locations?.length" class="section">
-              <h3 class="section-heading">Vært stasjonert på</h3>
-              <div class="link-list">
-                <RouterLink
-                  v-for="loc in person.locations"
-                  :key="loc.slug"
-                  :to="`/map/${loc.slug}`"
-                  class="section-link"
-                >
-                  {{ loc.title }}
-                </RouterLink>
-              </div>
-            </section>
+      <!-- Video -->
+      <section v-if="person.movie" class="section">
+        <h3 class="section-heading">Video</h3>
+        <video controls class="video-player">
+          <source :src="person.movie" type="video/mp4" />
+        </video>
+      </section>
 
-            <!-- Baser -->
-            <section v-if="person.stations?.length" class="section">
-              <h3 class="section-heading">Gjennomgått trening på</h3>
-              <div class="link-list">
-                <RouterLink
-                  v-for="s in person.stations"
-                  :key="s.slug"
-                  :to="`/station/${s.slug}`"
-                  class="section-link"
-                >
-                  {{ s.title }}
-                </RouterLink>
-              </div>
-            </section>
+      <!-- Galleri — direct + propagated via incidents/operations/unit/orgs -->
+      <section v-if="galleryImages.length" class="section">
+        <h3 class="section-heading">Galleri ({{ galleryImages.length }})</h3>
+        <ImageSlider :images="galleryImages" />
+      </section>
 
-            <!-- Annen informasjon -->
-            <section v-if="outlines.length" class="section">
-              <h3 class="section-heading">Annen informasjon</h3>
-              <div class="link-list">
-                <RouterLink
-                  v-for="o in outlines"
-                  :key="o.slug"
-                  :to="`/outlines/${o.slug}`"
-                  class="section-link"
-                >
-                  {{ o.title }}
-                </RouterLink>
-              </div>
-            </section>
-
-            <!-- Video -->
-            <section v-if="person.movie" class="section">
-              <h3 class="section-heading">Video</h3>
-              <video controls class="video-player">
-                <source :src="person.movie" type="video/mp4" />
-              </video>
-            </section>
-
-            <!-- Galleri — direct + propagated via incidents/operations/unit/orgs -->
-            <section v-if="galleryImages.length" class="section">
-              <h3 class="section-heading">Galleri ({{ galleryImages.length }})</h3>
-              <ImageSlider :images="galleryImages" />
-            </section>
-
-            <!-- Lenker -->
-            <section class="section">
-              <h3 class="section-heading">Lenker<span v-if="externalRefs.length"> ({{ externalRefs.length }})</span></h3>
-              <div v-if="externalRefs.length" class="link-list">
-                <a
-                  v-for="r in externalRefs"
-                  :key="r.id"
-                  :href="r.url"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  class="ref-item"
-                >
-                  <span class="ref-title">{{ r.title ?? r.url }}</span>
-                  <span class="ref-meta">
-                    <span v-if="r.nbBacked" class="ref-nb" title="Nasjonalbiblioteket">NB</span>
-                    <span v-if="r.domain" class="ref-domain">{{ r.domain }}</span>
-                  </span>
-                </a>
-              </div>
-              <p v-else class="section-empty">Ingen lenker registrert ennå.</p>
-            </section>
-          </template>
-
-          <!-- ── Enriched (Neo4j) ───────────────────────────────── -->
-          <EnrichedPerson
-            v-else
-            :slug="person.slug"
-            :gallery="person.gallery"
-            :links="person.links"
-            @select-event-slug="slug => router.push(`/events/${slug}`)"
-            @has-data="v => (enrichedHasData = v)"
-          />
-        </AppTabs>
-      </template>
+      <!-- Lenker -->
+      <section class="section">
+        <h3 class="section-heading">Lenker<span v-if="externalRefs.length"> ({{ externalRefs.length }})</span></h3>
+        <div v-if="externalRefs.length" class="link-list">
+          <a
+            v-for="r in externalRefs"
+            :key="r.id"
+            :href="r.url"
+            target="_blank"
+            rel="noopener noreferrer"
+            class="ref-item"
+          >
+            <span class="ref-title">{{ r.title ?? r.url }}</span>
+            <span class="ref-meta">
+              <span v-if="r.nbBacked" class="ref-nb" title="Nasjonalbiblioteket">NB</span>
+              <span v-if="r.domain" class="ref-domain">{{ r.domain }}</span>
+            </span>
+          </a>
+        </div>
+        <p v-else class="section-empty">Ingen lenker registrert ennå.</p>
+      </section>
     </div>
   </DetailPage>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue'
-import { useRoute, useRouter, RouterLink } from 'vue-router'
+import { ref, computed } from 'vue'
+import { RouterLink } from 'vue-router'
 import { useLocationCache } from '../composables/useLocationCache.ts'
 import { neo4jQuery } from '../composables/useNeo4j.ts'
 import type { IdbEvent } from '../types/idb.ts'
-import AppTabs from '../components/AppTabs.vue'
 import DetailPage from '../components/DetailPage.vue'
-import EnrichedPerson from '../components/EnrichedPerson.vue'
 import ImageSlider, { type SlideImage } from '../components/ImageSlider.vue'
 import SourceRef from '../components/SourceRef.vue'
 
-const route  = useRoute()
-const router = useRouter()
-const { people, loading, init } = useLocationCache()
+const { people, init } = useLocationCache()
 
-const isAutoSlug = computed(() => (route.params.slug as string).startsWith('auto-'))
-const autoPersonName = ref<string | null>(null)
+interface Neo4jPerson {
+  slug: string
+  name: string
+  secretName: string | null
+  home: string | null
+  birthYear: number | null
+  status: string | null
+  serviceClass: string | null
+}
+const neo4jPerson = ref<Neo4jPerson | null>(null)
 
 const heroImage     = ref<{ url: string; caption: string | null } | null>(null)
 const galleryImages = ref<SlideImage[]>([])
@@ -260,35 +229,36 @@ const ROLE_LABEL: Record<string, string> = {
 }
 
 function resetPerson() {
+  neo4jPerson.value   = null
   heroImage.value     = null
   galleryImages.value = []
   externalRefs.value  = []
   memberships.value   = []
-  autoPersonName.value = null
   expandedMembership.value = null
 }
 
 async function loadPerson(slug: string) {
+  // IDB cache gives us optional rich extras (description, locations, stations,
+  // movie, outlines) when a person was in the Sanity dump. Neo4j is the
+  // source of existence — a person found in Neo4j but missing from IDB just
+  // renders with fewer sections. No "auto" special-case needed.
   await init()
-  if (isAutoSlug.value) {
-    try {
-      const rows = await neo4jQuery<{ name: string }>(
-        `MATCH (p:Person {slug: $slug}) RETURN p.name AS name LIMIT 1`,
-        { slug },
-      )
-      autoPersonName.value = rows[0]?.name ?? null
-    } catch {
-      autoPersonName.value = null
-    }
-    return
-  }
 
-  // Hero + gallery (Neo4j-direct). Hero selection rule:
+  // Core Person fields from Neo4j (authoritative for name, home, birthYear, …).
+  // Hero + gallery + Lenker + Medlemskap + Hendelser follow below.
   //   1. Direct HAS_IMAGE with isHero = true
   //   2. Else direct Source with kind = 'portrait'
   //   3. Else first direct image by order (Sanity convention: gallery[0] ≈ portrait)
   try {
-    const [heroRows, galleryRows, refRows, membershipRows] = await Promise.all([
+    const [personRows, heroRows, galleryRows, refRows, membershipRows] = await Promise.all([
+      neo4jQuery<Neo4jPerson>(
+        `MATCH (p:Person {slug: $slug})
+         RETURN p.slug AS slug, p.canonicalName AS name,
+                p.secretName AS secretName, p.home AS home,
+                p.birthYear AS birthYear, p.status AS status,
+                p.serviceClass AS serviceClass`,
+        { slug },
+      ),
       neo4jQuery<{ url: string; caption: string | null }>(
         `MATCH (p:Person {slug: $slug})-[h:HAS_IMAGE]->(s:Source)
          WITH s, h,
@@ -380,48 +350,24 @@ async function loadPerson(slug: string) {
       }))
     externalRefs.value = refRows
     memberships.value = membershipRows
+    neo4jPerson.value = personRows[0] ?? null
   } catch (err) {
     console.error('PersonDetail hero/gallery fetch error:', err)
   }
 }
 
 
-const person = computed(() =>
-  isAutoSlug.value
-    ? null
-    : (people.value.find(p => p.slug === (route.params.slug as string)) ?? null),
-)
-
-// Tabs
-const activeTab       = ref('original')
-const enrichedHasData = ref<boolean | null>(null)
-
-const TABS = computed(() => [
-  { id: 'original', label: 'Original' },
-  { id: 'enriched', label: 'Beriket', disabled: enrichedHasData.value === false },
-])
-
-async function checkEnrichedData(slug: string) {
-  enrichedHasData.value = null
-  try {
-    const rows = await neo4jQuery<{ n: number }>(
-      `MATCH (p:Person {slug: $slug})<-[:INVOLVED]-() RETURN count(*) AS n LIMIT 1`,
-      { slug },
-    )
-    enrichedHasData.value = (rows[0]?.n ?? 0) > 0
-  } catch {
-    enrichedHasData.value = false
-  }
-}
-
-watch(
-  () => person.value?.slug,
-  slug => {
-    activeTab.value = route.hash === '#beriket' ? 'enriched' : 'original'
-    if (slug) void checkEnrichedData(slug)
-  },
-  { immediate: true },
-)
+// Merged view: Neo4j is authoritative for existence and core identity;
+// IDB cache layers on rich extras (description, locations, stations, movie,
+// outlines, events, gallery, thumbnailUrl) for persons that were in the
+// Sanity dump. If a person isn't in IDB (the former "auto-" case), those
+// extras are simply absent and the corresponding sections render empty.
+const person = computed(() => {
+  const core = neo4jPerson.value
+  if (!core) return null
+  const extras = people.value.find(p => p.slug === core.slug)
+  return { ...(extras ?? {}), ...core }
+})
 
 
 const personTitle = computed(() => {
@@ -543,28 +489,6 @@ const personInitials = computed<string>(() => {
   font-size: 12px;
   color: var(--color-muted);
   margin: 0;
-}
-
-.person-name-row {
-  display: flex;
-  align-items: baseline;
-  gap: 10px;
-  flex-wrap: wrap;
-}
-
-.auto-badge {
-  display: inline-block;
-  font-size: 10px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  color: #7a4f00;
-  background: #fff3cd;
-  border: 1px solid #f0c040;
-  border-radius: 3px;
-  padding: 2px 7px;
-  white-space: nowrap;
-  flex-shrink: 0;
 }
 
 /* ── Sections ───────────────────────────────────────────────── */
