@@ -48,9 +48,10 @@
                 aria-label="Vis forklaring"
                 @click="toggleUnitInfo(u.slug)"
               >i</button>
-              <p v-if="u.description && expandedUnit === u.slug" class="relation-desc">
-                {{ u.description }}
-              </p>
+              <div v-if="u.description && expandedUnit === u.slug" class="relation-desc">
+                <p class="relation-desc-text">{{ u.description }}</p>
+                <SourceRef v-if="u.sourceRefs?.length" :refs="u.sourceRefs" />
+              </div>
             </div>
           </div>
         </div>
@@ -122,11 +123,13 @@
         </div>
       </details>
 
-      <!-- Eksterne referanser -->
-      <details v-if="externalRefs.length" class="section" open>
-        <summary class="section-summary"><h3 class="section-heading">Eksterne referanser ({{ externalRefs.length }})</h3></summary>
+      <!-- Lenker — general external references (sibling concept to inline source citations) -->
+      <details class="section" open>
+        <summary class="section-summary">
+          <h3 class="section-heading">Lenker<span v-if="externalRefs.length"> ({{ externalRefs.length }})</span></h3>
+        </summary>
         <div class="section-body">
-          <div class="link-list">
+          <div v-if="externalRefs.length" class="link-list">
             <a
               v-for="r in externalRefs"
               :key="r.id"
@@ -142,6 +145,7 @@
               </span>
             </a>
           </div>
+          <p v-else class="section-empty">Ingen lenker registrert ennå.</p>
         </div>
       </details>
     </template>
@@ -154,6 +158,7 @@ import { useRoute, RouterLink } from 'vue-router'
 import { neo4jQuery } from '../composables/useNeo4j.ts'
 import { blocksToHtml } from '../utils/portableText.ts'
 import ImageSlider, { type SlideImage } from '../components/ImageSlider.vue'
+import SourceRef from '../components/SourceRef.vue'
 
 const route   = useRoute()
 const loading = ref(true)
@@ -178,6 +183,7 @@ interface ChildUnit {
   slug: string
   role: string | null
   description: string | null
+  sourceRefs: string[] | null
   order: number
 }
 
@@ -237,6 +243,7 @@ onMounted(async () => {
                 u.slug          AS slug,
                 r.role          AS role,
                 r.description   AS description,
+                r.sourceRefs    AS sourceRefs,
                 coalesce(r.order, 999) AS \`order\`
          ORDER BY CASE WHEN r.description IS NOT NULL THEN 1 ELSE 0 END,
                   \`order\`, name`,
@@ -511,6 +518,14 @@ const sortedEvents = computed(() => {
   padding: 0 16px 12px;
 }
 
+.section-empty {
+  margin: 0;
+  padding: 4px 0;
+  font-size: 12px;
+  color: var(--color-muted);
+  font-style: italic;
+}
+
 .section-tools {
   display: flex;
   justify-content: flex-end;
@@ -685,13 +700,17 @@ const sortedEvents = computed(() => {
   flex-basis: 100%;
   margin: 4px 0 2px;
   padding: 8px 10px;
-  font-size: 12px;
-  line-height: 1.5;
-  color: var(--color-text);
   background: var(--color-bg);
   border-left: 3px solid var(--color-navy);
   border-radius: 0 3px 3px 0;
 }
+.relation-desc-text {
+  margin: 0 0 4px;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--color-text);
+}
+.relation-desc-text:last-child { margin-bottom: 0; }
 
 /* ── Event items ────────────────────────────────────────────── */
 .event-item {
