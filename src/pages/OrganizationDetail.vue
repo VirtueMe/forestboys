@@ -234,11 +234,11 @@ onMounted(async () => {
          ORDER BY nbBacked DESC, s.type, coalesce(s.title, s.url)`,
         { slug },
       ),
-      // Indirect gallery — photos reachable via this Org, its units' members,
-      // and incidents it orchestrated. sortKey orders: 0 direct org photos,
-      // 1 member portraits (via any nested unit), 2 orchestrated-incident photos.
-      // HAS_IMAGE.scope = 'entity' pins a Source to its attachment entity and is
-      // filtered out of every propagating hop.
+      // Gallery — photos reachable from this Org by graph traversal, sorted
+      // by bucket: 0 own, 1 operations, 2 units, 3 incidents, 4 people.
+      // HAS_IMAGE.scope = 'entity' pins a Source to its attachment and is
+      // filtered out of every propagating hop. Today only Incident/Person have
+      // HAS_IMAGE edges in the DB; upper buckets are forward-compatible.
       neo4jQuery<{ url: string; caption: string | null; subjectName: string; subjectSlug: string; subjectType: string; sortKey: number }>(
         `CALL {
            MATCH (o:Organization {slug: $slug})-[h:HAS_IMAGE]->(s:Source)
@@ -246,17 +246,29 @@ onMounted(async () => {
                   o.canonicalName AS subjectName, o.slug AS subjectSlug,
                   'organization' AS subjectType, 0 AS sortKey
            UNION
-           MATCH (o:Organization {slug: $slug})<-[:PART_OF*1..]-(:Unit)<-[:MEMBER_OF]-(p:Person)-[h:HAS_IMAGE]->(s:Source)
+           MATCH (o:Organization {slug: $slug})<-[:ORCHESTRATED_BY]-(op:Operation)-[h:HAS_IMAGE]->(s:Source)
            WHERE coalesce(h.scope, 'propagate') <> 'entity'
            RETURN s.url AS url, h.caption AS caption,
-                  p.canonicalName AS subjectName, p.slug AS subjectSlug,
-                  'person' AS subjectType, 1 AS sortKey
+                  op.codeName AS subjectName, op.slug AS subjectSlug,
+                  'operation' AS subjectType, 1 AS sortKey
+           UNION
+           MATCH (o:Organization {slug: $slug})<-[:PART_OF*1..]-(u:Unit)-[h:HAS_IMAGE]->(s:Source)
+           WHERE coalesce(h.scope, 'propagate') <> 'entity'
+           RETURN s.url AS url, h.caption AS caption,
+                  u.canonicalName AS subjectName, u.slug AS subjectSlug,
+                  'unit' AS subjectType, 2 AS sortKey
            UNION
            MATCH (o:Organization {slug: $slug})<-[:ORCHESTRATED_BY]-(i:Incident)-[h:HAS_IMAGE]->(s:Source)
            WHERE coalesce(h.scope, 'propagate') <> 'entity'
            RETURN s.url AS url, h.caption AS caption,
                   i.title AS subjectName, i.slug AS subjectSlug,
-                  'incident' AS subjectType, 2 AS sortKey
+                  'incident' AS subjectType, 3 AS sortKey
+           UNION
+           MATCH (o:Organization {slug: $slug})<-[:PART_OF*1..]-(:Unit)<-[:MEMBER_OF]-(p:Person)-[h:HAS_IMAGE]->(s:Source)
+           WHERE coalesce(h.scope, 'propagate') <> 'entity'
+           RETURN s.url AS url, h.caption AS caption,
+                  p.canonicalName AS subjectName, p.slug AS subjectSlug,
+                  'person' AS subjectType, 4 AS sortKey
          }
          RETURN url, caption, subjectName, subjectSlug, subjectType, sortKey
          ORDER BY sortKey, subjectName

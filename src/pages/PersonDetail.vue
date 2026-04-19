@@ -23,9 +23,16 @@
     </template>
 
     <template v-else>
-      <!-- Hero image -->
-      <div v-if="heroUrl" class="hero">
-        <img :src="heroUrl" :alt="person.name" class="hero-img" itemprop="image" />
+      <!-- Hero image (reserves the same vertical space when no image exists) -->
+      <div class="hero" :class="{ 'hero--empty': !heroUrl }">
+        <img
+          v-if="heroUrl"
+          :src="heroUrl"
+          :alt="person.name"
+          class="hero-img"
+          itemprop="image"
+        />
+        <span v-else class="hero-placeholder" aria-hidden="true">{{ personInitials }}</span>
       </div>
 
       <!-- Header -->
@@ -125,22 +132,10 @@
             </video>
           </section>
 
-          <!-- Galleri -->
-          <section v-if="person.gallery?.length" class="section">
-            <h3 class="section-heading">Galleri</h3>
-            <div class="carousel">
-              <button v-if="person.gallery.length > 1" class="carousel-btn" @click="prevImage">&#x2039;</button>
-              <img
-                :src="currentImageUrl"
-                :alt="`${person.name} bilde ${currentImageIndex + 1}`"
-                class="carousel-img"
-              />
-              <button v-if="person.gallery.length > 1" class="carousel-btn" @click="nextImage">&#x203a;</button>
-            </div>
-            <p v-if="person.gallery.length > 1" class="carousel-count">
-              {{ currentImageIndex + 1 }} / {{ person.gallery.length }}
-            </p>
-            <p v-if="currentCaption" class="carousel-caption">{{ currentCaption }}</p>
+          <!-- Galleri — direct + propagated via incidents/operations/unit/orgs -->
+          <section v-if="galleryImages.length" class="section">
+            <h3 class="section-heading">Galleri ({{ galleryImages.length }})</h3>
+            <ImageSlider :images="galleryImages" />
           </section>
 
           <!-- Lenker -->
@@ -178,10 +173,10 @@ import { ref, computed, onMounted, watch } from 'vue'
 import { useRoute, useRouter, RouterLink } from 'vue-router'
 import { useLocationCache } from '../composables/useLocationCache.ts'
 import { neo4jQuery } from '../composables/useNeo4j.ts'
-import { SANITY_IMG } from '../config/sanity.ts'
 import type { IdbEvent } from '../types/idb.ts'
 import AppTabs from '../components/AppTabs.vue'
 import EnrichedPerson from '../components/EnrichedPerson.vue'
+import ImageSlider, { type SlideImage } from '../components/ImageSlider.vue'
 
 const route  = useRoute()
 const router = useRouter()
@@ -190,18 +185,99 @@ const { people, loading, init } = useLocationCache()
 const isAutoSlug = computed(() => (route.params.slug as string).startsWith('auto-'))
 const autoPersonName = ref<string | null>(null)
 
+const heroImage     = ref<{ url: string; caption: string | null } | null>(null)
+const galleryImages = ref<SlideImage[]>([])
+
 onMounted(async () => {
   await init()
+  const slug = route.params.slug as string
   if (isAutoSlug.value) {
     try {
       const rows = await neo4jQuery<{ name: string }>(
         `MATCH (p:Person {slug: $slug}) RETURN p.name AS name LIMIT 1`,
-        { slug: route.params.slug as string },
+        { slug },
       )
       autoPersonName.value = rows[0]?.name ?? null
     } catch {
       autoPersonName.value = null
     }
+    return
+  }
+
+  // Hero + gallery (Neo4j-direct). Hero selection rule:
+  //   1. Direct HAS_IMAGE with isHero = true
+  //   2. Else direct Source with kind = 'portrait'
+  //   3. Else first direct image by order (Sanity convention: gallery[0] ≈ portrait)
+  try {
+    const [heroRows, galleryRows] = await Promise.all([
+      neo4jQuery<{ url: string; caption: string | null }>(
+        `MATCH (p:Person {slug: $slug})-[h:HAS_IMAGE]->(s:Source)
+         WITH s, h,
+              CASE WHEN h.isHero = true      THEN 0
+                   WHEN s.kind    = 'portrait' THEN 1
+                                               ELSE 2 END AS tier
+         RETURN s.url AS url, h.caption AS caption
+         ORDER BY tier, h.order
+         LIMIT 1`,
+        { slug },
+      ),
+      // Gallery buckets: 0 own, 1 operations, 2 incidents, 3 unit, 4 orgs.
+      neo4jQuery<{ url: string; caption: string | null; subjectName: string; subjectSlug: string; subjectType: string; sortKey: number }>(
+        `MATCH (person:Person {slug: $slug})
+         CALL {
+           WITH person
+           MATCH (person)-[h:HAS_IMAGE]->(s:Source)
+           RETURN s.url AS url, h.caption AS caption,
+                  person.canonicalName AS subjectName, person.slug AS subjectSlug,
+                  'person' AS subjectType, 0 AS sortKey
+           UNION
+           WITH person
+           MATCH (person)-[:INVOLVED_IN]->(:Incident)-[:PART_OF]->(op:Operation)-[h:HAS_IMAGE]->(s:Source)
+           WHERE coalesce(h.scope, 'propagate') <> 'entity'
+           RETURN s.url AS url, h.caption AS caption,
+                  op.codeName AS subjectName, op.slug AS subjectSlug,
+                  'operation' AS subjectType, 1 AS sortKey
+           UNION
+           WITH person
+           MATCH (person)-[:INVOLVED_IN]->(i:Incident)-[h:HAS_IMAGE]->(s:Source)
+           WHERE coalesce(h.scope, 'propagate') <> 'entity'
+           RETURN s.url AS url, h.caption AS caption,
+                  i.title AS subjectName, i.slug AS subjectSlug,
+                  'incident' AS subjectType, 2 AS sortKey
+           UNION
+           WITH person
+           MATCH (person)-[:MEMBER_OF]->(u:Unit)-[h:HAS_IMAGE]->(s:Source)
+           WHERE coalesce(h.scope, 'propagate') <> 'entity'
+           RETURN s.url AS url, h.caption AS caption,
+                  u.canonicalName AS subjectName, u.slug AS subjectSlug,
+                  'unit' AS subjectType, 3 AS sortKey
+           UNION
+           WITH person
+           MATCH (person)-[:MEMBER_OF]-(x)-[:PART_OF*0..]->(o:Organization)-[h:HAS_IMAGE]->(s:Source)
+           WHERE coalesce(h.scope, 'propagate') <> 'entity'
+           RETURN s.url AS url, h.caption AS caption,
+                  o.canonicalName AS subjectName, o.slug AS subjectSlug,
+                  'organization' AS subjectType, 4 AS sortKey
+         }
+         RETURN url, caption, subjectName, subjectSlug, subjectType, sortKey
+         ORDER BY sortKey, subjectName
+         LIMIT 200`,
+        { slug },
+      ),
+    ])
+    heroImage.value = heroRows[0] ?? null
+    const seen = new Set<string>()
+    galleryImages.value = galleryRows
+      .filter(r => !seen.has(r.url) && seen.add(r.url))
+      .map(r => ({
+        url: r.url,
+        caption: r.caption,
+        subjectName: r.subjectName,
+        subjectSlug: r.subjectSlug,
+        subjectType: r.subjectType as SlideImage['subjectType'],
+      }))
+  } catch (err) {
+    console.error('PersonDetail hero/gallery fetch error:', err)
   }
 })
 
@@ -275,35 +351,21 @@ const sortedEvents = computed(() => {
 const outlines = computed(() => person.value?.outlines ?? [])
 
 const heroUrl = computed<string | null>(() => {
-  const thumb = person.value?.thumbnailUrl
-  if (!thumb) return null
-  return thumb.replace(/\?.*$/, '') + '?w=900&h=500&fit=crop&auto=format'
+  const url = heroImage.value?.url
+  if (!url) return null
+  const sep = url.includes('?') ? '&' : '?'
+  return `${url}${sep}w=900&h=500&fit=crop&auto=format`
 })
 
-// Gallery carousel
-const currentImageIndex = ref(0)
-
-const currentImageUrl = computed<string>(() => {
-  const g = person.value?.gallery
-  if (!g?.length) return ''
-  const assetRef = (g[currentImageIndex.value].asset as { _ref: string })._ref
-  const path = assetRef.replace(/^image-/, '').replace(/-([a-z]+)$/, '.$1')
-  return `${SANITY_IMG}/${path}?w=900&auto=format`
+const personInitials = computed<string>(() => {
+  const name = person.value?.name ?? ''
+  const parts = name.trim().split(/\s+/).filter(Boolean)
+  if (!parts.length) return '?'
+  const first = parts[0]?.[0] ?? ''
+  const last  = parts.length > 1 ? parts[parts.length - 1]?.[0] ?? '' : ''
+  return (first + last).toUpperCase()
 })
 
-const currentCaption = computed<string | null>(() =>
-  person.value?.gallery?.[currentImageIndex.value]?.caption ?? null,
-)
-
-function prevImage() {
-  const len = person.value?.gallery?.length ?? 0
-  currentImageIndex.value = (currentImageIndex.value - 1 + len) % len
-}
-
-function nextImage() {
-  const len = person.value?.gallery?.length ?? 0
-  currentImageIndex.value = (currentImageIndex.value + 1) % len
-}
 </script>
 
 <style scoped>
@@ -334,19 +396,38 @@ function nextImage() {
 /* ── Hero ───────────────────────────────────────────────────── */
 .hero {
   width: 100%;
+  height: 280px;
   overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .hero-img {
   width: 100%;
-  height: 280px;
+  height: 100%;
   object-fit: cover;
   object-position: center 20%;
   display: block;
 }
 
+.hero--empty {
+  background: linear-gradient(135deg, var(--color-surface) 0%, var(--color-bg) 100%);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.hero-placeholder {
+  font-size: 72px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: var(--color-border-mid);
+  font-variant: all-small-caps;
+  user-select: none;
+}
+
 @media (max-width: 480px) {
-  .hero-img { height: 200px; }
+  .hero { height: 200px; }
+  .hero-placeholder { font-size: 56px; }
 }
 
 /* ── Page header ────────────────────────────────────────────── */

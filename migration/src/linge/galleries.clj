@@ -57,6 +57,15 @@
 
 ;; ── Cypher emission ─────────────────────────────────────────────────────
 
+;; Source (photograph) node properties:
+;;   :id             — synthetic source ID (img:sanity:<asset-ref>)
+;;   :type           — 'photograph' (vs book, archive, etc. on non-image Sources)
+;;   :url            — CDN URL (Sanity today; R2 after future migration)
+;;   :sanityAssetRef — original Sanity asset reference (for re-derivation)
+;;   :kind           — intrinsic photo category: 'portrait' | 'group' | 'action'
+;;                     | 'scene' | 'document' | 'artifact' | 'uniform' | 'landscape'
+;;                     (absent = unclassified). Set editorially post-migration.
+;;                     Used by hero selection and future search/filter.
 (defn source-cypher [{:keys [asset-ref url]}]
   (cy/merge-node :Source
                  {:id (source-id asset-ref)
@@ -73,9 +82,19 @@
 ;;                           every Unit they were a member of)
 ;;              'propagate' / absent → default: image surfaces in aggregate
 ;;                           galleries via graph traversal
+;;   :isHero  — boolean. When true, this attachment is the hero image on the
+;;              entity's page. Edge-scoped (not on Source) because the same
+;;              photo can be the hero on Person X's page but just a gallery
+;;              entry on an Incident page. At most one `isHero = true` per
+;;              entity is a UI convention (not enforced in the graph).
 ;;
-;; This migration does NOT emit :scope — all Sanity-sourced edges default to
-;; propagate. Editors set :scope = 'entity' via CMS when uploading post-migration.
+;; Hero-selection rule (frontend):
+;;   1. Direct HAS_IMAGE with isHero = true  →  use that Source
+;;   2. Else direct Source with kind = 'portrait'  →  first by :order
+;;   3. Else first direct image by :order  (Sanity convention: gallery[0] ≈ portrait)
+;;
+;; This migration does NOT emit :scope, :isHero, or Source.kind — all defaults
+;; apply. Editors set these via the (future) CMS post-migration.
 (defn image-edge-cypher [entity-label {:keys [slug asset-ref order caption]}]
   (cy/merge-edge {:from {:label entity-label :match {:slug slug}}
                   :to   {:label :Source      :match {:id (source-id asset-ref)}}
