@@ -1,10 +1,12 @@
 <template>
-  <div class="org-detail">
-    <div v-if="loading" class="status">Laster…</div>
-
-    <div v-else-if="!org" class="status">Organisasjon ikke funnet.</div>
-
-    <template v-else>
+  <DetailPage
+    :load="loadOrg"
+    :reset="resetOrg"
+    :not-found="!org"
+    not-found-text="Organisasjon ikke funnet."
+    page-class="org-detail"
+  >
+    <template v-if="org">
       <!-- Header -->
       <div class="page-header">
         <RouterLink to="/registre" class="back-link">&#x2039; Tilbake</RouterLink>
@@ -47,7 +49,9 @@
                 :aria-expanded="expandedUnit === u.slug"
                 aria-label="Vis forklaring"
                 @click="toggleUnitInfo(u.slug)"
-              >i</button>
+              >
+                i
+              </button>
               <div v-if="u.description && expandedUnit === u.slug" class="relation-desc">
                 <p class="relation-desc-text">{{ u.description }}</p>
                 <SourceRef v-if="u.sourceRefs?.length" :refs="u.sourceRefs" />
@@ -149,19 +153,17 @@
         </div>
       </details>
     </template>
-  </div>
+  </DetailPage>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue'
-import { useRoute, RouterLink } from 'vue-router'
+import { ref, computed } from 'vue'
+import { RouterLink } from 'vue-router'
 import { neo4jQuery } from '../composables/useNeo4j.ts'
 import { blocksToHtml } from '../utils/portableText.ts'
+import DetailPage from '../components/DetailPage.vue'
 import ImageSlider, { type SlideImage } from '../components/ImageSlider.vue'
 import SourceRef from '../components/SourceRef.vue'
-
-const route   = useRoute()
-const loading = ref(true)
 
 interface OrgNode {
   name: string
@@ -207,12 +209,7 @@ const people       = ref<{ slug: string; name: string; eventCount: number }[]>([
 const externalRefs = ref<{ id: string; title: string | null; url: string; type: string; domain: string | null; nbBacked: boolean }[]>([])
 const galleryImages = ref<SlideImage[]>([])
 
-// Re-fetch whenever the :slug route param changes — the component instance
-// is reused across /organization/:slug navigations (kept alive by App.vue),
-// so onMounted alone wouldn't pick up the new target.
-async function loadOrg(slug: string) {
-  if (!slug) return
-  loading.value      = true
+function resetOrg() {
   org.value          = null
   description.value  = null
   units.value        = []
@@ -221,6 +218,10 @@ async function loadOrg(slug: string) {
   people.value       = []
   externalRefs.value = []
   galleryImages.value = []
+  expandedUnit.value = null
+}
+
+async function loadOrg(slug: string) {
   try {
     const [orgRows, descRows, unitRows, opRows, eventRows, peopleRows, refRows, galleryRows] = await Promise.all([
       neo4jQuery<OrgNode>(
@@ -363,12 +364,8 @@ async function loadOrg(slug: string) {
   } catch (err) {
     console.error('OrganizationDetail fetch error:', err)
     org.value = null
-  } finally {
-    loading.value = false
   }
 }
-
-watch(() => route.params.slug as string, loadOrg, { immediate: true })
 
 const MONTHS = ['januar','februar','mars','april','mai','juni','juli','august','september','oktober','november','desember']
 
@@ -389,28 +386,6 @@ const sortedEvents = computed(() => {
 </script>
 
 <style scoped>
-.org-detail {
-  flex: 1;
-  min-height: 0;
-  overflow-y: auto;
-  background: var(--color-bg);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-}
-
-.org-detail > * {
-  width: 100%;
-  max-width: 1320px;
-}
-
-.status {
-  padding: 48px 20px;
-  text-align: center;
-  font-size: 13px;
-  color: var(--color-muted);
-}
-
 /* ── Page header ────────────────────────────────────────────── */
 .page-header {
   padding: 14px 16px 12px;

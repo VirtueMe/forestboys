@@ -1,10 +1,12 @@
 <template>
-  <div class="district-detail">
-    <div v-if="loading" class="status">Laster…</div>
-
-    <div v-else-if="!unit" class="status">Avdeling ikke funnet.</div>
-
-    <template v-else>
+  <DetailPage
+    :load="loadUnit"
+    :reset="resetUnit"
+    :not-found="!unit"
+    not-found-text="Avdeling ikke funnet."
+    page-class="district-detail"
+  >
+    <template v-if="unit">
       <!-- Header -->
       <div class="page-header">
         <RouterLink to="/registre" class="back-link">&#x2039; Tilbake</RouterLink>
@@ -30,7 +32,9 @@
               :aria-expanded="expandedParent === p.slug"
               aria-label="Vis forklaring"
               @click="toggleParentInfo(p.slug)"
-            >i</button>
+            >
+              i
+            </button>
             <div v-if="p.description && expandedParent === p.slug" class="parent-desc">
               <p class="parent-desc-text">{{ p.description }}</p>
               <SourceRef v-if="p.sourceRefs?.length" :refs="p.sourceRefs" />
@@ -156,7 +160,9 @@
                 :aria-expanded="expandedMember === p.slug"
                 aria-label="Vis forklaring"
                 @click="toggleMemberInfo(p.slug)"
-              >i</button>
+              >
+                i
+              </button>
               <div v-if="p.description && expandedMember === p.slug" class="relation-desc">
                 <p class="relation-desc-text">{{ p.description }}</p>
                 <SourceRef v-if="p.sourceRefs?.length" :refs="p.sourceRefs" />
@@ -192,19 +198,18 @@
         </div>
       </details>
     </template>
-  </div>
+  </DetailPage>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue'
-import { useRoute, RouterLink } from 'vue-router'
+import { ref, computed } from 'vue'
+import { RouterLink } from 'vue-router'
+import DetailPage from '../components/DetailPage.vue'
 import { neo4jQuery } from '../composables/useNeo4j.ts'
 import { blocksToHtml } from '../utils/portableText.ts'
 import ImageSlider, { type SlideImage } from '../components/ImageSlider.vue'
 import SourceRef from '../components/SourceRef.vue'
 
-const route   = useRoute()
-const loading = ref(true)
 
 interface UnitNode {
   name: string
@@ -272,12 +277,7 @@ const events      = ref<{ slug: string; title: string; date: string | null }[]>(
 const externalRefs = ref<{ id: string; title: string | null; url: string; type: string; domain: string | null; nbBacked: boolean }[]>([])
 const galleryImages = ref<SlideImage[]>([])
 
-// Re-fetch whenever the :slug route param changes — the component instance
-// is reused across /district/:slug navigations (kept alive by App.vue),
-// so onMounted alone wouldn't pick up the new target.
-async function loadUnit(slug: string) {
-  if (!slug) return
-  loading.value      = true
+function resetUnit() {
   unit.value         = null
   description.value  = null
   parents.value      = []
@@ -289,6 +289,9 @@ async function loadUnit(slug: string) {
   galleryImages.value = []
   expandedParent.value = null
   expandedMember.value = null
+}
+
+async function loadUnit(slug: string) {
   try {
     const [unitRows, descRows, parentRows, subUnitRows, memberRows, eventRows, courseRows, refRows, galleryRows] = await Promise.all([
       neo4jQuery<UnitNode>(
@@ -494,12 +497,9 @@ async function loadUnit(slug: string) {
   } catch (err) {
     console.error('DistrictDetail fetch error:', err)
     unit.value = null
-  } finally {
-    loading.value = false
   }
 }
 
-watch(() => route.params.slug as string, loadUnit, { immediate: true })
 
 const MONTHS = ['januar','februar','mars','april','mai','juni','juli','august','september','oktober','november','desember']
 
@@ -525,28 +525,6 @@ const courseTotals = computed(() => ({
 </script>
 
 <style scoped>
-.district-detail {
-  flex: 1;
-  min-height: 0;
-  overflow-y: auto;
-  background: var(--color-bg);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-}
-
-.district-detail > * {
-  width: 100%;
-  max-width: 1320px;
-}
-
-.status {
-  padding: 48px 20px;
-  text-align: center;
-  font-size: 13px;
-  color: var(--color-muted);
-}
-
 /* ── Page header ────────────────────────────────────────────── */
 .page-header {
   padding: 14px 16px 12px;
