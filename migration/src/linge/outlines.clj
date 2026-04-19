@@ -52,7 +52,8 @@
    {:match "Norwegian Parachute" :kind :unit :slug "kp-f" :type "company"
     :parents [{:org "haerens-overkommando-i-london-hok" :role "administrative" :order 1}
               {:org "soe" :role "operational" :order 2
-               :description "KP F var operativt tilknyttet SOE for trening og oppdragsgivning, men administrativt underlagt Hærens Overkommando (HOK) som del av den norske hæren."}]}
+               :description "KP F var operativt tilknyttet SOE for trening og oppdragsgivning, men administrativt underlagt Hærens Overkommando (HOK) som del av den norske hæren."
+               :source-refs ["editorial:jan-warberg:2026-04-19"]}]}
    {:match "No. 5 Troop"        :kind :unit :slug "no-5-troop-10-ia-commandos" :type "troop" :parent-org "british-commandos"}
    {:match "Balchen"             :kind :unit :slug "balchen-bernt-projects" :type "task-force" :parent-org "usaaf"}
    {:match "Eksportgruppe  Torsvik"     :kind :unit :slug "eksportgruppe-torsvik"     :type "cell" :parent-org "sis"}
@@ -186,23 +187,27 @@
 ;; Parent resolution:
 ;;   :parent-org "soe"                        — legacy single-parent shorthand
 ;;   :parents [{:org "hok" :role "administrative" :order 1}
-;;             {:org "soe" :role "operational"    :order 2 :description "…"}]
-;;     — one PART_OF edge per entry with metadata (role, description, order).
-;;     Target label is currently :Organization; extend to :Unit when needed.
+;;             {:org "soe" :role "operational"    :order 2
+;;              :description "…"
+;;              :source-refs ["editorial:jan-warberg:2026-04-19"]}]
+;;     — one PART_OF edge per entry with metadata (role, description, order,
+;;     sourceRefs). Target label is currently :Organization; extend to :Unit
+;;     when needed.
 (defn- unit-parent-edges [slug {:keys [parent-org parents]}]
   (let [entries (cond
                   (seq parents) parents
                   parent-org    [{:org parent-org}]
                   :else         [])]
     (apply str
-      (for [{:keys [org role description order]} entries]
+      (for [{:keys [org role description order source-refs]} entries]
         (cy/merge-edge {:from {:label :Unit         :match {:slug slug}}
                         :to   {:label :Organization :match {:slug org}}
                         :rel  :PART_OF
                         :props (cond-> {}
-                                 role        (assoc :role role)
-                                 description (assoc :description description)
-                                 order       (assoc :order order))})))))
+                                 role         (assoc :role role)
+                                 description  (assoc :description description)
+                                 order        (assoc :order order)
+                                 (seq source-refs) (assoc :sourceRefs source-refs))})))))
 
 (defn unit-cypher [outline classification]
   (let [{:keys [slug type names canonical-name]} classification]
