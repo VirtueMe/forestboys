@@ -55,6 +55,30 @@
             <p v-else class="plain-text">{{ person.description }}</p>
           </section>
 
+          <!-- Medlemskap (MEMBER_OF units with role / period / info marker) -->
+          <section v-if="memberships.length" class="section">
+            <h3 class="section-heading">Medlemskap ({{ memberships.length }})</h3>
+            <div class="relation-list">
+              <div v-for="m in memberships" :key="m.unitSlug" class="relation-row">
+                <RouterLink :to="`/district/${m.unitSlug}`" class="relation-link">{{ m.unitName }}</RouterLink>
+                <span v-if="m.role" class="relation-role">{{ ROLE_LABEL[m.role] ?? m.role }}</span>
+                <span v-if="membershipPeriod(m)" class="member-period">{{ membershipPeriod(m) }}</span>
+                <button
+                  v-if="m.description"
+                  class="info-marker"
+                  type="button"
+                  :aria-expanded="expandedMembership === m.unitSlug"
+                  aria-label="Vis forklaring"
+                  @click="toggleMembership(m.unitSlug)"
+                >i</button>
+                <div v-if="m.description && expandedMembership === m.unitSlug" class="relation-desc">
+                  <p class="relation-desc-text">{{ m.description }}</p>
+                  <SourceRef v-if="m.sourceRefs?.length" :refs="m.sourceRefs" />
+                </div>
+              </div>
+            </div>
+          </section>
+
           <!-- Hendelser -->
           <section v-if="person.events?.length" class="section">
             <div class="section-header-row">
@@ -184,6 +208,7 @@ import type { IdbEvent } from '../types/idb.ts'
 import AppTabs from '../components/AppTabs.vue'
 import EnrichedPerson from '../components/EnrichedPerson.vue'
 import ImageSlider, { type SlideImage } from '../components/ImageSlider.vue'
+import SourceRef from '../components/SourceRef.vue'
 
 const route  = useRoute()
 const router = useRouter()
@@ -195,6 +220,37 @@ const autoPersonName = ref<string | null>(null)
 const heroImage     = ref<{ url: string; caption: string | null } | null>(null)
 const galleryImages = ref<SlideImage[]>([])
 const externalRefs  = ref<{ id: string; title: string | null; url: string; type: string; domain: string | null; nbBacked: boolean }[]>([])
+
+interface Membership {
+  unitSlug: string
+  unitName: string
+  role: string | null
+  description: string | null
+  sourceRefs: string[] | null
+  startDate: string | null
+  endDate: string | null
+}
+const memberships = ref<Membership[]>([])
+const expandedMembership = ref<string | null>(null)
+function toggleMembership(s: string) {
+  expandedMembership.value = expandedMembership.value === s ? null : s
+}
+function membershipPeriod(m: Membership): string | null {
+  if (!m.startDate && !m.endDate) return null
+  return `${m.startDate ?? '?'}${m.endDate ? ` – ${m.endDate}` : ''}`
+}
+const ROLE_LABEL: Record<string, string> = {
+  administrative: 'administrativt',
+  operational:    'operativt',
+  sponsor:        'sponsor',
+  parent:         'overordnet',
+  operative:      'operatør',
+  courier:        'kurér',
+  radiotelegraph: 'radiotelegrafist',
+  host:           'vert',
+  informant:      'informant',
+  member:         'medlem',
+}
 
 onMounted(async () => {
   await init()
@@ -217,7 +273,7 @@ onMounted(async () => {
   //   2. Else direct Source with kind = 'portrait'
   //   3. Else first direct image by order (Sanity convention: gallery[0] ≈ portrait)
   try {
-    const [heroRows, galleryRows, refRows] = await Promise.all([
+    const [heroRows, galleryRows, refRows, membershipRows] = await Promise.all([
       neo4jQuery<{ url: string; caption: string | null }>(
         `MATCH (p:Person {slug: $slug})-[h:HAS_IMAGE]->(s:Source)
          WITH s, h,
@@ -282,6 +338,19 @@ onMounted(async () => {
          ORDER BY nbBacked DESC, s.type, coalesce(s.title, s.url)`,
         { slug },
       ),
+      // Memberships — direct MEMBER_OF edges with role / dates / description
+      // / sourceRefs metadata. Same info-marker pattern as PART_OF: rows with
+      // a description sort LAST.
+      neo4jQuery<Membership>(
+        `MATCH (p:Person {slug: $slug})-[m:MEMBER_OF]->(u:Unit)
+         RETURN u.slug AS unitSlug, u.canonicalName AS unitName,
+                m.role AS role, m.description AS description,
+                m.sourceRefs AS sourceRefs,
+                m.startDate AS startDate, m.endDate AS endDate
+         ORDER BY CASE WHEN m.description IS NOT NULL THEN 1 ELSE 0 END,
+                  m.startDate, unitName`,
+        { slug },
+      ),
     ])
     heroImage.value = heroRows[0] ?? null
     const seen = new Set<string>()
@@ -295,6 +364,7 @@ onMounted(async () => {
         subjectType: r.subjectType as SlideImage['subjectType'],
       }))
     externalRefs.value = refRows
+    memberships.value = membershipRows
   } catch (err) {
     console.error('PersonDetail hero/gallery fetch error:', err)
   }
@@ -663,6 +733,85 @@ const personInitials = computed<string>(() => {
 }
 
 /* ── External links ─────────────────────────────────────────── */
+/* ── Relation rows (MEMBER_OF edges with metadata) ──────────── */
+.relation-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.relation-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 0;
+}
+.relation-link {
+  font-size: 13px;
+  color: var(--color-navy);
+  text-decoration: none;
+}
+.relation-link:hover { text-decoration: underline; }
+
+.relation-role {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--color-muted);
+  padding: 1px 6px;
+  border: 1px solid var(--color-border-mid);
+  border-radius: 3px;
+}
+
+.member-period {
+  font-size: 11px;
+  color: var(--color-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.info-marker {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: 1px solid var(--color-border-mid);
+  background: var(--color-surface);
+  color: var(--color-muted);
+  font-size: 11px;
+  font-weight: 700;
+  font-style: italic;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.1s, border-color 0.1s, color 0.1s;
+  -webkit-tap-highlight-color: transparent;
+}
+.info-marker:hover,
+.info-marker[aria-expanded="true"] {
+  background: var(--color-navy);
+  border-color: var(--color-navy);
+  color: #fff;
+}
+
+.relation-desc {
+  flex-basis: 100%;
+  margin: 4px 0 2px;
+  padding: 8px 10px;
+  background: var(--color-bg);
+  border-left: 3px solid var(--color-navy);
+  border-radius: 0 3px 3px 0;
+}
+.relation-desc-text {
+  margin: 0 0 4px;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--color-text);
+}
+.relation-desc-text:last-child { margin-bottom: 0; }
+
 /* ── Lenker (Neo4j REFERENCED_IN) ────────────────────────────── */
 .ref-item {
   display: flex;

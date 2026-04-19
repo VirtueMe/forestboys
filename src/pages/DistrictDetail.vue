@@ -141,18 +141,27 @@
       <details v-if="members.length" class="section" open>
         <summary class="section-summary"><h3 class="section-heading">Medlemmer ({{ members.length }})</h3></summary>
         <div class="section-body">
-          <div class="link-list">
-            <RouterLink
-              v-for="p in members"
-              :key="p.slug"
-              :to="`/person/${p.slug}`"
-              class="person-item"
-            >
-              <span class="person-name">{{ p.name }}</span>
+          <div class="relation-list">
+            <div v-for="p in members" :key="p.slug" class="relation-row member-row">
+              <RouterLink :to="`/person/${p.slug}`" class="person-name-link">{{ p.name }}</RouterLink>
               <span v-if="p.status === 'KIA'" class="status-marker status-marker--kia" title="Falt">✝</span>
               <span v-else-if="p.status === 'ambiguous'" class="status-marker status-marker--ambig" title="Uavklart skjebne">∞</span>
               <span v-if="p.rank" class="rank-badge">{{ p.rank }}</span>
-            </RouterLink>
+              <span v-if="p.role" class="relation-role">{{ ROLE_LABEL[p.role] ?? p.role }}</span>
+              <span v-if="memberPeriod(p)" class="member-period">{{ memberPeriod(p) }}</span>
+              <button
+                v-if="p.description"
+                class="info-marker"
+                type="button"
+                :aria-expanded="expandedMember === p.slug"
+                aria-label="Vis forklaring"
+                @click="toggleMemberInfo(p.slug)"
+              >i</button>
+              <div v-if="p.description && expandedMember === p.slug" class="relation-desc">
+                <p class="relation-desc-text">{{ p.description }}</p>
+                <SourceRef v-if="p.sourceRefs?.length" :refs="p.sourceRefs" />
+              </div>
+            </div>
           </div>
         </div>
       </details>
@@ -239,7 +248,26 @@ const ROLE_LABEL: Record<string, string> = {
 }
 const subUnits    = ref<{ name: string; slug: string }[]>([])
 const courses     = ref<{ slug: string; letter: string; startDate: string | null; studentCount: number; missingCount: number; targetGroup: string | null }[]>([])
-const members     = ref<{ slug: string; name: string; rank: string | null; status: string | null }[]>([])
+interface Member {
+  slug: string
+  name: string
+  rank: string | null
+  status: string | null
+  role: string | null
+  description: string | null
+  sourceRefs: string[] | null
+  startDate: string | null
+  endDate: string | null
+}
+const members     = ref<Member[]>([])
+const expandedMember = ref<string | null>(null)
+function toggleMemberInfo(s: string) {
+  expandedMember.value = expandedMember.value === s ? null : s
+}
+function memberPeriod(m: Member): string | null {
+  if (!m.startDate && !m.endDate) return null
+  return `${m.startDate ?? '?'}${m.endDate ? ` – ${m.endDate}` : ''}`
+}
 const events      = ref<{ slug: string; title: string; date: string | null }[]>([])
 const externalRefs = ref<{ id: string; title: string | null; url: string; type: string; domain: string | null; nbBacked: boolean }[]>([])
 const galleryImages = ref<SlideImage[]>([])
@@ -297,14 +325,25 @@ onMounted(async () => {
         { slug },
       ),
       // Members — persons with MEMBER_OF edge (including nested sub-units), plus
-      // their rank (skip the default Menig baseline) and status marker (KIA etc.).
-      neo4jQuery<{ slug: string; name: string; rank: string | null; status: string | null }>(
-        `MATCH (p:Person)-[:MEMBER_OF]->(:Unit)-[:PART_OF*0..]->(u:Unit {slug: $slug})
+      // their rank (skip the default Menig baseline), status marker (KIA etc.),
+      // and edge metadata (role, description, sourceRefs, date range) from the
+      // MEMBER_OF edge nearest the person (i.e. the direct membership, not the
+      // target unit). Same info-marker pattern as PART_OF: edges with
+      // description sort LAST within the person's row order.
+      neo4jQuery<{ slug: string; name: string; rank: string | null; status: string | null; role: string | null; description: string | null; sourceRefs: string[] | null; startDate: string | null; endDate: string | null }>(
+        `MATCH (p:Person)-[m:MEMBER_OF]->(:Unit)-[:PART_OF*0..]->(u:Unit {slug: $slug})
          OPTIONAL MATCH (p)-[:HELD_RANK]->(r:Rank)
          WHERE r.canonicalName <> 'Menig'
-         RETURN DISTINCT p.slug AS slug, p.canonicalName AS name,
-                         r.abbreviation AS rank, p.status AS status
-         ORDER BY name`,
+         WITH p, r, collect(m) AS edges
+         WITH p, r,
+              head([e IN edges WHERE e.description IS NOT NULL] + edges) AS m
+         RETURN p.slug AS slug, p.canonicalName AS name,
+                r.abbreviation AS rank, p.status AS status,
+                m.role AS role, m.description AS description,
+                m.sourceRefs AS sourceRefs,
+                m.startDate AS startDate, m.endDate AS endDate
+         ORDER BY CASE WHEN m.description IS NOT NULL THEN 1 ELSE 0 END,
+                  name`,
         { slug },
       ),
       // Incidents this unit's members participated in.
@@ -771,6 +810,22 @@ const courseTotals = computed(() => ({
 }
 
 /* ── Person items ───────────────────────────────────────────── */
+.member-row {
+  padding: 4px 0;
+}
+.person-name-link {
+  font-size: 13px;
+  color: var(--color-navy);
+  text-decoration: none;
+}
+.person-name-link:hover { text-decoration: underline; }
+
+.member-period {
+  font-size: 11px;
+  color: var(--color-muted);
+  font-variant-numeric: tabular-nums;
+}
+
 .person-item {
   display: flex;
   align-items: center;
