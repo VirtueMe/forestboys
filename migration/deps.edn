@@ -33,6 +33,20 @@
   :run-2-1
   {:main-opts ["-m" "linge.courses"]}
 
+  ;; Round 3 — events → Incidents + districts → Units + descriptions
+  :run-3
+  {:main-opts ["-m" "linge.events"]}
+
+  ;; External sources — walk every entity's links[] into Source nodes
+  ;; with REFERENCED_IN edges. Tags NB-backed domains.
+  :run-sources
+  {:main-opts ["-m" "linge.external-sources"]}
+
+  ;; Galleries — walk every entity's gallery[] into Source{type:photograph}
+  ;; nodes with HAS_IMAGE edges. Sanity CDN URLs (R2 migration deferred).
+  :run-galleries
+  {:main-opts ["-m" "linge.galleries"]}
+
   ;; Indexes + unique constraints — idempotent, safe to re-run
   :indexes
   {:main-opts ["-m" "linge.indexes"]}}}

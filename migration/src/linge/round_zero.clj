@@ -43,7 +43,9 @@
     ;; discriminates scale.
     (cy/merge-node :Unit
                    {:slug "kompani-linge" :canonicalName "Kompani Linge" :type "company"
-                    :country "UK-NO" :color "#e35c24" :foundedDate "1940-08-01"
+                    :country "UK-NO" :color "#e35c24"
+                    :foundedDate    "1940-08-01"
+                    :dissolvedDate  "1945-11-15"
                     :names [{:value "Norwegian Independent Company 1" :type "formal"
                              :language "en" :period "1941–1945" :context "SOE"}
                             {:value "NOR.I.C.1"     :type "formal-cover" :language "en"}
@@ -53,7 +55,26 @@
                     :rel  :PART_OF})
     (cy/merge-node :Organization {:slug "haeren"  :canonicalName "Hæren"  :type "military-branch" :country "NO"})
     (cy/merge-node :Organization {:slug "raf"     :canonicalName "RAF"    :type "military-branch" :country "UK"})
-    (cy/merge-node :Organization {:slug "marinen" :canonicalName "Marinen" :type "military-branch" :country "NO"})))
+    (cy/merge-node :Organization {:slug "marinen" :canonicalName "Marinen" :type "military-branch" :country "NO"})
+
+    ;; Manual curated external reference for Kompani Linge.
+    ;; lokalhistoriewiki.no/Kompani_Linge documents the unit's history and
+    ;; — most importantly — the list of fallen members. NB-backed source.
+    ;; Future review-pass: each Person's `status: KIA` claim can have its
+    ;; sourceRef upgraded from "sanity-migration:...name-marker:✝" to point
+    ;; at this URL with a per-person fragment.
+    (cy/merge-node :Source
+                   {:id "lokalhistoriewiki-kompani-linge"
+                    :url "https://lokalhistoriewiki.no/wiki/Kompani_Linge"
+                    :title "Kompani Linge — Lokalhistoriewiki"
+                    :type "encyclopedia"
+                    :domain "lokalhistoriewiki.no"
+                    :nbBacked true
+                    :license "CC-BY-SA-3.0+GFDL"
+                    :attribution "Lokalhistoriewiki, Nasjonalbiblioteket"})
+    (cy/merge-edge {:from {:label :Unit   :match {:slug "kompani-linge"}}
+                    :to   {:label :Source :match {:id "lokalhistoriewiki-kompani-linge"}}
+                    :rel  :REFERENCED_IN})))
 
 (defn sources-cypher [linge]
   (apply str
