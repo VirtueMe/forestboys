@@ -24,6 +24,41 @@
           </a>
         </div>
 
+        <div v-if="directEnabled" class="section-divider">eller</div>
+
+        <div v-if="directEnabled" class="access-section">
+          <p class="section-label">Logg inn med brukernavn</p>
+          <p class="state-text muted">For deg som har fått egne innloggings-detaljer av oss.</p>
+          <form class="direct-form" @submit.prevent="submitLogin">
+            <input
+              v-model="username"
+              class="direct-input"
+              type="text"
+              autocomplete="username"
+              placeholder="Brukernavn"
+              :disabled="busy"
+              aria-label="Brukernavn"
+            />
+            <input
+              v-model="password"
+              class="direct-input"
+              type="password"
+              autocomplete="current-password"
+              placeholder="Passord"
+              :disabled="busy"
+              aria-label="Passord"
+            />
+            <button
+              type="submit"
+              class="btn btn-direct"
+              :disabled="busy || !username || !password"
+            >
+              {{ busy ? 'Logger inn…' : 'Logg inn' }}
+            </button>
+          </form>
+          <p v-if="error" class="direct-error">{{ error }}</p>
+        </div>
+
         <div class="section-divider">eller</div>
 
         <div class="access-section">
@@ -52,9 +87,7 @@
           Innlogget som <strong>{{ user.name }}</strong> ({{ user.email }}).<br />
           Forespørselen din er sendt — en administrator vil godkjenne den snart.
         </p>
-        <form method="POST" action="/auth/logout">
-          <button class="btn btn-secondary" type="submit">Logg ut</button>
-        </form>
+        <button class="btn btn-secondary" type="button" @click="logout">Logg ut</button>
       </div>
 
       <!-- Denied -->
@@ -63,9 +96,7 @@
         <p class="state-text">
           Tilgang som redaktør ble ikke innvilget for <strong>{{ user.email }}</strong>.
         </p>
-        <form method="POST" action="/auth/logout">
-          <button class="btn btn-secondary" type="submit">Logg ut</button>
-        </form>
+        <button class="btn btn-secondary" type="button" @click="logout">Logg ut</button>
       </div>
 
       <!-- Editor or admin -->
@@ -78,9 +109,7 @@
         </p>
         <div class="access-actions">
           <RouterLink to="/" class="btn btn-primary">Til forsiden</RouterLink>
-          <form method="POST" action="/auth/logout">
-            <button class="btn btn-secondary" type="submit">Logg ut</button>
-          </form>
+          <button class="btn btn-secondary" type="button" @click="logout">Logg ut</button>
         </div>
       </div>
     </div>
@@ -88,10 +117,44 @@
 </template>
 
 <script setup lang="ts">
+import { onMounted, ref } from 'vue'
 import { RouterLink } from 'vue-router'
 import { useAuth } from '../composables/useAuth.ts'
 
-const { user, loading } = useAuth()
+const { user, loading, directLogin, logout } = useAuth()
+
+// Direct login — username/password exchange for a JWT bearer token, a
+// provisional alternative to Google OAuth while we wait for Jan to decide
+// whether to commit to Google. The section is hidden when the server reports
+// `enabled: false` (i.e. DIRECT_LOGIN_USERNAME / DIRECT_LOGIN_PASSWORD_HASH
+// aren't set on the Pages env).
+const directEnabled = ref(false)
+const username = ref('')
+const password = ref('')
+const busy     = ref(false)
+const error    = ref<string | null>(null)
+
+onMounted(async () => {
+  try {
+    const res = await fetch('/auth/token')
+    if (!res.ok) return
+    const data = await res.json() as { enabled: boolean }
+    directEnabled.value = Boolean(data.enabled)
+  } catch { /* endpoint missing — feature off */ }
+})
+
+async function submitLogin() {
+  busy.value  = true
+  error.value = null
+  const err = await directLogin({ username: username.value, password: password.value })
+  if (err) {
+    error.value = err
+  } else {
+    username.value = ''
+    password.value = ''
+  }
+  busy.value = false
+}
 </script>
 
 <style scoped>
@@ -243,5 +306,46 @@ const { user, loading } = useAuth()
   width: 18px;
   height: 18px;
   flex-shrink: 0;
+}
+
+.direct-form {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.direct-input {
+  width: 100%;
+  padding: 10px 12px;
+  font-size: 14px;
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  background: var(--color-bg);
+  color: var(--color-text);
+  box-sizing: border-box;
+}
+.direct-input:focus {
+  outline: 2px solid var(--color-navy);
+  outline-offset: -1px;
+  border-color: var(--color-navy);
+}
+.direct-input:disabled { opacity: 0.6; }
+
+.btn-direct {
+  background: var(--color-navy);
+  color: #fff;
+  width: 100%;
+  justify-content: center;
+  padding: 11px 16px;
+}
+.btn-direct:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.direct-error {
+  margin: 0;
+  font-size: 12px;
+  color: #b91c1c;
 }
 </style>
