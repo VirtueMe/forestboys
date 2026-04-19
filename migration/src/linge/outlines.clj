@@ -45,7 +45,14 @@
    ;; canonical-name must be explicit here — the outline's title ("N.O.R.I.C.(1) (LINGE)
    ;; Medlemmer") isn't the clean canonical form we want showing in UI.
    {:match "N.O.R.I.C" :kind :unit :slug "kompani-linge" :canonical-name "Kompani Linge" :type "company" :parent-org "soe" :transform-blocks :strip-course-list}
-   {:match "Norwegian Parachute" :kind :unit :slug "kp-f" :type "company" :parent-org "soe"}
+   ;; KP F had dual reporting lines — administratively a Norwegian Army unit
+   ;; under HOK, operationally attached to SOE for training and mission tasking.
+   ;; The `:parents` form creates one PART_OF edge per entry with metadata that
+   ;; drives the UI's parent chips + info markers.
+   {:match "Norwegian Parachute" :kind :unit :slug "kp-f" :type "company"
+    :parents [{:org "haerens-overkommando-i-london-hok" :role "administrative" :order 1}
+              {:org "soe" :role "operational" :order 2
+               :description "KP F var operativt tilknyttet SOE for trening og oppdragsgivning, men administrativt underlagt Hærens Overkommando (HOK) som del av den norske hæren."}]}
    {:match "No. 5 Troop"        :kind :unit :slug "no-5-troop-10-ia-commandos" :type "troop" :parent-org "british-commandos"}
    {:match "Balchen"             :kind :unit :slug "balchen-bernt-projects" :type "task-force" :parent-org "usaaf"}
    {:match "Eksportgruppe  Torsvik"     :kind :unit :slug "eksportgruppe-torsvik"     :type "cell" :parent-org "sis"}
@@ -176,19 +183,38 @@
                         :to   {:label target-label  :match {match-key target-slug}}
                         :rel  :ABOUT})))))
 
-(defn unit-cypher [outline {:keys [slug type parent-org names canonical-name]}]
-  (str
-    (cy/merge-node :Unit
-                   (cond-> {:slug slug
-                            :canonicalName (or canonical-name (:title outline))
-                            :type type
-                            :sanityOutlineId (:_id outline)
-                            :sanityUpdatedAt (:_updatedAt outline)}
-                     names (assoc :names (json/generate-string names))))
-    (when parent-org
-      (cy/merge-edge {:from {:label :Unit         :match {:slug slug}}
-                      :to   {:label :Organization :match {:slug parent-org}}
-                      :rel  :PART_OF}))))
+;; Parent resolution:
+;;   :parent-org "soe"                        — legacy single-parent shorthand
+;;   :parents [{:org "hok" :role "administrative" :order 1}
+;;             {:org "soe" :role "operational"    :order 2 :description "…"}]
+;;     — one PART_OF edge per entry with metadata (role, description, order).
+;;     Target label is currently :Organization; extend to :Unit when needed.
+(defn- unit-parent-edges [slug {:keys [parent-org parents]}]
+  (let [entries (cond
+                  (seq parents) parents
+                  parent-org    [{:org parent-org}]
+                  :else         [])]
+    (apply str
+      (for [{:keys [org role description order]} entries]
+        (cy/merge-edge {:from {:label :Unit         :match {:slug slug}}
+                        :to   {:label :Organization :match {:slug org}}
+                        :rel  :PART_OF
+                        :props (cond-> {}
+                                 role        (assoc :role role)
+                                 description (assoc :description description)
+                                 order       (assoc :order order))})))))
+
+(defn unit-cypher [outline classification]
+  (let [{:keys [slug type names canonical-name]} classification]
+    (str
+      (cy/merge-node :Unit
+                     (cond-> {:slug slug
+                              :canonicalName (or canonical-name (:title outline))
+                              :type type
+                              :sanityOutlineId (:_id outline)
+                              :sanityUpdatedAt (:_updatedAt outline)}
+                       names (assoc :names (json/generate-string names))))
+      (unit-parent-edges slug classification))))
 
 (defn operation-cypher [outline {:keys [slug orchestrated-by names]}]
   (str

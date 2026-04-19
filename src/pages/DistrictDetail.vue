@@ -16,10 +16,26 @@
           </span>
           <span v-if="unit.country" class="unit-country">{{ unit.country }}</span>
         </p>
-        <RouterLink v-if="parentOrg" :to="`/organization/${parentOrg.slug}`" class="parent-link">
-          <span v-if="parentOrg.color" class="color-dot" :style="{ background: parentOrg.color }"></span>
-          {{ parentOrg.name }}
-        </RouterLink>
+        <div v-if="parents.length" class="parent-list">
+          <div v-for="p in parents" :key="p.slug" class="parent-row">
+            <RouterLink :to="parentRoute(p)" class="parent-link">
+              <span v-if="p.color" class="color-dot" :style="{ background: p.color }"></span>
+              {{ p.name }}
+            </RouterLink>
+            <span v-if="p.role" class="parent-role">{{ ROLE_LABEL[p.role] ?? p.role }}</span>
+            <button
+              v-if="p.description"
+              class="info-marker"
+              type="button"
+              :aria-expanded="expandedParent === p.slug"
+              aria-label="Vis forklaring"
+              @click="toggleParentInfo(p.slug)"
+            >i</button>
+            <p v-if="p.description && expandedParent === p.slug" class="parent-desc">
+              {{ p.description }}
+            </p>
+          </div>
+        </div>
       </div>
 
       <!-- Beskrivelse -->
@@ -189,15 +205,32 @@ interface DescriptionNode {
   html: string
 }
 
-interface ParentOrg {
+interface Parent {
   name: string
   slug: string
+  label: 'Organization' | 'Unit'
   color: string | null
+  role: string | null
+  description: string | null
+  order: number
 }
 
 const unit        = ref<UnitNode | null>(null)
 const description = ref<DescriptionNode | null>(null)
-const parentOrg   = ref<ParentOrg | null>(null)
+const parents     = ref<Parent[]>([])
+const expandedParent = ref<string | null>(null)
+function toggleParentInfo(slug: string) {
+  expandedParent.value = expandedParent.value === slug ? null : slug
+}
+function parentRoute(p: Parent): string {
+  return p.label === 'Organization' ? `/organization/${p.slug}` : `/district/${p.slug}`
+}
+const ROLE_LABEL: Record<string, string> = {
+  administrative: 'administrativt',
+  operational:    'operativt',
+  sponsor:        'sponsor',
+  parent:         'overordnet',
+}
 const subUnits    = ref<{ name: string; slug: string }[]>([])
 const courses     = ref<{ slug: string; letter: string; startDate: string | null; studentCount: number; missingCount: number; targetGroup: string | null }[]>([])
 const members     = ref<{ slug: string; name: string; rank: string | null; status: string | null }[]>([])
@@ -226,12 +259,20 @@ onMounted(async () => {
          ORDER BY d.recordedDate DESC LIMIT 1`,
         { slug },
       ),
-      // Parent — Organization OR another Unit. Return both fields, pick whichever is set.
-      neo4jQuery<ParentOrg>(
-        `MATCH (u:Unit {slug: $slug})-[:PART_OF]->(parent)
+      // Parents — one PART_OF edge per reporting line (e.g. KP F admin→HOK,
+      // operational→SOE). Edge props: role (chip), description (info marker),
+      // order (render order among sibling parents).
+      neo4jQuery<Parent>(
+        `MATCH (u:Unit {slug: $slug})-[r:PART_OF]->(parent)
          WHERE parent:Organization OR parent:Unit
-         RETURN parent.canonicalName AS name, parent.slug AS slug, parent.color AS color
-         LIMIT 1`,
+         RETURN parent.canonicalName AS name,
+                parent.slug          AS slug,
+                labels(parent)[0]    AS label,
+                parent.color         AS color,
+                r.role               AS role,
+                r.description        AS description,
+                coalesce(r.order, 999) AS \`order\`
+         ORDER BY \`order\`, name`,
         { slug },
       ),
       // Sub-units — any Units PART_OF this one, EXCEPT training courses
@@ -357,7 +398,7 @@ onMounted(async () => {
     ])
 
     unit.value         = unitRows[0] ?? null
-    parentOrg.value    = parentRows[0] ?? null
+    parents.value      = parentRows
     subUnits.value     = subUnitRows
     members.value      = memberRows
     events.value       = eventRows
@@ -493,6 +534,20 @@ const courseTotals = computed(() => ({
   letter-spacing: 0.06em;
 }
 
+.parent-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-top: 4px;
+}
+
+.parent-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
 .parent-link {
   display: inline-flex;
   align-items: center;
@@ -501,9 +556,57 @@ const courseTotals = computed(() => ({
   font-weight: 600;
   color: var(--color-navy);
   text-decoration: none;
-  margin-top: 4px;
 }
 .parent-link:hover { text-decoration: underline; }
+
+.parent-role {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--color-muted);
+  padding: 1px 6px;
+  border: 1px solid var(--color-border-mid);
+  border-radius: 3px;
+}
+
+.info-marker {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: 1px solid var(--color-border-mid);
+  background: var(--color-surface);
+  color: var(--color-muted);
+  font-size: 11px;
+  font-weight: 700;
+  font-style: italic;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.1s, border-color 0.1s, color 0.1s;
+  -webkit-tap-highlight-color: transparent;
+}
+.info-marker:hover,
+.info-marker[aria-expanded="true"] {
+  background: var(--color-navy);
+  border-color: var(--color-navy);
+  color: #fff;
+}
+
+.parent-desc {
+  flex-basis: 100%;
+  margin: 4px 0 2px;
+  padding: 8px 10px;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--color-text);
+  background: var(--color-bg);
+  border-left: 3px solid var(--color-navy);
+  border-radius: 0 3px 3px 0;
+}
 
 .color-dot {
   width: 10px;

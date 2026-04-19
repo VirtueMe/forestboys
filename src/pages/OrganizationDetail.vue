@@ -36,15 +36,22 @@
       <details v-if="units.length" class="section" open>
         <summary class="section-summary"><h3 class="section-heading">Underavdelinger ({{ units.length }})</h3></summary>
         <div class="section-body">
-          <div class="link-list">
-            <RouterLink
-              v-for="u in units"
-              :key="u.slug"
-              :to="`/district/${u.slug}`"
-              class="section-link"
-            >
-              {{ u.name }}
-            </RouterLink>
+          <div class="relation-list">
+            <div v-for="u in units" :key="u.slug" class="relation-row">
+              <RouterLink :to="`/district/${u.slug}`" class="relation-link">{{ u.name }}</RouterLink>
+              <span v-if="u.role" class="relation-role">{{ ROLE_LABEL[u.role] ?? u.role }}</span>
+              <button
+                v-if="u.description"
+                class="info-marker"
+                type="button"
+                :aria-expanded="expandedUnit === u.slug"
+                aria-label="Vis forklaring"
+                @click="toggleUnitInfo(u.slug)"
+              >i</button>
+              <p v-if="u.description && expandedUnit === u.slug" class="relation-desc">
+                {{ u.description }}
+              </p>
+            </div>
           </div>
         </div>
       </details>
@@ -166,9 +173,28 @@ interface DescriptionNode {
   html: string
 }
 
+interface ChildUnit {
+  name: string
+  slug: string
+  role: string | null
+  description: string | null
+  order: number
+}
+
+const ROLE_LABEL: Record<string, string> = {
+  administrative: 'administrativt',
+  operational:    'operativt',
+  sponsor:        'sponsor',
+  parent:         'overordnet',
+}
+
 const org          = ref<OrgNode | null>(null)
 const description  = ref<DescriptionNode | null>(null)
-const units        = ref<{ name: string; slug: string }[]>([])
+const units        = ref<ChildUnit[]>([])
+const expandedUnit = ref<string | null>(null)
+function toggleUnitInfo(slug: string) {
+  expandedUnit.value = expandedUnit.value === slug ? null : slug
+}
 const operations   = ref<{ name: string; slug: string }[]>([])
 const events       = ref<{ slug: string; title: string; date: string | null }[]>([])
 const people       = ref<{ slug: string; name: string; eventCount: number }[]>([])
@@ -198,10 +224,17 @@ onMounted(async () => {
          ORDER BY d.recordedDate DESC LIMIT 1`,
         { slug },
       ),
-      neo4jQuery<{ name: string; slug: string }>(
-        `MATCH (u:Unit)-[:PART_OF]->(o:Organization {slug: $slug})
-         RETURN u.canonicalName AS name, u.slug AS slug
-         ORDER BY name`,
+      // Sub-units — PART_OF edges carry role/description/order per reporting
+      // line (e.g. KP F is PART_OF SOE with role='operational'). The info
+      // marker in the UI surfaces the description when set.
+      neo4jQuery<ChildUnit>(
+        `MATCH (u:Unit)-[r:PART_OF]->(o:Organization {slug: $slug})
+         RETURN u.canonicalName AS name,
+                u.slug          AS slug,
+                r.role          AS role,
+                r.description   AS description,
+                coalesce(r.order, 999) AS \`order\`
+         ORDER BY \`order\`, name`,
         { slug },
       ),
       // Operations orchestrated by this org (round-2 classified outlines).
@@ -583,6 +616,77 @@ const sortedEvents = computed(() => {
   padding: 4px 0;
 }
 .section-link:hover { text-decoration: underline; }
+
+/* ── Relation rows (PART_OF with role/description edge metadata) ───── */
+.relation-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.relation-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 0;
+}
+
+.relation-link {
+  font-size: 13px;
+  color: var(--color-navy);
+  text-decoration: none;
+}
+.relation-link:hover { text-decoration: underline; }
+
+.relation-role {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--color-muted);
+  padding: 1px 6px;
+  border: 1px solid var(--color-border-mid);
+  border-radius: 3px;
+}
+
+.info-marker {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: 1px solid var(--color-border-mid);
+  background: var(--color-surface);
+  color: var(--color-muted);
+  font-size: 11px;
+  font-weight: 700;
+  font-style: italic;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.1s, border-color 0.1s, color 0.1s;
+  -webkit-tap-highlight-color: transparent;
+}
+.info-marker:hover,
+.info-marker[aria-expanded="true"] {
+  background: var(--color-navy);
+  border-color: var(--color-navy);
+  color: #fff;
+}
+
+.relation-desc {
+  flex-basis: 100%;
+  margin: 4px 0 2px;
+  padding: 8px 10px;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--color-text);
+  background: var(--color-bg);
+  border-left: 3px solid var(--color-navy);
+  border-radius: 0 3px 3px 0;
+}
 
 /* ── Event items ────────────────────────────────────────────── */
 .event-item {
