@@ -68,7 +68,7 @@
       </p>
     </div>
 
-    <div v-if="images.length > 1" class="slider-thumbs">
+    <div v-if="images.length > 1" ref="stripEl" class="slider-thumbs">
       <button
         v-for="(img, i) in images"
         :key="img.url"
@@ -130,12 +130,17 @@ function preload(url: string) {
   img.src = transformed(url, 900)
 }
 
+const stripEl = ref<HTMLElement | null>(null)
 const thumbRefs = new Map<number, HTMLElement>()
 function setThumbRef(el: HTMLElement | null, i: number) {
   if (el) thumbRefs.set(i, el)
   else thumbRefs.delete(i)
 }
 
+// Center the active thumb inside its own scroll container via scrollLeft —
+// scrollIntoView({ block: 'nearest' }) would also scroll the PAGE viewport
+// when the gallery is below the fold, yanking the reader down to the slider
+// on every navigation.
 watch(currentIndex, async () => {
   if (props.images.length < 2) return
   const len = props.images.length
@@ -144,7 +149,10 @@ watch(currentIndex, async () => {
 
   await nextTick()
   const thumb = thumbRefs.get(currentIndex.value)
-  thumb?.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' })
+  const strip = stripEl.value
+  if (!thumb || !strip) return
+  const target = thumb.offsetLeft - (strip.clientWidth - thumb.offsetWidth) / 2
+  strip.scrollTo({ left: target, behavior: 'smooth' })
 }, { immediate: true })
 
 // Reset to first slide when the image set changes (e.g. route change reuses component).
