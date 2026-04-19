@@ -24,13 +24,29 @@
         </p>
       </div>
 
-      <!-- Beskrivelse -->
-      <details v-if="description" class="section" open>
-        <summary class="section-summary"><h3 class="section-heading">Beskrivelse</h3></summary>
+      <!-- Beskrivelse (stacked Descriptions, newest first) -->
+      <details v-if="descriptions.length" class="section" open>
+        <summary class="section-summary">
+          <h3 class="section-heading">Beskrivelse<span v-if="descriptions.length > 1"> ({{ descriptions.length }})</span></h3>
+        </summary>
         <div class="section-body">
-          <!-- eslint-disable vue/no-v-html -->
-          <div class="portable-text" v-html="description.html"></div>
-          <!-- eslint-enable vue/no-v-html -->
+          <article
+            v-for="(d, i) in descriptions"
+            :key="`${d.recordedDate ?? 'd'}-${i}`"
+            class="description-entry"
+          >
+            <!-- eslint-disable vue/no-v-html -->
+            <div class="portable-text" v-html="d.html"></div>
+            <!-- eslint-enable vue/no-v-html -->
+            <footer
+              v-if="showDescriptionAttribution(d)"
+              class="description-attribution"
+            >
+              <span v-if="d.author" class="description-author">{{ d.author }}</span>
+              <span v-if="d.recordedDate" class="description-date">{{ d.recordedDate }}</span>
+              <SourceRef v-if="d.sourceRefs?.length" :refs="d.sourceRefs" />
+            </footer>
+          </article>
         </div>
       </details>
 
@@ -178,6 +194,9 @@ interface OrgNode {
 
 interface DescriptionNode {
   html: string
+  recordedDate: string | null
+  author: string | null
+  sourceRefs: string[] | null
 }
 
 interface ChildUnit {
@@ -197,7 +216,18 @@ const ROLE_LABEL: Record<string, string> = {
 }
 
 const org          = ref<OrgNode | null>(null)
-const description  = ref<DescriptionNode | null>(null)
+const descriptions = ref<DescriptionNode[]>([])
+
+const MIGRATION_AUTHORS = new Set([
+  'sanity-outline-migration',
+  'sanity-migration',
+])
+function showDescriptionAttribution(d: DescriptionNode): boolean {
+  if (descriptions.value.length > 1) return true
+  if (d.sourceRefs?.length) return true
+  if (d.author && !MIGRATION_AUTHORS.has(d.author)) return true
+  return false
+}
 const units        = ref<ChildUnit[]>([])
 const expandedUnit = ref<string | null>(null)
 function toggleUnitInfo(slug: string) {
@@ -211,7 +241,7 @@ const galleryImages = ref<SlideImage[]>([])
 
 function resetOrg() {
   org.value          = null
-  description.value  = null
+  descriptions.value = []
   units.value        = []
   operations.value   = []
   events.value       = []
@@ -236,11 +266,17 @@ async function loadOrg(slug: string) {
                 o.country       AS country`,
         { slug },
       ),
-      // Descriptions attached to this org (Outline migrations + future editorial).
-      neo4jQuery<{ content: string | null }>(
+      // Descriptions — ALL entries ABOUT this org, stacked newest-first.
+      // `sourceRefs` forward-compatible: no FROM Source edges exist today.
+      neo4jQuery<{ content: string | null; recordedDate: string | null; author: string | null; sourceRefs: string[] }>(
         `MATCH (d:Description)-[:ABOUT]->(o:Organization {slug: $slug})
-         RETURN d.content AS content
-         ORDER BY d.recordedDate DESC LIMIT 1`,
+         OPTIONAL MATCH (d)-[:FROM]->(s:Source)
+         WITH d, collect(s.id) AS sourceRefs
+         RETURN d.content AS content,
+                d.recordedDate AS recordedDate,
+                d.author AS author,
+                [x IN sourceRefs WHERE x IS NOT NULL] AS sourceRefs
+         ORDER BY d.recordedDate DESC, d.id`,
         { slug },
       ),
       // Sub-units — PART_OF edges carry role/description/order per reporting
@@ -353,14 +389,20 @@ async function loadOrg(slug: string) {
         subjectType: r.subjectType as SlideImage['subjectType'],
       }))
 
-    const descRow = descRows[0]
-    if (descRow?.content) {
+    descriptions.value = descRows.flatMap(row => {
+      if (!row.content) return []
       try {
-        const blocks = JSON.parse(descRow.content) as unknown[]
+        const blocks = JSON.parse(row.content) as unknown[]
         const html = blocksToHtml(blocks)
-        description.value = html ? { html } : null
-      } catch { description.value = null }
-    }
+        if (!html) return []
+        return [{
+          html,
+          recordedDate: row.recordedDate,
+          author: row.author,
+          sourceRefs: row.sourceRefs?.length ? row.sourceRefs : null,
+        }]
+      } catch { return [] }
+    })
   } catch (err) {
     console.error('OrganizationDetail fetch error:', err)
     org.value = null
@@ -546,6 +588,30 @@ const sortedEvents = computed(() => {
 
 /* ── Portable text (Description rendering) ──────────────────── */
 .portable-text { margin-top: 4px; }
+
+.description-entry { margin: 0; }
+.description-entry + .description-entry {
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid var(--color-border);
+}
+
+.description-attribution {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+  padding-top: 6px;
+  border-top: 1px dashed var(--color-border);
+  font-size: 11px;
+  color: var(--color-muted);
+}
+.description-author {
+  font-weight: 600;
+  color: var(--color-text);
+}
+.description-date { font-variant-numeric: tabular-nums; }
 
 .portable-text :deep(p) {
   margin: 0 0 0.75em;

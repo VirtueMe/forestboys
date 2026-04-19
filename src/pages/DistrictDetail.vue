@@ -43,13 +43,29 @@
         </div>
       </div>
 
-      <!-- Beskrivelse -->
-      <details v-if="description" class="section" open>
-        <summary class="section-summary"><h3 class="section-heading">Beskrivelse</h3></summary>
+      <!-- Beskrivelse (stacked Descriptions, newest first) -->
+      <details v-if="descriptions.length" class="section" open>
+        <summary class="section-summary">
+          <h3 class="section-heading">Beskrivelse<span v-if="descriptions.length > 1"> ({{ descriptions.length }})</span></h3>
+        </summary>
         <div class="section-body">
-          <!-- eslint-disable vue/no-v-html -->
-          <div class="portable-text" v-html="description.html"></div>
-          <!-- eslint-enable vue/no-v-html -->
+          <article
+            v-for="(d, i) in descriptions"
+            :key="`${d.recordedDate ?? 'd'}-${i}`"
+            class="description-entry"
+          >
+            <!-- eslint-disable vue/no-v-html -->
+            <div class="portable-text" v-html="d.html"></div>
+            <!-- eslint-enable vue/no-v-html -->
+            <footer
+              v-if="showDescriptionAttribution(d)"
+              class="description-attribution"
+            >
+              <span v-if="d.author" class="description-author">{{ d.author }}</span>
+              <span v-if="d.recordedDate" class="description-date">{{ d.recordedDate }}</span>
+              <SourceRef v-if="d.sourceRefs?.length" :refs="d.sourceRefs" />
+            </footer>
+          </article>
         </div>
       </details>
 
@@ -222,6 +238,9 @@ interface UnitNode {
 
 interface DescriptionNode {
   html: string
+  recordedDate: string | null
+  author: string | null
+  sourceRefs: string[] | null   // future: resolved from FROM Source edges
 }
 
 interface Parent {
@@ -236,7 +255,23 @@ interface Parent {
 }
 
 const unit        = ref<UnitNode | null>(null)
-const description = ref<DescriptionNode | null>(null)
+const descriptions = ref<DescriptionNode[]>([])
+
+// Hide the attribution footer when there's only one Description and it's the
+// default migration signature with no sourceRefs — the entry is implicitly
+// Jan's outline and the footer would be visual noise. As soon as a second
+// Description, a custom author, or a citation appears, show attribution for
+// all entries so reviewers can tell them apart.
+const MIGRATION_AUTHORS = new Set([
+  'sanity-outline-migration',
+  'sanity-migration',
+])
+function showDescriptionAttribution(d: DescriptionNode): boolean {
+  if (descriptions.value.length > 1) return true
+  if (d.sourceRefs?.length) return true
+  if (d.author && !MIGRATION_AUTHORS.has(d.author)) return true
+  return false
+}
 const parents     = ref<Parent[]>([])
 const expandedParent = ref<string | null>(null)
 function toggleParentInfo(slug: string) {
@@ -279,7 +314,7 @@ const galleryImages = ref<SlideImage[]>([])
 
 function resetUnit() {
   unit.value         = null
-  description.value  = null
+  descriptions.value = []
   parents.value      = []
   subUnits.value     = []
   courses.value      = []
@@ -305,10 +340,20 @@ async function loadUnit(slug: string) {
         { slug },
       ),
       // Descriptions attached to this unit (from outline migration or editorial).
-      neo4jQuery<{ content: string | null }>(
+      // Descriptions — ALL entries ABOUT this unit, stacked newest-first.
+      // Each Description is authored (Jan's outline migration, editorial,
+      // future author identities). `sourceRefs` is forward-compatible:
+      // no FROM Source edges exist today, but the query returns them as an
+      // array so SourceRef chips render the moment the edges appear.
+      neo4jQuery<{ content: string | null; recordedDate: string | null; author: string | null; sourceRefs: string[] }>(
         `MATCH (d:Description)-[:ABOUT]->(u:Unit {slug: $slug})
-         RETURN d.content AS content
-         ORDER BY d.recordedDate DESC LIMIT 1`,
+         OPTIONAL MATCH (d)-[:FROM]->(s:Source)
+         WITH d, collect(s.id) AS sourceRefs
+         RETURN d.content AS content,
+                d.recordedDate AS recordedDate,
+                d.author AS author,
+                [x IN sourceRefs WHERE x IS NOT NULL] AS sourceRefs
+         ORDER BY d.recordedDate DESC, d.id`,
         { slug },
       ),
       // Parents — one PART_OF edge per reporting line (e.g. KP F admin→HOK,
@@ -486,14 +531,20 @@ async function loadUnit(slug: string) {
         subjectType: r.subjectType as SlideImage['subjectType'],
       }))
 
-    const descRow = descRows[0]
-    if (descRow?.content) {
+    descriptions.value = descRows.flatMap(row => {
+      if (!row.content) return []
       try {
-        const blocks = JSON.parse(descRow.content) as unknown[]
+        const blocks = JSON.parse(row.content) as unknown[]
         const html = blocksToHtml(blocks)
-        description.value = html ? { html } : null
-      } catch { description.value = null }
-    }
+        if (!html) return []
+        return [{
+          html,
+          recordedDate: row.recordedDate,
+          author: row.author,
+          sourceRefs: row.sourceRefs?.length ? row.sourceRefs : null,
+        }]
+      } catch { return [] }
+    })
   } catch (err) {
     console.error('DistrictDetail fetch error:', err)
     unit.value = null
@@ -925,6 +976,36 @@ const courseTotals = computed(() => ({
 
 /* ── Portable text (Description rendering) ──────────────────── */
 .portable-text { margin-top: 4px; }
+
+.description-entry {
+  margin: 0;
+}
+.description-entry + .description-entry {
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid var(--color-border);
+}
+
+.description-attribution {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+  padding-top: 6px;
+  border-top: 1px dashed var(--color-border);
+  font-size: 11px;
+  color: var(--color-muted);
+}
+
+.description-author {
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.description-date {
+  font-variant-numeric: tabular-nums;
+}
 
 .portable-text :deep(p) {
   margin: 0 0 0.75em;
