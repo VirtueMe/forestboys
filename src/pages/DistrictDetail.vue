@@ -10,6 +10,12 @@
         <RouterLink to="/registre" class="back-link">&#x2039; Tilbake</RouterLink>
         <h1 class="unit-name">{{ unit.name }}</h1>
         <p v-if="unit.formalName" class="unit-meta">{{ unit.formalName }}</p>
+        <p v-if="unit.foundedDate || unit.dissolvedDate || unit.country" class="unit-period">
+          <span v-if="unit.foundedDate || unit.dissolvedDate">
+            Etablert {{ unit.foundedDate ?? '?' }}<span v-if="unit.dissolvedDate"> – {{ unit.dissolvedDate }}</span>
+          </span>
+          <span v-if="unit.country" class="unit-country">{{ unit.country }}</span>
+        </p>
         <RouterLink v-if="parentOrg" :to="`/organization/${parentOrg.slug}`" class="parent-link">
           <span v-if="parentOrg.color" class="color-dot" :style="{ background: parentOrg.color }"></span>
           {{ parentOrg.name }}
@@ -17,104 +23,145 @@
       </div>
 
       <!-- Beskrivelse -->
-      <section v-if="description" class="section">
-        <h3 class="section-heading">Beskrivelse</h3>
-        <!-- eslint-disable vue/no-v-html -->
-        <div class="portable-text" v-html="description.html"></div>
-        <!-- eslint-enable vue/no-v-html -->
-      </section>
+      <details v-if="description" class="section" open>
+        <summary class="section-summary"><h3 class="section-heading">Beskrivelse</h3></summary>
+        <div class="section-body">
+          <!-- eslint-disable vue/no-v-html -->
+          <div class="portable-text" v-html="description.html"></div>
+          <!-- eslint-enable vue/no-v-html -->
+        </div>
+      </details>
 
       <!-- Underavdelinger (non-course sub-units) -->
-      <section v-if="subUnits.length" class="section">
-        <h3 class="section-heading">Underavdelinger ({{ subUnits.length }})</h3>
-        <div class="link-list">
-          <RouterLink
-            v-for="sub in subUnits"
-            :key="sub.slug"
-            :to="`/district/${sub.slug}`"
-            class="section-link"
-          >
-            {{ sub.name }}
-          </RouterLink>
+      <details v-if="subUnits.length" class="section" open>
+        <summary class="section-summary"><h3 class="section-heading">Underavdelinger ({{ subUnits.length }})</h3></summary>
+        <div class="section-body">
+          <div class="link-list">
+            <RouterLink
+              v-for="sub in subUnits"
+              :key="sub.slug"
+              :to="`/district/${sub.slug}`"
+              class="section-link"
+            >
+              {{ sub.name }}
+            </RouterLink>
+          </div>
         </div>
-      </section>
+      </details>
 
       <!-- Kurs — training cohorts (Course-typed sub-units) -->
-      <section v-if="courses.length" class="section">
-        <h3 class="section-heading">Kurs ({{ courses.length }})</h3>
-        <div class="course-table-wrap">
-          <table class="course-table">
-            <thead>
-              <tr>
-                <th>Kurs</th>
-                <th>Oppstart</th>
-                <th class="num">Elever</th>
-                <th class="num">Mangler</th>
-                <th>Gruppe</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr v-for="c in courses" :key="c.slug">
-                <td>
-                  <RouterLink :to="`/district/${c.slug}`" class="course-link">{{ c.letter }}</RouterLink>
-                </td>
-                <td class="course-date">{{ c.startDate ?? '—' }}</td>
-                <td class="num">{{ c.studentCount }}</td>
-                <td class="num">{{ c.missingCount > 0 ? c.missingCount : '—' }}</td>
-                <td class="course-group">{{ c.targetGroup ?? '—' }}</td>
-              </tr>
-            </tbody>
-            <tfoot>
-              <tr class="course-total">
-                <td>Sum</td>
-                <td></td>
-                <td class="num">{{ courseTotals.students }}</td>
-                <td class="num">{{ courseTotals.missing > 0 ? courseTotals.missing : '—' }}</td>
-                <td></td>
-              </tr>
-            </tfoot>
-          </table>
+      <details v-if="courses.length" class="section" open>
+        <summary class="section-summary"><h3 class="section-heading">Kurs ({{ courses.length }})</h3></summary>
+        <div class="section-body">
+          <div class="course-table-wrap">
+            <table class="course-table">
+              <thead>
+                <tr>
+                  <th>Kurs</th>
+                  <th>Oppstart</th>
+                  <th class="num">Elever</th>
+                  <th class="num">Mangler</th>
+                  <th>Gruppe</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="c in courses" :key="c.slug">
+                  <td>
+                    <RouterLink :to="`/district/${c.slug}`" class="course-link">{{ c.letter }}</RouterLink>
+                  </td>
+                  <td class="course-date">{{ c.startDate ?? '—' }}</td>
+                  <td class="num">{{ c.studentCount }}</td>
+                  <td class="num">{{ c.missingCount > 0 ? c.missingCount : '—' }}</td>
+                  <td class="course-group">{{ c.targetGroup ?? '—' }}</td>
+                </tr>
+              </tbody>
+              <tfoot>
+                <tr class="course-total">
+                  <td>Sum</td>
+                  <td></td>
+                  <td class="num">{{ courseTotals.students }}</td>
+                  <td class="num">{{ courseTotals.missing > 0 ? courseTotals.missing : '—' }}</td>
+                  <td></td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
         </div>
-      </section>
+      </details>
+
+      <!-- Hendelser -->
+      <details v-if="events.length" class="section" open>
+        <summary class="section-summary"><h3 class="section-heading">Hendelser ({{ events.length }})</h3></summary>
+        <div class="section-body">
+          <div class="section-tools">
+            <button class="sort-btn" @click="eventSortAsc = !eventSortAsc">
+              Dato {{ eventSortAsc ? '↑' : '↓' }}
+            </button>
+          </div>
+          <div class="link-list">
+            <RouterLink
+              v-for="event in sortedEvents"
+              :key="event.slug"
+              :to="`/events/${event.slug}`"
+              class="event-item"
+            >
+              <span class="event-date">{{ formatDate(event.date) }}</span>
+              <span class="event-title">{{ event.title }}</span>
+            </RouterLink>
+          </div>
+        </div>
+      </details>
+
+      <!-- Galleri (direct + indirect via members and incidents) -->
+      <details v-if="galleryImages.length" class="section" open>
+        <summary class="section-summary"><h3 class="section-heading">Galleri ({{ galleryImages.length }})</h3></summary>
+        <div class="section-body">
+          <ImageSlider :images="galleryImages" />
+        </div>
+      </details>
 
       <!-- Medlemmer -->
-      <section v-if="members.length" class="section">
-        <h3 class="section-heading">Medlemmer ({{ members.length }})</h3>
-        <div class="link-list">
-          <RouterLink
-            v-for="p in members"
-            :key="p.slug"
-            :to="`/person/${p.slug}`"
-            class="person-item"
-          >
-            <span class="person-name">{{ p.name }}</span>
-            <span v-if="p.status === 'KIA'" class="status-marker status-marker--kia" title="Falt">✝</span>
-            <span v-else-if="p.status === 'ambiguous'" class="status-marker status-marker--ambig" title="Uavklart skjebne">∞</span>
-            <span v-if="p.rank" class="rank-badge">{{ p.rank }}</span>
-          </RouterLink>
+      <details v-if="members.length" class="section" open>
+        <summary class="section-summary"><h3 class="section-heading">Medlemmer ({{ members.length }})</h3></summary>
+        <div class="section-body">
+          <div class="link-list">
+            <RouterLink
+              v-for="p in members"
+              :key="p.slug"
+              :to="`/person/${p.slug}`"
+              class="person-item"
+            >
+              <span class="person-name">{{ p.name }}</span>
+              <span v-if="p.status === 'KIA'" class="status-marker status-marker--kia" title="Falt">✝</span>
+              <span v-else-if="p.status === 'ambiguous'" class="status-marker status-marker--ambig" title="Uavklart skjebne">∞</span>
+              <span v-if="p.rank" class="rank-badge">{{ p.rank }}</span>
+            </RouterLink>
+          </div>
         </div>
-      </section>
+      </details>
 
-      <!-- Hendelser (empty until round 3) -->
-      <section v-if="events.length" class="section">
-        <div class="section-header-row">
-          <h3 class="section-heading">Hendelser ({{ events.length }})</h3>
-          <button class="sort-btn" @click="eventSortAsc = !eventSortAsc">
-            Dato {{ eventSortAsc ? '↑' : '↓' }}
-          </button>
+      <!-- Eksterne referanser -->
+      <details v-if="externalRefs.length" class="section" open>
+        <summary class="section-summary"><h3 class="section-heading">Eksterne referanser ({{ externalRefs.length }})</h3></summary>
+        <div class="section-body">
+          <div class="link-list">
+            <a
+              v-for="r in externalRefs"
+              :key="r.id"
+              :href="r.url"
+              target="_blank"
+              rel="noopener noreferrer"
+              class="ref-item"
+            >
+              <span class="ref-title">{{ r.title ?? r.url }}</span>
+              <span class="ref-meta">
+                <span v-if="r.nbBacked" class="ref-nb" title="Nasjonalbiblioteket">NB</span>
+                <span v-if="r.domain" class="ref-domain">{{ r.domain }}</span>
+              </span>
+            </a>
+          </div>
         </div>
-        <div class="link-list">
-          <RouterLink
-            v-for="event in sortedEvents"
-            :key="event.slug"
-            :to="`/events/${event.slug}`"
-            class="event-item"
-          >
-            <span class="event-date">{{ formatDate(event.date) }}</span>
-            <span class="event-title">{{ event.title }}</span>
-          </RouterLink>
-        </div>
-      </section>
+      </details>
     </template>
   </div>
 </template>
@@ -124,6 +171,7 @@ import { ref, computed, onMounted } from 'vue'
 import { useRoute, RouterLink } from 'vue-router'
 import { neo4jQuery } from '../composables/useNeo4j.ts'
 import { blocksToHtml } from '../utils/portableText.ts'
+import ImageSlider, { type SlideImage } from '../components/ImageSlider.vue'
 
 const route   = useRoute()
 const loading = ref(true)
@@ -132,6 +180,9 @@ interface UnitNode {
   name: string
   formalName: string | null
   type: string | null
+  foundedDate: string | null
+  dissolvedDate: string | null
+  country: string | null
 }
 
 interface DescriptionNode {
@@ -151,16 +202,21 @@ const subUnits    = ref<{ name: string; slug: string }[]>([])
 const courses     = ref<{ slug: string; letter: string; startDate: string | null; studentCount: number; missingCount: number; targetGroup: string | null }[]>([])
 const members     = ref<{ slug: string; name: string; rank: string | null; status: string | null }[]>([])
 const events      = ref<{ slug: string; title: string; date: string | null }[]>([])
+const externalRefs = ref<{ id: string; title: string | null; url: string; type: string; domain: string | null; nbBacked: boolean }[]>([])
+const galleryImages = ref<SlideImage[]>([])
 
 onMounted(async () => {
   const slug = route.params.slug as string
   try {
-    const [unitRows, descRows, parentRows, subUnitRows, memberRows, eventRows, courseRows] = await Promise.all([
+    const [unitRows, descRows, parentRows, subUnitRows, memberRows, eventRows, courseRows, refRows, galleryRows] = await Promise.all([
       neo4jQuery<UnitNode>(
         `MATCH (u:Unit {slug: $slug})
          RETURN u.canonicalName AS name,
                 u.formalName    AS formalName,
-                u.type          AS type`,
+                u.type          AS type,
+                u.foundedDate   AS foundedDate,
+                u.dissolvedDate AS dissolvedDate,
+                u.country       AS country`,
         { slug },
       ),
       // Descriptions attached to this unit (from outline migration or editorial).
@@ -198,9 +254,19 @@ onMounted(async () => {
          ORDER BY name`,
         { slug },
       ),
-      // Incidents this unit's members participated in (empty until round 3).
+      // Incidents this unit's members participated in.
+      // Filtered by the unit's lifetime (foundedDate ≤ date ≤ dissolvedDate)
+      // because MEMBER_OF doesn't track join/leave dates yet — without that
+      // filter, Linge's page surfaces 1940-05 events from people who only
+      // joined Linge after it was formed in 1940-08. Incidents with NULL
+      // dates always pass through (we can't classify them).
       neo4jQuery<{ slug: string; title: string; date: string | null }>(
-        `MATCH (:Unit {slug: $slug})<-[:MEMBER_OF]-(p:Person)-[:INVOLVED_IN]->(i:Incident)
+        `MATCH (u:Unit {slug: $slug})<-[:MEMBER_OF]-(p:Person)-[:INVOLVED_IN]->(i:Incident)
+         WHERE i.date IS NULL
+            OR (
+              (u.foundedDate   IS NULL OR i.date >= u.foundedDate) AND
+              (u.dissolvedDate IS NULL OR i.date <= u.dissolvedDate)
+            )
          RETURN DISTINCT i.slug AS slug, i.title AS title, i.date AS date
          ORDER BY date`,
         { slug },
@@ -217,14 +283,73 @@ onMounted(async () => {
          ORDER BY c.order`,
         { slug },
       ),
+      // External references — Sources this Unit is REFERENCED_IN.
+      // NB-backed (Nasjonalbiblioteket-operated) sources sort first, then by type.
+      neo4jQuery<{ id: string; title: string | null; url: string; type: string; domain: string | null; nbBacked: boolean }>(
+        `MATCH (u:Unit {slug: $slug})-[:REFERENCED_IN]->(s:Source)
+         RETURN s.id AS id, s.title AS title, s.url AS url,
+                s.type AS type, s.domain AS domain,
+                coalesce(s.nbBacked, false) AS nbBacked
+         ORDER BY nbBacked DESC, s.type, coalesce(s.title, s.url)`,
+        { slug },
+      ),
+      // Indirect gallery — photographs reachable via this Unit, its members,
+      // and incidents involving its members (during the unit's lifetime).
+      // sortKey orders: 0 direct unit photos, 1 member portraits, 2 incident photos.
+      //
+      // HAS_IMAGE.scope = 'entity' pins an image to the entity it's attached to
+      // (e.g. a private portrait on a Person page). It's filtered out of every
+      // propagating hop — direct unit photos are always shown (the unit IS the
+      // attachment entity). Absent/other values = propagate (the default).
+      neo4jQuery<{ url: string; caption: string | null; subjectName: string; subjectSlug: string; subjectType: string; sortKey: number }>(
+        `CALL {
+           MATCH (u:Unit {slug: $slug})-[h:HAS_IMAGE]->(s:Source)
+           RETURN s.url AS url, h.caption AS caption,
+                  u.canonicalName AS subjectName, u.slug AS subjectSlug,
+                  'unit' AS subjectType, 0 AS sortKey
+           UNION
+           MATCH (u:Unit {slug: $slug})<-[:MEMBER_OF]-(p:Person)-[h:HAS_IMAGE]->(s:Source)
+           WHERE coalesce(h.scope, 'propagate') <> 'entity'
+           RETURN s.url AS url, h.caption AS caption,
+                  p.canonicalName AS subjectName, p.slug AS subjectSlug,
+                  'person' AS subjectType, 1 AS sortKey
+           UNION
+           MATCH (u:Unit {slug: $slug})<-[:MEMBER_OF]-(p:Person)-[:INVOLVED_IN]->(i:Incident)-[h:HAS_IMAGE]->(s:Source)
+           WHERE coalesce(h.scope, 'propagate') <> 'entity'
+             AND (i.date IS NULL OR (
+               (u.foundedDate   IS NULL OR i.date >= u.foundedDate) AND
+               (u.dissolvedDate IS NULL OR i.date <= u.dissolvedDate)
+             ))
+           RETURN s.url AS url, h.caption AS caption,
+                  i.title AS subjectName, i.slug AS subjectSlug,
+                  'incident' AS subjectType, 2 AS sortKey
+         }
+         RETURN url, caption, subjectName, subjectSlug, subjectType, sortKey
+         ORDER BY sortKey, subjectName
+         LIMIT 200`,
+        { slug },
+      ),
     ])
 
-    unit.value      = unitRows[0] ?? null
-    parentOrg.value = parentRows[0] ?? null
-    subUnits.value  = subUnitRows
-    members.value   = memberRows
-    events.value    = eventRows
-    courses.value   = courseRows
+    unit.value         = unitRows[0] ?? null
+    parentOrg.value    = parentRows[0] ?? null
+    subUnits.value     = subUnitRows
+    members.value      = memberRows
+    events.value       = eventRows
+    courses.value      = courseRows
+    externalRefs.value = refRows
+    // Dedupe by URL (same image can surface via multiple paths) and cast
+    // subjectType to the SlideImage union.
+    const seen = new Set<string>()
+    galleryImages.value = galleryRows
+      .filter(r => !seen.has(r.url) && seen.add(r.url))
+      .map(r => ({
+        url: r.url,
+        caption: r.caption,
+        subjectName: r.subjectName,
+        subjectSlug: r.subjectSlug,
+        subjectType: r.subjectType as SlideImage['subjectType'],
+      }))
 
     const descRow = descRows[0]
     if (descRow?.content) {
@@ -323,6 +448,26 @@ const courseTotals = computed(() => ({
   font-style: italic;
 }
 
+.unit-period {
+  font-size: 12px;
+  color: var(--color-muted);
+  margin: 0 0 6px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  font-variant-numeric: tabular-nums;
+}
+
+.unit-country {
+  display: inline-block;
+  padding: 1px 6px;
+  border: 1px solid var(--color-border-mid);
+  border-radius: 3px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+}
+
 .parent-link {
   display: inline-flex;
   align-items: center;
@@ -342,9 +487,8 @@ const courseTotals = computed(() => ({
   flex-shrink: 0;
 }
 
-/* ── Sections ───────────────────────────────────────────────── */
+/* ── Sections (collapsible via native <details>) ────────────── */
 .section {
-  padding: 12px 16px;
   border-bottom: 1px solid var(--color-border);
   background: var(--color-surface);
 }
@@ -352,10 +496,37 @@ const courseTotals = computed(() => ({
 .section + .section { border-top: none; }
 .section:last-of-type { margin-bottom: 48px; }
 
-.section-header-row {
+.section-summary {
+  cursor: pointer;
+  list-style: none;
+  padding: 12px 16px;
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 10px;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+.section-summary::-webkit-details-marker { display: none; }
+.section-summary::after {
+  content: '▾';
+  font-size: 11px;
+  color: var(--color-muted);
+  transition: transform 0.15s ease;
+  flex-shrink: 0;
+}
+.section:not([open]) > .section-summary::after {
+  transform: rotate(-90deg);
+}
+.section-summary:hover { background: var(--color-bg); }
+
+.section-body {
+  padding: 0 16px 12px;
+}
+
+.section-tools {
+  display: flex;
+  justify-content: flex-end;
   margin-bottom: 8px;
 }
 
@@ -492,6 +663,55 @@ const courseTotals = computed(() => ({
 .status-marker--kia   { color: var(--color-red); }
 .status-marker--ambig { color: var(--color-muted); }
 
+/* ── External reference rows ─────────────────────────────────── */
+.ref-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 8px;
+  margin: 0 -8px;
+  text-decoration: none;
+  color: var(--color-text);
+  border-radius: 4px;
+  transition: background 0.1s;
+}
+.ref-item:hover { background: var(--color-bg); }
+.ref-item:hover .ref-title { text-decoration: underline; }
+
+.ref-title {
+  font-size: 13px;
+  color: var(--color-navy);
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ref-meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.ref-nb {
+  display: inline-block;
+  padding: 1px 6px;
+  border-radius: 3px;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  background: var(--color-orange, #e38924);
+  color: #fff;
+}
+
+.ref-domain {
+  font-size: 11px;
+  color: var(--color-muted);
+  font-variant-numeric: tabular-nums;
+}
+
 .person-count {
   font-size: 11px;
   color: var(--color-muted);
@@ -502,7 +722,7 @@ const courseTotals = computed(() => ({
 .ext-icon { font-size: 11px; opacity: 0.6; }
 
 /* ── Portable text (Description rendering) ──────────────────── */
-.portable-text { margin-top: 10px; }
+.portable-text { margin-top: 4px; }
 
 .portable-text :deep(p) {
   margin: 0 0 0.75em;
@@ -543,7 +763,10 @@ const courseTotals = computed(() => ({
 }
 
 /* ── Course table ───────────────────────────────────────────── */
-.course-table-wrap { overflow-x: auto; }
+.course-table-wrap {
+  overflow-x: auto;
+  margin-top: 10px;
+}
 
 .course-table {
   width: 100%;

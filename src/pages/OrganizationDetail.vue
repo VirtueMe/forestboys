@@ -14,82 +14,129 @@
           <span v-if="org.abbreviation && org.abbreviation !== org.name" class="abbr-badge">{{ org.abbreviation }}</span>
         </div>
         <p v-if="org.formalName" class="org-meta">{{ org.formalName }}</p>
+        <p v-if="org.foundedDate || org.dissolvedDate || org.country" class="org-period">
+          <span v-if="org.foundedDate || org.dissolvedDate">
+            Etablert {{ org.foundedDate ?? '?' }}<span v-if="org.dissolvedDate"> – {{ org.dissolvedDate }}</span>
+          </span>
+          <span v-if="org.country" class="org-country">{{ org.country }}</span>
+        </p>
       </div>
 
       <!-- Beskrivelse -->
-      <section v-if="description" class="section">
-        <h3 class="section-heading">Beskrivelse</h3>
-        <!-- eslint-disable vue/no-v-html -->
-        <div class="portable-text" v-html="description.html"></div>
-        <!-- eslint-enable vue/no-v-html -->
-      </section>
+      <details v-if="description" class="section" open>
+        <summary class="section-summary"><h3 class="section-heading">Beskrivelse</h3></summary>
+        <div class="section-body">
+          <!-- eslint-disable vue/no-v-html -->
+          <div class="portable-text" v-html="description.html"></div>
+          <!-- eslint-enable vue/no-v-html -->
+        </div>
+      </details>
 
       <!-- Underavdelinger -->
-      <section v-if="units.length" class="section">
-        <h3 class="section-heading">Underavdelinger ({{ units.length }})</h3>
-        <div class="link-list">
-          <RouterLink
-            v-for="u in units"
-            :key="u.slug"
-            :to="`/district/${u.slug}`"
-            class="section-link"
-          >
-            {{ u.name }}
-          </RouterLink>
+      <details v-if="units.length" class="section" open>
+        <summary class="section-summary"><h3 class="section-heading">Underavdelinger ({{ units.length }})</h3></summary>
+        <div class="section-body">
+          <div class="link-list">
+            <RouterLink
+              v-for="u in units"
+              :key="u.slug"
+              :to="`/district/${u.slug}`"
+              class="section-link"
+            >
+              {{ u.name }}
+            </RouterLink>
+          </div>
         </div>
-      </section>
+      </details>
 
       <!-- Operasjoner -->
-      <section v-if="operations.length" class="section">
-        <h3 class="section-heading">Operasjoner ({{ operations.length }})</h3>
-        <div class="link-list">
-          <RouterLink
-            v-for="op in operations"
-            :key="op.slug"
-            :to="`/operation/${op.slug}`"
-            class="section-link"
-          >
-            {{ op.name }}
-          </RouterLink>
+      <details v-if="operations.length" class="section" open>
+        <summary class="section-summary"><h3 class="section-heading">Operasjoner ({{ operations.length }})</h3></summary>
+        <div class="section-body">
+          <div class="link-list">
+            <RouterLink
+              v-for="op in operations"
+              :key="op.slug"
+              :to="`/operation/${op.slug}`"
+              class="section-link"
+            >
+              {{ op.name }}
+            </RouterLink>
+          </div>
         </div>
-      </section>
+      </details>
 
       <!-- Hendelser -->
-      <section v-if="events.length" class="section">
-        <div class="section-header-row">
-          <h3 class="section-heading">Hendelser ({{ events.length }})</h3>
-          <button class="sort-btn" @click="eventSortAsc = !eventSortAsc">
-            Dato {{ eventSortAsc ? '↑' : '↓' }}
-          </button>
+      <details v-if="events.length" class="section" open>
+        <summary class="section-summary"><h3 class="section-heading">Hendelser ({{ events.length }})</h3></summary>
+        <div class="section-body">
+          <div class="section-tools">
+            <button class="sort-btn" @click="eventSortAsc = !eventSortAsc">
+              Dato {{ eventSortAsc ? '↑' : '↓' }}
+            </button>
+          </div>
+          <div class="link-list">
+            <RouterLink
+              v-for="event in sortedEvents"
+              :key="event.slug"
+              :to="`/events/${event.slug}`"
+              class="event-item"
+            >
+              <span class="event-date">{{ formatDate(event.date) }}</span>
+              <span class="event-title">{{ event.title }}</span>
+            </RouterLink>
+          </div>
         </div>
-        <div class="link-list">
-          <RouterLink
-            v-for="event in sortedEvents"
-            :key="event.slug"
-            :to="`/events/${event.slug}`"
-            class="event-item"
-          >
-            <span class="event-date">{{ formatDate(event.date) }}</span>
-            <span class="event-title">{{ event.title }}</span>
-          </RouterLink>
+      </details>
+
+      <!-- Galleri (direct + indirect via member units and orchestrated incidents) -->
+      <details v-if="galleryImages.length" class="section" open>
+        <summary class="section-summary"><h3 class="section-heading">Galleri ({{ galleryImages.length }})</h3></summary>
+        <div class="section-body">
+          <ImageSlider :images="galleryImages" />
         </div>
-      </section>
+      </details>
 
       <!-- Deltakere -->
-      <section v-if="people.length" class="section">
-        <h3 class="section-heading">Deltakere ({{ people.length }})</h3>
-        <div class="link-list">
-          <RouterLink
-            v-for="p in people"
-            :key="p.slug"
-            :to="`/person/${p.slug}`"
-            class="person-item"
-          >
-            <span class="person-name">{{ p.name }}</span>
-            <span class="person-count">{{ p.eventCount }} hendelser</span>
-          </RouterLink>
+      <details v-if="people.length" class="section" open>
+        <summary class="section-summary"><h3 class="section-heading">Deltakere ({{ people.length }})</h3></summary>
+        <div class="section-body">
+          <div class="link-list">
+            <RouterLink
+              v-for="p in people"
+              :key="p.slug"
+              :to="`/person/${p.slug}`"
+              class="person-item"
+            >
+              <span class="person-name">{{ p.name }}</span>
+              <span class="person-count">{{ p.eventCount }} hendelser</span>
+            </RouterLink>
+          </div>
         </div>
-      </section>
+      </details>
+
+      <!-- Eksterne referanser -->
+      <details v-if="externalRefs.length" class="section" open>
+        <summary class="section-summary"><h3 class="section-heading">Eksterne referanser ({{ externalRefs.length }})</h3></summary>
+        <div class="section-body">
+          <div class="link-list">
+            <a
+              v-for="r in externalRefs"
+              :key="r.id"
+              :href="r.url"
+              target="_blank"
+              rel="noopener noreferrer"
+              class="ref-item"
+            >
+              <span class="ref-title">{{ r.title ?? r.url }}</span>
+              <span class="ref-meta">
+                <span v-if="r.nbBacked" class="ref-nb" title="Nasjonalbiblioteket">NB</span>
+                <span v-if="r.domain" class="ref-domain">{{ r.domain }}</span>
+              </span>
+            </a>
+          </div>
+        </div>
+      </details>
     </template>
   </div>
 </template>
@@ -99,6 +146,7 @@ import { ref, computed, onMounted } from 'vue'
 import { useRoute, RouterLink } from 'vue-router'
 import { neo4jQuery } from '../composables/useNeo4j.ts'
 import { blocksToHtml } from '../utils/portableText.ts'
+import ImageSlider, { type SlideImage } from '../components/ImageSlider.vue'
 
 const route   = useRoute()
 const loading = ref(true)
@@ -109,6 +157,9 @@ interface OrgNode {
   abbreviation: string | null
   sortingName: string | null
   color: string | null
+  foundedDate: string | null
+  dissolvedDate: string | null
+  country: string | null
 }
 
 interface DescriptionNode {
@@ -121,18 +172,23 @@ const units        = ref<{ name: string; slug: string }[]>([])
 const operations   = ref<{ name: string; slug: string }[]>([])
 const events       = ref<{ slug: string; title: string; date: string | null }[]>([])
 const people       = ref<{ slug: string; name: string; eventCount: number }[]>([])
+const externalRefs = ref<{ id: string; title: string | null; url: string; type: string; domain: string | null; nbBacked: boolean }[]>([])
+const galleryImages = ref<SlideImage[]>([])
 
 onMounted(async () => {
   const slug = route.params.slug as string
   try {
-    const [orgRows, descRows, unitRows, opRows, eventRows, peopleRows] = await Promise.all([
+    const [orgRows, descRows, unitRows, opRows, eventRows, peopleRows, refRows, galleryRows] = await Promise.all([
       neo4jQuery<OrgNode>(
         `MATCH (o:Organization {slug: $slug})
          RETURN o.canonicalName AS name,
                 o.formalName    AS formalName,
                 o.abbreviation  AS abbreviation,
                 o.sortingName   AS sortingName,
-                o.color         AS color`,
+                o.color         AS color,
+                o.foundedDate   AS foundedDate,
+                o.dissolvedDate AS dissolvedDate,
+                o.country       AS country`,
         { slug },
       ),
       // Descriptions attached to this org (Outline migrations + future editorial).
@@ -169,13 +225,63 @@ onMounted(async () => {
          ORDER BY eventCount DESC`,
         { slug },
       ),
+      // External references — Sources this Organization is REFERENCED_IN.
+      neo4jQuery<{ id: string; title: string | null; url: string; type: string; domain: string | null; nbBacked: boolean }>(
+        `MATCH (o:Organization {slug: $slug})-[:REFERENCED_IN]->(s:Source)
+         RETURN s.id AS id, s.title AS title, s.url AS url,
+                s.type AS type, s.domain AS domain,
+                coalesce(s.nbBacked, false) AS nbBacked
+         ORDER BY nbBacked DESC, s.type, coalesce(s.title, s.url)`,
+        { slug },
+      ),
+      // Indirect gallery — photos reachable via this Org, its units' members,
+      // and incidents it orchestrated. sortKey orders: 0 direct org photos,
+      // 1 member portraits (via any nested unit), 2 orchestrated-incident photos.
+      // HAS_IMAGE.scope = 'entity' pins a Source to its attachment entity and is
+      // filtered out of every propagating hop.
+      neo4jQuery<{ url: string; caption: string | null; subjectName: string; subjectSlug: string; subjectType: string; sortKey: number }>(
+        `CALL {
+           MATCH (o:Organization {slug: $slug})-[h:HAS_IMAGE]->(s:Source)
+           RETURN s.url AS url, h.caption AS caption,
+                  o.canonicalName AS subjectName, o.slug AS subjectSlug,
+                  'organization' AS subjectType, 0 AS sortKey
+           UNION
+           MATCH (o:Organization {slug: $slug})<-[:PART_OF*1..]-(:Unit)<-[:MEMBER_OF]-(p:Person)-[h:HAS_IMAGE]->(s:Source)
+           WHERE coalesce(h.scope, 'propagate') <> 'entity'
+           RETURN s.url AS url, h.caption AS caption,
+                  p.canonicalName AS subjectName, p.slug AS subjectSlug,
+                  'person' AS subjectType, 1 AS sortKey
+           UNION
+           MATCH (o:Organization {slug: $slug})<-[:ORCHESTRATED_BY]-(i:Incident)-[h:HAS_IMAGE]->(s:Source)
+           WHERE coalesce(h.scope, 'propagate') <> 'entity'
+           RETURN s.url AS url, h.caption AS caption,
+                  i.title AS subjectName, i.slug AS subjectSlug,
+                  'incident' AS subjectType, 2 AS sortKey
+         }
+         RETURN url, caption, subjectName, subjectSlug, subjectType, sortKey
+         ORDER BY sortKey, subjectName
+         LIMIT 200`,
+        { slug },
+      ),
     ])
 
-    org.value        = orgRows[0] ?? null
-    operations.value = opRows
-    units.value      = unitRows
-    events.value     = eventRows
-    people.value     = peopleRows
+    org.value          = orgRows[0] ?? null
+    operations.value   = opRows
+    units.value        = unitRows
+    events.value       = eventRows
+    people.value       = peopleRows
+    externalRefs.value = refRows
+    // Dedupe by URL (same Source can surface via multiple traversals).
+    const seen = new Set<string>()
+    galleryImages.value = galleryRows
+      .filter(r => !seen.has(r.url) && seen.add(r.url))
+      .map(r => ({
+        url: r.url,
+        caption: r.caption,
+        subjectName: r.subjectName,
+        subjectSlug: r.subjectSlug,
+        subjectType: r.subjectType as SlideImage['subjectType'],
+      }))
 
     const descRow = descRows[0]
     if (descRow?.content) {
@@ -298,9 +404,28 @@ const sortedEvents = computed(() => {
   font-style: italic;
 }
 
-/* ── Sections ───────────────────────────────────────────────── */
+.org-period {
+  font-size: 12px;
+  color: var(--color-muted);
+  margin: 6px 0 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  font-variant-numeric: tabular-nums;
+}
+
+.org-country {
+  display: inline-block;
+  padding: 1px 6px;
+  border: 1px solid var(--color-border-mid);
+  border-radius: 3px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+}
+
+/* ── Sections (collapsible via native <details>) ────────────── */
 .section {
-  padding: 12px 16px;
   border-bottom: 1px solid var(--color-border);
   background: var(--color-surface);
 }
@@ -308,10 +433,37 @@ const sortedEvents = computed(() => {
 .section + .section { border-top: none; }
 .section:last-of-type { margin-bottom: 48px; }
 
-.section-header-row {
+.section-summary {
+  cursor: pointer;
+  list-style: none;
+  padding: 12px 16px;
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 10px;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+.section-summary::-webkit-details-marker { display: none; }
+.section-summary::after {
+  content: '▾';
+  font-size: 11px;
+  color: var(--color-muted);
+  transition: transform 0.15s ease;
+  flex-shrink: 0;
+}
+.section:not([open]) > .section-summary::after {
+  transform: rotate(-90deg);
+}
+.section-summary:hover { background: var(--color-bg); }
+
+.section-body {
+  padding: 0 16px 12px;
+}
+
+.section-tools {
+  display: flex;
+  justify-content: flex-end;
   margin-bottom: 8px;
 }
 
@@ -339,7 +491,7 @@ const sortedEvents = computed(() => {
 .sort-btn:hover { border-color: var(--color-navy); color: var(--color-navy); }
 
 /* ── Portable text (Description rendering) ──────────────────── */
-.portable-text { margin-top: 10px; }
+.portable-text { margin-top: 4px; }
 
 .portable-text :deep(p) {
   margin: 0 0 0.75em;
@@ -481,4 +633,53 @@ const sortedEvents = computed(() => {
 }
 
 .ext-icon { font-size: 11px; opacity: 0.6; }
+
+/* ── External reference rows ─────────────────────────────────── */
+.ref-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 8px;
+  margin: 0 -8px;
+  text-decoration: none;
+  color: var(--color-text);
+  border-radius: 4px;
+  transition: background 0.1s;
+}
+.ref-item:hover { background: var(--color-bg); }
+.ref-item:hover .ref-title { text-decoration: underline; }
+
+.ref-title {
+  font-size: 13px;
+  color: var(--color-navy);
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ref-meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.ref-nb {
+  display: inline-block;
+  padding: 1px 6px;
+  border-radius: 3px;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  background: var(--color-orange, #e38924);
+  color: #fff;
+}
+
+.ref-domain {
+  font-size: 11px;
+  color: var(--color-muted);
+  font-variant-numeric: tabular-nums;
+}
 </style>
