@@ -139,18 +139,25 @@
           </section>
 
           <!-- Lenker -->
-          <section v-if="person.links?.length" class="section">
-            <h3 class="section-heading">Nyttige lenker</h3>
-            <div class="link-list">
+          <section class="section">
+            <h3 class="section-heading">Lenker<span v-if="externalRefs.length"> ({{ externalRefs.length }})</span></h3>
+            <div v-if="externalRefs.length" class="link-list">
               <a
-                v-for="link in person.links"
-                :key="link.url"
-                :href="link.url"
+                v-for="r in externalRefs"
+                :key="r.id"
+                :href="r.url"
                 target="_blank"
                 rel="noopener noreferrer"
-                class="ext-link"
-              >{{ link.title || link.url }} <span class="ext-icon">↗</span></a>
+                class="ref-item"
+              >
+                <span class="ref-title">{{ r.title ?? r.url }}</span>
+                <span class="ref-meta">
+                  <span v-if="r.nbBacked" class="ref-nb" title="Nasjonalbiblioteket">NB</span>
+                  <span v-if="r.domain" class="ref-domain">{{ r.domain }}</span>
+                </span>
+              </a>
             </div>
+            <p v-else class="section-empty">Ingen lenker registrert ennå.</p>
           </section>
         </template>
 
@@ -187,6 +194,7 @@ const autoPersonName = ref<string | null>(null)
 
 const heroImage     = ref<{ url: string; caption: string | null } | null>(null)
 const galleryImages = ref<SlideImage[]>([])
+const externalRefs  = ref<{ id: string; title: string | null; url: string; type: string; domain: string | null; nbBacked: boolean }[]>([])
 
 onMounted(async () => {
   await init()
@@ -209,7 +217,7 @@ onMounted(async () => {
   //   2. Else direct Source with kind = 'portrait'
   //   3. Else first direct image by order (Sanity convention: gallery[0] ≈ portrait)
   try {
-    const [heroRows, galleryRows] = await Promise.all([
+    const [heroRows, galleryRows, refRows] = await Promise.all([
       neo4jQuery<{ url: string; caption: string | null }>(
         `MATCH (p:Person {slug: $slug})-[h:HAS_IMAGE]->(s:Source)
          WITH s, h,
@@ -264,6 +272,16 @@ onMounted(async () => {
          LIMIT 200`,
         { slug },
       ),
+      // External references — Sources this Person is REFERENCED_IN.
+      // NB-backed sources sort first, then by type, then by title.
+      neo4jQuery<{ id: string; title: string | null; url: string; type: string; domain: string | null; nbBacked: boolean }>(
+        `MATCH (p:Person {slug: $slug})-[:REFERENCED_IN]->(s:Source)
+         RETURN s.id AS id, s.title AS title, s.url AS url,
+                s.type AS type, s.domain AS domain,
+                coalesce(s.nbBacked, false) AS nbBacked
+         ORDER BY nbBacked DESC, s.type, coalesce(s.title, s.url)`,
+        { slug },
+      ),
     ])
     heroImage.value = heroRows[0] ?? null
     const seen = new Set<string>()
@@ -276,6 +294,7 @@ onMounted(async () => {
         subjectSlug: r.subjectSlug,
         subjectType: r.subjectType as SlideImage['subjectType'],
       }))
+    externalRefs.value = refRows
   } catch (err) {
     console.error('PersonDetail hero/gallery fetch error:', err)
   }
@@ -644,6 +663,64 @@ const personInitials = computed<string>(() => {
 }
 
 /* ── External links ─────────────────────────────────────────── */
+/* ── Lenker (Neo4j REFERENCED_IN) ────────────────────────────── */
+.ref-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 8px;
+  margin: 0 -8px;
+  text-decoration: none;
+  color: var(--color-text);
+  border-radius: 4px;
+  transition: background 0.1s;
+}
+.ref-item:hover { background: var(--color-bg); }
+.ref-item:hover .ref-title { text-decoration: underline; }
+
+.ref-title {
+  font-size: 13px;
+  color: var(--color-navy);
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ref-meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.ref-nb {
+  display: inline-block;
+  padding: 1px 6px;
+  border-radius: 3px;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  background: var(--color-orange, #e38924);
+  color: #fff;
+}
+
+.ref-domain {
+  font-size: 11px;
+  color: var(--color-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.section-empty {
+  margin: 0;
+  padding: 4px 0;
+  font-size: 12px;
+  color: var(--color-muted);
+  font-style: italic;
+}
+
+/* ── Legacy Sanity links (kept until the "Original" tab is fully retired) ── */
 .ext-link {
   display: block;
   font-size: 13px;
