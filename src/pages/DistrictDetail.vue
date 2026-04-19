@@ -262,6 +262,10 @@ onMounted(async () => {
       // Parents — one PART_OF edge per reporting line (e.g. KP F admin→HOK,
       // operational→SOE). Edge props: role (chip), description (info marker),
       // order (render order among sibling parents).
+      //
+      // Convention: edges with a description are "context info" / special
+      // cases and sort last — primary relationships surface first, annotated
+      // ones follow.
       neo4jQuery<Parent>(
         `MATCH (u:Unit {slug: $slug})-[r:PART_OF]->(parent)
          WHERE parent:Organization OR parent:Unit
@@ -272,7 +276,8 @@ onMounted(async () => {
                 r.role               AS role,
                 r.description        AS description,
                 coalesce(r.order, 999) AS \`order\`
-         ORDER BY \`order\`, name`,
+         ORDER BY CASE WHEN r.description IS NOT NULL THEN 1 ELSE 0 END,
+                  \`order\`, name`,
         { slug },
       ),
       // Sub-units — any Units PART_OF this one, EXCEPT training courses

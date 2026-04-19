@@ -227,6 +227,10 @@ onMounted(async () => {
       // Sub-units — PART_OF edges carry role/description/order per reporting
       // line (e.g. KP F is PART_OF SOE with role='operational'). The info
       // marker in the UI surfaces the description when set.
+      //
+      // Convention: edges with a description are "context info" / special
+      // cases and sort last — primary members surface first, annotated ones
+      // follow (e.g. KP F sinks below Kompani Linge on SOE's page).
       neo4jQuery<ChildUnit>(
         `MATCH (u:Unit)-[r:PART_OF]->(o:Organization {slug: $slug})
          RETURN u.canonicalName AS name,
@@ -234,7 +238,8 @@ onMounted(async () => {
                 r.role          AS role,
                 r.description   AS description,
                 coalesce(r.order, 999) AS \`order\`
-         ORDER BY \`order\`, name`,
+         ORDER BY CASE WHEN r.description IS NOT NULL THEN 1 ELSE 0 END,
+                  \`order\`, name`,
         { slug },
       ),
       // Operations orchestrated by this org (round-2 classified outlines).
