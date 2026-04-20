@@ -289,83 +289,7 @@
               </select>
             </div>
 
-            <div class="field">
-              <div class="field-label-row">
-                <label class="field-label">Innhold</label>
-                <button type="button" class="btn-secondary-outline" @click="addSection">+ Legg til seksjon</button>
-              </div>
-
-              <div class="sections">
-                <div v-if="!selected.sections.length" class="sections-empty">Ingen seksjoner ennå.</div>
-                <div
-                  v-for="section in [...selected.sections].sort((a, b) => a.order - b.order)"
-                  :key="section.order"
-                  class="section-block"
-                >
-                  <div class="section-controls">
-                    <span class="section-index">Seksjon {{ section.order }}</span>
-                    <button type="button" class="section-btn" title="Opp" @click="moveSection(section, -1)">↑</button>
-                    <button type="button" class="section-btn" title="Ned" @click="moveSection(section, 1)">↓</button>
-                    <button type="button" class="section-btn section-btn-delete" title="Slett" @click="removeSection(section)">✕</button>
-                  </div>
-                  <PortableTextEditor
-                    :model-value="sectionBlocks(section)"
-                    @update:model-value="blocks => onSectionChange(section, blocks)"
-                  />
-
-                  <div class="section-cites">
-                    <div class="section-cites-header">
-                      <span class="section-cites-label">Kilder</span>
-                    </div>
-                    <ul v-if="section.citations.length" class="section-cites-list">
-                      <template v-for="(c, i) in section.citations" :key="c.source.id">
-                        <li class="section-cite-item">
-                          <label class="section-cite-inline">
-                            <input
-                              type="checkbox"
-                              :checked="c.inline"
-                              @change="toggleCiteInline(section, i)"
-                            />
-                            inline
-                          </label>
-                          <span class="section-cite-title">{{ c.source.title || c.source.id }}</span>
-                          <span v-if="c.source.authorFreeText" class="section-cite-author">— {{ c.source.authorFreeText }}</span>
-                          <button type="button" class="section-btn" title="Rediger" @click="startEditSource(c.source)">✎</button>
-                          <button type="button" class="section-btn section-btn-delete" title="Fjern" @click="removeCite(section, i)">✕</button>
-                        </li>
-                        <li v-if="editingSourceId === c.source.id" class="section-cite-edit">
-                          <SourceEditForm
-                            :source="c.source"
-                            @saved="onSourceSaved"
-                            @cancel="editingSourceId = null"
-                          />
-                        </li>
-                      </template>
-                    </ul>
-                    <SourcePicker
-                      placeholder="Legg til kilde…"
-                      @pick="s => addCite(section, s)"
-                    />
-                  </div>
-
-                  <div class="section-sourced">
-                    <div class="section-sourced-header">
-                      <span class="section-sourced-label">Gjengitt fra</span>
-                    </div>
-                    <div v-if="section.sourcedFrom" class="section-sourced-chip">
-                      <span class="sc-title">{{ section.sourcedFrom.title || section.sourcedFrom.id }}</span>
-                      <span v-if="section.sourcedFrom.license" class="sc-license">{{ section.sourcedFrom.license }}</span>
-                      <button type="button" class="section-btn section-btn-delete" title="Fjern" @click="clearSourcedFrom(section)">✕</button>
-                    </div>
-                    <SourcePicker
-                      v-else
-                      placeholder="Sett kildematerial…"
-                      @pick="s => setSourcedFrom(section, s)"
-                    />
-                  </div>
-                </div>
-              </div>
-            </div>
+            <SectionsEditor :sections="selected.sections" label="Innhold" />
 
             <div v-if="headingWarnings.length" class="validation-warning">
               <div class="validation-title">Advarsel om HTML-standard:</div>
@@ -397,10 +321,7 @@ import { useRoute } from 'vue-router'
 import { neo4jQuery } from '@/composables/useNeo4j.ts'
 import { blocksToHtml } from '@/utils/portableText.ts'
 import { authFetch } from '@/composables/useAuth.ts'
-import PortableTextEditor from '@/components/PortableTextEditor.vue'
-import SourcePicker from '@/components/SourcePicker.vue'
-import SourceEditForm from '@/components/SourceEditForm.vue'
-import type { PortableTextBlock } from '@portabletext/editor'
+import SectionsEditor from '@/components/SectionsEditor.vue'
 
 const TABS = [
   { slug: 'home',  label: 'Hjem' },
@@ -603,84 +524,6 @@ function footnoteCites(s: Section, card: Card): (Citation & { footnoteNumber: nu
   return all.filter(fn => s.citations.some(c => !c.inline && c.source.id === fn.source.id))
 }
 
-function sectionBlocks(section: Section): PortableTextBlock[] {
-  try { return JSON.parse(section.content) as PortableTextBlock[] }
-  catch { return [] }
-}
-
-function onSectionChange(section: Section, blocks: PortableTextBlock[]) {
-  section.content = JSON.stringify(blocks)
-}
-
-function addSection() {
-  if (!selected.value) return
-  const maxOrder = selected.value.sections.reduce((m, s) => Math.max(m, s.order), 0)
-  selected.value.sections.push({ order: maxOrder + 1, content: '[]', citations: [], sourcedFrom: null })
-}
-
-function setSourcedFrom(section: Section, source: SourceRef) {
-  section.sourcedFrom = { ...source }
-}
-
-function clearSourcedFrom(section: Section) {
-  section.sourcedFrom = null
-}
-
-function addCite(section: Section, source: SourceRef) {
-  if (section.citations.some(c => c.source.id === source.id)) return
-  section.citations.push({ inline: false, source: { ...source } })
-}
-
-function removeCite(section: Section, index: number) {
-  section.citations.splice(index, 1)
-}
-
-function toggleCiteInline(section: Section, index: number) {
-  const c = section.citations[index]
-  if (c) c.inline = !c.inline
-}
-
-const editingSourceId = ref<string | null>(null)
-
-function startEditSource(source: SourceRef) {
-  editingSourceId.value = editingSourceId.value === source.id ? null : source.id
-}
-
-function onSourceSaved(updated: SourceRef) {
-  // Source changes persist immediately, independent of the card's dirty flow.
-  // Propagate the new fields to every local citation referencing this source
-  // (including originalById so the dirty check doesn't flag a spurious change).
-  const apply = (card: Card) => {
-    for (const s of card.sections) {
-      for (const c of s.citations) {
-        if (c.source.id === updated.id) c.source = { ...updated }
-      }
-    }
-  }
-  for (const card of cards.value)            apply(card)
-  for (const card of originalById.value.values()) apply(card)
-  editingSourceId.value = null
-}
-
-function removeSection(section: Section) {
-  if (!selected.value) return
-  selected.value.sections = selected.value.sections.filter(s => s !== section)
-  // Re-number surviving sections
-  selected.value.sections
-    .sort((a, b) => a.order - b.order)
-    .forEach((s, i) => { s.order = i + 1 })
-}
-
-function moveSection(section: Section, direction: -1 | 1) {
-  if (!selected.value) return
-  const sorted = [...selected.value.sections].sort((a, b) => a.order - b.order)
-  const i = sorted.indexOf(section)
-  const j = i + direction
-  if (j < 0 || j >= sorted.length) return
-  const tmp = sorted[i].order
-  sorted[i].order = sorted[j].order
-  sorted[j].order = tmp
-}
 
 interface CardDiff {
   order?:        number

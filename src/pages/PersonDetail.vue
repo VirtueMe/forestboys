@@ -124,6 +124,20 @@
           <button type="button" class="edit-link-revert" :disabled="ranksSaving" @click="revertRanks">Angre</button>
         </footer>
         <div v-if="editForm.type === 'soldier' && ranksError" class="edit-save-error">{{ ranksError }}</div>
+
+        <section class="edit-section">
+          <h3 class="edit-section-heading">Beskrivelse</h3>
+          <SectionsEditor :sections="sectionDraft" />
+        </section>
+
+        <footer v-if="sectionsDirty" class="edit-save-bar">
+          <span class="edit-save-prompt">Ser det bra ut?</span>
+          <button type="button" class="edit-btn-primary" :disabled="sectionsSaving" @click="saveSections">
+            {{ sectionsSaving ? 'Lagrer…' : 'Lagre' }}
+          </button>
+          <button type="button" class="edit-link-revert" :disabled="sectionsSaving" @click="revertSections">Angre</button>
+        </footer>
+        <div v-if="sectionsError" class="edit-save-error">{{ sectionsError }}</div>
       </div>
 
       <!-- Hero image (reserves the same vertical space when no image exists) -->
@@ -154,11 +168,72 @@
       </div>
 
       <!-- Beskrivelse -->
-      <section v-if="person.descriptionHtml || person.description" class="section">
+      <section v-if="sectionsForPreview.length || person.descriptionHtml || person.description" class="section">
         <h3 class="section-heading">Beskrivelse</h3>
-        <!-- eslint-disable-next-line vue/no-v-html -->
-        <div v-if="person.descriptionHtml" class="rich-text" itemprop="description" v-html="person.descriptionHtml"></div>
-        <p v-else class="plain-text">{{ person.description }}</p>
+        <template v-if="sectionsForPreview.length">
+          <template v-for="entry in sectionsForPreview" :key="entry.order">
+            <div class="section-wrap">
+              <!-- eslint-disable vue/no-v-html -->
+              <div
+                class="rich-text portable-text"
+                :class="{ 'is-quote': entry.section.citations.length > 0 || entry.section.sourcedFrom }"
+                itemprop="description"
+                v-html="entry.html"
+              ></div>
+              <!-- eslint-enable vue/no-v-html -->
+              <div v-if="entry.section.sourcedFrom" class="sourced-from">
+                <span class="sourced-label">Fra:</span>
+                <a
+                  v-if="entry.section.sourcedFrom.url"
+                  :href="entry.section.sourcedFrom.url"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  class="sourced-link"
+                >{{ entry.section.sourcedFrom.attribution || entry.section.sourcedFrom.title || entry.section.sourcedFrom.id }} ↗</a>
+                <span v-else class="sourced-link">{{ entry.section.sourcedFrom.attribution || entry.section.sourcedFrom.title || entry.section.sourcedFrom.id }}</span>
+                <span v-if="entry.section.sourcedFrom.license" class="sourced-license">{{ entry.section.sourcedFrom.license }}</span>
+              </div>
+              <div v-if="inlineCites(entry.section).length" class="inline-cites">
+                <a
+                  v-for="c in inlineCites(entry.section)"
+                  :key="c.source.id"
+                  :href="c.source.url ?? '#'"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  class="cite-chip"
+                >
+                  {{ c.source.title || c.source.id }}
+                  <span v-if="c.source.authorFreeText" class="cite-chip-author">— {{ c.source.authorFreeText }}</span>
+                  <span class="cite-chip-arrow">↗</span>
+                </a>
+              </div>
+              <div v-if="sectionFootnoteCites(entry.section).length" class="section-footnotes">
+                <sup v-for="c in sectionFootnoteCites(entry.section)" :key="c.source.id">[{{ c.footnoteNumber }}]</sup>
+              </div>
+            </div>
+          </template>
+          <footer v-if="personFootnotes.length" class="card-kilder">
+            <div class="kilder-label">Kilder</div>
+            <ol class="kilder-list">
+              <li v-for="c in personFootnotes" :key="c.source.id" :value="c.footnoteNumber">
+                <component
+                  :is="c.source.url ? 'a' : 'span'"
+                  v-bind="c.source.url ? { href: c.source.url, target: '_blank', rel: 'noopener noreferrer' } : {}"
+                  class="kilder-ref"
+                >{{ c.source.title || c.source.id
+                  }}<span v-if="c.source.authorFreeText" class="kilder-author"> — {{ c.source.authorFreeText }}</span>
+                </component>
+                <span v-if="c.source.url" class="kilder-arrow"> ↗</span>
+              </li>
+            </ol>
+          </footer>
+        </template>
+        <!-- Legacy fallback — Sanity-era descriptionHtml / description -->
+        <template v-else>
+          <!-- eslint-disable-next-line vue/no-v-html -->
+          <div v-if="person.descriptionHtml" class="rich-text" itemprop="description" v-html="person.descriptionHtml"></div>
+          <p v-else class="plain-text">{{ person.description }}</p>
+        </template>
       </section>
 
       <!-- Medlemskap (MEMBER_OF units with role / period / info marker) -->
@@ -305,7 +380,9 @@ import DetailPage from '../components/DetailPage.vue'
 import ImageSlider, { type SlideImage } from '../components/ImageSlider.vue'
 import SourceRef from '../components/SourceRef.vue'
 import AdminViewTabs, { type AdminViewMode } from '../components/AdminViewTabs.vue'
+import SectionsEditor, { type Section, type Citation } from '../components/SectionsEditor.vue'
 import { authFetch } from '../composables/useAuth.ts'
+import { blocksToHtml } from '../utils/portableText.ts'
 
 const { people, init } = useLocationCache()
 
@@ -537,6 +614,147 @@ function rankPeriod(r: HeldRank): string {
   return `${r.from ?? '?'}–${r.to ?? ''}`
 }
 
+// ── Beskrivelse (Description sections) ─────────────────────────────────
+interface SectionRow {
+  order:        number | null
+  content:      string | null
+  citations:    {
+    inline:        boolean | null
+    sourceId:      string | null
+    sourceTitle:   string | null
+    sourceUrl:     string | null
+    sourceAuthor:  string | null
+  }[]
+  sourcedFrom: {
+    id:             string
+    title:          string | null
+    url:            string | null
+    authorFreeText: string | null
+    license:        string | null
+    attribution:    string | null
+  } | null
+}
+
+const sectionDraft    = ref<Section[]>([])
+const sectionOriginal = ref<Section[]>([])
+const sectionsSaving  = ref(false)
+const sectionsError   = ref<string | null>(null)
+
+function rowToSection(r: SectionRow): Section {
+  return {
+    order:   r.order ?? 1,
+    content: r.content ?? '[]',
+    citations: (r.citations ?? [])
+      .filter(c => c.sourceId)
+      .map(c => ({
+        inline: c.inline ?? false,
+        source: {
+          id:             c.sourceId!,
+          title:          c.sourceTitle,
+          url:            c.sourceUrl,
+          authorFreeText: c.sourceAuthor,
+        },
+      })),
+    sourcedFrom: r.sourcedFrom ? { ...r.sourcedFrom } : null,
+  }
+}
+
+function cloneSection(s: Section): Section {
+  return {
+    ...s,
+    citations:   s.citations.map(c => ({ ...c, source: { ...c.source } })),
+    sourcedFrom: s.sourcedFrom ? { ...s.sourcedFrom } : null,
+  }
+}
+
+function sectionsSignature(arr: Section[]): string {
+  return JSON.stringify(
+    [...arr]
+      .sort((a, b) => a.order - b.order)
+      .map(s => [
+        s.order,
+        s.content,
+        s.citations.map(c => [c.inline, c.source.id]),
+        s.sourcedFrom?.id ?? null,
+      ]),
+  )
+}
+
+const sectionsDirty = computed(() => sectionsSignature(sectionDraft.value) !== sectionsSignature(sectionOriginal.value))
+
+function revertSections() {
+  sectionDraft.value = sectionOriginal.value.map(cloneSection)
+  sectionsError.value = null
+}
+
+async function saveSections() {
+  if (!neo4jPerson.value) return
+  sectionsSaving.value = true
+  sectionsError.value  = null
+  try {
+    const payload = {
+      sections: [...sectionDraft.value]
+        .sort((a, b) => a.order - b.order)
+        .map(s => ({
+          order:          s.order,
+          content:        s.content,
+          citations:      s.citations.map(c => ({ inline: c.inline, sourceId: c.source.id })),
+          sourcedFromId:  s.sourcedFrom?.id ?? null,
+        })),
+    }
+    const res = await authFetch(`/api/admin/person/${encodeURIComponent(neo4jPerson.value.slug)}/sections`, {
+      method:  'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify(payload),
+    })
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({})) as { error?: string }
+      sectionsError.value = body.error ?? `HTTP ${res.status}`
+      return
+    }
+    sectionOriginal.value = sectionDraft.value.map(cloneSection)
+  } catch (e) {
+    sectionsError.value = (e as Error).message
+  } finally {
+    sectionsSaving.value = false
+  }
+}
+
+interface RenderedSection {
+  order: number
+  html:  string
+  section: Section
+}
+
+const sectionsForPreview = computed<RenderedSection[]>(() => {
+  const source = sectionsDirty.value ? sectionDraft.value : sectionOriginal.value
+  return [...source]
+    .sort((a, b) => a.order - b.order)
+    .map(s => {
+      let html = ''
+      try { html = blocksToHtml(JSON.parse(s.content) as unknown[]) } catch { /* skip */ }
+      return { order: s.order, html, section: s }
+    })
+})
+
+function footnotesForCard(): (Citation & { footnoteNumber: number })[] {
+  const source = sectionsDirty.value ? sectionDraft.value : sectionOriginal.value
+  const out: (Citation & { footnoteNumber: number })[] = []
+  for (const s of [...source].sort((a, b) => a.order - b.order)) {
+    for (const c of s.citations) {
+      if (!c.inline) out.push({ ...c, footnoteNumber: out.length + 1 })
+    }
+  }
+  return out
+}
+
+const personFootnotes = computed(() => footnotesForCard())
+
+function inlineCites(s: Section): Citation[] { return s.citations.filter(c => c.inline) }
+function sectionFootnoteCites(s: Section): (Citation & { footnoteNumber: number })[] {
+  return personFootnotes.value.filter(fn => s.citations.some(c => !c.inline && c.source.id === fn.source.id))
+}
+
 interface Membership {
   unitSlug: string
   unitName: string
@@ -575,6 +793,8 @@ function resetPerson() {
   externalRefs.value  = []
   memberships.value   = []
   heldRanks.value     = []
+  sectionDraft.value    = []
+  sectionOriginal.value = []
   expandedMembership.value = null
 }
 
@@ -591,7 +811,7 @@ async function loadPerson(slug: string) {
   //   2. Else direct Source with kind = 'portrait'
   //   3. Else first direct image by order (Sanity convention: gallery[0] ≈ portrait)
   try {
-    const [personRows, heroRows, galleryRows, refRows, membershipRows, rankRows, allRankRows] = await Promise.all([
+    const [personRows, heroRows, galleryRows, refRows, membershipRows, rankRows, allRankRows, sectionRows] = await Promise.all([
       neo4jQuery<Neo4jPerson>(
         `MATCH (p:Person {slug: $slug})
          RETURN p.slug AS slug, p.canonicalName AS name,
@@ -690,6 +910,32 @@ async function loadPerson(slug: string) {
          RETURN r.slug AS slug, r.canonicalName AS name, r.tier AS tier
          ORDER BY r.tier, r.canonicalName`,
       ),
+      neo4jQuery<SectionRow>(
+        `MATCH (p:Person {slug: $slug})-[:HAS_CONTENT]->(d:Description)
+         OPTIONAL MATCH (d)-[:SOURCED_FROM]->(from:Source)
+         WITH d, from
+           ORDER BY coalesce(d.order, 1)
+         OPTIONAL MATCH (d)-[cites:CITES]->(src:Source)
+         WITH d, from, collect(CASE WHEN src IS NULL THEN NULL ELSE {
+           inline:       coalesce(cites.inline, false),
+           sourceId:     src.id,
+           sourceTitle:  src.title,
+           sourceUrl:    src.url,
+           sourceAuthor: src.authorFreeText
+         } END) AS rawCites
+         RETURN coalesce(d.order, 1) AS order, d.content AS content,
+                [x IN rawCites WHERE x IS NOT NULL] AS citations,
+                CASE WHEN from IS NULL THEN NULL ELSE {
+                  id:             from.id,
+                  title:          from.title,
+                  url:            from.url,
+                  authorFreeText: from.authorFreeText,
+                  license:        from.license,
+                  attribution:    from.attribution
+                } END AS sourcedFrom
+         ORDER BY order`,
+        { slug },
+      ),
     ])
     heroImage.value = heroRows[0] ?? null
     const seen = new Set<string>()
@@ -706,6 +952,8 @@ async function loadPerson(slug: string) {
     memberships.value = membershipRows
     heldRanks.value = rankRows
     allRanks.value = allRankRows
+    sectionOriginal.value = sectionRows.map(rowToSection)
+    sectionDraft.value    = sectionOriginal.value.map(cloneSection)
     neo4jPerson.value = personRows[0] ?? null
   } catch (err) {
     console.error('PersonDetail hero/gallery fetch error:', err)
@@ -1008,6 +1256,96 @@ const personInitials = computed<string>(() => {
   cursor: pointer;
 }
 .rank-remove-btn:hover { background: #fef2f2; border-color: #fecaca; }
+
+/* ── Beskrivelse (preview) ───────────────────────────────────── */
+.section-wrap { position: relative; }
+
+.is-quote {
+  border-left: 3px solid var(--color-border);
+  padding: 2px 14px;
+  margin: 12px 0 12px 2px;
+  font-style: italic;
+  color: var(--color-text);
+}
+
+.sourced-from {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 6px;
+  margin: -6px 0 12px 18px;
+  font-size: 11px;
+  color: var(--color-muted);
+}
+.sourced-label  { font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; font-size: 10px; }
+.sourced-link   { color: var(--color-navy); text-decoration: underline; }
+.sourced-license {
+  font-family: monospace;
+  font-size: 10px;
+  padding: 1px 6px;
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  color: var(--color-muted);
+}
+
+.inline-cites {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 6px 0 10px;
+}
+.cite-chip {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 4px;
+  padding: 3px 8px;
+  font-size: 11px;
+  color: var(--color-navy);
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  text-decoration: none;
+}
+.cite-chip:hover       { border-color: var(--color-navy); }
+.cite-chip-author      { color: var(--color-muted); }
+.cite-chip-arrow       { font-size: 10px; opacity: 0.6; }
+
+.section-footnotes {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  gap: 2px;
+  font-size: 11px;
+  color: var(--color-muted);
+}
+
+.card-kilder {
+  border-top: 1px solid var(--color-border);
+  margin-top: 12px;
+  padding-top: 10px;
+}
+.kilder-label {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-muted);
+  margin-bottom: 6px;
+}
+.kilder-list {
+  margin: 0;
+  padding-left: 22px;
+  font-size: 11px;
+  color: var(--color-muted);
+  line-height: 1.5;
+}
+.kilder-list li        { margin-bottom: 3px; }
+.kilder-ref            { color: inherit; text-decoration: none; }
+.kilder-list a.kilder-ref { color: var(--color-navy); text-decoration: underline; }
+.kilder-list a.kilder-ref .kilder-author { color: var(--color-muted); }
+.kilder-arrow { font-size: 10px; opacity: 0.6; color: var(--color-navy); }
 
 /* ── Hero ───────────────────────────────────────────────────── */
 .hero {
