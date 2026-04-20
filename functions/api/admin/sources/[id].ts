@@ -1,8 +1,9 @@
 /**
- * PATCH /api/admin/sources/:id — update an existing Source node.
+ * /api/admin/sources/:id
  *
- * Body: { title?, url?, authorFreeText?, type? }
- * Returns: { id, title, url, authorFreeText, type }
+ *   PATCH  — update Source fields (title, url, authorFreeText, type)
+ *   DELETE — remove the Source, but only if no other node references it
+ *            (no incoming edges). Returns 409 with usage count otherwise.
  */
 
 import { requireAdmin } from '~/_lib/require-admin.ts'
@@ -68,6 +69,34 @@ export const onRequestPatch: PagesFunction<Env> = async ({ request, env, params 
 
     if (!rows.length) return json({ error: 'Source not found' }, 404)
     return json({ ok: true, ...rows[0] })
+  } catch (e) {
+    return json({ error: (e as Error).message }, 502)
+  }
+}
+
+interface UsageRow {
+  usage: number
+}
+
+export const onRequestDelete: PagesFunction<Env> = async ({ request, env, params }) => {
+  const guard = await requireAdmin(request, env)
+  if (guard instanceof Response) return guard
+
+  const id = String(params.id)
+  if (!id) return json({ error: 'Missing source id' }, 400)
+
+  try {
+    const usage = await runCypher<UsageRow>(env, `
+      MATCH (s:Source {id: $id})
+      OPTIONAL MATCH (s)<-[r]-()
+      RETURN count(r) AS usage
+    `, { id })
+
+    if (!usage.length) return json({ error: 'Source not found' }, 404)
+    if (usage[0].usage > 0) return json({ error: 'Source is in use', usage: usage[0].usage }, 409)
+
+    await runCypher(env, `MATCH (s:Source {id: $id}) DELETE s`, { id })
+    return json({ ok: true, id })
   } catch (e) {
     return json({ error: (e as Error).message }, 502)
   }

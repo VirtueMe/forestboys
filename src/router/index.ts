@@ -16,7 +16,9 @@ import OrganizationDetail from '../pages/OrganizationDetail.vue'
 import DistrictDetail     from '../pages/DistrictDetail.vue'
 import AccessView    from '../pages/AccessView.vue'
 import ReviewView    from '../pages/ReviewView.vue'
-import AdminPagesView from '../pages/AdminPagesView.vue'
+import AdminLayout      from '../pages/AdminLayout.vue'
+import AdminPagesView   from '../pages/AdminPagesView.vue'
+import AdminSourcesView from '../pages/AdminSourcesView.vue'
 import { ensureUser } from '../composables/useAuth.ts'
 
 const MAP_PARAMS = ['lat', 'lng', 'z', 'orgs', 'dists', 'q', 'si']
@@ -49,8 +51,17 @@ const router = createRouter({
     { path: '/about',                   component: AboutView },
     { path: '/access',                  component: AccessView },
     { path: '/review',                  component: ReviewView },
-    { path: '/admin/pages',             redirect: '/admin/pages/home' },
-    { path: '/admin/pages/:slug',       component: AdminPagesView, meta: { requiresAdmin: true } },
+    {
+      path:     '/admin',
+      component: AdminLayout,
+      meta:     { requiresAdmin: true },
+      redirect: '/admin/pages/home',
+      children: [
+        { path: 'pages',         redirect: '/admin/pages/home' },
+        { path: 'pages/:slug',   component: AdminPagesView },
+        { path: 'sources',       component: AdminSourcesView },
+      ],
+    },
   ],
 })
 
