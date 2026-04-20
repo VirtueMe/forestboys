@@ -7,6 +7,12 @@
     page-class="person-page"
   >
     <div v-if="person" itemscope itemtype="https://schema.org/Person">
+      <AdminViewTabs v-model="mode" />
+
+      <div v-if="mode === 'edit'" class="edit-placeholder">
+        Redigering kommer snart.
+      </div>
+
       <!-- Hero image (reserves the same vertical space when no image exists) -->
       <div class="hero" :class="{ 'hero--empty': !heroUrl }">
         <img
@@ -179,8 +185,11 @@ import type { IdbEvent } from '../types/idb.ts'
 import DetailPage from '../components/DetailPage.vue'
 import ImageSlider, { type SlideImage } from '../components/ImageSlider.vue'
 import SourceRef from '../components/SourceRef.vue'
+import AdminViewTabs, { type AdminViewMode } from '../components/AdminViewTabs.vue'
 
 const { people, init } = useLocationCache()
+
+const mode = ref<AdminViewMode>('preview')
 
 interface Neo4jPerson {
   slug: string
@@ -420,6 +429,16 @@ const personInitials = computed<string>(() => {
 </script>
 
 <style scoped>
+.edit-placeholder {
+  padding: 32px 24px;
+  text-align: center;
+  font-size: 13px;
+  color: var(--color-muted);
+  font-style: italic;
+  background: var(--color-bg);
+  border-bottom: 1px solid var(--color-border);
+}
+
 /* ── Hero ───────────────────────────────────────────────────── */
 .hero {
   width: 100%;
