@@ -13,6 +13,19 @@
         <section class="edit-section">
           <h3 class="edit-section-heading">Grunnleggende</h3>
           <div class="edit-row">
+            <label class="edit-label">Type</label>
+            <div class="type-seg">
+              <label class="type-seg-opt" :class="{ active: editForm.type === 'civilian' }">
+                <input type="radio" value="civilian" v-model="editForm.type" />
+                Sivil
+              </label>
+              <label class="type-seg-opt" :class="{ active: editForm.type === 'soldier' }">
+                <input type="radio" value="soldier" v-model="editForm.type" />
+                Soldat
+              </label>
+            </div>
+          </div>
+          <div class="edit-row">
             <label class="edit-label" for="edit-canonicalName">Navn</label>
             <input
               id="edit-canonicalName"
@@ -61,6 +74,56 @@
           <button type="button" class="edit-link-revert" :disabled="editSaving" @click="revertEdit">Angre</button>
         </footer>
         <div v-if="editError" class="edit-save-error">{{ editError }}</div>
+
+        <section v-if="editForm.type === 'soldier'" class="edit-section">
+          <div class="edit-section-head">
+            <h3 class="edit-section-heading">Grad</h3>
+            <button type="button" class="edit-btn-outline" @click="addRank">+ Legg til grad</button>
+          </div>
+          <div v-if="!rankDraft.length" class="edit-empty">Ingen grad</div>
+          <div
+            v-for="(r, i) in rankDraft"
+            :key="i"
+            class="rank-edit-row"
+          >
+            <select
+              :value="r.rankSlug"
+              class="edit-input rank-edit-select"
+              @change="setRankSlug(i, ($event.target as HTMLSelectElement).value)"
+            >
+              <option v-for="opt in allRanks" :key="opt.slug" :value="opt.slug">
+                {{ opt.name }}
+              </option>
+            </select>
+            <input
+              class="edit-input edit-input-year"
+              type="text"
+              inputmode="numeric"
+              placeholder="fra"
+              :value="yearModel(i, 'from')"
+              @input="setYear(i, 'from', ($event.target as HTMLInputElement).value)"
+            />
+            <span class="rank-dash">–</span>
+            <input
+              class="edit-input edit-input-year"
+              type="text"
+              inputmode="numeric"
+              placeholder="til"
+              :value="yearModel(i, 'to')"
+              @input="setYear(i, 'to', ($event.target as HTMLInputElement).value)"
+            />
+            <button type="button" class="rank-remove-btn" aria-label="Fjern" @click="removeRank(i)">✕</button>
+          </div>
+        </section>
+
+        <footer v-if="editForm.type === 'soldier' && ranksDirty" class="edit-save-bar">
+          <span class="edit-save-prompt">Ser det bra ut?</span>
+          <button type="button" class="edit-btn-primary" :disabled="ranksSaving" @click="saveRanks">
+            {{ ranksSaving ? 'Lagrer…' : 'Lagre' }}
+          </button>
+          <button type="button" class="edit-link-revert" :disabled="ranksSaving" @click="revertRanks">Angre</button>
+        </footer>
+        <div v-if="editForm.type === 'soldier' && ranksError" class="edit-save-error">{{ ranksError }}</div>
       </div>
 
       <!-- Hero image (reserves the same vertical space when no image exists) -->
@@ -82,6 +145,12 @@
         <meta v-if="person.secretName" :content="person.secretName" itemprop="alternateName" />
         <meta v-if="person.birthYear" :content="String(person.birthYear)" itemprop="birthDate" />
         <p v-if="person.home" class="person-meta" itemprop="homeLocation">{{ person.home }}</p>
+        <ul v-if="person.type === 'soldier' && ranksForPreview.length" class="rank-list">
+          <li v-for="r in ranksForPreview" :key="`${r.rankSlug}-${r.from}-${r.to}`" class="rank-row">
+            <span class="rank-name">{{ r.rankName || r.rankSlug }}</span>
+            <span v-if="rankPeriod(r)" class="rank-period">{{ rankPeriod(r) }}</span>
+          </li>
+        </ul>
       </div>
 
       <!-- Beskrivelse -->
@@ -242,6 +311,8 @@ const { people, init } = useLocationCache()
 
 const mode = ref<AdminViewMode>('preview')
 
+type PersonType = 'civilian' | 'soldier'
+
 interface Neo4jPerson {
   slug: string
   name: string
@@ -250,6 +321,7 @@ interface Neo4jPerson {
   birthYear: number | null
   status: string | null
   serviceClass: string | null
+  type: PersonType
 }
 const neo4jPerson = ref<Neo4jPerson | null>(null)
 
@@ -259,10 +331,12 @@ interface EditForm {
   secretName:    string
   birthYear:     string // input value; parsed to int on save
   home:          string
+  type:          PersonType
 }
 
-const editForm     = ref<EditForm>({ canonicalName: '', secretName: '', birthYear: '', home: '' })
-const editOriginal = ref<EditForm>({ canonicalName: '', secretName: '', birthYear: '', home: '' })
+const emptyForm: EditForm = { canonicalName: '', secretName: '', birthYear: '', home: '', type: 'civilian' }
+const editForm     = ref<EditForm>({ ...emptyForm })
+const editOriginal = ref<EditForm>({ ...emptyForm })
 const editSaving   = ref(false)
 const editError    = ref<string | null>(null)
 
@@ -274,6 +348,7 @@ function resetEditForm() {
     secretName:    p.secretName ?? '',
     birthYear:     p.birthYear != null ? String(p.birthYear) : '',
     home:          p.home ?? '',
+    type:          p.type ?? 'civilian',
   }
   editForm.value     = { ...snapshot }
   editOriginal.value = { ...snapshot }
@@ -301,6 +376,7 @@ async function saveEdit() {
     if (f.canonicalName !== o.canonicalName) body.canonicalName = f.canonicalName.trim()
     if (f.secretName    !== o.secretName)    body.secretName    = f.secretName.trim() || null
     if (f.home          !== o.home)          body.home          = f.home.trim() || null
+    if (f.type          !== o.type)          body.type          = f.type
     if (f.birthYear     !== o.birthYear) {
       const trimmed = f.birthYear.trim()
       if (!trimmed) body.birthYear = null
@@ -318,7 +394,7 @@ async function saveEdit() {
       body:    JSON.stringify(body),
     })
     const out = await res.json().catch(() => ({})) as {
-      canonicalName?: string; secretName?: string | null; birthYear?: number | null; home?: string | null; error?: string
+      canonicalName?: string; secretName?: string | null; birthYear?: number | null; home?: string | null; type?: PersonType; error?: string
     }
     if (!res.ok) {
       editError.value = out.error ?? `HTTP ${res.status}`
@@ -330,6 +406,7 @@ async function saveEdit() {
       if (out.secretName    !== undefined) p.secretName = out.secretName
       if (out.birthYear     !== undefined) p.birthYear  = out.birthYear
       if (out.home          !== undefined) p.home       = out.home
+      if (out.type          !== undefined) p.type       = out.type
     }
     resetEditForm()
   } catch (e) {
@@ -342,6 +419,123 @@ async function saveEdit() {
 const heroImage     = ref<{ url: string; caption: string | null } | null>(null)
 const galleryImages = ref<SlideImage[]>([])
 const externalRefs  = ref<{ id: string; title: string | null; url: string; type: string; domain: string | null; nbBacked: boolean }[]>([])
+
+interface HeldRank {
+  rankSlug: string
+  rankName: string
+  tier:     number | null
+  from:     number | null
+  to:       number | null
+}
+interface RankOption { slug: string; name: string; tier: number | null }
+
+const heldRanks = ref<HeldRank[]>([])
+const allRanks  = ref<RankOption[]>([])
+
+/** Local editable copy used in Rediger mode. */
+const rankDraft    = ref<HeldRank[]>([])
+const rankOriginal = ref<HeldRank[]>([])
+const ranksSaving  = ref(false)
+const ranksError   = ref<string | null>(null)
+
+function resetRankDraft() {
+  rankDraft.value    = heldRanks.value.map(r => ({ ...r }))
+  rankOriginal.value = heldRanks.value.map(r => ({ ...r }))
+  ranksError.value   = null
+}
+
+watch(heldRanks, resetRankDraft, { deep: true, immediate: true })
+
+function sigRanks(arr: HeldRank[]): string {
+  return JSON.stringify([...arr].map(r => [r.rankSlug, r.from, r.to]))
+}
+
+const ranksDirty = computed(() => sigRanks(rankDraft.value) !== sigRanks(rankOriginal.value))
+
+function addRank() {
+  const first = allRanks.value[0]
+  rankDraft.value.push({
+    rankSlug: first?.slug ?? '',
+    rankName: first?.name ?? '',
+    tier:     first?.tier ?? null,
+    from:     null,
+    to:       null,
+  })
+}
+
+function removeRank(i: number) {
+  rankDraft.value.splice(i, 1)
+}
+
+function setRankSlug(i: number, slug: string) {
+  const option = allRanks.value.find(r => r.slug === slug)
+  if (!option) return
+  const row = rankDraft.value[i]
+  if (!row) return
+  row.rankSlug = option.slug
+  row.rankName = option.name
+  row.tier     = option.tier
+}
+
+function yearModel(i: number, key: 'from' | 'to'): string {
+  return rankDraft.value[i]?.[key] != null ? String(rankDraft.value[i]?.[key]) : ''
+}
+
+function setYear(i: number, key: 'from' | 'to', value: string) {
+  const row = rankDraft.value[i]
+  if (!row) return
+  const trimmed = value.trim()
+  if (!trimmed) { row[key] = null; return }
+  const n = Number(trimmed)
+  if (Number.isInteger(n)) row[key] = n
+}
+
+function revertRanks() {
+  rankDraft.value = rankOriginal.value.map(r => ({ ...r }))
+  ranksError.value = null
+}
+
+async function saveRanks() {
+  if (!neo4jPerson.value) return
+  ranksSaving.value = true
+  ranksError.value  = null
+  try {
+    const payload = {
+      ranks: rankDraft.value.map(r => ({
+        rankSlug: r.rankSlug,
+        from:     r.from,
+        to:       r.to,
+      })),
+    }
+    const res = await authFetch(`/api/admin/person/${encodeURIComponent(neo4jPerson.value.slug)}/ranks`, {
+      method:  'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify(payload),
+    })
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({})) as { error?: string }
+      ranksError.value = body.error ?? `HTTP ${res.status}`
+      return
+    }
+    heldRanks.value = rankDraft.value.map(r => ({ ...r }))
+    resetRankDraft()
+  } catch (e) {
+    ranksError.value = (e as Error).message
+  } finally {
+    ranksSaving.value = false
+  }
+}
+
+/** Overlay for the preview: in edit mode, show the draft instead of saved ranks. */
+const ranksForPreview = computed<HeldRank[]>(() =>
+  ranksDirty.value ? rankDraft.value : heldRanks.value,
+)
+
+function rankPeriod(r: HeldRank): string {
+  if (r.from == null && r.to == null) return ''
+  if (r.from != null && r.to != null && r.from === r.to) return String(r.from)
+  return `${r.from ?? '?'}–${r.to ?? ''}`
+}
 
 interface Membership {
   unitSlug: string
@@ -380,6 +574,7 @@ function resetPerson() {
   galleryImages.value = []
   externalRefs.value  = []
   memberships.value   = []
+  heldRanks.value     = []
   expandedMembership.value = null
 }
 
@@ -396,13 +591,14 @@ async function loadPerson(slug: string) {
   //   2. Else direct Source with kind = 'portrait'
   //   3. Else first direct image by order (Sanity convention: gallery[0] ≈ portrait)
   try {
-    const [personRows, heroRows, galleryRows, refRows, membershipRows] = await Promise.all([
+    const [personRows, heroRows, galleryRows, refRows, membershipRows, rankRows, allRankRows] = await Promise.all([
       neo4jQuery<Neo4jPerson>(
         `MATCH (p:Person {slug: $slug})
          RETURN p.slug AS slug, p.canonicalName AS name,
                 p.secretName AS secretName, p.home AS home,
                 p.birthYear AS birthYear, p.status AS status,
-                p.serviceClass AS serviceClass`,
+                p.serviceClass AS serviceClass,
+                coalesce(p.type, 'civilian') AS type`,
         { slug },
       ),
       neo4jQuery<{ url: string; caption: string | null }>(
@@ -482,6 +678,18 @@ async function loadPerson(slug: string) {
                   m.startDate, unitName`,
         { slug },
       ),
+      neo4jQuery<HeldRank>(
+        `MATCH (p:Person {slug: $slug})-[h:HELD_RANK]->(r:Rank)
+         RETURN r.slug AS rankSlug, r.canonicalName AS rankName, r.tier AS tier,
+                h.from AS from, h.to AS to
+         ORDER BY coalesce(h.from, 0), r.tier`,
+        { slug },
+      ),
+      neo4jQuery<RankOption>(
+        `MATCH (r:Rank)
+         RETURN r.slug AS slug, r.canonicalName AS name, r.tier AS tier
+         ORDER BY r.tier, r.canonicalName`,
+      ),
     ])
     heroImage.value = heroRows[0] ?? null
     const seen = new Set<string>()
@@ -496,6 +704,8 @@ async function loadPerson(slug: string) {
       }))
     externalRefs.value = refRows
     memberships.value = membershipRows
+    heldRanks.value = rankRows
+    allRanks.value = allRankRows
     neo4jPerson.value = personRows[0] ?? null
   } catch (err) {
     console.error('PersonDetail hero/gallery fetch error:', err)
@@ -519,6 +729,7 @@ const person = computed(() => {
     secretName: editForm.value.secretName.trim() || null,
     home:       editForm.value.home.trim() || null,
     birthYear:  parseEditedBirthYear(),
+    type:       editForm.value.type,
   } : {}
   return { ...(extras ?? {}), ...core, ...overlay }
 })
@@ -676,6 +887,127 @@ const personInitials = computed<string>(() => {
 @media (max-width: 520px) {
   .edit-row { grid-template-columns: 1fr; gap: 4px; }
 }
+
+/* Sivil / Soldat segmented control */
+.type-seg {
+  display: inline-flex;
+  gap: 0;
+  border: 1px solid var(--color-border);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.type-seg-opt {
+  display: inline-flex;
+  align-items: center;
+  padding: 6px 14px;
+  font-size: 13px;
+  color: var(--color-muted);
+  cursor: pointer;
+  user-select: none;
+}
+
+.type-seg-opt + .type-seg-opt { border-left: 1px solid var(--color-border); }
+
+.type-seg-opt input[type="radio"] {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.type-seg-opt.active {
+  background: var(--color-navy);
+  color: #fff;
+  font-weight: 600;
+}
+
+/* ── Rangering (preview) ─────────────────────────────────────── */
+.rank-list {
+  list-style: none;
+  padding: 0;
+  margin: 8px 0 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.rank-row {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
+  padding: 2px 10px;
+  font-size: 12px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  color: var(--color-text);
+}
+
+.rank-name   { font-weight: 600; }
+.rank-period { font-size: 11px; color: var(--color-muted); font-family: monospace; }
+
+/* ── Rangering (edit) ────────────────────────────────────────── */
+.edit-section-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.edit-btn-outline {
+  padding: 6px 10px;
+  font-size: 12px;
+  font-weight: 600;
+  background: transparent;
+  color: var(--color-navy);
+  border: 1px solid var(--color-border);
+  border-radius: 4px;
+  cursor: pointer;
+}
+.edit-btn-outline:hover { border-color: var(--color-navy); }
+
+.edit-empty {
+  padding: 12px;
+  text-align: center;
+  font-size: 12px;
+  font-style: italic;
+  color: var(--color-muted);
+  border: 1px dashed var(--color-border);
+  border-radius: 6px;
+}
+
+.rank-edit-row {
+  display: grid;
+  grid-template-columns: 1fr 80px auto 80px 28px;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.rank-edit-select { min-width: 0; }
+
+.edit-input-year {
+  text-align: center;
+  font-family: monospace;
+}
+
+.rank-dash { text-align: center; color: var(--color-muted); }
+
+.rank-remove-btn {
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  font-size: 12px;
+  color: #b91c1c;
+  background: transparent;
+  border: 1px solid var(--color-border);
+  border-radius: 4px;
+  cursor: pointer;
+}
+.rank-remove-btn:hover { background: #fef2f2; border-color: #fecaca; }
 
 /* ── Hero ───────────────────────────────────────────────────── */
 .hero {

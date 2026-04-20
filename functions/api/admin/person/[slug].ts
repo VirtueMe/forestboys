@@ -17,6 +17,7 @@ interface UpdateBody {
   secretName?:    unknown
   birthYear?:     unknown
   home?:          unknown
+  type?:          unknown
 }
 
 interface PersonRow {
@@ -25,7 +26,10 @@ interface PersonRow {
   secretName:    string | null
   birthYear:     number | null
   home:          string | null
+  type:          string | null
 }
+
+const PERSON_TYPES = new Set(['civilian', 'soldier'])
 
 export const onRequestPatch: PagesFunction<Env> = async ({ request, env, params }) => {
   const guard = await requireAdmin(request, env)
@@ -56,6 +60,12 @@ export const onRequestPatch: PagesFunction<Env> = async ({ request, env, params 
   if ('home' in body) {
     props.home = typeof body.home === 'string' && body.home.trim() ? body.home.trim() : null
   }
+  if ('type' in body) {
+    if (typeof body.type !== 'string' || !PERSON_TYPES.has(body.type)) {
+      return json({ error: 'type must be "civilian" or "soldier"' }, 400)
+    }
+    props.type = body.type
+  }
 
   if (!Object.keys(props).length) return json({ error: 'No fields to update' }, 400)
 
@@ -65,7 +75,7 @@ export const onRequestPatch: PagesFunction<Env> = async ({ request, env, params 
       SET p += $props
       RETURN p.slug AS slug, p.canonicalName AS canonicalName,
              p.secretName AS secretName, p.birthYear AS birthYear,
-             p.home AS home
+             p.home AS home, p.type AS type
     `, { slug, props })
 
     if (!rows.length) return json({ error: 'Person not found' }, 404)
