@@ -1,119 +1,163 @@
 <template>
   <div class="about-page">
     <div v-if="loading" class="status">Laster…</div>
-    <div v-else-if="error" class="status">Kunne ikke laste innhold.</div>
+    <div v-else-if="error" class="status error">Kunne ikke laste innhold.</div>
 
-    <template v-else>
-      <div class="page-header">
+    <main v-else class="page-flow">
+      <header class="page-header layout-full">
         <h1 class="page-title">Om oss</h1>
-      </div>
+      </header>
 
-      <!-- Beskrivelse -->
-      <section v-if="descriptionHtml" class="section">
-        <!-- eslint-disable vue/no-v-html -->
-        <div
-          class="portable-text"
-          @click.capture="handleInternalLinks"
-          v-html="descriptionHtml"
-        ></div>
-        <!-- eslint-enable vue/no-v-html -->
-      </section>
+      <template v-for="card in cards" :key="card.id">
+        <section
+          v-if="card.kind === 'text'"
+          class="block block-text"
+          :class="`layout-${card.layout}`"
+        >
+          <component
+            v-if="card.title"
+            :is="`h${card.headingLevel}`"
+            class="block-heading"
+          >
+            {{ card.title }}
+          </component>
+          <template v-for="s in card.sections" :key="s.order">
+            <!-- eslint-disable vue/no-v-html -->
+            <div
+              class="block-body portable-text"
+              @click.capture="handleInternalLinks"
+              v-html="s.html"
+            ></div>
+            <!-- eslint-enable vue/no-v-html -->
+          </template>
+        </section>
 
-      <!-- Støttespillere -->
-      <section v-if="partners.length" class="section">
-        <h2 class="section-heading">Våre støttespillere</h2>
-        <div class="partners-grid">
-          <div v-for="p in partners" :key="p.title" class="partner-card">
-            <img
-              v-if="p.imageUrl"
-              :src="`${p.imageUrl}?w=400&auto=format`"
-              :alt="p.title"
-              class="partner-img"
-              loading="lazy"
-            />
-            <div class="partner-body">
-              <h3 class="partner-title">{{ p.title }}</h3>
+        <article
+          v-else
+          class="block block-card"
+          :class="`layout-${card.layout}`"
+        >
+          <img
+            v-if="card.imageUrl"
+            :src="`${card.imageUrl}?w=400&auto=format`"
+            :alt="card.title ?? ''"
+            class="card-img"
+            loading="lazy"
+          />
+          <div class="card-body">
+            <h2 v-if="card.title" class="card-title">{{ card.title }}</h2>
+            <template v-for="s in card.sections" :key="s.order">
               <!-- eslint-disable vue/no-v-html -->
               <div
-                v-if="p.descriptionHtml"
-                class="portable-text partner-desc"
+                class="card-desc portable-text"
                 @click.capture="handleInternalLinks"
-                v-html="p.descriptionHtml"
+                v-html="s.html"
               ></div>
               <!-- eslint-enable vue/no-v-html -->
-            </div>
+              <cite v-if="s.authorSlug" class="byline">
+                — <router-link :to="`/person/${s.authorSlug}`">{{ s.authorName || s.authorSlug }}</router-link>
+              </cite>
+            </template>
           </div>
-        </div>
-      </section>
-    </template>
+        </article>
+      </template>
+    </main>
+
+    <EditPageButton slug="about" />
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { neo4jQuery } from '../composables/useNeo4j.ts'
-import { blocksToHtml } from '../utils/portableText.ts'
+import { neo4jQuery } from '@/composables/useNeo4j.ts'
+import { blocksToHtml } from '@/utils/portableText.ts'
+import EditPageButton from '@/components/EditPageButton.vue'
 
-interface Partner {
-  title: string
-  descriptionHtml?: string
-  imageUrl?: string
+interface SectionRow {
+  order:   number | null
+  content: string | null
 }
 
 interface CardRow {
-  section: string
-  sectionOrder: number
-  title: string | null
-  type: string | null
-  content: string | null
-  imageUrl: string | null
+  id:           string
+  order:        number
+  kind:         string | null
+  layout:       string | null
+  title:        string | null
+  headingLevel: number | null
+  sections:     SectionRow[]
+  imageUrl:     string | null
+}
+
+interface Section {
+  order: number
+  html:  string
+}
+
+interface Block {
+  id:           string
+  order:        number
+  kind:         'card' | 'text'
+  layout:       'full' | 'half' | 'third' | 'quarter'
+  title:        string | null
+  headingLevel: 1 | 2 | 3
+  sections:     Section[]
+  imageUrl:     string | null
 }
 
 const PAGE_QUERY = `
 MATCH (p:Page {slug: "about"})-[:HAS_CARD]->(c:Card)
-OPTIONAL MATCH (c)-[:HAS_CONTENT]->(d:Description)
 OPTIONAL MATCH (c)-[:HAS_HERO_IMAGE]->(s:Source)
-RETURN c.section AS section, c.sectionOrder AS sectionOrder,
-       c.title AS title, c.type AS type,
-       d.content AS content, s.url AS imageUrl
-ORDER BY c.section, c.sectionOrder
+OPTIONAL MATCH (c)-[:HAS_CONTENT]->(d:Description)
+WITH c, s, d ORDER BY coalesce(d.order, 1)
+WITH c, s, [x IN collect(d) WHERE x IS NOT NULL | {order: coalesce(x.order, 1), content: x.content}] AS sections
+RETURN c.id AS id, c.order AS order, c.kind AS kind, c.layout AS layout,
+       c.title AS title, c.headingLevel AS headingLevel,
+       s.url AS imageUrl, sections
+ORDER BY c.order
 `
 
 const router = useRouter()
+const cards = ref<Block[]>([])
 const loading = ref(true)
 const error = ref(false)
-const descriptionHtml = ref<string | null>(null)
-const partners = ref<Partner[]>([])
 
-function parseBlocks(content: string | null): unknown[] | undefined {
-  if (!content) return undefined
-  try { return JSON.parse(content) as unknown[] } catch { return undefined }
+function rowToBlock(r: CardRow): Block {
+  const sections: Section[] = (r.sections ?? [])
+    .filter(s => s.content)
+    .map(s => {
+      let html = ''
+      try { html = blocksToHtml(JSON.parse(s.content!) as unknown[]) } catch { /* skip */ }
+      return { order: s.order ?? 1, html }
+    })
+    .sort((a, b) => a.order - b.order)
+  const rawLevel = Number(r.headingLevel ?? 2)
+  const headingLevel = (rawLevel >= 1 && rawLevel <= 3 ? rawLevel : 2) as 1 | 2 | 3
+  return {
+    id:           r.id,
+    order:        r.order ?? 0,
+    kind:         (r.kind as 'card' | 'text') ?? 'card',
+    layout:       (r.layout as Block['layout']) ?? 'full',
+    title:        r.title,
+    headingLevel,
+    sections,
+    imageUrl:     r.imageUrl,
+  }
 }
 
 function handleInternalLinks(e: MouseEvent) {
   const link = (e.target as HTMLElement).closest('a.internal-link')
   if (link) {
     e.preventDefault()
-    void router.push(link.getAttribute('href') ?? '/')
+    router.push(link.getAttribute('href') ?? '/')
   }
 }
 
 onMounted(async () => {
   try {
     const rows = await neo4jQuery<CardRow>(PAGE_QUERY)
-    if (!rows.length) { error.value = true; return }
-
-    const prose = rows.find(r => r.section === 'middle' && r.type === 'prose')
-    const partnerRows = rows.filter(r => r.type === 'partner')
-
-    descriptionHtml.value = blocksToHtml(parseBlocks(prose?.content ?? null)) || null
-
-    partners.value = partnerRows.map(r => ({
-      title: r.title ?? '',
-      descriptionHtml: blocksToHtml(parseBlocks(r.content)) || undefined,
-      imageUrl: r.imageUrl ?? undefined,
-    }))
+    cards.value = rows.map(rowToBlock)
   } catch {
     error.value = true
   } finally {
@@ -128,114 +172,130 @@ onMounted(async () => {
   min-height: 0;
   overflow-y: auto;
   background: var(--color-bg);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-}
-
-.about-page > * {
-  width: 100%;
-  max-width: 1320px;
 }
 
 .status {
-  padding: 48px 20px;
+  padding: 48px 24px;
   text-align: center;
   font-size: 13px;
   color: var(--color-muted);
 }
+.error { color: var(--color-red); }
 
-.page-header {
-  padding: 24px 16px 16px;
-  background: var(--color-surface);
-  border-bottom: 1px solid var(--color-border);
+.page-flow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  padding: 24px 16px;
+  max-width: 1200px;
+  margin: 0 auto;
+  box-sizing: border-box;
 }
 
+.block {
+  flex-grow: 1;
+  flex-shrink: 0;
+  min-width: 0;
+}
+
+.layout-full    { flex-basis: 100%; }
+.layout-half    { flex-basis: calc(50% - 8px); }
+.layout-third   { flex-basis: calc(33.333% - 11px); }
+.layout-quarter { flex-basis: calc(25% - 12px); }
+
+@media (max-width: 1023px) {
+  .layout-quarter { flex-basis: calc(33.333% - 11px); }
+}
+
+@media (max-width: 767px) {
+  .layout-quarter,
+  .layout-third { flex-basis: calc(50% - 8px); }
+}
+
+@media (max-width: 559px) {
+  .layout-half,
+  .layout-third,
+  .layout-quarter { flex-basis: 100%; }
+}
+
+.page-header { padding: 16px 0; }
+
 .page-title {
-  font-size: 26px;
+  font-size: 28px;
   font-weight: 700;
   color: var(--color-navy);
   margin: 0;
 }
 
-.section {
-  padding: 20px 16px;
-  border-bottom: 1px solid var(--color-border);
-  background: var(--color-surface);
-}
+.block-text { padding: 16px 0; }
 
-.section-heading {
-  font-size: 10px;
+.block-heading {
+  font-size: 22px;
   font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.07em;
-  color: var(--color-muted);
-  margin: 0 0 16px;
+  color: var(--color-navy);
+  margin: 0 0 12px;
+  line-height: 1.3;
 }
 
-/* ── Portable text ───────────────────────────────────────────── */
-.portable-text :deep(p) {
-  margin: 0 0 0.75em;
+.block-body {
   font-size: 14px;
-  line-height: 1.75;
+  line-height: 1.7;
   color: var(--color-text);
 }
-.portable-text :deep(p:last-child) { margin-bottom: 0; }
-.portable-text :deep(strong) { font-weight: 600; }
-.portable-text :deep(em) { font-style: italic; }
-.portable-text :deep(a.internal-link),
-.portable-text :deep(a.external-link) {
-  color: var(--color-navy);
-  text-decoration: underline;
-  cursor: pointer;
-}
-.portable-text :deep(a.external-link::after) {
-  content: ' ↗';
-  font-size: 11px;
-  opacity: 0.6;
-}
 
-/* ── Partners ────────────────────────────────────────────────── */
-.partners-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
-  gap: 16px;
-}
-
-.partner-card {
+.block-card {
+  background: var(--color-surface);
   border: 1px solid var(--color-border);
   border-radius: 8px;
   overflow: hidden;
-  background: var(--color-bg);
+  display: flex;
+  flex-direction: column;
 }
 
-.partner-img {
+.card-img {
   width: 100%;
-  aspect-ratio: 4 / 3;
-  object-fit: contain;
-  object-position: center;
+  height: auto;
   display: block;
-  background-color: white;
+}
+
+.card-body {
   padding: 16px;
-  box-sizing: border-box;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
 }
 
-.partner-body {
-  padding: 12px 14px;
-}
-
-.partner-title {
+.card-title {
   font-size: 15px;
   font-weight: 700;
-  color: var(--color-text);
-  margin: 0 0 8px;
+  color: var(--color-navy);
+  margin: 0;
+  line-height: 1.3;
 }
 
-.partner-desc :deep(p) {
+.card-desc :deep(p) {
+  margin: 0 0 0.75em;
+  line-height: 1.7;
   font-size: 13px;
-  line-height: 1.6;
   color: var(--color-muted);
-  margin: 0 0 0.5em;
 }
-.partner-desc :deep(p:last-child) { margin-bottom: 0; }
+
+.card-desc :deep(p:last-child) { margin-bottom: 0; }
+.card-desc :deep(a) {
+  color: var(--color-navy);
+  text-decoration: underline;
+}
+
+.byline {
+  display: block;
+  font-size: 12px;
+  color: var(--color-muted);
+  font-style: normal;
+  margin: 4px 0 12px;
+}
+.byline a {
+  color: var(--color-navy);
+  text-decoration: underline;
+}
 </style>

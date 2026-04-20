@@ -4,116 +4,125 @@
 
     <div v-else-if="error" class="status error">Kunne ikke laste innhold.</div>
 
-    <template v-else-if="home">
-      <!-- Intro -->
-      <div v-if="home.description" class="intro">
-        <p class="intro-text">{{ home.description }}</p>
-      </div>
-
-      <!-- Top cards -->
-      <section v-if="home.topCards?.length" class="card-section">
-        <div class="card-grid">
-          <div
-            v-for="card in home.topCards"
-            :key="card.title"
-            class="card"
+    <main v-else class="page-flow">
+      <template v-for="card in cards" :key="card.id">
+        <!-- Text card (intro / title bar) -->
+        <section
+          v-if="card.kind === 'text'"
+          class="block block-text"
+          :class="`layout-${card.layout}`"
+        >
+          <component
+            v-if="card.title"
+            :is="`h${card.headingLevel}`"
+            class="block-heading"
+            :class="`heading-level-${card.headingLevel}`"
           >
-            <div class="card-img-wrap">
-              <img
-                v-if="card.imageUrl"
-                :src="cardSrc(card.imageUrl)"
-                :alt="card.title"
-                class="card-img"
-                loading="lazy"
-              />
-              <div v-else class="card-img-placeholder"></div>
-            </div>
-            <div class="card-body">
-              <h2 class="card-title">{{ card.title }}</h2>
+            {{ card.title }}
+          </component>
+          <template v-for="s in card.sections" :key="s.order">
+            <!-- eslint-disable vue/no-v-html -->
+            <div
+              class="block-body portable-text"
+              @click.capture="handleInternalLinks"
+              v-html="s.html"
+            ></div>
+            <!-- eslint-enable vue/no-v-html -->
+          </template>
+        </section>
+
+        <!-- Image card -->
+        <article
+          v-else
+          class="block block-card"
+          :class="`layout-${card.layout}`"
+        >
+          <div class="card-img-wrap">
+            <img
+              v-if="card.imageUrl"
+              :src="cardSrc(card.imageUrl)"
+              :alt="card.title ?? ''"
+              class="card-img"
+              loading="lazy"
+            />
+            <div v-else class="card-img-placeholder"></div>
+          </div>
+          <div class="card-body">
+            <h2 v-if="card.title" class="card-title">{{ card.title }}</h2>
+            <template v-for="s in card.sections" :key="s.order">
+              <!-- eslint-disable vue/no-v-html -->
               <div
-                v-if="card.descriptionHtml"
                 class="card-desc portable-text"
                 @click.capture="handleInternalLinks"
-                v-html="card.descriptionHtml"
+                v-html="s.html"
               ></div>
-            </div>
+              <!-- eslint-enable vue/no-v-html -->
+              <cite v-if="s.authorSlug" class="byline">
+                — <router-link :to="`/person/${s.authorSlug}`">{{ s.authorName || s.authorSlug }}</router-link>
+              </cite>
+            </template>
           </div>
-        </div>
-      </section>
+        </article>
+      </template>
+    </main>
 
-      <!-- Bottom cards -->
-      <section v-if="home.bottomCards?.length" class="card-section">
-        <div class="card-grid">
-          <div
-            v-for="card in home.bottomCards"
-            :key="card.title"
-            class="card"
-          >
-            <div class="card-img-wrap">
-              <img
-                v-if="card.imageUrl"
-                :src="cardSrc(card.imageUrl)"
-                :alt="card.title"
-                class="card-img"
-                loading="lazy"
-              />
-              <div v-else class="card-img-placeholder"></div>
-            </div>
-            <div class="card-body">
-              <h2 class="card-title">{{ card.title }}</h2>
-              <div
-                v-if="card.descriptionHtml"
-                class="card-desc portable-text"
-                @click.capture="handleInternalLinks"
-                v-html="card.descriptionHtml"
-              ></div>
-            </div>
-          </div>
-        </div>
-      </section>
-    </template>
+    <EditPageButton slug="home" />
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { neo4jQuery } from '../composables/useNeo4j.ts'
-import { blocksToHtml, blocksToText } from '../utils/portableText.ts'
+import { neo4jQuery } from '@/composables/useNeo4j.ts'
+import { blocksToHtml } from '@/utils/portableText.ts'
+import EditPageButton from '@/components/EditPageButton.vue'
 
-interface HomeCard {
-  title: string
-  descriptionHtml?: string
-  imageUrl?: string
-}
-
-interface HomeData {
-  description?: string
-  topCards?: HomeCard[]
-  bottomCards?: HomeCard[]
+interface SectionRow {
+  order:   number | null
+  content: string | null
 }
 
 interface CardRow {
-  section: string
-  sectionOrder: number
-  title: string | null
-  type: string | null
-  content: string | null
-  imageUrl: string | null
+  id:           string
+  order:        number
+  kind:         string | null
+  layout:       string | null
+  title:        string | null
+  headingLevel: number | null
+  sections:     SectionRow[]
+  imageUrl:     string | null
+}
+
+interface Section {
+  order: number
+  html:  string
+}
+
+interface Block {
+  id:           string
+  order:        number
+  kind:         'card' | 'text'
+  layout:       'full' | 'half' | 'third' | 'quarter'
+  title:        string | null
+  headingLevel: 1 | 2 | 3
+  sections:     Section[]
+  imageUrl:     string | null
 }
 
 const PAGE_QUERY = `
 MATCH (p:Page {slug: "home"})-[:HAS_CARD]->(c:Card)
-OPTIONAL MATCH (c)-[:HAS_CONTENT]->(d:Description)
 OPTIONAL MATCH (c)-[:HAS_HERO_IMAGE]->(s:Source)
-RETURN c.section AS section, c.sectionOrder AS sectionOrder,
-       c.title AS title, c.type AS type,
-       d.content AS content, s.url AS imageUrl
-ORDER BY c.section, c.sectionOrder
+OPTIONAL MATCH (c)-[:HAS_CONTENT]->(d:Description)
+WITH c, s, d ORDER BY coalesce(d.order, 1)
+WITH c, s, [x IN collect(d) WHERE x IS NOT NULL | {order: coalesce(x.order, 1), content: x.content}] AS sections
+RETURN c.id AS id, c.order AS order, c.kind AS kind, c.layout AS layout,
+       c.title AS title, c.headingLevel AS headingLevel,
+       s.url AS imageUrl, sections
+ORDER BY c.order
 `
 
 const router = useRouter()
-const home = ref<HomeData | null>(null)
+const cards = ref<Block[]>([])
 const loading = ref(true)
 const error = ref(false)
 
@@ -121,18 +130,26 @@ function cardSrc(url: string): string {
   return `${url}?w=700&auto=format`
 }
 
-function parseBlocks(content: string | null): unknown[] | undefined {
-  if (!content) return undefined
-  try { return JSON.parse(content) as unknown[] } catch { return undefined }
-}
-
-function rowToCard(r: CardRow): HomeCard {
-  const blocks = parseBlocks(r.content)
-  const html = blocksToHtml(blocks)
+function rowToBlock(r: CardRow): Block {
+  const sections: Section[] = (r.sections ?? [])
+    .filter(s => s.content)
+    .map(s => {
+      let html = ''
+      try { html = blocksToHtml(JSON.parse(s.content!) as unknown[]) } catch { /* skip */ }
+      return { order: s.order ?? 1, html }
+    })
+    .sort((a, b) => a.order - b.order)
+  const rawLevel = Number(r.headingLevel ?? 2)
+  const headingLevel = (rawLevel >= 1 && rawLevel <= 3 ? rawLevel : 2) as 1 | 2 | 3
   return {
-    title: r.title ?? '',
-    descriptionHtml: html || undefined,
-    imageUrl: r.imageUrl ?? undefined,
+    id:           r.id,
+    order:        r.order ?? 0,
+    kind:         (r.kind as 'card' | 'text') ?? 'card',
+    layout:       (r.layout as Block['layout']) ?? 'full',
+    title:        r.title,
+    headingLevel,
+    sections,
+    imageUrl:     r.imageUrl,
   }
 }
 
@@ -148,16 +165,7 @@ onMounted(async () => {
   try {
     const rows = await neo4jQuery<CardRow>(PAGE_QUERY)
     if (!rows.length) { error.value = true; return }
-
-    const middle = rows.find(r => r.section === 'middle')
-    const topRows = rows.filter(r => r.section === 'top')
-    const bottomRows = rows.filter(r => r.section === 'bottom')
-
-    home.value = {
-      description: blocksToText(parseBlocks(middle?.content ?? null)) || undefined,
-      topCards: topRows.map(rowToCard),
-      bottomCards: bottomRows.map(rowToCard),
-    }
+    cards.value = rows.map(rowToBlock)
   } catch {
     error.value = true
   } finally {
@@ -174,7 +182,6 @@ onMounted(async () => {
   background: var(--color-bg);
 }
 
-/* ── Status ─────────────────────────────────────────────────── */
 .status {
   padding: 48px 24px;
   text-align: center;
@@ -183,42 +190,76 @@ onMounted(async () => {
 }
 .error { color: var(--color-red); }
 
-/* ── Intro ──────────────────────────────────────────────────── */
-.intro {
-  padding: 32px 24px 16px;
-  max-width: 720px;
+/* ── Page flow: flex-wrap with blocks sizing per layout ──────── */
+.page-flow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  padding: 24px 16px;
+  max-width: 1200px;
   margin: 0 auto;
+  box-sizing: border-box;
 }
 
-.intro-text {
+.block {
+  flex-grow: 1;
+  flex-shrink: 0;
+  min-width: 0;
+}
+
+.layout-full    { flex-basis: 100%; }
+.layout-half    { flex-basis: calc(50% - 8px); }
+.layout-third   { flex-basis: calc(33.333% - 11px); }
+.layout-quarter { flex-basis: calc(25% - 12px); }
+
+/* ≥ 1024: 4-across / 3-across native.
+ * 768–1023: quarter → third (4 cards = 3+1).
+ * 560–767:  quarter/third → half (2-across).
+ * < 560:    everything full width.
+ */
+@media (max-width: 1023px) {
+  .layout-quarter { flex-basis: calc(33.333% - 11px); }
+}
+
+@media (max-width: 767px) {
+  .layout-quarter,
+  .layout-third { flex-basis: calc(50% - 8px); }
+}
+
+@media (max-width: 559px) {
+  .layout-half,
+  .layout-third,
+  .layout-quarter { flex-basis: 100%; }
+}
+
+/* ── Text blocks ────────────────────────────────────────────── */
+.block-text {
+  padding: 16px 0;
+  text-align: center;
+}
+
+.block-heading {
+  font-weight: 700;
+  color: var(--color-navy);
+  margin: 0 0 8px;
+  line-height: 1.2;
+}
+
+.heading-level-1 { font-size: 36px; }
+.heading-level-2 { font-size: 24px; }
+.heading-level-3 { font-size: 18px; }
+
+.block-body {
   font-size: 15px;
   line-height: 1.75;
   color: var(--color-text);
-  white-space: pre-line;
-}
-
-/* ── Card section ───────────────────────────────────────────── */
-.card-section {
-  padding: 16px 16px 0;
-  max-width: 960px;
+  max-width: 720px;
   margin: 0 auto;
+  text-align: left;
 }
 
-.card-grid {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 16px;
-  padding-bottom: 16px;
-}
-
-@media (min-width: 600px) {
-  .card-grid {
-    grid-template-columns: repeat(2, 1fr);
-  }
-}
-
-/* ── Card ───────────────────────────────────────────────────── */
-.card {
+/* ── Card blocks ────────────────────────────────────────────── */
+.block-card {
   background: var(--color-surface);
   border: 1px solid var(--color-border);
   border-radius: 8px;
@@ -241,7 +282,7 @@ onMounted(async () => {
 
 .card-img-placeholder {
   width: 100%;
-  height: 100%;
+  aspect-ratio: 16 / 9;
   background: var(--color-navy);
   opacity: 0.12;
 }
@@ -262,9 +303,7 @@ onMounted(async () => {
   line-height: 1.3;
 }
 
-.card-desc {
-  margin: 0;
-}
+.card-desc { margin: 0; }
 
 .card-desc :deep(p) {
   margin: 0 0 0.75em;
@@ -273,22 +312,10 @@ onMounted(async () => {
   color: var(--color-muted);
 }
 
-.card-desc :deep(p:last-child) {
-  margin-bottom: 0;
-}
-
-.card-desc :deep(strong) {
-  font-weight: 500;
-  color: var(--color-text);
-}
-
-.card-desc :deep(u) {
-  text-decoration: underline;
-}
-
-.card-desc :deep(em) {
-  font-style: italic;
-}
+.card-desc :deep(p:last-child) { margin-bottom: 0; }
+.card-desc :deep(strong) { font-weight: 500; color: var(--color-text); }
+.card-desc :deep(u) { text-decoration: underline; }
+.card-desc :deep(em) { font-style: italic; }
 
 .card-desc :deep(a.internal-link),
 .card-desc :deep(a.external-link) {
@@ -317,5 +344,18 @@ onMounted(async () => {
   background: var(--color-bg);
   padding: 1px 4px;
   border-radius: 3px;
+}
+
+/* ── Byline (section author attribution) ────────────────────── */
+.byline {
+  display: block;
+  font-size: 12px;
+  color: var(--color-muted);
+  font-style: normal;
+  margin: 4px 0 12px;
+}
+.byline a {
+  color: var(--color-navy);
+  text-decoration: underline;
 }
 </style>
