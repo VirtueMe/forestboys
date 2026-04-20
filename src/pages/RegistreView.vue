@@ -237,8 +237,11 @@ const filtered = computed<Entry[]>(() => {
   const activeKeys = new Set(selectedTypes.value.map(t => TYPE_KEY[t]))
   let r = allEntries.value.filter(e => activeKeys.has(e.type))
   if (query.value.length >= 2) {
-    const q = query.value.toLowerCase()
-    r = r.filter(e => e.name.toLowerCase().includes(q))
+    const tokens = query.value.toLowerCase().split(/\s+/).filter(Boolean)
+    r = r.filter(e => {
+      const words = e.name.toLowerCase().split(/\s+/).filter(Boolean)
+      return tokens.every(t => words.some(w => w.startsWith(t)))
+    })
   }
   return r
 })

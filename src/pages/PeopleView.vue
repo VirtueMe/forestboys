@@ -94,11 +94,11 @@ const sortedPeople = computed(() =>
 
 const filteredPeople = computed(() => {
   if (query.value.length < 2) return sortedPeople.value
-  const q = query.value.toLowerCase()
-  return sortedPeople.value.filter(p =>
-    p.name.toLowerCase().includes(q) ||
-    (p.secretName?.toLowerCase().includes(q) ?? false),
-  )
+  const tokens = query.value.toLowerCase().split(/\s+/).filter(Boolean)
+  return sortedPeople.value.filter(p => {
+    const words = `${p.name} ${p.secretName ?? ''}`.toLowerCase().split(/\s+/).filter(Boolean)
+    return tokens.every(t => words.some(w => w.startsWith(t)))
+  })
 })
 
 const visibleRange = computed(() => {
