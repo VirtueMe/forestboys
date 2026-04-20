@@ -42,6 +42,9 @@ out/
 .dev.vars
 .dev.vars.*
 
+# Cloudflare Wrangler — local state (emulated R2, KV, D1)
+.wrangler/
+
 # TypeScript incremental build info (regenerated on every build)
 tsconfig.tsbuildinfo
 *.tsbuildinfo
