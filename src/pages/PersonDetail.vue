@@ -9,8 +9,58 @@
     <div v-if="person" itemscope itemtype="https://schema.org/Person">
       <AdminViewTabs v-model="mode" />
 
-      <div v-if="mode === 'edit'" class="edit-placeholder">
-        Redigering kommer snart.
+      <div v-if="mode === 'edit'" class="edit-pane">
+        <section class="edit-section">
+          <h3 class="edit-section-heading">Grunnleggende</h3>
+          <div class="edit-row">
+            <label class="edit-label" for="edit-canonicalName">Navn</label>
+            <input
+              id="edit-canonicalName"
+              v-model="editForm.canonicalName"
+              class="edit-input"
+              type="text"
+              required
+            />
+          </div>
+          <div class="edit-row">
+            <label class="edit-label" for="edit-secretName">Dekknavn</label>
+            <input
+              id="edit-secretName"
+              v-model="editForm.secretName"
+              class="edit-input"
+              type="text"
+            />
+          </div>
+          <div class="edit-row">
+            <label class="edit-label" for="edit-birthYear">Fødselsår</label>
+            <input
+              id="edit-birthYear"
+              v-model="editForm.birthYear"
+              class="edit-input edit-input-narrow"
+              type="text"
+              inputmode="numeric"
+              placeholder="åååå"
+            />
+          </div>
+          <div class="edit-row">
+            <label class="edit-label" for="edit-home">Hjemsted</label>
+            <input
+              id="edit-home"
+              v-model="editForm.home"
+              class="edit-input"
+              type="text"
+            />
+          </div>
+        </section>
+
+        <footer v-if="editDirty" class="edit-save-bar">
+          <span class="edit-save-prompt">Ser det bra ut?</span>
+          <button type="button" class="edit-btn-primary" :disabled="editSaving" @click="saveEdit">
+            {{ editSaving ? 'Lagrer…' : 'Lagre' }}
+          </button>
+          <button type="button" class="edit-link-revert" :disabled="editSaving" @click="revertEdit">Angre</button>
+        </footer>
+        <div v-if="editError" class="edit-save-error">{{ editError }}</div>
       </div>
 
       <!-- Hero image (reserves the same vertical space when no image exists) -->
@@ -177,7 +227,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { RouterLink } from 'vue-router'
 import { useLocationCache } from '../composables/useLocationCache.ts'
 import { neo4jQuery } from '../composables/useNeo4j.ts'
@@ -186,6 +236,7 @@ import DetailPage from '../components/DetailPage.vue'
 import ImageSlider, { type SlideImage } from '../components/ImageSlider.vue'
 import SourceRef from '../components/SourceRef.vue'
 import AdminViewTabs, { type AdminViewMode } from '../components/AdminViewTabs.vue'
+import { authFetch } from '../composables/useAuth.ts'
 
 const { people, init } = useLocationCache()
 
@@ -201,6 +252,92 @@ interface Neo4jPerson {
   serviceClass: string | null
 }
 const neo4jPerson = ref<Neo4jPerson | null>(null)
+
+// ── Grunnleggende edit form (admin) ────────────────────────────────────
+interface EditForm {
+  canonicalName: string
+  secretName:    string
+  birthYear:     string // input value; parsed to int on save
+  home:          string
+}
+
+const editForm     = ref<EditForm>({ canonicalName: '', secretName: '', birthYear: '', home: '' })
+const editOriginal = ref<EditForm>({ canonicalName: '', secretName: '', birthYear: '', home: '' })
+const editSaving   = ref(false)
+const editError    = ref<string | null>(null)
+
+function resetEditForm() {
+  const p = neo4jPerson.value
+  if (!p) return
+  const snapshot: EditForm = {
+    canonicalName: p.name ?? '',
+    secretName:    p.secretName ?? '',
+    birthYear:     p.birthYear != null ? String(p.birthYear) : '',
+    home:          p.home ?? '',
+  }
+  editForm.value     = { ...snapshot }
+  editOriginal.value = { ...snapshot }
+  editError.value    = null
+}
+
+watch(neo4jPerson, resetEditForm, { immediate: true })
+
+const editDirty = computed(() =>
+  (Object.keys(editForm.value) as (keyof EditForm)[]).some(k => editForm.value[k] !== editOriginal.value[k]),
+)
+
+function revertEdit() {
+  editForm.value = { ...editOriginal.value }
+  editError.value = null
+}
+
+async function saveEdit() {
+  if (!neo4jPerson.value) return
+  editSaving.value = true
+  editError.value  = null
+  try {
+    const body: Record<string, unknown> = {}
+    const f = editForm.value, o = editOriginal.value
+    if (f.canonicalName !== o.canonicalName) body.canonicalName = f.canonicalName.trim()
+    if (f.secretName    !== o.secretName)    body.secretName    = f.secretName.trim() || null
+    if (f.home          !== o.home)          body.home          = f.home.trim() || null
+    if (f.birthYear     !== o.birthYear) {
+      const trimmed = f.birthYear.trim()
+      if (!trimmed) body.birthYear = null
+      else {
+        const n = Number(trimmed)
+        if (!Number.isInteger(n)) { editError.value = 'Fødselsår må være et heltall'; editSaving.value = false; return }
+        body.birthYear = n
+      }
+    }
+    if (!Object.keys(body).length) { editSaving.value = false; return }
+
+    const res = await authFetch(`/api/admin/person/${encodeURIComponent(neo4jPerson.value.slug)}`, {
+      method:  'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify(body),
+    })
+    const out = await res.json().catch(() => ({})) as {
+      canonicalName?: string; secretName?: string | null; birthYear?: number | null; home?: string | null; error?: string
+    }
+    if (!res.ok) {
+      editError.value = out.error ?? `HTTP ${res.status}`
+      return
+    }
+    const p = neo4jPerson.value
+    if (p) {
+      if (out.canonicalName !== undefined) p.name       = out.canonicalName
+      if (out.secretName    !== undefined) p.secretName = out.secretName
+      if (out.birthYear     !== undefined) p.birthYear  = out.birthYear
+      if (out.home          !== undefined) p.home       = out.home
+    }
+    resetEditForm()
+  } catch (e) {
+    editError.value = (e as Error).message
+  } finally {
+    editSaving.value = false
+  }
+}
 
 const heroImage     = ref<{ url: string; caption: string | null } | null>(null)
 const galleryImages = ref<SlideImage[]>([])
@@ -375,8 +512,23 @@ const person = computed(() => {
   const core = neo4jPerson.value
   if (!core) return null
   const extras = people.value.find(p => p.slug === core.slug)
-  return { ...(extras ?? {}), ...core }
+  // In edit mode, overlay the (possibly unsaved) form values so the
+  // Forhåndsvisning tab reflects the edit in real time.
+  const overlay = editDirty.value ? {
+    name:       editForm.value.canonicalName,
+    secretName: editForm.value.secretName.trim() || null,
+    home:       editForm.value.home.trim() || null,
+    birthYear:  parseEditedBirthYear(),
+  } : {}
+  return { ...(extras ?? {}), ...core, ...overlay }
 })
+
+function parseEditedBirthYear(): number | null {
+  const trimmed = editForm.value.birthYear.trim()
+  if (!trimmed) return null
+  const n = Number(trimmed)
+  return Number.isInteger(n) ? n : null
+}
 
 
 const personTitle = computed(() => {
@@ -429,14 +581,100 @@ const personInitials = computed<string>(() => {
 </script>
 
 <style scoped>
-.edit-placeholder {
-  padding: 32px 24px;
-  text-align: center;
-  font-size: 13px;
-  color: var(--color-muted);
-  font-style: italic;
-  background: var(--color-bg);
+.edit-pane {
+  background: var(--color-surface);
   border-bottom: 1px solid var(--color-border);
+  padding: 20px 24px;
+}
+
+.edit-section + .edit-section { margin-top: 24px; }
+
+.edit-section-heading {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-muted);
+  margin: 0 0 12px;
+}
+
+.edit-row {
+  display: grid;
+  grid-template-columns: 120px 1fr;
+  gap: 12px;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.edit-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.edit-input {
+  width: 100%;
+  padding: 8px 10px;
+  font-size: 14px;
+  color: var(--color-text);
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: 4px;
+  box-sizing: border-box;
+  font-family: inherit;
+}
+.edit-input:focus {
+  outline: 2px solid var(--color-navy);
+  outline-offset: -1px;
+  border-color: var(--color-navy);
+}
+.edit-input-narrow { max-width: 140px; }
+
+.edit-save-bar {
+  margin-top: 20px;
+  padding: 10px 14px;
+  background: #fef3c7;
+  border: 1px solid #fcd34d;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.edit-save-prompt { flex: 1; font-size: 13px; color: #92400e; font-weight: 600; }
+.edit-btn-primary {
+  padding: 8px 14px;
+  font-size: 12px;
+  font-weight: 600;
+  background: var(--color-navy);
+  color: #fff;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+.edit-btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+.edit-link-revert {
+  background: transparent;
+  border: none;
+  padding: 0;
+  font-size: 12px;
+  color: #92400e;
+  text-decoration: underline;
+  cursor: pointer;
+}
+.edit-link-revert:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.edit-save-error {
+  margin-top: 8px;
+  padding: 8px 10px;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  border-radius: 6px;
+  font-size: 12px;
+  color: #b91c1c;
+}
+
+@media (max-width: 520px) {
+  .edit-row { grid-template-columns: 1fr; gap: 4px; }
 }
 
 /* ── Hero ───────────────────────────────────────────────────── */
