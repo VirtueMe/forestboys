@@ -9,6 +9,8 @@ export interface SanityMarkDef {
   _key: string
   _type: string
   href?: string
+  slug?: string
+  name?: string
 }
 
 export interface SanityBlock {
@@ -21,7 +23,11 @@ export interface SanityBlock {
   markDefs?: SanityMarkDef[]
 }
 
-function renderSpans(children: SanitySpan[], linkMap: Record<string, string>): string {
+function renderSpans(
+  children:  SanitySpan[],
+  linkMap:   Record<string, string>,
+  personMap: Record<string, { slug: string; name?: string }>,
+): string {
   return (children ?? []).map(child => {
     let t = (child.text ?? '')
       .replace(/&/g, '&amp;')
@@ -35,15 +41,21 @@ function renderSpans(children: SanitySpan[], linkMap: Record<string, string>): s
     if (child.marks?.includes('strike-through')) t = `<s>${t}</s>`
     if (child.marks?.includes('code'))           t = `<code>${t}</code>`
 
-    const linkKey = child.marks?.find(m => linkMap[m])
-    if (linkKey) {
-      const href = linkMap[linkKey]
-      if (href.startsWith('/')) {
-        t = `<a href="${href}" class="internal-link">${t}</a>`
-      } else if (href.startsWith('http')) {
-        t = `<a href="${href}" target="_blank" rel="noopener noreferrer" class="external-link">${t}</a>`
-      } else {
-        t = `<a href="/events/${href}" class="internal-link">${t}</a>`
+    const personKey = child.marks?.find(m => personMap[m])
+    if (personKey) {
+      const p = personMap[personKey]
+      t = `<a href="/person/${p.slug}" class="internal-link person-link">${t}</a>`
+    } else {
+      const linkKey = child.marks?.find(m => linkMap[m])
+      if (linkKey) {
+        const href = linkMap[linkKey]
+        if (href.startsWith('/')) {
+          t = `<a href="${href}" class="internal-link">${t}</a>`
+        } else if (href.startsWith('http')) {
+          t = `<a href="${href}" target="_blank" rel="noopener noreferrer" class="external-link">${t}</a>`
+        } else {
+          t = `<a href="/events/${href}" class="internal-link">${t}</a>`
+        }
       }
     }
 
@@ -74,12 +86,14 @@ export function blocksToHtml(blocks?: SanityBlock[] | unknown | null): string {
   for (const block of blocks as SanityBlock[]) {
     if (block._type !== 'block') continue
 
-    const linkMap: Record<string, string> = {}
+    const linkMap:   Record<string, string> = {}
+    const personMap: Record<string, { slug: string; name?: string }> = {}
     block.markDefs?.forEach(def => {
       if (def._type === 'link' && def.href) linkMap[def._key] = def.href
+      if (def._type === 'person' && def.slug) personMap[def._key] = { slug: def.slug, name: def.name }
     })
 
-    const inner = renderSpans(block.children ?? [], linkMap)
+    const inner = renderSpans(block.children ?? [], linkMap, personMap)
 
     if (block.listItem) {
       flushPre()
