@@ -84,6 +84,15 @@ export async function logout(): Promise<void> {
   loading.value = false
 }
 
+/**
+ * Ensure the current user has been fetched at least once, then return it.
+ * Safe to call from router guards (doesn't depend on component lifecycle).
+ */
+export async function ensureUser(): Promise<AuthUser | null> {
+  if (loading.value) await fetchUser()
+  return user.value
+}
+
 export function useAuth() {
   onMounted(() => {
     if (loading.value) void fetchUser()

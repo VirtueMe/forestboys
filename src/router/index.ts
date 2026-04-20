@@ -16,6 +16,8 @@ import OrganizationDetail from '../pages/OrganizationDetail.vue'
 import DistrictDetail     from '../pages/DistrictDetail.vue'
 import AccessView    from '../pages/AccessView.vue'
 import ReviewView    from '../pages/ReviewView.vue'
+import AdminPagesView from '../pages/AdminPagesView.vue'
+import { ensureUser } from '../composables/useAuth.ts'
 
 const MAP_PARAMS = ['lat', 'lng', 'z', 'orgs', 'dists', 'q', 'si']
 
@@ -47,16 +49,23 @@ const router = createRouter({
     { path: '/about',                   component: AboutView },
     { path: '/access',                  component: AccessView },
     { path: '/review',                  component: ReviewView },
+    { path: '/admin/pages',             redirect: '/admin/pages/home' },
+    { path: '/admin/pages/:slug',       component: AdminPagesView, meta: { requiresAdmin: true } },
   ],
 })
 
-router.beforeEach((to, from) => {
+router.beforeEach(async (to, from) => {
   const leavingMap = from.path.startsWith('/map')
   const enteringMap = to.path.startsWith('/map')
   if (leavingMap && !enteringMap && MAP_PARAMS.some(k => k in to.query)) {
     const query = { ...to.query }
     for (const k of MAP_PARAMS) delete query[k]
     return { ...to, query }
+  }
+
+  if (to.meta.requiresAdmin) {
+    const user = await ensureUser()
+    if (user?.role !== 'admin') return { path: '/access', query: { next: to.fullPath } }
   }
 })
 

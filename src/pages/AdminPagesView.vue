@@ -1,0 +1,1216 @@
+<template>
+  <div class="admin-pages">
+    <nav class="tab-strip">
+      <router-link
+        v-for="tab in TABS"
+        :key="tab.slug"
+        :to="`/admin/pages/${tab.slug}`"
+        class="tab"
+        :class="{ active: tab.slug === activeSlug }"
+      >
+        {{ tab.label }}
+      </router-link>
+    </nav>
+
+    <div class="editor">
+      <aside class="tree">
+        <div v-if="loading" class="status">Laster…</div>
+        <div v-else-if="error" class="status error">Kunne ikke laste.</div>
+        <template v-else>
+          <div class="tree-label">Blokker</div>
+          <div class="tree-cards">
+            <div
+              v-for="card in cards"
+              :key="card.id"
+              class="card-chip"
+              :class="{ active: card.id === selectedId, dragging: draggingId === card.id }"
+              draggable="true"
+              @click="selectCard(card.id)"
+              @dragstart="onDragStart(card.id, $event)"
+              @dragend="onDragEnd"
+              @dragover.prevent="onDragOver(card.id)"
+              @drop.prevent="onDrop"
+            >
+              <span class="drag-handle" aria-hidden="true">⋮⋮</span>
+              <span class="card-chip-title">{{ card.title || (card.kind === 'text' ? '(tekstblokk)' : '(uten tittel)') }}</span>
+              <span class="card-chip-meta">{{ card.kind }} · {{ card.layout }}</span>
+            </div>
+            <div v-if="!cards.length" class="tree-empty">tom</div>
+          </div>
+
+          <footer v-if="dirty" class="save-footer tree-save">
+            <span class="save-prompt">Ser det bra ut?</span>
+            <button class="btn-primary" :disabled="saving" @click="save">
+              {{ saving ? 'Lagrer…' : 'Lagre' }}
+            </button>
+            <button class="link-revert" :disabled="saving" @click="revert">Angre</button>
+          </footer>
+        </template>
+      </aside>
+
+      <section class="panes">
+        <div class="pane-tabs">
+          <button
+            class="pane-tab"
+            :class="{ active: paneView === 'preview' }"
+            @click="paneView = 'preview'"
+          >Forhåndsvisning</button>
+          <button
+            class="pane-tab"
+            :class="{ active: paneView === 'edit' }"
+            @click="paneView = 'edit'"
+          >Rediger</button>
+        </div>
+
+        <section v-if="paneView === 'preview'" class="pane">
+          <template v-if="selected">
+            <div class="preview-meta">
+              <span class="id-chip"><code>{{ selected.id }}</code></span>
+              <span class="meta-sep">·</span>
+              <span>{{ selected.kind }} · {{ selected.layout }}</span>
+            </div>
+            <article class="card-preview">
+              <img
+                v-if="selected.imageUrl"
+                :src="`${selected.imageUrl}?w=700&auto=format`"
+                :alt="selected.title ?? ''"
+                class="preview-img"
+              />
+              <div class="preview-body">
+                <h2 v-if="selected.title" class="preview-title">{{ selected.title }}</h2>
+                <!-- eslint-disable vue/no-v-html -->
+                <div
+                  v-if="selectedHtml"
+                  class="preview-content portable-text"
+                  v-html="selectedHtml"
+                ></div>
+                <!-- eslint-enable vue/no-v-html -->
+                <div v-else class="muted">tomt</div>
+              </div>
+            </article>
+
+          </template>
+          <div v-else class="page-preview">
+            <div class="page-preview-header">
+              <span class="page-preview-label">Hele siden</span>
+              <div class="zoom-control">
+                <span class="zoom-icon">−</span>
+                <input
+                  type="range"
+                  min="0.5"
+                  max="1.5"
+                  step="0.1"
+                  v-model.number="zoom"
+                  class="zoom-slider"
+                  aria-label="Zoom"
+                />
+                <span class="zoom-icon">+</span>
+                <span class="zoom-value">{{ Math.round(zoom * 100) }}%</span>
+              </div>
+            </div>
+            <div class="zoom-wrap" :style="{ height: `${scaledHeight}px` }">
+              <div
+                ref="zoomInner"
+                class="zoom-inner"
+                :style="{ transform: `scale(${zoom})`, width: `${100 / zoom}%` }"
+              >
+                <div class="mini-flow">
+                  <template v-for="card in cards" :key="card.id">
+                    <section
+                      v-if="card.kind === 'text'"
+                      class="mini-block mini-text"
+                      :class="`layout-${card.layout}`"
+                      @click="selectCard(card.id)"
+                    >
+                      <h4 v-if="card.title" class="mini-text-heading">{{ card.title }}</h4>
+                      <!-- eslint-disable vue/no-v-html -->
+                      <div
+                        v-if="cardHtml(card)"
+                        class="mini-text-body portable-text"
+                        v-html="cardHtml(card)"
+                      ></div>
+                      <!-- eslint-enable vue/no-v-html -->
+                    </section>
+                    <article
+                      v-else
+                      class="mini-block mini-card"
+                      :class="`layout-${card.layout}`"
+                      @click="selectCard(card.id)"
+                    >
+                      <img
+                        v-if="cardImage(card)"
+                        :src="`${cardImage(card)}?w=400&auto=format`"
+                        :alt="card.title ?? ''"
+                        class="mini-card-img"
+                      />
+                      <div class="mini-card-body">
+                        <h4 v-if="card.title" class="mini-card-title">{{ card.title }}</h4>
+                        <!-- eslint-disable vue/no-v-html -->
+                        <div
+                          v-if="cardHtml(card)"
+                          class="mini-card-content portable-text"
+                          v-html="cardHtml(card)"
+                        ></div>
+                        <!-- eslint-enable vue/no-v-html -->
+                      </div>
+                    </article>
+                  </template>
+                </div>
+              </div>
+            </div>
+            <div class="page-preview-hint">Klikk en blokk for å redigere.</div>
+          </div>
+        </section>
+
+        <section v-else class="pane">
+          <template v-if="selected">
+            <div class="field">
+              <label class="field-label" :for="`title-${selected.id}`">Tittel</label>
+              <input
+                :id="`title-${selected.id}`"
+                v-model="selected.title"
+                class="field-input"
+                type="text"
+                :placeholder="selected.kind === 'text' ? 'Overskrift…' : 'Korttittel…'"
+              />
+            </div>
+
+            <div class="field-row">
+              <div class="field">
+                <label class="field-label" :for="`kind-${selected.id}`">Type</label>
+                <select
+                  :id="`kind-${selected.id}`"
+                  v-model="selected.kind"
+                  class="field-input"
+                >
+                  <option value="card">Kort (med bilde)</option>
+                  <option value="text">Tekst</option>
+                </select>
+              </div>
+
+              <div class="field">
+                <label class="field-label" :for="`layout-${selected.id}`">Bredde</label>
+                <select
+                  :id="`layout-${selected.id}`"
+                  v-model="selected.layout"
+                  class="field-input"
+                >
+                  <option value="full">Full</option>
+                  <option value="half">1/2</option>
+                  <option value="third">1/3</option>
+                  <option value="quarter">1/4</option>
+                </select>
+              </div>
+            </div>
+
+            <div v-if="selected.kind === 'card'" class="field">
+              <label class="field-label">Bilde</label>
+              <div class="image-field">
+                <img
+                  v-if="selected.imageUrl"
+                  :src="selected.imageUrl"
+                  class="image-thumb"
+                  alt=""
+                />
+                <div v-else class="image-placeholder">Ingen bilde</div>
+                <label class="image-upload">
+                  <input
+                    type="file"
+                    accept="image/*"
+                    class="image-input"
+                    :disabled="uploading"
+                    @change="onImageChange($event, selected.id)"
+                  />
+                  <span>{{ uploading ? 'Laster opp…' : 'Velg fil…' }}</span>
+                </label>
+                <div v-if="uploadError" class="upload-error">{{ uploadError }}</div>
+              </div>
+            </div>
+
+            <div v-if="selected.kind === 'text'" class="field">
+              <label class="field-label" :for="`heading-${selected.id}`">Overskriftsnivå</label>
+              <select
+                :id="`heading-${selected.id}`"
+                :value="selected.headingLevel ?? 2"
+                class="field-input"
+                @change="selected.headingLevel = Number(($event.target as HTMLSelectElement).value)"
+              >
+                <option :value="1">H1 — sidetittel</option>
+                <option :value="2">H2 — seksjonsoverskrift</option>
+                <option :value="3">H3 — underoverskrift</option>
+              </select>
+            </div>
+
+            <div class="field">
+              <div class="field-label-row">
+                <label class="field-label">Innhold</label>
+                <button type="button" class="btn-secondary-outline" @click="addSection">+ Legg til seksjon</button>
+              </div>
+
+              <div class="sections">
+                <div v-if="!selected.sections.length" class="sections-empty">Ingen seksjoner ennå.</div>
+                <div
+                  v-for="section in [...selected.sections].sort((a, b) => a.order - b.order)"
+                  :key="section.order"
+                  class="section-block"
+                >
+                  <div class="section-controls">
+                    <span class="section-index">Seksjon {{ section.order }}</span>
+                    <button type="button" class="section-btn" title="Opp" @click="moveSection(section, -1)">↑</button>
+                    <button type="button" class="section-btn" title="Ned" @click="moveSection(section, 1)">↓</button>
+                    <button type="button" class="section-btn section-btn-delete" title="Slett" @click="removeSection(section)">✕</button>
+                  </div>
+                  <PortableTextEditor
+                    :model-value="sectionBlocks(section)"
+                    @update:model-value="blocks => onSectionChange(section, blocks)"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div v-if="headingWarnings.length" class="validation-warning">
+              <div class="validation-title">Advarsel om HTML-standard:</div>
+              <ul class="validation-list">
+                <li v-for="(w, i) in headingWarnings" :key="i">{{ w }}</li>
+              </ul>
+            </div>
+
+          </template>
+          <div v-else class="pane-empty">Velg en blokk.</div>
+        </section>
+
+        <footer v-if="dirty" class="save-footer">
+          <span class="save-prompt">Ser det bra ut?</span>
+          <button class="btn-primary" :disabled="saving" @click="save">
+            {{ saving ? 'Lagrer…' : 'Lagre' }}
+          </button>
+          <button class="link-revert" :disabled="saving" @click="revert">Angre</button>
+        </footer>
+        <div v-if="saveError" class="save-error">{{ saveError }}</div>
+      </section>
+    </div>
+  </div>
+</template>
+
+<script setup lang="ts">
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
+import { useRoute } from 'vue-router'
+import { neo4jQuery } from '@/composables/useNeo4j.ts'
+import { blocksToHtml } from '@/utils/portableText.ts'
+import { authFetch } from '@/composables/useAuth.ts'
+import PortableTextEditor from '@/components/PortableTextEditor.vue'
+import type { PortableTextBlock } from '@portabletext/editor'
+
+const TABS = [
+  { slug: 'home',  label: 'Hjem' },
+  { slug: 'about', label: 'Om oss' },
+] as const
+
+interface Section {
+  order:   number
+  content: string   // JSON-serialized Portable Text blocks
+}
+
+interface CardRow {
+  id:           string
+  order:        number
+  kind:         string | null
+  layout:       string | null
+  title:        string | null
+  headingLevel: number | null
+  sections:     Section[]
+  imageUrl:     string | null
+}
+
+const PAGE_QUERY = `
+MATCH (p:Page {slug: $slug})-[:HAS_CARD]->(c:Card)
+OPTIONAL MATCH (c)-[:HAS_HERO_IMAGE]->(s:Source)
+OPTIONAL MATCH (c)-[:HAS_CONTENT]->(d:Description)
+WITH c, s, d ORDER BY coalesce(d.order, 1)
+WITH c, s, [x IN collect(d) WHERE x IS NOT NULL | {order: coalesce(x.order, 1), content: x.content}] AS sections
+RETURN c.id AS id, c.order AS order, c.kind AS kind, c.layout AS layout,
+       c.title AS title, c.headingLevel AS headingLevel,
+       s.url AS imageUrl, sections
+ORDER BY c.order
+`
+
+const route = useRoute()
+const activeSlug = computed(() => String(route.params.slug ?? 'home'))
+
+const cards = ref<CardRow[]>([])
+const loading = ref(true)
+const error = ref(false)
+const selectedId = ref<string | null>(null)
+const draggingId = ref<string | null>(null)
+const originalById = ref<Map<string, CardRow>>(new Map())
+const paneView = ref<'edit' | 'preview'>('preview')
+
+const SCALAR_FIELDS = ['order', 'title', 'layout', 'kind', 'headingLevel'] as const
+type ScalarField = typeof SCALAR_FIELDS[number]
+
+const selected = computed(() => cards.value.find(c => c.id === selectedId.value) ?? null)
+
+function cardHtml(card: CardRow): string {
+  return (card.sections ?? [])
+    .map(s => {
+      try { return blocksToHtml(JSON.parse(s.content) as unknown[]) }
+      catch { return '' }
+    })
+    .join('')
+}
+
+function sectionsSignature(sections: Section[]): string {
+  return JSON.stringify(
+    [...sections].sort((a, b) => a.order - b.order).map(s => [s.order, s.content]),
+  )
+}
+
+function cardImage(card: CardRow): string | null {
+  return card.imageUrl ?? null
+}
+
+const selectedHtml = computed(() => selected.value ? cardHtml(selected.value) : '')
+
+function sectionBlocks(section: Section): PortableTextBlock[] {
+  try { return JSON.parse(section.content) as PortableTextBlock[] }
+  catch { return [] }
+}
+
+function onSectionChange(section: Section, blocks: PortableTextBlock[]) {
+  section.content = JSON.stringify(blocks)
+}
+
+function addSection() {
+  if (!selected.value) return
+  const maxOrder = selected.value.sections.reduce((m, s) => Math.max(m, s.order), 0)
+  selected.value.sections.push({ order: maxOrder + 1, content: '[]' })
+}
+
+function removeSection(section: Section) {
+  if (!selected.value) return
+  selected.value.sections = selected.value.sections.filter(s => s !== section)
+  // Re-number surviving sections
+  selected.value.sections
+    .sort((a, b) => a.order - b.order)
+    .forEach((s, i) => { s.order = i + 1 })
+}
+
+function moveSection(section: Section, direction: -1 | 1) {
+  if (!selected.value) return
+  const sorted = [...selected.value.sections].sort((a, b) => a.order - b.order)
+  const i = sorted.indexOf(section)
+  const j = i + direction
+  if (j < 0 || j >= sorted.length) return
+  const tmp = sorted[i].order
+  sorted[i].order = sorted[j].order
+  sorted[j].order = tmp
+}
+
+interface CardDiff {
+  order?:        number
+  title?:        string | null
+  layout?:       string
+  kind?:         string
+  headingLevel?: number | null
+  sections?:     Section[]
+}
+
+function changedFields(card: CardRow): CardDiff | null {
+  const orig = originalById.value.get(card.id)
+  if (!orig) return null
+  const diff: CardDiff = {}
+  let has = false
+  for (const f of SCALAR_FIELDS) {
+    if (card[f] !== orig[f]) {
+      (diff as Record<string, unknown>)[f] = card[f]
+      has = true
+    }
+  }
+  if (sectionsSignature(card.sections) !== sectionsSignature(orig.sections)) {
+    diff.sections = [...card.sections].sort((a, b) => a.order - b.order)
+    has = true
+  }
+  return has ? diff : null
+}
+
+const dirty = computed(() => cards.value.some(c => changedFields(c) !== null))
+
+/**
+ * Build the heading outline for the current page and flag standards violations.
+ * Rules:
+ *   - At most one h1 per page
+ *   - No skipped levels (h3 without a preceding h2)
+ * Text cards with a title contribute at their headingLevel (default 2).
+ * Image cards always contribute h3 (rendered as <h3 class="card-title">).
+ */
+const headingWarnings = computed<string[]>(() => {
+  const levels: number[] = []
+  for (const c of [...cards.value].sort((a, b) => a.order - b.order)) {
+    if (c.kind === 'text' && c.title) {
+      const raw = Number(c.headingLevel ?? 2)
+      const lvl = raw >= 1 && raw <= 3 ? raw : 2
+      levels.push(lvl)
+    } else if (c.kind !== 'text' && c.title) {
+      levels.push(2)
+    }
+  }
+
+  const warnings: string[] = []
+  const h1Count = levels.filter(l => l === 1).length
+  if (h1Count > 1) warnings.push(`Flere H1 på siden (${h1Count}) — bare én er tillatt.`)
+
+  const haveH2 = levels.some(l => l === 2)
+  const haveH3 = levels.some(l => l === 3)
+  if (haveH3 && !haveH2 && levels.filter(l => l === 1).length === 0) {
+    warnings.push('H3 brukes uten en H2 før.')
+  } else if (haveH3 && !haveH2 && levels.filter(l => l === 1).length > 0) {
+    warnings.push('H3 brukes uten en H2 imellom H1 og H3.')
+  }
+
+  return warnings
+})
+
+function selectCard(id: string) {
+  selectedId.value = selectedId.value === id ? null : id
+  paneView.value = 'preview'
+}
+
+function onDragStart(id: string, e: DragEvent) {
+  draggingId.value = id
+  e.dataTransfer?.setData('text/plain', id)
+  if (e.dataTransfer) e.dataTransfer.effectAllowed = 'move'
+}
+
+function onDragEnd() {
+  draggingId.value = null
+}
+
+function onDragOver(targetId: string) {
+  if (!draggingId.value || draggingId.value === targetId) return
+  const from = cards.value.findIndex(c => c.id === draggingId.value)
+  const to   = cards.value.findIndex(c => c.id === targetId)
+  if (from === -1 || to === -1) return
+  const [moved] = cards.value.splice(from, 1)
+  cards.value.splice(to, 0, moved)
+  cards.value.forEach((c, i) => { c.order = i + 1 })
+}
+
+function onDrop() {
+  draggingId.value = null
+}
+
+async function load(slug: string) {
+  loading.value = true
+  error.value = false
+  selectedId.value = null
+  try {
+    const rows = await neo4jQuery<CardRow>(PAGE_QUERY, { slug })
+    cards.value = rows.map(r => ({ ...r, sections: (r.sections ?? []).map(s => ({ ...s })) }))
+    originalById.value = new Map(cards.value.map(c => [c.id, {
+      ...c,
+      sections: c.sections.map(s => ({ ...s })),
+    }]))
+  } catch {
+    error.value = true
+  } finally {
+    loading.value = false
+  }
+}
+
+watch(activeSlug, slug => void load(slug), { immediate: true })
+
+const saving    = ref(false)
+const saveError = ref<string | null>(null)
+const uploading   = ref(false)
+const uploadError = ref<string | null>(null)
+
+async function onImageChange(e: Event, cardId: string) {
+  const input = e.target as HTMLInputElement
+  const file  = input.files?.[0]
+  if (!file) return
+
+  uploading.value = true
+  uploadError.value = null
+  try {
+    const form = new FormData()
+    form.append('file', file)
+    const res = await authFetch(
+      `/api/admin/pages/${activeSlug.value}/cards/${encodeURIComponent(cardId)}/image`,
+      { method: 'POST', body: form },
+    )
+    const body = await res.json().catch(() => ({})) as { url?: string; error?: string }
+    if (!res.ok || !body.url) {
+      uploadError.value = body.error ?? `HTTP ${res.status}`
+      return
+    }
+    const card = cards.value.find(c => c.id === cardId)
+    if (card) {
+      card.imageUrl = body.url
+      const orig = originalById.value.get(cardId)
+      if (orig) orig.imageUrl = body.url
+    }
+    input.value = ''
+  } catch (err) {
+    uploadError.value = (err as Error).message
+  } finally {
+    uploading.value = false
+  }
+}
+
+function revert() {
+  void load(activeSlug.value)
+}
+
+async function save() {
+  saving.value = true
+  saveError.value = null
+  try {
+    const items = cards.value
+      .map(c => {
+        const diff = changedFields(c)
+        return diff ? { id: c.id, ...diff } : null
+      })
+      .filter((x): x is { id: string } & Partial<CardRow> => x !== null)
+
+    if (!items.length) { saving.value = false; return }
+
+    const res = await authFetch(`/api/admin/pages/${activeSlug.value}/cards`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({ items }),
+    })
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({})) as { error?: string }
+      saveError.value = body.error ?? `HTTP ${res.status}`
+      return
+    }
+    originalById.value = new Map(cards.value.map(c => [c.id, {
+      ...c,
+      sections: c.sections.map(s => ({ ...s })),
+    }]))
+  } catch (e) {
+    saveError.value = (e as Error).message
+  } finally {
+    saving.value = false
+  }
+}
+
+const zoom = ref(0.7)
+const zoomInner = ref<HTMLElement | null>(null)
+const innerHeight = ref(0)
+const scaledHeight = computed(() => innerHeight.value * zoom.value)
+
+let ro: ResizeObserver | null = null
+onMounted(() => {
+  ro = new ResizeObserver(entries => {
+    for (const e of entries) innerHeight.value = e.contentRect.height
+  })
+  watch(zoomInner, el => {
+    ro?.disconnect()
+    if (el) ro?.observe(el)
+  }, { immediate: true })
+})
+onUnmounted(() => ro?.disconnect())
+</script>
+
+<style scoped>
+.admin-pages {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  background: var(--color-bg);
+  padding: 24px;
+  max-width: 1200px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+.tab-strip {
+  display: flex;
+  gap: 4px;
+  border-bottom: 1px solid var(--color-border);
+  margin-bottom: 24px;
+}
+
+.tab {
+  padding: 10px 16px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-muted);
+  text-decoration: none;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+}
+
+.tab.active {
+  color: var(--color-navy);
+  border-bottom-color: var(--color-navy);
+}
+
+.editor {
+  display: grid;
+  grid-template-columns: 260px 1fr;
+  gap: 16px;
+  align-items: start;
+}
+
+@media (max-width: 720px) {
+  .editor { grid-template-columns: 1fr; }
+}
+
+/* ── Tree ───────────────────────────────────────────────────── */
+.tree {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  padding: 12px;
+}
+
+.tree-label {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-muted);
+  padding: 4px 8px;
+  margin-bottom: 4px;
+}
+
+.tree-cards {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 6px 4px;
+}
+
+.tree-empty {
+  padding: 8px 10px;
+  font-size: 12px;
+  color: var(--color-muted);
+  font-style: italic;
+  text-align: center;
+}
+
+.card-chip {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  font-size: 13px;
+  cursor: grab;
+  user-select: none;
+}
+
+.card-chip:hover { border-color: var(--color-navy); }
+.card-chip:active { cursor: grabbing; }
+
+.card-chip.active {
+  background: var(--color-navy);
+  color: #fff;
+  border-color: var(--color-navy);
+}
+
+.card-chip.active .card-chip-meta { color: rgba(255, 255, 255, 0.7); }
+
+.card-chip.dragging { opacity: 0.4; }
+
+.drag-handle {
+  color: var(--color-muted);
+  font-size: 12px;
+  letter-spacing: -2px;
+  flex-shrink: 0;
+}
+.card-chip.active .drag-handle { color: rgba(255, 255, 255, 0.6); }
+
+.card-chip-title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
+}
+
+.card-chip-meta {
+  font-size: 10px;
+  color: var(--color-muted);
+  font-family: monospace;
+  flex-shrink: 0;
+}
+
+/* ── Panes ──────────────────────────────────────────────────── */
+.panes { display: flex; flex-direction: column; }
+
+.pane-tabs {
+  display: flex;
+  gap: 4px;
+  border-bottom: 1px solid var(--color-border);
+  margin-bottom: 16px;
+}
+
+.pane-tab {
+  padding: 10px 16px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-muted);
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  cursor: pointer;
+}
+
+.pane-tab.active {
+  color: var(--color-navy);
+  border-bottom-color: var(--color-navy);
+}
+
+.pane {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  padding: 20px;
+  min-height: 200px;
+}
+
+.pane-empty {
+  color: var(--color-muted);
+  font-size: 13px;
+  text-align: center;
+  padding: 48px 0;
+  font-style: italic;
+}
+
+/* ── Field inputs ───────────────────────────────────────────── */
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 16px;
+}
+
+.field-label {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--color-muted);
+}
+
+.field-input {
+  width: 100%;
+  padding: 9px 12px;
+  font-size: 14px;
+  color: var(--color-text);
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  box-sizing: border-box;
+  font-family: inherit;
+}
+.field-input:focus {
+  outline: 2px solid var(--color-navy);
+  outline-offset: -1px;
+  border-color: var(--color-navy);
+}
+
+select.field-input {
+  appearance: none;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'><path fill='%23666' d='M0 0l5 6 5-6z'/></svg>");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  padding-right: 32px;
+}
+
+.field-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.validation-warning {
+  margin-bottom: 16px;
+  padding: 10px 12px;
+  background: #fffbeb;
+  border: 1px solid #fcd34d;
+  border-radius: 6px;
+  font-size: 12px;
+  color: #92400e;
+}
+
+.validation-title {
+  font-weight: 700;
+  margin-bottom: 4px;
+}
+
+.validation-list {
+  margin: 0;
+  padding-left: 18px;
+}
+
+/* ── Sections list ──────────────────────────────────────────── */
+.field-label-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 6px;
+}
+
+.btn-secondary-outline {
+  padding: 4px 10px;
+  font-size: 11px;
+  font-weight: 600;
+  background: transparent;
+  color: var(--color-navy);
+  border: 1px solid var(--color-border);
+  border-radius: 4px;
+  cursor: pointer;
+}
+.btn-secondary-outline:hover { border-color: var(--color-navy); }
+
+.sections {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.sections-empty {
+  padding: 16px;
+  text-align: center;
+  font-size: 13px;
+  color: var(--color-muted);
+  font-style: italic;
+  border: 1px dashed var(--color-border);
+  border-radius: 6px;
+}
+
+.section-block {
+  padding: 12px;
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+}
+
+.section-controls {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 10px;
+}
+
+.section-index {
+  flex: 1;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--color-muted);
+}
+
+.section-btn {
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  font-size: 12px;
+  background: transparent;
+  border: 1px solid var(--color-border);
+  border-radius: 3px;
+  cursor: pointer;
+  color: var(--color-text);
+}
+.section-btn:hover { border-color: var(--color-navy); }
+
+.section-btn-delete { color: #b91c1c; }
+.section-btn-delete:hover { background: #fef2f2; border-color: #fecaca; }
+
+.section-author {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.section-author-label {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--color-muted);
+  flex-shrink: 0;
+}
+
+.section-author .person-picker {
+  flex: 1;
+}
+
+/* ── Image upload ───────────────────────────────────────────── */
+.image-field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.image-thumb {
+  max-width: 240px;
+  border-radius: 6px;
+  border: 1px solid var(--color-border);
+  display: block;
+}
+
+.image-placeholder {
+  width: 240px;
+  height: 135px;
+  background: var(--color-bg);
+  border: 1px dashed var(--color-border);
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  color: var(--color-muted);
+  font-style: italic;
+}
+
+.image-upload {
+  display: inline-flex;
+  align-items: center;
+  padding: 6px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--color-navy);
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: 4px;
+  cursor: pointer;
+  align-self: flex-start;
+}
+.image-upload:hover { border-color: var(--color-navy); }
+
+.image-input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.upload-error {
+  font-size: 12px;
+  color: #b91c1c;
+}
+
+.preview-meta {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  margin-bottom: 16px;
+  font-size: 11px;
+  color: var(--color-muted);
+  font-family: monospace;
+}
+
+.meta-sep { opacity: 0.5; }
+
+.id-chip code {
+  font-family: monospace;
+  font-size: 11px;
+  background: var(--color-bg);
+  padding: 2px 6px;
+  border-radius: 3px;
+  color: var(--color-muted);
+}
+
+.card-preview {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.preview-img { width: 100%; height: auto; display: block; }
+
+.preview-body { padding: 16px; }
+
+.preview-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--color-navy);
+  margin: 0 0 12px;
+  line-height: 1.3;
+}
+
+.preview-content :deep(p) {
+  margin: 0 0 0.75em;
+  line-height: 1.7;
+  font-size: 13px;
+  color: var(--color-muted);
+}
+.preview-content :deep(p:last-child) { margin-bottom: 0; }
+.preview-content :deep(strong) { font-weight: 500; color: var(--color-text); }
+.preview-content :deep(em) { font-style: italic; }
+.preview-content :deep(a) { color: var(--color-navy); text-decoration: underline; }
+
+.muted { color: var(--color-muted); font-style: italic; font-size: 13px; }
+
+/* ── Save footer ────────────────────────────────────────────── */
+.save-footer {
+  margin-top: 16px;
+  padding: 12px 14px;
+  background: #fef3c7;
+  border: 1px solid #fcd34d;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.save-prompt { flex: 1; font-size: 13px; color: #92400e; font-weight: 600; }
+.tree-save { margin-top: 12px; flex-wrap: wrap; }
+.tree-save .save-prompt { flex-basis: 100%; font-size: 12px; margin-bottom: 4px; }
+.btn-primary {
+  padding: 8px 14px;
+  font-size: 12px;
+  font-weight: 600;
+  background: var(--color-navy);
+  color: #fff;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+.btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+.link-revert {
+  background: transparent;
+  border: none;
+  padding: 0;
+  font-size: 12px;
+  color: #92400e;
+  text-decoration: underline;
+  cursor: pointer;
+}
+.link-revert:disabled { opacity: 0.5; cursor: not-allowed; }
+.save-error {
+  margin-top: 8px;
+  padding: 8px 10px;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  border-radius: 6px;
+  font-size: 12px;
+  color: #b91c1c;
+}
+
+/* ── Whole-page preview ─────────────────────────────────────── */
+.page-preview { display: flex; flex-direction: column; gap: 12px; }
+
+.page-preview-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.page-preview-label {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-muted);
+}
+
+.zoom-control { display: flex; align-items: center; gap: 6px; }
+.zoom-icon {
+  font-size: 12px; color: var(--color-muted); font-weight: 700;
+  width: 10px; text-align: center;
+}
+.zoom-slider { width: 100px; accent-color: var(--color-navy); }
+.zoom-value {
+  font-size: 11px; color: var(--color-muted); font-family: monospace;
+  width: 36px; text-align: right;
+}
+
+.zoom-wrap { overflow: hidden; transition: height 0.1s; }
+
+.zoom-inner { transform-origin: top left; }
+
+.mini-flow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.mini-block {
+  flex-grow: 1;
+  flex-shrink: 0;
+  min-width: 0;
+  cursor: pointer;
+  transition: border-color 0.1s;
+}
+
+.mini-block.layout-full    { flex-basis: 100%; }
+.mini-block.layout-half    { flex-basis: calc(50% - 6px); }
+.mini-block.layout-third   { flex-basis: calc(33.333% - 8px); }
+.mini-block.layout-quarter { flex-basis: calc(25% - 9px); }
+
+.mini-text {
+  padding: 8px 10px;
+  text-align: center;
+  border: 1px dashed transparent;
+  border-radius: 6px;
+}
+.mini-text:hover { border-color: var(--color-navy); }
+
+.mini-text-heading {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--color-navy);
+  margin: 0 0 4px;
+}
+
+.mini-text-body :deep(p) {
+  margin: 0 0 0.4em;
+  font-size: 11px;
+  line-height: 1.5;
+  color: var(--color-muted);
+}
+
+.mini-card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+.mini-card:hover { border-color: var(--color-navy); }
+
+.mini-card-img { width: 100%; height: auto; display: block; }
+
+.mini-card-body { padding: 8px 10px; }
+
+.mini-card-title {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--color-navy);
+  margin: 0 0 4px;
+  line-height: 1.3;
+}
+
+.mini-card-content :deep(p) {
+  margin: 0 0 0.4em;
+  line-height: 1.5;
+  font-size: 10px;
+  color: var(--color-muted);
+}
+.mini-card-content :deep(p:last-child) { margin-bottom: 0; }
+
+.page-preview-hint {
+  font-size: 12px;
+  color: var(--color-muted);
+  font-style: italic;
+  text-align: center;
+  margin-top: 4px;
+}
+
+.status { padding: 24px; font-size: 13px; color: var(--color-muted); text-align: center; }
+.error  { color: var(--color-red); }
+</style>

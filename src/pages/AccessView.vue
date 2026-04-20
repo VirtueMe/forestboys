@@ -108,7 +108,9 @@
           Innlogget som <strong>{{ user.name }}</strong> ({{ user.email }}).
         </p>
         <div class="access-actions">
-          <RouterLink to="/" class="btn btn-primary">Til forsiden</RouterLink>
+          <RouterLink :to="nextPath ?? '/'" class="btn btn-primary">
+            {{ nextPath ? 'Fortsett' : 'Til forsiden' }}
+          </RouterLink>
           <button class="btn btn-secondary" type="button" @click="logout">Logg ut</button>
         </div>
       </div>
@@ -117,11 +119,25 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
-import { RouterLink } from 'vue-router'
+import { computed, onMounted, ref, watch } from 'vue'
+import { RouterLink, useRoute, useRouter } from 'vue-router'
 import { useAuth } from '../composables/useAuth.ts'
 
 const { user, loading, directLogin, logout } = useAuth()
+const route  = useRoute()
+const router = useRouter()
+
+const nextPath = computed(() => {
+  const raw = route.query.next
+  const str = Array.isArray(raw) ? raw[0] : raw
+  return typeof str === 'string' && str.startsWith('/') ? str : null
+})
+
+watch(user, u => {
+  if (u && (u.role === 'admin' || u.role === 'editor') && nextPath.value) {
+    void router.replace(nextPath.value)
+  }
+})
 
 // Direct login — username/password exchange for a JWT bearer token, a
 // provisional alternative to Google OAuth while we wait for Jan to decide
