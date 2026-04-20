@@ -132,7 +132,17 @@
                                   :type "humanitarian" :country "SE"})
     (cy/merge-node :Organization {:slug "regjeringen"
                                   :canonicalName "Den norske regjering i London"
-                                  :type "government" :country "NO"})))
+                                  :type "government" :country "NO"})
+
+    ;; Curator-decision sources. When the classification table attaches a
+    ;; :source-refs vector to an edge and the referenced ID follows the
+    ;; 'editorial:<curator>:<date>' convention, the corresponding Source
+    ;; node must exist so the UI's SourceRef chip resolves to a real title
+    ;; instead of falling back to "Kilden finnes ikke i grafen ennå".
+    (cy/merge-node :Source
+                   {:id    "editorial:jan-warberg:2026-04-19"
+                    :type  "editorial"
+                    :title "Redaksjonell vurdering av Jan Warberg — dobbelt tilknytning SOE / HOK (2026-04-19)"})))
 
 ;; ── Per-target-type emitters ────────────────────────────────────────────
 
