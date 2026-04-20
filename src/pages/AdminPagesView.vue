@@ -83,10 +83,22 @@
                     <!-- eslint-disable vue/no-v-html -->
                     <div
                       class="preview-content portable-text"
-                      :class="{ 'is-quote': s.citations.length > 0 }"
+                      :class="{ 'is-quote': s.citations.length > 0 || s.sourcedFrom }"
                       v-html="sectionHtml(s)"
                     ></div>
                     <!-- eslint-enable vue/no-v-html -->
+                    <div v-if="s.sourcedFrom" class="sourced-from">
+                      <span class="sourced-label">Fra:</span>
+                      <a
+                        v-if="s.sourcedFrom.url"
+                        :href="s.sourcedFrom.url"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        class="sourced-link"
+                      >{{ s.sourcedFrom.attribution || s.sourcedFrom.title || s.sourcedFrom.id }} ↗</a>
+                      <span v-else class="sourced-link">{{ s.sourcedFrom.attribution || s.sourcedFrom.title || s.sourcedFrom.id }}</span>
+                      <span v-if="s.sourcedFrom.license" class="sourced-license">{{ s.sourcedFrom.license }}</span>
+                    </div>
                     <div v-if="inlineCites(s).length" class="inline-cites">
                       <a
                         v-for="c in inlineCites(s)"
@@ -335,6 +347,22 @@
                       @pick="s => addCite(section, s)"
                     />
                   </div>
+
+                  <div class="section-sourced">
+                    <div class="section-sourced-header">
+                      <span class="section-sourced-label">Gjengitt fra</span>
+                    </div>
+                    <div v-if="section.sourcedFrom" class="section-sourced-chip">
+                      <span class="sc-title">{{ section.sourcedFrom.title || section.sourcedFrom.id }}</span>
+                      <span v-if="section.sourcedFrom.license" class="sc-license">{{ section.sourcedFrom.license }}</span>
+                      <button type="button" class="section-btn section-btn-delete" title="Fjern" @click="clearSourcedFrom(section)">✕</button>
+                    </div>
+                    <SourcePicker
+                      v-else
+                      placeholder="Sett kildematerial…"
+                      @pick="s => setSourcedFrom(section, s)"
+                    />
+                  </div>
                 </div>
               </div>
             </div>
@@ -384,6 +412,8 @@ interface SourceRef {
   title:          string | null
   url:            string | null
   authorFreeText: string | null
+  license?:       string | null
+  attribution?:   string | null
 }
 
 interface Citation {
@@ -392,9 +422,10 @@ interface Citation {
 }
 
 interface Section {
-  order:     number
-  content:   string   // JSON-serialized Portable Text blocks
-  citations: Citation[]
+  order:       number
+  content:     string   // JSON-serialized Portable Text blocks
+  citations:   Citation[]
+  sourcedFrom: SourceRef | null
 }
 
 interface CitationRow {
@@ -406,9 +437,10 @@ interface CitationRow {
 }
 
 interface SectionRow {
-  order:     number
-  content:   string
-  citations: CitationRow[]
+  order:       number
+  content:     string
+  citations:   CitationRow[]
+  sourcedFrom: SourceRef | null
 }
 
 interface CardRow {
@@ -437,10 +469,11 @@ const PAGE_QUERY = `
 MATCH (p:Page {slug: $slug})-[:HAS_CARD]->(c:Card)
 OPTIONAL MATCH (c)-[:HAS_HERO_IMAGE]->(hero:Source)
 OPTIONAL MATCH (c)-[:HAS_CONTENT]->(d:Description)
-WITH c, hero, d
+OPTIONAL MATCH (d)-[:SOURCED_FROM]->(from:Source)
+WITH c, hero, d, from
   ORDER BY coalesce(d.order, 1)
 OPTIONAL MATCH (d)-[cites:CITES]->(src:Source)
-WITH c, hero, d,
+WITH c, hero, d, from,
      collect(CASE WHEN src IS NULL THEN NULL ELSE {
        inline:       coalesce(cites.inline, false),
        sourceId:     src.id,
@@ -448,11 +481,19 @@ WITH c, hero, d,
        sourceUrl:    src.url,
        sourceAuthor: src.authorFreeText
      } END) AS rawCites
-WITH c, hero, d, [x IN rawCites WHERE x IS NOT NULL] AS citations
+WITH c, hero, d, from, [x IN rawCites WHERE x IS NOT NULL] AS citations
 WITH c, hero, collect(CASE WHEN d IS NULL THEN NULL ELSE {
-  order:     coalesce(d.order, 1),
-  content:   d.content,
-  citations: citations
+  order:       coalesce(d.order, 1),
+  content:     d.content,
+  citations:   citations,
+  sourcedFrom: CASE WHEN from IS NULL THEN NULL ELSE {
+    id:             from.id,
+    title:          from.title,
+    url:            from.url,
+    authorFreeText: from.authorFreeText,
+    license:        from.license,
+    attribution:    from.attribution
+  } END
 } END) AS rawSections
 WITH c, hero, [x IN rawSections WHERE x IS NOT NULL] AS sections
 RETURN c.id AS id, c.order AS order, c.kind AS kind, c.layout AS layout,
@@ -503,6 +544,7 @@ function rowToCard(r: CardRow): Card {
             authorFreeText: c.sourceAuthor,
           },
         })),
+      sourcedFrom: s.sourcedFrom ? { ...s.sourcedFrom } : null,
     })),
   }
 }
@@ -512,7 +554,8 @@ function cloneCard(c: Card): Card {
     ...c,
     sections: c.sections.map(s => ({
       ...s,
-      citations: s.citations.map(x => ({ ...x, source: { ...x.source } })),
+      citations:   s.citations.map(x => ({ ...x, source: { ...x.source } })),
+      sourcedFrom: s.sourcedFrom ? { ...s.sourcedFrom } : null,
     })),
   }
 }
@@ -525,6 +568,7 @@ function sectionsSignature(sections: Section[]): string {
         s.order,
         s.content,
         s.citations.map(c => [c.inline, c.source.id]),
+        s.sourcedFrom?.id ?? null,
       ]),
   )
 }
@@ -571,7 +615,15 @@ function onSectionChange(section: Section, blocks: PortableTextBlock[]) {
 function addSection() {
   if (!selected.value) return
   const maxOrder = selected.value.sections.reduce((m, s) => Math.max(m, s.order), 0)
-  selected.value.sections.push({ order: maxOrder + 1, content: '[]', citations: [] })
+  selected.value.sections.push({ order: maxOrder + 1, content: '[]', citations: [], sourcedFrom: null })
+}
+
+function setSourcedFrom(section: Section, source: SourceRef) {
+  section.sourcedFrom = { ...source }
+}
+
+function clearSourcedFrom(section: Section) {
+  section.sourcedFrom = null
 }
 
 function addCite(section: Section, source: SourceRef) {
@@ -793,9 +845,10 @@ async function save() {
         const payload: Record<string, unknown> = { id: c.id, ...diff }
         if (diff.sections) {
           payload.sections = diff.sections.map(s => ({
-            order:     s.order,
-            content:   s.content,
-            citations: s.citations.map(x => ({ inline: x.inline, sourceId: x.source.id })),
+            order:          s.order,
+            content:        s.content,
+            citations:      s.citations.map(x => ({ inline: x.inline, sourceId: x.source.id })),
+            sourcedFromId:  s.sourcedFrom?.id ?? null,
           }))
         }
         return payload
@@ -1225,6 +1278,72 @@ select.field-input {
 .section-cite-edit {
   list-style: none;
   padding: 0;
+}
+
+.section-sourced {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px dashed var(--color-border);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.section-sourced-label {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--color-muted);
+}
+
+.section-sourced-chip {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: 4px;
+  font-size: 12px;
+}
+
+.sc-title { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sc-license {
+  font-family: monospace;
+  font-size: 10px;
+  padding: 1px 6px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  color: var(--color-muted);
+}
+
+/* Match public `sourced-from` strip inside the admin preview */
+.card-preview .sourced-from {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 6px;
+  margin: -6px 0 12px 18px;
+  font-size: 11px;
+  color: var(--color-muted);
+}
+.card-preview .sourced-label {
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  font-size: 10px;
+}
+.card-preview .sourced-link { color: var(--color-navy); text-decoration: underline; }
+.card-preview .sourced-license {
+  font-family: monospace;
+  font-size: 10px;
+  padding: 1px 6px;
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  color: var(--color-muted);
 }
 
 .section-author {

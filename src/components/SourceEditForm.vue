@@ -67,6 +67,7 @@ function autoFill() {
 }
 
 async function submit() {
+  autoFill() // fires even if the URL input didn't blur before submit
   busy.value = true
   error.value = null
   try {

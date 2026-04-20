@@ -23,9 +23,10 @@ interface CitationInput {
 }
 
 interface Section {
-  order:      number
-  content:    string
-  citations?: CitationInput[]
+  order:          number
+  content:        string
+  citations?:     CitationInput[]
+  sourcedFromId?: string | null
 }
 
 interface Item {
@@ -90,6 +91,9 @@ export const onRequestPatch: PagesFunction<Env> = async ({ request, env, params 
             if (typeof c.inline !== 'boolean')                return json({ error: `Bad citation inline for ${it.id}:${s.order}` }, 400)
           }
         }
+        if (s.sourcedFromId !== undefined && s.sourcedFromId !== null && typeof s.sourcedFromId !== 'string') {
+          return json({ error: `Bad sourcedFromId for ${it.id}:${s.order}` }, 400)
+        }
       }
     }
   }
@@ -113,10 +117,11 @@ export const onRequestPatch: PagesFunction<Env> = async ({ request, env, params 
     .map(it => ({
       id:       it.id,
       sections: (it.sections ?? []).map(s => ({
-        id:        `${it.id.replace('card:', 'desc:')}:${s.order}`,
-        order:     s.order,
-        content:   s.content,
-        citations: s.citations ?? [],
+        id:            `${it.id.replace('card:', 'desc:')}:${s.order}`,
+        order:         s.order,
+        content:       s.content,
+        citations:     s.citations ?? [],
+        sourcedFromId: typeof s.sourcedFromId === 'string' ? s.sourcedFromId : null,
       })),
     }))
 
@@ -148,10 +153,15 @@ export const onRequestPatch: PagesFunction<Env> = async ({ request, env, params 
           UNWIND $sections AS s
           CREATE (c)-[:HAS_CONTENT]->(d:Description { id: s.id, order: s.order, content: s.content })
           WITH d, s
+          OPTIONAL MATCH (fromSrc:Source {id: s.sourcedFromId})
+          FOREACH (_ IN CASE WHEN s.sourcedFromId IS NOT NULL AND fromSrc IS NOT NULL THEN [1] ELSE [] END |
+            CREATE (d)-[:SOURCED_FROM]->(fromSrc)
+          )
+          WITH d, s
           UNWIND (CASE WHEN size(s.citations) > 0 THEN s.citations ELSE [null] END) AS cite
-          OPTIONAL MATCH (src:Source {id: cite.sourceId})
-          FOREACH (_ IN CASE WHEN cite IS NOT NULL AND src IS NOT NULL THEN [1] ELSE [] END |
-            CREATE (d)-[:CITES {inline: cite.inline}]->(src)
+          OPTIONAL MATCH (citeSrc:Source {id: cite.sourceId})
+          FOREACH (_ IN CASE WHEN cite IS NOT NULL AND citeSrc IS NOT NULL THEN [1] ELSE [] END |
+            CREATE (d)-[:CITES {inline: cite.inline}]->(citeSrc)
           )
         `, { slug, cardId: it.id, sections: it.sections })
       }

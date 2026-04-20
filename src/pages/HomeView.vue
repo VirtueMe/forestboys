@@ -25,11 +25,23 @@
               <!-- eslint-disable vue/no-v-html -->
               <div
                 class="block-body portable-text"
-                :class="{ 'is-quote': s.citations.length > 0 }"
+                :class="{ 'is-quote': s.citations.length > 0 || s.sourcedFrom }"
                 @click.capture="handleInternalLinks"
                 v-html="s.html"
               ></div>
               <!-- eslint-enable vue/no-v-html -->
+              <div v-if="s.sourcedFrom" class="sourced-from">
+                <span class="sourced-label">Fra:</span>
+                <a
+                  v-if="s.sourcedFrom.url"
+                  :href="s.sourcedFrom.url"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  class="sourced-link"
+                >{{ s.sourcedFrom.attribution || s.sourcedFrom.title || s.sourcedFrom.id }} ↗</a>
+                <span v-else class="sourced-link">{{ s.sourcedFrom.attribution || s.sourcedFrom.title || s.sourcedFrom.id }}</span>
+                <span v-if="s.sourcedFrom.license" class="sourced-license">{{ s.sourcedFrom.license }}</span>
+              </div>
               <div v-if="inlineCites(s).length" class="inline-cites">
                 <a
                   v-for="c in inlineCites(s)"
@@ -89,11 +101,23 @@
                 <!-- eslint-disable vue/no-v-html -->
                 <div
                   class="card-desc portable-text"
-                  :class="{ 'is-quote': s.citations.length > 0 }"
+                  :class="{ 'is-quote': s.citations.length > 0 || s.sourcedFrom }"
                   @click.capture="handleInternalLinks"
                   v-html="s.html"
                 ></div>
                 <!-- eslint-enable vue/no-v-html -->
+                <div v-if="s.sourcedFrom" class="sourced-from">
+                  <span class="sourced-label">Fra:</span>
+                  <a
+                    v-if="s.sourcedFrom.url"
+                    :href="s.sourcedFrom.url"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    class="sourced-link"
+                  >{{ s.sourcedFrom.attribution || s.sourcedFrom.title || s.sourcedFrom.id }} ↗</a>
+                  <span v-else class="sourced-link">{{ s.sourcedFrom.attribution || s.sourcedFrom.title || s.sourcedFrom.id }}</span>
+                  <span v-if="s.sourcedFrom.license" class="sourced-license">{{ s.sourcedFrom.license }}</span>
+                </div>
                 <div v-if="inlineCites(s).length" class="inline-cites">
                   <a
                     v-for="c in inlineCites(s)"
@@ -152,10 +176,20 @@ interface CitationRow {
   sourceAuthor:   string | null
 }
 
+interface SourceRef {
+  id:             string
+  title:          string | null
+  url:            string | null
+  authorFreeText: string | null
+  license:        string | null
+  attribution:    string | null
+}
+
 interface SectionRow {
-  order:     number | null
-  content:   string | null
-  citations: CitationRow[]
+  order:       number | null
+  content:     string | null
+  citations:   CitationRow[]
+  sourcedFrom: SourceRef | null
 }
 
 interface CardRow {
@@ -182,9 +216,10 @@ interface Citation {
 }
 
 interface Section {
-  order:     number
-  html:      string
-  citations: Citation[]
+  order:       number
+  html:        string
+  citations:   Citation[]
+  sourcedFrom: SourceRef | null
 }
 
 interface Block {
@@ -204,10 +239,11 @@ const PAGE_QUERY = `
 MATCH (p:Page {slug: "home"})-[:HAS_CARD]->(c:Card)
 OPTIONAL MATCH (c)-[:HAS_HERO_IMAGE]->(hero:Source)
 OPTIONAL MATCH (c)-[:HAS_CONTENT]->(d:Description)
-WITH c, hero, d
+OPTIONAL MATCH (d)-[:SOURCED_FROM]->(from:Source)
+WITH c, hero, d, from
   ORDER BY coalesce(d.order, 1)
 OPTIONAL MATCH (d)-[cites:CITES]->(src:Source)
-WITH c, hero, d,
+WITH c, hero, d, from,
      collect(CASE WHEN src IS NULL THEN NULL ELSE {
        inline:       coalesce(cites.inline, false),
        sourceId:     src.id,
@@ -215,11 +251,19 @@ WITH c, hero, d,
        sourceUrl:    src.url,
        sourceAuthor: src.authorFreeText
      } END) AS rawCites
-WITH c, hero, d, [x IN rawCites WHERE x IS NOT NULL] AS citations
+WITH c, hero, d, from, [x IN rawCites WHERE x IS NOT NULL] AS citations
 WITH c, hero, collect(CASE WHEN d IS NULL THEN NULL ELSE {
-  order:     coalesce(d.order, 1),
-  content:   d.content,
-  citations: citations
+  order:       coalesce(d.order, 1),
+  content:     d.content,
+  citations:   citations,
+  sourcedFrom: CASE WHEN from IS NULL THEN NULL ELSE {
+    id:             from.id,
+    title:          from.title,
+    url:            from.url,
+    authorFreeText: from.authorFreeText,
+    license:        from.license,
+    attribution:    from.attribution
+  } END
 } END) AS rawSections
 WITH c, hero, [x IN rawSections WHERE x IS NOT NULL] AS sections
 RETURN c.id AS id, c.order AS order, c.kind AS kind, c.layout AS layout,
@@ -258,7 +302,12 @@ function rowToBlock(r: CardRow): Block {
             authorFreeText: c.sourceAuthor,
           },
         }))
-      return { order: s.order ?? 1, html, citations }
+      return {
+        order:       s.order ?? 1,
+        html,
+        citations,
+        sourcedFrom: s.sourcedFrom,
+      }
     })
     .sort((a, b) => a.order - b.order)
 
@@ -490,6 +539,38 @@ onMounted(async () => {
   margin: 12px 0 12px 2px;
   font-style: italic;
   color: var(--color-text);
+}
+
+.sourced-from {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 6px;
+  margin: -6px 0 12px 18px;
+  font-size: 11px;
+  color: var(--color-muted);
+}
+
+.sourced-label {
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  font-size: 10px;
+}
+
+.sourced-link {
+  color: var(--color-navy);
+  text-decoration: underline;
+}
+
+.sourced-license {
+  font-family: monospace;
+  font-size: 10px;
+  padding: 1px 6px;
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  color: var(--color-muted);
 }
 
 .inline-cites {

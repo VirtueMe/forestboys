@@ -148,7 +148,7 @@ function startCreate() {
     url:            '',
     authorFreeText: '',
     type:           'website',
-    license:        'unknown',
+    license:        NOASSERTION,
     attribution:    '',
   }
   creating.value = true
@@ -170,6 +170,7 @@ function cancelCreate() {
 }
 
 async function submitCreate() {
+  autoFill() // fires even if the URL input didn't blur before submit
   busy.value = true
   createError.value = null
   try {
