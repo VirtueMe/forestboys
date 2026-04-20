@@ -78,14 +78,50 @@
               />
               <div class="preview-body">
                 <h2 v-if="selected.title" class="preview-title">{{ selected.title }}</h2>
-                <!-- eslint-disable vue/no-v-html -->
-                <div
-                  v-if="selectedHtml"
-                  class="preview-content portable-text"
-                  v-html="selectedHtml"
-                ></div>
-                <!-- eslint-enable vue/no-v-html -->
-                <div v-else class="muted">tomt</div>
+                <template v-for="s in [...selected.sections].sort((a, b) => a.order - b.order)" :key="s.order">
+                  <div class="section-wrap">
+                    <!-- eslint-disable vue/no-v-html -->
+                    <div
+                      class="preview-content portable-text"
+                      :class="{ 'is-quote': s.citations.length > 0 }"
+                      v-html="sectionHtml(s)"
+                    ></div>
+                    <!-- eslint-enable vue/no-v-html -->
+                    <div v-if="inlineCites(s).length" class="inline-cites">
+                      <a
+                        v-for="c in inlineCites(s)"
+                        :key="c.source.id"
+                        :href="c.source.url ?? '#'"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        class="cite-chip"
+                      >
+                        {{ c.source.title || c.source.id }}
+                        <span v-if="c.source.authorFreeText" class="cite-chip-author">— {{ c.source.authorFreeText }}</span>
+                        <span class="cite-chip-arrow">↗</span>
+                      </a>
+                    </div>
+                    <div v-if="footnoteCites(s, selected).length" class="section-footnotes">
+                      <sup v-for="c in footnoteCites(s, selected)" :key="c.source.id">[{{ c.footnoteNumber }}]</sup>
+                    </div>
+                  </div>
+                </template>
+                <footer v-if="cardFootnotes(selected).length" class="card-kilder">
+                  <div class="kilder-label">Kilder</div>
+                  <ol class="kilder-list">
+                    <li v-for="c in cardFootnotes(selected)" :key="c.source.id" :value="c.footnoteNumber">
+                      <component
+                        :is="c.source.url ? 'a' : 'span'"
+                        v-bind="c.source.url ? { href: c.source.url, target: '_blank', rel: 'noopener noreferrer' } : {}"
+                        class="kilder-ref"
+                      >{{ c.source.title || c.source.id
+                        }}<span v-if="c.source.authorFreeText" class="kilder-author"> — {{ c.source.authorFreeText }}</span>
+                      </component>
+                      <span v-if="c.source.url" class="kilder-arrow"> ↗</span>
+                    </li>
+                  </ol>
+                </footer>
+                <div v-if="!selected.sections.length" class="muted">tomt</div>
               </div>
             </article>
 
@@ -264,6 +300,41 @@
                     :model-value="sectionBlocks(section)"
                     @update:model-value="blocks => onSectionChange(section, blocks)"
                   />
+
+                  <div class="section-cites">
+                    <div class="section-cites-header">
+                      <span class="section-cites-label">Kilder</span>
+                    </div>
+                    <ul v-if="section.citations.length" class="section-cites-list">
+                      <template v-for="(c, i) in section.citations" :key="c.source.id">
+                        <li class="section-cite-item">
+                          <label class="section-cite-inline">
+                            <input
+                              type="checkbox"
+                              :checked="c.inline"
+                              @change="toggleCiteInline(section, i)"
+                            />
+                            inline
+                          </label>
+                          <span class="section-cite-title">{{ c.source.title || c.source.id }}</span>
+                          <span v-if="c.source.authorFreeText" class="section-cite-author">— {{ c.source.authorFreeText }}</span>
+                          <button type="button" class="section-btn" title="Rediger" @click="startEditSource(c.source)">✎</button>
+                          <button type="button" class="section-btn section-btn-delete" title="Fjern" @click="removeCite(section, i)">✕</button>
+                        </li>
+                        <li v-if="editingSourceId === c.source.id" class="section-cite-edit">
+                          <SourceEditForm
+                            :source="c.source"
+                            @saved="onSourceSaved"
+                            @cancel="editingSourceId = null"
+                          />
+                        </li>
+                      </template>
+                    </ul>
+                    <SourcePicker
+                      placeholder="Legg til kilde…"
+                      @pick="s => addCite(section, s)"
+                    />
+                  </div>
                 </div>
               </div>
             </div>
@@ -299,6 +370,8 @@ import { neo4jQuery } from '@/composables/useNeo4j.ts'
 import { blocksToHtml } from '@/utils/portableText.ts'
 import { authFetch } from '@/composables/useAuth.ts'
 import PortableTextEditor from '@/components/PortableTextEditor.vue'
+import SourcePicker from '@/components/SourcePicker.vue'
+import SourceEditForm from '@/components/SourceEditForm.vue'
 import type { PortableTextBlock } from '@portabletext/editor'
 
 const TABS = [
@@ -306,12 +379,50 @@ const TABS = [
   { slug: 'about', label: 'Om oss' },
 ] as const
 
+interface SourceRef {
+  id:             string
+  title:          string | null
+  url:            string | null
+  authorFreeText: string | null
+}
+
+interface Citation {
+  inline: boolean
+  source: SourceRef
+}
+
 interface Section {
-  order:   number
-  content: string   // JSON-serialized Portable Text blocks
+  order:     number
+  content:   string   // JSON-serialized Portable Text blocks
+  citations: Citation[]
+}
+
+interface CitationRow {
+  inline:       boolean | null
+  sourceId:     string | null
+  sourceTitle:  string | null
+  sourceUrl:    string | null
+  sourceAuthor: string | null
+}
+
+interface SectionRow {
+  order:     number
+  content:   string
+  citations: CitationRow[]
 }
 
 interface CardRow {
+  id:           string
+  order:        number
+  kind:         string | null
+  layout:       string | null
+  title:        string | null
+  headingLevel: number | null
+  sections:     SectionRow[]
+  imageUrl:     string | null
+}
+
+interface Card {
   id:           string
   order:        number
   kind:         string | null
@@ -324,25 +435,41 @@ interface CardRow {
 
 const PAGE_QUERY = `
 MATCH (p:Page {slug: $slug})-[:HAS_CARD]->(c:Card)
-OPTIONAL MATCH (c)-[:HAS_HERO_IMAGE]->(s:Source)
+OPTIONAL MATCH (c)-[:HAS_HERO_IMAGE]->(hero:Source)
 OPTIONAL MATCH (c)-[:HAS_CONTENT]->(d:Description)
-WITH c, s, d ORDER BY coalesce(d.order, 1)
-WITH c, s, [x IN collect(d) WHERE x IS NOT NULL | {order: coalesce(x.order, 1), content: x.content}] AS sections
+WITH c, hero, d
+  ORDER BY coalesce(d.order, 1)
+OPTIONAL MATCH (d)-[cites:CITES]->(src:Source)
+WITH c, hero, d,
+     collect(CASE WHEN src IS NULL THEN NULL ELSE {
+       inline:       coalesce(cites.inline, false),
+       sourceId:     src.id,
+       sourceTitle:  src.title,
+       sourceUrl:    src.url,
+       sourceAuthor: src.authorFreeText
+     } END) AS rawCites
+WITH c, hero, d, [x IN rawCites WHERE x IS NOT NULL] AS citations
+WITH c, hero, collect(CASE WHEN d IS NULL THEN NULL ELSE {
+  order:     coalesce(d.order, 1),
+  content:   d.content,
+  citations: citations
+} END) AS rawSections
+WITH c, hero, [x IN rawSections WHERE x IS NOT NULL] AS sections
 RETURN c.id AS id, c.order AS order, c.kind AS kind, c.layout AS layout,
        c.title AS title, c.headingLevel AS headingLevel,
-       s.url AS imageUrl, sections
+       hero.url AS imageUrl, sections
 ORDER BY c.order
 `
 
 const route = useRoute()
 const activeSlug = computed(() => String(route.params.slug ?? 'home'))
 
-const cards = ref<CardRow[]>([])
+const cards = ref<Card[]>([])
 const loading = ref(true)
 const error = ref(false)
 const selectedId = ref<string | null>(null)
 const draggingId = ref<string | null>(null)
-const originalById = ref<Map<string, CardRow>>(new Map())
+const originalById = ref<Map<string, Card>>(new Map())
 const paneView = ref<'edit' | 'preview'>('preview')
 
 const SCALAR_FIELDS = ['order', 'title', 'layout', 'kind', 'headingLevel'] as const
@@ -350,7 +477,7 @@ type ScalarField = typeof SCALAR_FIELDS[number]
 
 const selected = computed(() => cards.value.find(c => c.id === selectedId.value) ?? null)
 
-function cardHtml(card: CardRow): string {
+function cardHtml(card: Card): string {
   return (card.sections ?? [])
     .map(s => {
       try { return blocksToHtml(JSON.parse(s.content) as unknown[]) }
@@ -359,17 +486,78 @@ function cardHtml(card: CardRow): string {
     .join('')
 }
 
+function rowToCard(r: CardRow): Card {
+  return {
+    ...r,
+    sections: (r.sections ?? []).map(s => ({
+      order:   s.order,
+      content: s.content,
+      citations: (s.citations ?? [])
+        .filter(c => c.sourceId)
+        .map(c => ({
+          inline: c.inline ?? false,
+          source: {
+            id:             c.sourceId!,
+            title:          c.sourceTitle,
+            url:            c.sourceUrl,
+            authorFreeText: c.sourceAuthor,
+          },
+        })),
+    })),
+  }
+}
+
+function cloneCard(c: Card): Card {
+  return {
+    ...c,
+    sections: c.sections.map(s => ({
+      ...s,
+      citations: s.citations.map(x => ({ ...x, source: { ...x.source } })),
+    })),
+  }
+}
+
 function sectionsSignature(sections: Section[]): string {
   return JSON.stringify(
-    [...sections].sort((a, b) => a.order - b.order).map(s => [s.order, s.content]),
+    [...sections]
+      .sort((a, b) => a.order - b.order)
+      .map(s => [
+        s.order,
+        s.content,
+        s.citations.map(c => [c.inline, c.source.id]),
+      ]),
   )
 }
 
-function cardImage(card: CardRow): string | null {
+function cardImage(card: Card): string | null {
   return card.imageUrl ?? null
 }
 
-const selectedHtml = computed(() => selected.value ? cardHtml(selected.value) : '')
+function sectionHtml(s: Section): string {
+  try { return blocksToHtml(JSON.parse(s.content) as unknown[]) }
+  catch { return '' }
+}
+
+function inlineCites(s: Section): Citation[] {
+  return s.citations.filter(c => c.inline)
+}
+
+/** Numbered footnotes for this card, in render order; footnoteNumber set. */
+function cardFootnotes(card: Card): (Citation & { footnoteNumber: number })[] {
+  const out: (Citation & { footnoteNumber: number })[] = []
+  for (const sec of [...card.sections].sort((a, b) => a.order - b.order)) {
+    for (const c of sec.citations) {
+      if (!c.inline) out.push({ ...c, footnoteNumber: out.length + 1 })
+    }
+  }
+  return out
+}
+
+/** The footnote entries belonging to the given section within this card. */
+function footnoteCites(s: Section, card: Card): (Citation & { footnoteNumber: number })[] {
+  const all = cardFootnotes(card)
+  return all.filter(fn => s.citations.some(c => !c.inline && c.source.id === fn.source.id))
+}
 
 function sectionBlocks(section: Section): PortableTextBlock[] {
   try { return JSON.parse(section.content) as PortableTextBlock[] }
@@ -383,7 +571,43 @@ function onSectionChange(section: Section, blocks: PortableTextBlock[]) {
 function addSection() {
   if (!selected.value) return
   const maxOrder = selected.value.sections.reduce((m, s) => Math.max(m, s.order), 0)
-  selected.value.sections.push({ order: maxOrder + 1, content: '[]' })
+  selected.value.sections.push({ order: maxOrder + 1, content: '[]', citations: [] })
+}
+
+function addCite(section: Section, source: SourceRef) {
+  if (section.citations.some(c => c.source.id === source.id)) return
+  section.citations.push({ inline: false, source: { ...source } })
+}
+
+function removeCite(section: Section, index: number) {
+  section.citations.splice(index, 1)
+}
+
+function toggleCiteInline(section: Section, index: number) {
+  const c = section.citations[index]
+  if (c) c.inline = !c.inline
+}
+
+const editingSourceId = ref<string | null>(null)
+
+function startEditSource(source: SourceRef) {
+  editingSourceId.value = editingSourceId.value === source.id ? null : source.id
+}
+
+function onSourceSaved(updated: SourceRef) {
+  // Source changes persist immediately, independent of the card's dirty flow.
+  // Propagate the new fields to every local citation referencing this source
+  // (including originalById so the dirty check doesn't flag a spurious change).
+  const apply = (card: Card) => {
+    for (const s of card.sections) {
+      for (const c of s.citations) {
+        if (c.source.id === updated.id) c.source = { ...updated }
+      }
+    }
+  }
+  for (const card of cards.value)            apply(card)
+  for (const card of originalById.value.values()) apply(card)
+  editingSourceId.value = null
 }
 
 function removeSection(section: Section) {
@@ -415,7 +639,7 @@ interface CardDiff {
   sections?:     Section[]
 }
 
-function changedFields(card: CardRow): CardDiff | null {
+function changedFields(card: Card): CardDiff | null {
   const orig = originalById.value.get(card.id)
   if (!orig) return null
   const diff: CardDiff = {}
@@ -505,11 +729,8 @@ async function load(slug: string) {
   selectedId.value = null
   try {
     const rows = await neo4jQuery<CardRow>(PAGE_QUERY, { slug })
-    cards.value = rows.map(r => ({ ...r, sections: (r.sections ?? []).map(s => ({ ...s })) }))
-    originalById.value = new Map(cards.value.map(c => [c.id, {
-      ...c,
-      sections: c.sections.map(s => ({ ...s })),
-    }]))
+    cards.value = rows.map(rowToCard)
+    originalById.value = new Map(cards.value.map(c => [c.id, cloneCard(c)]))
   } catch {
     error.value = true
   } finally {
@@ -568,9 +789,18 @@ async function save() {
     const items = cards.value
       .map(c => {
         const diff = changedFields(c)
-        return diff ? { id: c.id, ...diff } : null
+        if (!diff) return null
+        const payload: Record<string, unknown> = { id: c.id, ...diff }
+        if (diff.sections) {
+          payload.sections = diff.sections.map(s => ({
+            order:     s.order,
+            content:   s.content,
+            citations: s.citations.map(x => ({ inline: x.inline, sourceId: x.source.id })),
+          }))
+        }
+        return payload
       })
-      .filter((x): x is { id: string } & Partial<CardRow> => x !== null)
+      .filter((x): x is Record<string, unknown> & { id: string } => x !== null)
 
     if (!items.length) { saving.value = false; return }
 
@@ -925,6 +1155,78 @@ select.field-input {
 .section-btn-delete { color: #b91c1c; }
 .section-btn-delete:hover { background: #fef2f2; border-color: #fecaca; }
 
+.section-cites {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px dashed var(--color-border);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.section-cites-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.section-cites-label {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--color-muted);
+}
+
+.section-cites-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.section-cite-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: 4px;
+  font-size: 12px;
+}
+
+.section-cite-inline {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  color: var(--color-muted);
+  cursor: pointer;
+  user-select: none;
+  flex-shrink: 0;
+}
+
+.section-cite-title {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.section-cite-author {
+  font-size: 11px;
+  color: var(--color-muted);
+  flex-shrink: 0;
+}
+
+.section-cite-edit {
+  list-style: none;
+  padding: 0;
+}
+
 .section-author {
   display: flex;
   align-items: center;
@@ -1051,6 +1353,81 @@ select.field-input {
 .preview-content :deep(strong) { font-weight: 500; color: var(--color-text); }
 .preview-content :deep(em) { font-style: italic; }
 .preview-content :deep(a) { color: var(--color-navy); text-decoration: underline; }
+
+.card-preview .section-wrap { position: relative; }
+
+.card-preview .is-quote {
+  border-left: 3px solid var(--color-border-mid, var(--color-border));
+  padding: 2px 14px;
+  margin: 12px 0 12px 2px;
+  font-style: italic;
+  color: var(--color-text);
+}
+
+.card-preview .inline-cites {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 6px 0 10px;
+}
+
+.card-preview .cite-chip {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 4px;
+  padding: 3px 8px;
+  font-size: 11px;
+  color: var(--color-navy);
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  text-decoration: none;
+}
+.card-preview .cite-chip:hover { border-color: var(--color-navy); }
+.card-preview .cite-chip-author { color: var(--color-muted); }
+.card-preview .cite-chip-arrow  { font-size: 10px; opacity: 0.6; }
+
+.card-preview .section-footnotes {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  gap: 2px;
+  font-size: 11px;
+  color: var(--color-muted);
+}
+
+.card-preview .card-kilder {
+  border-top: 1px solid var(--color-border);
+  margin-top: 12px;
+  padding-top: 10px;
+}
+.card-preview .kilder-label {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-muted);
+  margin-bottom: 6px;
+}
+.card-preview .kilder-list {
+  margin: 0;
+  padding-left: 22px;
+  font-size: 11px;
+  color: var(--color-muted);
+  line-height: 1.5;
+}
+.card-preview .kilder-list li { margin-bottom: 3px; }
+.card-preview .kilder-ref {
+  color: inherit;
+  text-decoration: none;
+}
+.card-preview .kilder-list a.kilder-ref {
+  color: var(--color-navy);
+  text-decoration: underline;
+}
+.card-preview .kilder-list a.kilder-ref .kilder-author { color: var(--color-muted); }
+.card-preview .kilder-arrow { font-size: 10px; opacity: 0.6; color: var(--color-navy); }
 
 .muted { color: var(--color-muted); font-style: italic; font-size: 13px; }
 

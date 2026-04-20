@@ -15,6 +15,20 @@ interface Env extends Neo4jEnv {
   IMAGES:         R2Bucket
 }
 
+interface UrlRow {
+  url: string
+}
+
+/**
+ * Minimal File-ish shape — @cloudflare/workers-types doesn't include the DOM
+ * File globally, so we type-narrow against the properties we actually use.
+ */
+interface UploadedFile {
+  size:   number
+  type:   string
+  stream: () => ReadableStream
+}
+
 const MAX_BYTES = 10 * 1024 * 1024 // 10 MB
 const EXT_BY_MIME: Record<string, string> = {
   'image/png':  'png',
@@ -38,10 +52,11 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env, params }
   let form: FormData
   try { form = await request.formData() } catch { return json({ error: 'Invalid multipart body' }, 400) }
 
-  const file = form.get('file') as unknown as { size: number; type: string; stream: () => ReadableStream } | null
-  if (!file || typeof file === 'string' || typeof file.size !== 'number') {
+  const entry = form.get('file') as unknown
+  if (!entry || typeof entry === 'string' || typeof (entry as UploadedFile).size !== 'number') {
     return json({ error: 'Missing "file" field' }, 400)
   }
+  const file = entry as UploadedFile
   if (file.size > MAX_BYTES) return json({ error: `File too large (${file.size} > ${MAX_BYTES})` }, 413)
   const ext = EXT_BY_MIME[file.type]
   if (!ext) return json({ error: `Unsupported type: ${file.type}` }, 415)
@@ -53,7 +68,7 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env, params }
   const url = `/images/${key}`
 
   try {
-    const rows = await runCypher<{ url: string }>(env, `
+    const rows = await runCypher<UrlRow>(env, `
       MATCH (p:Page {slug: $slug})-[:HAS_CARD]->(c:Card {id: $cardId})
       OPTIONAL MATCH (c)-[:HAS_HERO_IMAGE]->(existing:Source)
       WITH c, existing
