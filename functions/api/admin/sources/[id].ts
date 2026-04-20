@@ -18,6 +18,8 @@ interface UpdateSourceBody {
   url?:            unknown
   authorFreeText?: unknown
   type?:           unknown
+  license?:        unknown
+  attribution?:    unknown
 }
 
 interface SourceRow {
@@ -26,9 +28,12 @@ interface SourceRow {
   url:            string | null
   authorFreeText: string | null
   type:           string | null
+  license:        string | null
+  attribution:    string | null
 }
 
 const TYPES = new Set(['website', 'book', 'article', 'archive'])
+const LICENSE_RE = /^[A-Za-z0-9 .+\-()]{1,120}$/
 
 export const onRequestPatch: PagesFunction<Env> = async ({ request, env, params }) => {
   const guard = await requireAdmin(request, env)
@@ -57,6 +62,14 @@ export const onRequestPatch: PagesFunction<Env> = async ({ request, env, params 
     if (typeof body.type !== 'string' || !TYPES.has(body.type)) return json({ error: `Bad type: ${String(body.type)}` }, 400)
     props.type = body.type
   }
+  if ('license' in body) {
+    if      (body.license === null)                                              props.license = null
+    else if (typeof body.license === 'string' && LICENSE_RE.test(body.license))  props.license = body.license
+    else                                                                         return json({ error: 'Bad license' }, 400)
+  }
+  if ('attribution' in body) {
+    props.attribution = typeof body.attribution === 'string' && body.attribution.trim() ? body.attribution.trim() : null
+  }
 
   if (!Object.keys(props).length) return json({ error: 'No fields to update' }, 400)
 
@@ -64,7 +77,9 @@ export const onRequestPatch: PagesFunction<Env> = async ({ request, env, params 
     const rows = await runCypher<SourceRow>(env, `
       MATCH (s:Source {id: $id})
       SET s += $props
-      RETURN s.id AS id, s.title AS title, s.url AS url, s.authorFreeText AS authorFreeText, s.type AS type
+      RETURN s.id AS id, s.title AS title, s.url AS url,
+             s.authorFreeText AS authorFreeText, s.type AS type,
+             s.license AS license, s.attribution AS attribution
     `, { id, props })
 
     if (!rows.length) return json({ error: 'Source not found' }, 404)

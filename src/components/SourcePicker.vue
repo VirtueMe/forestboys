@@ -46,6 +46,7 @@
         class="picker-input"
         type="url"
         placeholder="URL"
+        @blur="autoFill"
       />
       <input
         v-model="form.authorFreeText"
@@ -53,12 +54,16 @@
         type="text"
         placeholder="Forfatter"
       />
-      <select v-model="form.type" class="picker-input">
-        <option value="website">Nettside</option>
-        <option value="book">Bok</option>
-        <option value="article">Artikkel</option>
-        <option value="archive">Arkiv</option>
-      </select>
+      <div class="form-row">
+        <select v-model="form.type" class="picker-input">
+          <option value="website">Nettside</option>
+          <option value="book">Bok</option>
+          <option value="article">Artikkel</option>
+          <option value="archive">Arkiv</option>
+        </select>
+        <LicensePicker v-model="form.license" />
+      </div>
+      <input v-model="form.attribution" class="picker-input" type="text" placeholder="Attribusjon (for gjenbruk)" />
       <div v-if="createError" class="create-error">{{ createError }}</div>
       <div class="create-actions">
         <button type="button" class="create-btn-cancel" @click="cancelCreate">Avbryt</button>
@@ -74,6 +79,8 @@
 import { ref, watch } from 'vue'
 import { neo4jQuery } from '@/composables/useNeo4j.ts'
 import { authFetch } from '@/composables/useAuth.ts'
+import { licenseForUrl, attributionForUrl, NOASSERTION, type License } from '@/utils/licenseForDomain.ts'
+import LicensePicker from '@/components/LicensePicker.vue'
 
 interface SourceHit {
   id:             string
@@ -92,8 +99,16 @@ const open    = ref(false)
 const creating    = ref(false)
 const busy        = ref(false)
 const createError = ref<string | null>(null)
-const form = ref<{ title: string; url: string; authorFreeText: string; type: string }>({
+const form = ref<{
+  title:          string
+  url:            string
+  authorFreeText: string
+  type:           string
+  license:        License
+  attribution:    string
+}>({
   title: '', url: '', authorFreeText: '', type: 'website',
+  license: NOASSERTION, attribution: '',
 })
 
 let timer: number | undefined
@@ -128,9 +143,25 @@ function onBlur() {
 }
 
 function startCreate() {
-  form.value = { title: query.value.trim(), url: '', authorFreeText: '', type: 'website' }
+  form.value = {
+    title:          query.value.trim(),
+    url:            '',
+    authorFreeText: '',
+    type:           'website',
+    license:        'unknown',
+    attribution:    '',
+  }
   creating.value = true
   open.value = false
+}
+
+function autoFill() {
+  if (!form.value.url) return
+  if (form.value.license === NOASSERTION) form.value.license = licenseForUrl(form.value.url)
+  if (!form.value.attribution) {
+    const attr = attributionForUrl(form.value.url)
+    if (attr) form.value.attribution = attr
+  }
 }
 
 function cancelCreate() {
@@ -150,6 +181,8 @@ async function submitCreate() {
         url:            form.value.url.trim() || undefined,
         authorFreeText: form.value.authorFreeText.trim() || undefined,
         type:           form.value.type,
+        license:        form.value.license,
+        attribution:    form.value.attribution.trim() || undefined,
       }),
     })
     const body = await res.json().catch(() => ({})) as Partial<SourceHit> & { error?: string }
@@ -267,6 +300,12 @@ function shortUrl(url: string): string {
   text-transform: uppercase;
   color: var(--color-navy);
   margin-bottom: 2px;
+}
+
+.form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
 }
 
 .create-error {

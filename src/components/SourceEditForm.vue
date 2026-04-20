@@ -2,14 +2,19 @@
   <form class="edit-form" @submit.prevent="submit">
     <div class="edit-title">Rediger kilde</div>
     <input v-model="form.title"          class="picker-input" type="text" placeholder="Tittel *" required />
-    <input v-model="form.url"            class="picker-input" type="url"  placeholder="URL" />
+    <input v-model="form.url"            class="picker-input" type="url"  placeholder="URL" @blur="autoFill" />
     <input v-model="form.authorFreeText" class="picker-input" type="text" placeholder="Forfatter" />
-    <select v-model="form.type" class="picker-input">
-      <option value="website">Nettside</option>
-      <option value="book">Bok</option>
-      <option value="article">Artikkel</option>
-      <option value="archive">Arkiv</option>
-    </select>
+    <div class="form-row">
+      <select v-model="form.type" class="picker-input">
+        <option value="website">Nettside</option>
+        <option value="book">Bok</option>
+        <option value="article">Artikkel</option>
+        <option value="archive">Arkiv</option>
+      </select>
+      <LicensePicker v-model="form.license" />
+    </div>
+    <input v-model="form.attribution" class="picker-input" type="text" placeholder="Attribusjon (for gjenbruk)" />
+
     <div v-if="error" class="edit-error">{{ error }}</div>
     <div class="edit-actions">
       <button type="button" class="edit-btn-cancel" @click="emit('cancel')">Avbryt</button>
@@ -23,12 +28,16 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { authFetch } from '@/composables/useAuth.ts'
+import { licenseForUrl, attributionForUrl, normalizeLicense, NOASSERTION } from '@/utils/licenseForDomain.ts'
+import LicensePicker from '@/components/LicensePicker.vue'
 
 interface SourceRef {
   id:             string
   title:          string | null
   url:            string | null
   authorFreeText: string | null
+  license?:       string | null
+  attribution?:   string | null
 }
 
 const props = defineProps<{ source: SourceRef }>()
@@ -38,13 +47,24 @@ const emit  = defineEmits<{
 }>()
 
 const form = ref({
-  title:          props.source.title ?? '',
-  url:            props.source.url ?? '',
+  title:          props.source.title          ?? '',
+  url:            props.source.url            ?? '',
   authorFreeText: props.source.authorFreeText ?? '',
   type:           'website',
+  license:        normalizeLicense(props.source.license),
+  attribution:    props.source.attribution ?? '',
 })
 const busy  = ref(false)
 const error = ref<string | null>(null)
+
+function autoFill() {
+  if (!form.value.url) return
+  if (form.value.license === NOASSERTION) form.value.license = licenseForUrl(form.value.url)
+  if (!form.value.attribution) {
+    const attr = attributionForUrl(form.value.url)
+    if (attr) form.value.attribution = attr
+  }
+}
 
 async function submit() {
   busy.value = true
@@ -58,6 +78,8 @@ async function submit() {
         url:            form.value.url.trim() || null,
         authorFreeText: form.value.authorFreeText.trim() || null,
         type:           form.value.type,
+        license:        form.value.license,
+        attribution:    form.value.attribution.trim() || null,
       }),
     })
     const body = await res.json().catch(() => ({})) as Partial<SourceRef> & { error?: string }
@@ -70,6 +92,8 @@ async function submit() {
       title:          body.title          ?? null,
       url:            body.url            ?? null,
       authorFreeText: body.authorFreeText ?? null,
+      license:        body.license        ?? null,
+      attribution:    body.attribution    ?? null,
     })
   } catch (e) {
     error.value = (e as Error).message
@@ -98,6 +122,12 @@ async function submit() {
   text-transform: uppercase;
   color: var(--color-navy);
   margin-bottom: 2px;
+}
+
+.form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
 }
 
 .picker-input {

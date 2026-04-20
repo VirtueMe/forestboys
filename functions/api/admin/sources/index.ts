@@ -20,12 +20,17 @@ interface Env extends Neo4jEnv {
 }
 
 const TYPES = new Set(['website', 'book', 'article', 'archive'])
+// SPDX IDs are open-ended (plus LicenseRef-*, NOASSERTION, expressions) —
+// validate shape not membership. Length cap guards against abuse.
+const LICENSE_RE = /^[A-Za-z0-9 .+\-()]{1,120}$/
 
 interface CreateSourceBody {
   title?:          unknown
   url?:            unknown
   authorFreeText?: unknown
   type?:           unknown
+  license?:        unknown
+  attribution?:    unknown
 }
 
 interface SourceRow {
@@ -33,6 +38,8 @@ interface SourceRow {
   title:          string | null
   url:            string | null
   authorFreeText: string | null
+  license:        string | null
+  attribution:    string | null
 }
 
 interface ListRow extends SourceRow {
@@ -74,6 +81,7 @@ export const onRequestGet: PagesFunction<Env> = async ({ request, env }) => {
       WITH s, count(r) AS usage
       RETURN s.id AS id, s.title AS title, s.url AS url,
              s.authorFreeText AS authorFreeText, s.type AS type,
+             s.license AS license, s.attribution AS attribution,
              usage
       ORDER BY coalesce(s.title, s.id)
       SKIP $offset LIMIT $limit
@@ -104,6 +112,8 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
   const url            = typeof body.url            === 'string' && body.url.trim()            ? body.url.trim()            : null
   const authorFreeText = typeof body.authorFreeText === 'string' && body.authorFreeText.trim() ? body.authorFreeText.trim() : null
   const type           = typeof body.type           === 'string' && TYPES.has(body.type)       ? body.type                  : 'website'
+  const license        = typeof body.license        === 'string' && LICENSE_RE.test(body.license) ? body.license             : null
+  const attribution    = typeof body.attribution    === 'string' && body.attribution.trim()    ? body.attribution.trim()    : null
 
   const slug = slugify(title) || 'source'
   const id   = `src-${slug}-${Date.now().toString(36)}`
@@ -115,10 +125,14 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
         title:          $title,
         type:           $type,
         url:            $url,
-        authorFreeText: $author
+        authorFreeText: $author,
+        license:        $license,
+        attribution:    $attribution
       })
-      RETURN s.id AS id, s.title AS title, s.url AS url, s.authorFreeText AS authorFreeText
-    `, { id, title, type, url, author: authorFreeText })
+      RETURN s.id AS id, s.title AS title, s.url AS url,
+             s.authorFreeText AS authorFreeText,
+             s.license AS license, s.attribution AS attribution
+    `, { id, title, type, url, author: authorFreeText, license, attribution })
 
     if (!rows.length) return json({ error: 'Failed to create Source' }, 502)
     return json({ ok: true, ...rows[0] })

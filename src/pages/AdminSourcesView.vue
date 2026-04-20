@@ -21,6 +21,11 @@
               <span class="row-title">{{ row.title || row.id }}</span>
               <span class="row-type">{{ row.type || '—' }}</span>
               <span
+                class="row-license"
+                :class="`license-${licenseClass(row.license)}`"
+                :title="row.attribution ? `Attribusjon: ${row.attribution}` : 'Lisens'"
+              >{{ normalizeLicense(row.license) }}</span>
+              <span
                 class="row-usage"
                 :class="{ 'usage-zero': row.usage === 0 }"
                 :title="`Referert fra ${row.usage} sted(er)`"
@@ -28,6 +33,7 @@
             </div>
             <div class="row-meta">
               <span v-if="row.authorFreeText" class="row-author">{{ row.authorFreeText }}</span>
+              <span v-if="row.attribution" class="row-attr">{{ row.attribution }}</span>
               <a
                 v-if="row.url"
                 :href="row.url"
@@ -72,6 +78,7 @@
 import { ref, watch } from 'vue'
 import { authFetch } from '@/composables/useAuth.ts'
 import SourceEditForm from '@/components/SourceEditForm.vue'
+import { normalizeLicense, LICENSE_REF_COPYRIGHT, NOASSERTION } from '@/utils/licenseForDomain.ts'
 
 interface Row {
   id:             string
@@ -79,6 +86,8 @@ interface Row {
   url:            string | null
   authorFreeText: string | null
   type:           string | null
+  license:        string | null
+  attribution:    string | null
   usage:          number
 }
 
@@ -132,14 +141,28 @@ function startEdit(row: Row) {
   editingId.value = editingId.value === row.id ? null : row.id
 }
 
-function onSaved(updated: { id: string; title: string | null; url: string | null; authorFreeText: string | null }) {
+function onSaved(updated: {
+  id: string; title: string | null; url: string | null;
+  authorFreeText: string | null;
+  license?: string | null; attribution?: string | null;
+}) {
   const r = rows.value.find(x => x.id === updated.id)
   if (r) {
     r.title          = updated.title
     r.url            = updated.url
     r.authorFreeText = updated.authorFreeText
+    if (updated.license    !== undefined) r.license     = updated.license
+    if (updated.attribution !== undefined) r.attribution = updated.attribution
   }
   editingId.value = null
+}
+
+function licenseClass(lic: string | null): string {
+  const n = normalizeLicense(lic)
+  if (n === NOASSERTION)           return 'unknown'
+  if (n === LICENSE_REF_COPYRIGHT) return 'copyright'
+  if (n.startsWith('CC-') || n.startsWith('CC0'))  return 'cc'
+  return 'other'
 }
 
 async function confirmDelete(row: Row) {
@@ -266,6 +289,20 @@ async function confirmDelete(row: Row) {
   border-radius: 8px;
 }
 .row-usage.usage-zero { color: #b45309; background: #fef3c7; }
+
+.row-license {
+  font-size: 10px;
+  font-family: monospace;
+  padding: 1px 6px;
+  border-radius: 8px;
+  border: 1px solid transparent;
+}
+.row-license.license-cc        { color: #065f46; background: #d1fae5; border-color: #a7f3d0; }
+.row-license.license-copyright { color: #9a3412; background: #ffedd5; border-color: #fed7aa; }
+.row-license.license-unknown   { color: var(--color-muted); background: var(--color-bg); border-color: var(--color-border); }
+.row-license.license-other     { color: #92400e; background: #fef3c7; border-color: #fcd34d; }
+
+.row-attr { font-size: 11px; color: var(--color-muted); font-style: italic; }
 
 .row-meta {
   display: flex;
