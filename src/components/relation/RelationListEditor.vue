@@ -50,7 +50,7 @@
                   @focus="pickerOpen = true"
                   @blur="onPickerBlur"
                 />
-                <div v-if="pickerOpen && filteredTargets.length" class="unit-results">
+                <div v-if="pickerOpen && (filteredTargets.length || createHref)" class="unit-results">
                   <button
                     v-for="opt in filteredTargets"
                     :key="opt.slug"
@@ -58,6 +58,11 @@
                     class="unit-result"
                     @mousedown.prevent="pickTarget(e, opt)"
                   >{{ opt.name }}</button>
+                  <a
+                    v-if="createHref"
+                    :href="createHref"
+                    class="unit-result unit-result--create"
+                  >{{ createLabel || '+ Opprett ny' }}</a>
                 </div>
               </template>
             </div>
@@ -154,6 +159,11 @@ const props = withDefaults(defineProps<{
   showDescription?: boolean
   roleOptions?:     Record<string, string>
   defaultRole?:     string | null
+  /** Optional "create new" button at the bottom of the typeahead dropdown. */
+  createLabel?:     string
+  createHref?:      string
+  /** Auto-expand the row whose targetSlug matches this on mount / prop change. */
+  expandSlug?:      string | null
 }>(), {
   showRole:        false,
   showDates:       true,
@@ -161,6 +171,9 @@ const props = withDefaults(defineProps<{
   showDescription: true,
   roleOptions:     undefined,
   defaultRole:     null,
+  createLabel:     undefined,
+  createHref:      undefined,
+  expandSlug:      null,
 })
 
 const emit = defineEmits<{ saved: [] }>()
@@ -209,6 +222,13 @@ function snapshot() {
 }
 
 watch(() => props.entries, snapshot, { immediate: true })
+
+// Auto-expand a specific row when the parent passes expandSlug.
+watch([() => props.expandSlug, () => props.entries], ([slug]) => {
+  if (!slug) return
+  const idx = props.entries.findIndex(e => e.targetSlug === slug)
+  if (idx >= 0) expandedIndex.value = idx
+}, { immediate: true })
 
 const dirty = computed(() => entrySignature(props.entries) !== entrySignature(originalEntries.value))
 const valid = computed(() => props.entries.every(e => e.targetSlug.trim().length > 0))
@@ -587,6 +607,14 @@ function revert() {
 }
 .unit-result:last-child { border-bottom: none; }
 .unit-result:hover      { background: var(--color-bg); }
+
+.unit-result--create {
+  color: var(--color-navy);
+  font-weight: 600;
+  text-decoration: none;
+  border-top: 1px solid var(--color-border);
+}
+.unit-result--create:hover { background: var(--color-surface); }
 
 /* ── Save bar ───────────────────────────────────────────────── */
 .edit-save-bar {

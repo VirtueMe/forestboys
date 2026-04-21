@@ -184,6 +184,9 @@
           picker-chip-aria="Bytt operasjon"
           validation-empty="Velg operasjon for alle oppføringer før du lagrer."
           :show-dates="false"
+          create-label="+ Opprett ny operasjon"
+          :create-href="createEventHref('operation')"
+          :expand-slug="pendingExpandEvent"
         />
 
         <RelationListEditor
@@ -199,6 +202,9 @@
           picker-chip-aria="Bytt hendelse"
           validation-empty="Velg hendelse for alle oppføringer før du lagrer."
           :show-dates="false"
+          create-label="+ Opprett ny hendelse"
+          :create-href="createEventHref('incident')"
+          :expand-slug="pendingExpandEvent"
         />
       </div>
 
@@ -447,7 +453,7 @@
 
 <script setup lang="ts">
 import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue'
-import { RouterLink } from 'vue-router'
+import { RouterLink, useRoute, useRouter } from 'vue-router'
 import { useLocationCache } from '../composables/useLocationCache.ts'
 import { neo4jQuery } from '../composables/useNeo4j.ts'
 import type { IdbEvent } from '../types/idb.ts'
@@ -465,7 +471,31 @@ import { blocksToHtml } from '../utils/portableText.ts'
 
 const { people, init } = useLocationCache()
 
+const route  = useRoute()
+const router = useRouter()
+
 const mode = ref<AdminViewMode>('preview')
+/** Captures ?expandEvent=... from the router once so the editor can latch
+ *  onto it even after we strip the query param. */
+const pendingExpandEvent = ref<string | null>(null)
+
+function createEventHref(kind: 'incident' | 'operation'): string {
+  const slug = neo4jPerson.value?.slug ?? ''
+  const q = new URLSearchParams({ kind, forPerson: slug, returnTo: `/person/${slug}` })
+  return `/admin/event/new?${q.toString()}`
+}
+
+watch(
+  () => route.query.expandEvent,
+  (q) => {
+    if (typeof q !== 'string' || !q) return
+    pendingExpandEvent.value = q
+    mode.value = 'edit'
+    const { expandEvent: _drop, ...rest } = route.query
+    void router.replace({ path: route.path, query: rest })
+  },
+  { immediate: true },
+)
 
 type PersonType = 'civilian' | 'soldier'
 
