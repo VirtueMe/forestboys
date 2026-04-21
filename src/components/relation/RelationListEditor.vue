@@ -102,7 +102,7 @@
               Ikke bestått
             </label>
           </div>
-          <div class="membership-desc-wrap">
+          <div v-if="showDescription" class="membership-desc-wrap">
             <label class="membership-desc-label">Beskrivelse</label>
             <SectionsEditor :sections="e.sections" />
           </div>
@@ -148,17 +148,19 @@ const props = withDefaults(defineProps<{
   pickerChipAria:    string
   validationEmpty:   string
 
-  showRole?:     boolean
-  showDates?:    boolean
-  showPassed?:   boolean
-  roleOptions?:  Record<string, string>
-  defaultRole?:  string | null
+  showRole?:        boolean
+  showDates?:       boolean
+  showPassed?:      boolean
+  showDescription?: boolean
+  roleOptions?:     Record<string, string>
+  defaultRole?:     string | null
 }>(), {
-  showRole:    false,
-  showDates:   true,
-  showPassed:  false,
-  roleOptions: undefined,
-  defaultRole: null,
+  showRole:        false,
+  showDates:       true,
+  showPassed:      false,
+  showDescription: true,
+  roleOptions:     undefined,
+  defaultRole:     null,
 })
 
 const emit = defineEmits<{ saved: [] }>()

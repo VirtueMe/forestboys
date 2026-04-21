@@ -177,6 +177,55 @@
         />
 
         <RelationInfoPopup :entry="activePerson" @close="activePerson = null" />
+
+        <!-- Hierarchy editors — admin only -->
+        <RelationListEditor
+          v-if="isAdmin && nodeKind === 'incident'"
+          :parent-slug="(route.params.slug as string)"
+          :entries="subIncidentEntries"
+          :targets="subIncidentTargets"
+          :strategy="SubIncidentsStrategy"
+          label="Underhendelser"
+          add-label="+ Legg til underhendelse"
+          empty-label="Ingen underhendelser"
+          search-placeholder="Søk hendelse…"
+          picker-chip-aria="Bytt hendelse"
+          validation-empty="Velg hendelse for alle oppføringer før du lagrer."
+          :show-dates="false"
+          :show-description="false"
+        />
+
+        <RelationListEditor
+          v-if="isAdmin && nodeKind === 'operation'"
+          :parent-slug="(route.params.slug as string)"
+          :entries="opIncidentEntries"
+          :targets="opIncidentTargets"
+          :strategy="OperationIncidentsStrategy"
+          label="Hendelser i operasjonen"
+          add-label="+ Legg til hendelse"
+          empty-label="Ingen hendelser knyttet"
+          search-placeholder="Søk hendelse…"
+          picker-chip-aria="Bytt hendelse"
+          validation-empty="Velg hendelse for alle oppføringer før du lagrer."
+          :show-dates="false"
+          :show-description="false"
+        />
+
+        <RelationListEditor
+          v-if="isAdmin && nodeKind === 'operation'"
+          :parent-slug="(route.params.slug as string)"
+          :entries="subOperationEntries"
+          :targets="subOperationTargets"
+          :strategy="SubOperationsStrategy"
+          label="Deloperasjoner"
+          add-label="+ Legg til deloperasjon"
+          empty-label="Ingen deloperasjoner"
+          search-placeholder="Søk operasjon…"
+          picker-chip-aria="Bytt operasjon"
+          validation-empty="Velg operasjon for alle oppføringer før du lagrer."
+          :show-dates="false"
+          :show-description="false"
+        />
       </article>
     </template>
   </div>
@@ -194,7 +243,10 @@ import type { IdbEventDetail } from '../types/idb.ts'
 import RelationListEditor from '../components/relation/RelationListEditor.vue'
 import RelationListView   from '../components/relation/RelationListView.vue'
 import RelationInfoPopup  from '../components/relation/RelationInfoPopup.vue'
-import { PersonInvolvementStrategy, PersonParticipationStrategy } from '../components/relation/strategies.ts'
+import {
+  PersonInvolvementStrategy, PersonParticipationStrategy,
+  SubIncidentsStrategy, SubOperationsStrategy, OperationIncidentsStrategy,
+} from '../components/relation/strategies.ts'
 import type { RelationEntry, RelationTarget } from '../components/relation/RelationStrategy.ts'
 
 const route = useRoute()
@@ -214,6 +266,43 @@ const kindError = ref<string | null>(null)
 const personEntries = ref<RelationEntry[]>([])
 const personTargets = ref<RelationTarget[]>([])
 const activePerson  = ref<RelationEntry | null>(null)
+
+const subIncidentEntries = ref<RelationEntry[]>([])
+const subIncidentTargets = ref<RelationTarget[]>([])
+const subOperationEntries = ref<RelationEntry[]>([])
+const subOperationTargets = ref<RelationTarget[]>([])
+const opIncidentEntries = ref<RelationEntry[]>([])
+const opIncidentTargets = ref<RelationTarget[]>([])
+
+async function loadHierarchy(slug: string) {
+  try {
+    if (nodeKind.value === 'incident') {
+      const [entries, targets] = await Promise.all([
+        SubIncidentsStrategy.fetchEntries(slug),
+        SubIncidentsStrategy.fetchTargets(),
+      ])
+      subIncidentEntries.value = entries
+      subIncidentTargets.value = targets
+      subOperationEntries.value = []
+      subOperationTargets.value = []
+      opIncidentEntries.value = []
+      opIncidentTargets.value = []
+    } else if (nodeKind.value === 'operation') {
+      const [subOps, subOpsTargets, incInOp, incInOpTargets] = await Promise.all([
+        SubOperationsStrategy.fetchEntries(slug),
+        SubOperationsStrategy.fetchTargets(),
+        OperationIncidentsStrategy.fetchEntries(slug),
+        OperationIncidentsStrategy.fetchTargets(),
+      ])
+      subOperationEntries.value = subOps
+      subOperationTargets.value = subOpsTargets
+      opIncidentEntries.value = incInOp
+      opIncidentTargets.value = incInOpTargets
+      subIncidentEntries.value = []
+      subIncidentTargets.value = []
+    }
+  } catch { /* ignore — just leaves arrays empty */ }
+}
 
 const personStrategy = computed(() =>
   nodeKind.value === 'operation' ? PersonParticipationStrategy : PersonInvolvementStrategy,
@@ -269,7 +358,7 @@ async function flipKind(target: NodeKind) {
       return
     }
     nodeKind.value = body.kind ?? target
-    await loadPersons(slug)
+    await Promise.all([loadPersons(slug), loadHierarchy(slug)])
   } catch (e) {
     kindError.value = (e as Error).message
   }
@@ -306,7 +395,7 @@ onMounted(async () => {
   try {
     const [detail] = await Promise.all([
       fetchEventDetailBySlug(slug),
-      loadNodeKind(slug),
+      loadNodeKind(slug).then(() => loadHierarchy(slug)),
       loadPersons(slug),
     ])
     event.value = detail

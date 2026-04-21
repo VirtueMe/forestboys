@@ -731,3 +731,124 @@ export const UnitAttendeesStrategy: RelationStrategy = {
   },
   targetRoute(entry) { return `/person/${entry.targetSlug}` },
 }
+
+/**
+ * Hierarchy strategies — structure edits on EventDetail. None of these
+ * carry person-scoped descriptions; saveNote is a no-op.
+ */
+
+async function noopSaveNote(): Promise<void> { /* hierarchy relations have no description notes */ }
+
+interface HierarchyRow {
+  targetSlug: string
+  targetName: string
+}
+
+function hierarchyRowToEntry(r: HierarchyRow): RelationEntry {
+  return {
+    targetSlug:     r.targetSlug,
+    targetName:     r.targetName,
+    startDate:      null,
+    endDate:        null,
+    sections:       [],
+    hasDescription: false,
+  }
+}
+
+async function fetchIncidentOptions(): Promise<RelationTarget[]> {
+  const rows = await neo4jQuery<{ slug: string; name: string }>(`
+    MATCH (i:Incident)
+    RETURN i.slug AS slug,
+           i.title + CASE WHEN i.date IS NOT NULL THEN ' · ' + i.date ELSE '' END AS name
+    ORDER BY i.date DESC, i.title
+  `)
+  return rows
+}
+
+async function fetchOperationOptions(): Promise<RelationTarget[]> {
+  const rows = await neo4jQuery<{ slug: string; name: string }>(`
+    MATCH (op:Operation)
+    RETURN op.slug AS slug, op.codeName AS name
+    ORDER BY op.codeName
+  `)
+  return rows
+}
+
+/** Children of an Incident — (child:Incident)-[:PART_OF]->(parent:Incident {slug}). */
+export const SubIncidentsStrategy: RelationStrategy = {
+  fetchTargets: fetchIncidentOptions,
+  async fetchEntries(parentSlug) {
+    const rows = await neo4jQuery<HierarchyRow>(`
+      MATCH (child:Incident)-[:PART_OF]->(parent:Incident {slug: $slug})
+      RETURN child.slug AS targetSlug, child.title AS targetName
+      ORDER BY targetName
+    `, { slug: parentSlug })
+    return rows.map(hierarchyRowToEntry)
+  },
+  async saveEntries(parentSlug, entries) {
+    const res = await authFetch(`/api/admin/incident/${encodeURIComponent(parentSlug)}/sub-incidents`, {
+      method:  'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ children: entries.map(e => ({ incidentSlug: e.targetSlug })) }),
+    })
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({})) as { error?: string }
+      throw new Error(body.error ?? `HTTP ${res.status}`)
+    }
+  },
+  saveNote: noopSaveNote,
+  targetRoute(entry) { return `/events/${entry.targetSlug}` },
+}
+
+/** Children of an Operation — (child:Operation)-[:PART_OF]->(parent:Operation {slug}). */
+export const SubOperationsStrategy: RelationStrategy = {
+  fetchTargets: fetchOperationOptions,
+  async fetchEntries(parentSlug) {
+    const rows = await neo4jQuery<HierarchyRow>(`
+      MATCH (child:Operation)-[:PART_OF]->(parent:Operation {slug: $slug})
+      RETURN child.slug AS targetSlug, child.codeName AS targetName
+      ORDER BY targetName
+    `, { slug: parentSlug })
+    return rows.map(hierarchyRowToEntry)
+  },
+  async saveEntries(parentSlug, entries) {
+    const res = await authFetch(`/api/admin/operation/${encodeURIComponent(parentSlug)}/sub-operations`, {
+      method:  'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ children: entries.map(e => ({ operationSlug: e.targetSlug })) }),
+    })
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({})) as { error?: string }
+      throw new Error(body.error ?? `HTTP ${res.status}`)
+    }
+  },
+  saveNote: noopSaveNote,
+  targetRoute(entry) { return `/events/${entry.targetSlug}` },
+}
+
+/** Incidents inside an Operation — (i:Incident)-[:OCCURRED_IN]->(op:Operation {slug}). */
+export const OperationIncidentsStrategy: RelationStrategy = {
+  fetchTargets: fetchIncidentOptions,
+  async fetchEntries(operationSlug) {
+    const rows = await neo4jQuery<HierarchyRow>(`
+      MATCH (i:Incident)-[:OCCURRED_IN]->(op:Operation {slug: $slug})
+      RETURN i.slug AS targetSlug,
+             i.title + CASE WHEN i.date IS NOT NULL THEN ' · ' + i.date ELSE '' END AS targetName
+      ORDER BY i.date, targetName
+    `, { slug: operationSlug })
+    return rows.map(hierarchyRowToEntry)
+  },
+  async saveEntries(operationSlug, entries) {
+    const res = await authFetch(`/api/admin/operation/${encodeURIComponent(operationSlug)}/incidents`, {
+      method:  'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ incidents: entries.map(e => ({ incidentSlug: e.targetSlug })) }),
+    })
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({})) as { error?: string }
+      throw new Error(body.error ?? `HTTP ${res.status}`)
+    }
+  },
+  saveNote: noopSaveNote,
+  targetRoute(entry) { return `/events/${entry.targetSlug}` },
+}
