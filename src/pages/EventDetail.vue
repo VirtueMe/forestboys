@@ -2,6 +2,21 @@
   <div class="event-page">
     <button class="back-btn" @click="router.back()">&#x2039; Tilbake</button>
 
+    <div v-if="isAdmin && nodeKind" class="kind-bar">
+      <span class="kind-label">Klassifisering</span>
+      <div class="kind-seg">
+        <label class="kind-seg-opt" :class="{ active: nodeKind === 'incident' }">
+          <input type="radio" value="incident" :checked="nodeKind === 'incident'" @change="flipKind('incident')" />
+          Hendelse
+        </label>
+        <label class="kind-seg-opt" :class="{ active: nodeKind === 'operation' }">
+          <input type="radio" value="operation" :checked="nodeKind === 'operation'" @change="flipKind('operation')" />
+          Operasjon
+        </label>
+      </div>
+      <span v-if="kindError" class="kind-error">{{ kindError }}</span>
+    </div>
+
     <div v-if="loading" class="status">Laster hendelse…</div>
     <div v-else-if="error" class="status error">Hendelsen ble ikke funnet.</div>
 
@@ -147,6 +162,8 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter, RouterLink } from 'vue-router'
 import { fetchEventDetailBySlug } from '../composables/useLocationCache.ts'
+import { neo4jQuery } from '../composables/useNeo4j.ts'
+import { useAuth, authFetch } from '../composables/useAuth.ts'
 import { SANITY_IMG } from '../config/sanity.ts'
 import { blocksToHtml } from '../utils/portableText.ts'
 import type { IdbEventDetail } from '../types/idb.ts'
@@ -157,6 +174,51 @@ const event = ref<IdbEventDetail | null>(null)
 const loading = ref(true)
 const error = ref(false)
 const currentImageIndex = ref(0)
+
+const { user } = useAuth()
+const isAdmin  = computed(() => user.value?.role === 'admin')
+
+type NodeKind = 'incident' | 'operation'
+const nodeKind  = ref<NodeKind | null>(null)
+const kindError = ref<string | null>(null)
+
+async function loadNodeKind(slug: string) {
+  try {
+    const rows = await neo4jQuery<{ kind: NodeKind | null }>(`
+      MATCH (n {slug: $slug})
+      WHERE n:Incident OR n:Operation
+      RETURN CASE WHEN 'Operation' IN labels(n) THEN 'operation' ELSE 'incident' END AS kind
+    `, { slug })
+    nodeKind.value = rows[0]?.kind ?? null
+  } catch {
+    nodeKind.value = null
+  }
+}
+
+async function flipKind(target: NodeKind) {
+  const slug = String(route.params.slug)
+  if (!slug || nodeKind.value === target) return
+  const label = target === 'operation' ? 'Operasjon' : 'Hendelse'
+  if (!window.confirm(
+    `Endre klassifisering til ${label}? Dette skriver om edges (INVOLVED_IN/PARTICIPATED_IN, notater, hierarki).`,
+  )) return
+  kindError.value = null
+  try {
+    const res = await authFetch(`/api/admin/event/${encodeURIComponent(slug)}/kind`, {
+      method:  'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({ kind: target }),
+    })
+    const body = await res.json().catch(() => ({})) as { kind?: NodeKind; error?: string }
+    if (!res.ok) {
+      kindError.value = body.error ?? `HTTP ${res.status}`
+      return
+    }
+    nodeKind.value = body.kind ?? target
+  } catch (e) {
+    kindError.value = (e as Error).message
+  }
+}
 
 const currentImageUrl = computed<string>(() => {
   const gallery = event.value?.gallery
@@ -185,8 +247,13 @@ function handleInternalLinks(e: MouseEvent) {
 }
 
 onMounted(async () => {
+  const slug = route.params.slug as string
   try {
-    event.value = await fetchEventDetailBySlug(route.params.slug as string)
+    const [detail] = await Promise.all([
+      fetchEventDetailBySlug(slug),
+      loadNodeKind(slug),
+    ])
+    event.value = detail
     if (!event.value) error.value = true
   } catch {
     error.value = true
@@ -202,6 +269,58 @@ onMounted(async () => {
   min-height: 0;
   overflow-y: auto;
   background: var(--color-bg);
+}
+
+/* ── Kind toggle (admin) ─────────────────────────────────── */
+.kind-bar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 16px;
+  margin: 0 16px 12px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  font-size: 12px;
+}
+.kind-label {
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--color-muted);
+  font-size: 11px;
+}
+.kind-seg {
+  display: inline-flex;
+  border: 1px solid var(--color-border);
+  border-radius: 4px;
+  overflow: hidden;
+}
+.kind-seg-opt {
+  display: inline-flex;
+  align-items: center;
+  padding: 6px 14px;
+  font-size: 13px;
+  color: var(--color-muted);
+  cursor: pointer;
+  user-select: none;
+}
+.kind-seg-opt + .kind-seg-opt { border-left: 1px solid var(--color-border); }
+.kind-seg-opt input[type="radio"] {
+  position: absolute;
+  width: 1px; height: 1px;
+  opacity: 0;
+  pointer-events: none;
+}
+.kind-seg-opt.active {
+  background: var(--color-navy);
+  color: #fff;
+  font-weight: 600;
+}
+.kind-error {
+  color: #b91c1c;
+  font-size: 12px;
+  margin-left: 8px;
 }
 
 /* ── Back ─────────────────────────────────────────────────── */
