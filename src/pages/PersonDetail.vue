@@ -139,109 +139,37 @@
         </footer>
         <div v-if="sectionsError" class="edit-save-error">{{ sectionsError }}</div>
 
-        <section class="edit-section">
-          <div class="edit-section-head">
-            <h3 class="edit-section-heading">Medlemskap</h3>
-            <button type="button" class="edit-btn-outline" @click="addMembership">+ Legg til medlemskap</button>
-          </div>
-          <div v-if="!membershipDraft.length" class="edit-empty">Ingen medlemskap</div>
-          <ul v-else class="membership-list">
-            <li
-              v-for="(m, i) in membershipDraft"
-              :key="i"
-              class="membership-item"
-              :class="{ expanded: expandedMembershipIndex === i }"
-            >
-              <button
-                type="button"
-                class="membership-summary"
-                :aria-expanded="expandedMembershipIndex === i"
-                @click="toggleMembershipIndex(i)"
-              >
-                <span class="membership-unit-name">{{ m.unitName || m.unitSlug }}</span>
-                <span v-if="membershipSummary(m)" class="membership-meta">{{ membershipSummary(m) }}</span>
-                <span class="membership-chevron">{{ expandedMembershipIndex === i ? '▾' : '▸' }}</span>
-              </button>
-              <div v-if="expandedMembershipIndex === i" class="membership-body">
-                <div class="membership-edit-top">
-                  <div class="unit-picker">
-                    <div v-if="m.unitSlug" class="unit-chip">
-                      <span class="unit-chip-name">{{ m.unitName || m.unitSlug }}</span>
-                      <button
-                        type="button"
-                        class="unit-chip-clear"
-                        aria-label="Bytt enhet"
-                        @click="clearUnit(i)"
-                      >✕</button>
-                    </div>
-                    <template v-else>
-                      <input
-                        v-model="unitQuery"
-                        class="edit-input"
-                        :class="{ 'edit-input-invalid': !m.unitSlug }"
-                        type="text"
-                        placeholder="Søk enhet…"
-                        @focus="unitPickerOpen = true"
-                        @blur="onUnitInputBlur"
-                      />
-                      <div v-if="unitPickerOpen && filteredUnits.length" class="unit-results">
-                        <button
-                          v-for="opt in filteredUnits"
-                          :key="opt.slug"
-                          type="button"
-                          class="unit-result"
-                          @mousedown.prevent="pickUnit(i, opt)"
-                        >{{ opt.name }}</button>
-                      </div>
-                    </template>
-                  </div>
-                  <select v-model="m.role" class="edit-input membership-role">
-                    <option :value="null">—</option>
-                    <option v-for="(label, value) in ROLE_LABEL" :key="value" :value="value">{{ label }}</option>
-                  </select>
-                  <button type="button" class="rank-remove-btn" aria-label="Fjern" @click="removeMembership(i)">✕</button>
-                </div>
-                <div class="membership-edit-dates">
-                  <input
-                    class="edit-input edit-input-date"
-                    type="text"
-                    placeholder="Startdato (ÅÅÅÅ eller ÅÅÅÅ-MM-DD)"
-                    :value="m.startDate ?? ''"
-                    @input="m.startDate = ($event.target as HTMLInputElement).value || null"
-                  />
-                  <span class="rank-dash">–</span>
-                  <input
-                    class="edit-input edit-input-date"
-                    type="text"
-                    placeholder="Sluttdato"
-                    :value="m.endDate ?? ''"
-                    @input="m.endDate = ($event.target as HTMLInputElement).value || null"
-                  />
-                </div>
-                <div class="membership-desc-wrap">
-                  <label class="membership-desc-label">Beskrivelse</label>
-                  <SectionsEditor :sections="m.sections" />
-                </div>
-              </div>
-            </li>
-          </ul>
-        </section>
+        <RelationListEditor
+          v-if="neo4jPerson"
+          :person-slug="neo4jPerson.slug"
+          :entries="membershipEntries"
+          :targets="membershipTargets"
+          :strategy="MembershipStrategy"
+          label="Medlemskap"
+          add-label="+ Legg til medlemskap"
+          empty-label="Ingen medlemskap"
+          search-placeholder="Søk enhet…"
+          picker-chip-aria="Bytt enhet"
+          validation-empty="Velg enhet for alle medlemskap før du lagrer."
+          show-role
+          :role-options="ROLE_LABEL"
+          default-role="member"
+        />
 
-        <footer v-if="membershipsDirty" class="edit-save-bar">
-          <span class="edit-save-prompt">
-            {{ membershipsValid ? 'Ser det bra ut?' : 'Velg enhet for alle medlemskap før du lagrer.' }}
-          </span>
-          <button
-            type="button"
-            class="edit-btn-primary"
-            :disabled="membershipsSaving || !membershipsValid"
-            @click="saveMemberships"
-          >
-            {{ membershipsSaving ? 'Lagrer…' : 'Lagre' }}
-          </button>
-          <button type="button" class="edit-link-revert" :disabled="membershipsSaving" @click="revertMemberships">Angre</button>
-        </footer>
-        <div v-if="membershipsError" class="edit-save-error">{{ membershipsError }}</div>
+        <RelationListEditor
+          v-if="neo4jPerson"
+          :person-slug="neo4jPerson.slug"
+          :entries="attendanceEntries"
+          :targets="attendanceTargets"
+          :strategy="AttendanceStrategy"
+          label="Kurs"
+          add-label="+ Legg til kurs"
+          empty-label="Ingen kurs"
+          search-placeholder="Søk kurs…"
+          picker-chip-aria="Bytt kurs"
+          validation-empty="Velg kurs for alle oppføringer før du lagrer."
+          show-passed
+        />
       </div>
 
       <!-- Hero image (reserves the same vertical space when no image exists) -->
@@ -340,91 +268,30 @@
         </template>
       </section>
 
-      <!-- Medlemskap (MEMBER_OF units with role / period / info marker) -->
-      <section v-if="membershipsForPreview.length" class="section">
-        <h3 class="section-heading">Medlemskap ({{ membershipsForPreview.length }})</h3>
-        <div class="relation-list">
-          <div v-for="m in membershipsForPreview" :key="m.unitSlug" class="relation-row">
-            <RouterLink :to="`/district/${m.unitSlug}`" class="relation-link">{{ m.unitName }}</RouterLink>
-            <span v-if="m.role" class="relation-role">{{ ROLE_LABEL[m.role] ?? m.role }}</span>
-            <span v-if="membershipPeriod(m)" class="member-period">{{ membershipPeriod(m) }}</span>
-            <button
-              v-if="m.hasDescription"
-              class="info-marker"
-              type="button"
-              aria-label="Vis forklaring"
-              @click="openMembershipPopup(m)"
-            >
-              i
-            </button>
-          </div>
-        </div>
-      </section>
+      <RelationListView
+        :entries="membershipEntries"
+        :strategy="MembershipStrategy"
+        label="Medlemskap"
+        show-role
+        :role-options="ROLE_LABEL"
+        @open="openMembership"
+      />
 
-      <!-- Membership description popup -->
-      <div v-if="membershipPopup" class="popup-scrim" @click="membershipPopup = null">
-        <div class="popup-card" role="dialog" aria-modal="true" @click.stop>
-          <header class="popup-head">
-            <h4 class="popup-title">{{ membershipPopup.unitName }}</h4>
-            <button type="button" class="popup-close" aria-label="Lukk" @click="membershipPopup = null">✕</button>
-          </header>
-          <div class="popup-sub">
-            <span v-if="membershipPopup.role" class="relation-role">{{ ROLE_LABEL[membershipPopup.role] ?? membershipPopup.role }}</span>
-            <span v-if="membershipPeriod(membershipPopup)" class="member-period">{{ membershipPeriod(membershipPopup) }}</span>
-          </div>
-          <template v-for="s in [...membershipPopup.sections].sort((a, b) => a.order - b.order)" :key="s.order">
-            <!-- eslint-disable vue/no-v-html -->
-            <div
-              class="popup-body portable-text"
-              :class="{ 'is-quote': s.citations.length > 0 || s.sourcedFrom }"
-              v-html="sectionHtml(s)"
-            ></div>
-            <!-- eslint-enable vue/no-v-html -->
-            <div v-if="s.sourcedFrom" class="sourced-from">
-              <span class="sourced-label">Fra:</span>
-              <a
-                v-if="s.sourcedFrom.url"
-                :href="s.sourcedFrom.url"
-                target="_blank"
-                rel="noopener noreferrer"
-                class="sourced-link"
-              >{{ s.sourcedFrom.attribution || s.sourcedFrom.title || s.sourcedFrom.id }} ↗</a>
-              <span v-else class="sourced-link">{{ s.sourcedFrom.attribution || s.sourcedFrom.title || s.sourcedFrom.id }}</span>
-              <span v-if="s.sourcedFrom.license" class="sourced-license">{{ s.sourcedFrom.license }}</span>
-            </div>
-            <div v-if="popupInlineCites(s).length" class="inline-cites">
-              <a
-                v-for="c in popupInlineCites(s)"
-                :key="c.source.id"
-                :href="c.source.url ?? '#'"
-                target="_blank"
-                rel="noopener noreferrer"
-                class="cite-chip"
-              >
-                {{ c.source.title || c.source.id }}
-                <span v-if="c.source.authorFreeText" class="cite-chip-author">— {{ c.source.authorFreeText }}</span>
-                <span class="cite-chip-arrow">↗</span>
-              </a>
-            </div>
-          </template>
-          <footer v-if="popupFootnotes(membershipPopup).length" class="card-kilder">
-            <div class="kilder-label">Kilder</div>
-            <ol class="kilder-list">
-              <li v-for="c in popupFootnotes(membershipPopup)" :key="c.source.id" :value="c.footnoteNumber">
-                <component
-                  :is="c.source.url ? 'a' : 'span'"
-                  v-bind="c.source.url ? { href: c.source.url, target: '_blank', rel: 'noopener noreferrer' } : {}"
-                  class="kilder-ref"
-                >{{ c.source.title || c.source.id
-                  }}<span v-if="c.source.authorFreeText" class="kilder-author"> — {{ c.source.authorFreeText }}</span>
-                </component>
-                <span v-if="c.source.url" class="kilder-arrow"> ↗</span>
-              </li>
-            </ol>
-          </footer>
-          <SourceRef v-if="membershipPopup.sourceRefs?.length" :refs="membershipPopup.sourceRefs" />
-        </div>
-      </div>
+      <RelationListView
+        :entries="attendanceEntries"
+        :strategy="AttendanceStrategy"
+        label="Kurs"
+        show-passed
+        @open="openAttendance"
+      />
+
+      <RelationInfoPopup
+        :entry="activeRelation"
+        :show-role="activeRelationShowsRole"
+        :show-passed="activeRelationShowsPassed"
+        :role-options="ROLE_LABEL"
+        @close="activeRelation = null"
+      />
 
       <!-- Hendelser -->
       <section v-if="person.events?.length" class="section">
@@ -542,9 +409,13 @@ import { neo4jQuery } from '../composables/useNeo4j.ts'
 import type { IdbEvent } from '../types/idb.ts'
 import DetailPage from '../components/DetailPage.vue'
 import ImageSlider, { type SlideImage } from '../components/ImageSlider.vue'
-import SourceRef from '../components/SourceRef.vue'
 import AdminViewTabs, { type AdminViewMode } from '../components/AdminViewTabs.vue'
 import SectionsEditor, { type Section, type Citation } from '../components/SectionsEditor.vue'
+import RelationListView    from '../components/relation/RelationListView.vue'
+import RelationInfoPopup   from '../components/relation/RelationInfoPopup.vue'
+import RelationListEditor  from '../components/relation/RelationListEditor.vue'
+import type { RelationEntry, RelationTarget } from '../components/relation/RelationStrategy.ts'
+import { MembershipStrategy, AttendanceStrategy, ROLE_LABEL } from '../components/relation/strategies.ts'
 import { authFetch } from '../composables/useAuth.ts'
 import { blocksToHtml } from '../utils/portableText.ts'
 
@@ -919,282 +790,26 @@ function sectionFootnoteCites(s: Section): (Citation & { footnoteNumber: number 
   return personFootnotes.value.filter(fn => s.citations.some(c => !c.inline && c.source.id === fn.source.id))
 }
 
-// ── Medlemskap (MEMBER_OF edges) ───────────────────────────────────────
-interface MembershipDraft {
-  unitSlug:    string
-  unitName:    string
-  role:        string | null
-  startDate:   string | null
-  endDate:     string | null
-  sections:    Section[]
-  sourceRefs:  string[] | null
+// ── Medlemskap & Kurs (via shared Relation strategies) ────────────────
+const membershipEntries  = ref<RelationEntry[]>([])
+const membershipTargets  = ref<RelationTarget[]>([])
+const attendanceEntries  = ref<RelationEntry[]>([])
+const attendanceTargets  = ref<RelationTarget[]>([])
+
+// Preview popup — shared between Medlemskap and Kurs since both feed
+// RelationInfoPopup with the same shape.
+const activeRelation           = ref<RelationEntry | null>(null)
+const activeRelationShowsRole   = ref(false)
+const activeRelationShowsPassed = ref(false)
+function openMembership(e: RelationEntry) {
+  activeRelation.value = e
+  activeRelationShowsRole.value   = true
+  activeRelationShowsPassed.value = false
 }
-
-interface UnitOption { slug: string; name: string }
-
-const allUnits = ref<UnitOption[]>([])
-const membershipDraft    = ref<MembershipDraft[]>([])
-const membershipOriginal = ref<MembershipDraft[]>([])
-const membershipsSaving  = ref(false)
-const membershipsError   = ref<string | null>(null)
-const expandedMembershipIndex = ref<number | null>(null)
-const unitQuery               = ref('')
-const unitPickerOpen          = ref(false)
-
-function toggleMembershipIndex(i: number) {
-  expandedMembershipIndex.value = expandedMembershipIndex.value === i ? null : i
-  // Reset the picker state when opening a different row.
-  unitQuery.value = ''
-  unitPickerOpen.value = false
-}
-
-const filteredUnits = computed(() => {
-  const q = unitQuery.value.trim().toLowerCase()
-  if (!q) return allUnits.value.slice(0, 12)
-  return allUnits.value.filter(u => u.name.toLowerCase().includes(q)).slice(0, 20)
-})
-
-function pickUnit(i: number, opt: UnitOption) {
-  const row = membershipDraft.value[i]
-  if (!row) return
-  row.unitSlug = opt.slug
-  row.unitName = opt.name
-  unitQuery.value = ''
-  unitPickerOpen.value = false
-}
-
-function clearUnit(i: number) {
-  const row = membershipDraft.value[i]
-  if (!row) return
-  row.unitSlug = ''
-  row.unitName = ''
-}
-
-function onUnitInputBlur() {
-  // Delay so mousedown on result fires first.
-  window.setTimeout(() => { unitPickerOpen.value = false }, 150)
-}
-
-
-function membershipSummary(m: MembershipDraft): string {
-  const bits: string[] = []
-  if (m.role) bits.push(ROLE_LABEL[m.role] ?? m.role)
-  if (m.startDate || m.endDate) bits.push(`${m.startDate ?? '?'}${m.endDate ? ` – ${m.endDate}` : ''}`)
-  return bits.join(' · ')
-}
-
-function membershipFromRow(m: Membership): MembershipDraft {
-  return {
-    unitSlug:   m.unitSlug,
-    unitName:   m.unitName,
-    role:       m.role,
-    startDate:  m.startDate,
-    endDate:    m.endDate,
-    sections:   m.sections.map(cloneSection),
-    sourceRefs: m.sourceRefs,
-  }
-}
-
-function cloneMembership(m: MembershipDraft): MembershipDraft {
-  return {
-    ...m,
-    sections:   m.sections.map(cloneSection),
-    sourceRefs: m.sourceRefs ? [...m.sourceRefs] : null,
-  }
-}
-
-function sigMemberships(arr: MembershipDraft[]): string {
-  return JSON.stringify(
-    arr.map(m => [m.unitSlug, m.role, m.startDate, m.endDate, sectionsSignature(m.sections)]),
-  )
-}
-
-const membershipsDirty = computed(() =>
-  sigMemberships(membershipDraft.value) !== sigMemberships(membershipOriginal.value),
-)
-
-const membershipsValid = computed(() =>
-  membershipDraft.value.every(m => m.unitSlug.trim().length > 0),
-)
-
-function addMembership() {
-  membershipDraft.value.push({
-    unitSlug:    '',
-    unitName:    '',
-    role:        'member',
-    startDate:   null,
-    endDate:     null,
-    sections:    [],
-    sourceRefs:  null,
-  })
-  expandedMembershipIndex.value = membershipDraft.value.length - 1
-}
-
-function removeMembership(i: number) {
-  membershipDraft.value.splice(i, 1)
-  if (expandedMembershipIndex.value === i) expandedMembershipIndex.value = null
-  else if (expandedMembershipIndex.value !== null && expandedMembershipIndex.value > i) {
-    expandedMembershipIndex.value--
-  }
-}
-
-function setMembershipUnit(i: number, slug: string) {
-  const opt = allUnits.value.find(u => u.slug === slug)
-  const row = membershipDraft.value[i]
-  if (!opt || !row) return
-  row.unitSlug = opt.slug
-  row.unitName = opt.name
-}
-
-function revertMemberships() {
-  membershipDraft.value = membershipOriginal.value.map(cloneMembership)
-  membershipsError.value = null
-}
-
-async function saveMemberships() {
-  if (!neo4jPerson.value) return
-  if (!membershipsValid.value) {
-    membershipsError.value = 'Alle medlemskap må ha en valgt enhet.'
-    return
-  }
-  membershipsSaving.value = true
-  membershipsError.value  = null
-  try {
-    const personSlug = neo4jPerson.value.slug
-    const memsRes = await authFetch(`/api/admin/person/${encodeURIComponent(personSlug)}/memberships`, {
-      method:  'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body:    JSON.stringify({
-        memberships: membershipDraft.value.map(m => ({
-          unitSlug:  m.unitSlug,
-          role:      m.role,
-          startDate: m.startDate || null,
-          endDate:   m.endDate   || null,
-        })),
-      }),
-    })
-    if (!memsRes.ok) {
-      const b = await memsRes.json().catch(() => ({})) as { error?: string }
-      membershipsError.value = b.error ?? `HTTP ${memsRes.status}`
-      return
-    }
-
-    // Walk notes for every current membership + any unit that had a note
-    // in the previous saved state (so deletions take effect).
-    const currentUnits  = new Set(membershipDraft.value.map(m => m.unitSlug).filter(Boolean))
-    const previousUnits = new Set(membershipOriginal.value.filter(m => m.sections.length).map(m => m.unitSlug))
-    const unitsToSync   = new Set<string>([...currentUnits, ...previousUnits])
-
-    for (const unitSlug of unitsToSync) {
-      const draft = membershipDraft.value.find(m => m.unitSlug === unitSlug)
-      const sections = draft?.sections ?? []
-      const payload = {
-        sections: [...sections].sort((a, b) => a.order - b.order).map(s => ({
-          order:         s.order,
-          content:       s.content,
-          citations:     s.citations.map(c => ({ inline: c.inline, sourceId: c.source.id })),
-          sourcedFromId: s.sourcedFrom?.id ?? null,
-        })),
-      }
-      const noteRes = await authFetch(
-        `/api/admin/person/${encodeURIComponent(personSlug)}/membership-note/${encodeURIComponent(unitSlug)}`,
-        {
-          method:  'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          body:    JSON.stringify(payload),
-        },
-      )
-      if (!noteRes.ok) {
-        const b = await noteRes.json().catch(() => ({})) as { error?: string }
-        membershipsError.value = b.error ?? `HTTP ${noteRes.status} on note for ${unitSlug}`
-        return
-      }
-    }
-
-    memberships.value = membershipDraft.value.map(m => ({
-      unitSlug:       m.unitSlug,
-      unitName:       m.unitName,
-      role:           m.role,
-      startDate:      m.startDate,
-      endDate:        m.endDate,
-      sourceRefs:     m.sourceRefs,
-      sections:       m.sections.map(cloneSection),
-      hasDescription: m.sections.length > 0,
-    }))
-    membershipOriginal.value = membershipDraft.value.map(cloneMembership)
-  } catch (e) {
-    membershipsError.value = (e as Error).message
-  } finally {
-    membershipsSaving.value = false
-  }
-}
-
-const membershipsForPreview = computed<Membership[]>(() =>
-  (membershipsDirty.value ? membershipDraft.value : membershipOriginal.value).map(m => ({
-    unitSlug:       m.unitSlug,
-    unitName:       m.unitName,
-    role:           m.role,
-    startDate:      m.startDate,
-    endDate:        m.endDate,
-    sourceRefs:     m.sourceRefs,
-    sections:       m.sections,
-    hasDescription: m.sections.length > 0,
-  })),
-)
-
-interface Membership {
-  unitSlug:       string
-  unitName:       string
-  role:           string | null
-  sourceRefs:     string[] | null
-  startDate:      string | null
-  endDate:        string | null
-  /** Rich description sections (Description nodes linked via HAS_MEMBERSHIP_NOTE). */
-  sections:       Section[]
-  /** Convenience flag for the info button. */
-  hasDescription: boolean
-}
-const memberships = ref<Membership[]>([])
-const membershipPopup = ref<Membership | null>(null)
-function openMembershipPopup(m: Membership) {
-  membershipPopup.value = m
-}
-function onPopupKey(e: KeyboardEvent) {
-  if (e.key === 'Escape' && membershipPopup.value) membershipPopup.value = null
-}
-function popupInlineCites(s: Section): Citation[] {
-  return s.citations.filter(c => c.inline)
-}
-function popupFootnotes(m: Membership): (Citation & { footnoteNumber: number })[] {
-  const out: (Citation & { footnoteNumber: number })[] = []
-  for (const s of [...m.sections].sort((a, b) => a.order - b.order)) {
-    for (const c of s.citations) {
-      if (!c.inline) out.push({ ...c, footnoteNumber: out.length + 1 })
-    }
-  }
-  return out
-}
-function sectionHtml(s: Section): string {
-  try { return blocksToHtml(JSON.parse(s.content) as unknown[]) }
-  catch { return '' }
-}
-onMounted(() => { window.addEventListener('keydown', onPopupKey) })
-onBeforeUnmount(() => { window.removeEventListener('keydown', onPopupKey) })
-function membershipPeriod(m: Membership): string | null {
-  if (!m.startDate && !m.endDate) return null
-  return `${m.startDate ?? '?'}${m.endDate ? ` – ${m.endDate}` : ''}`
-}
-const ROLE_LABEL: Record<string, string> = {
-  administrative: 'administrativt',
-  operational:    'operativt',
-  sponsor:        'sponsor',
-  parent:         'overordnet',
-  operative:      'operatør',
-  courier:        'kurér',
-  radiotelegraph: 'radiotelegrafist',
-  host:           'vert',
-  informant:      'informant',
-  member:         'medlem',
+function openAttendance(e: RelationEntry) {
+  activeRelation.value = e
+  activeRelationShowsRole.value   = false
+  activeRelationShowsPassed.value = true
 }
 
 function resetPerson() {
@@ -1202,13 +817,14 @@ function resetPerson() {
   heroImage.value     = null
   galleryImages.value = []
   externalRefs.value  = []
-  memberships.value   = []
   heldRanks.value     = []
   sectionDraft.value    = []
   sectionOriginal.value = []
-  membershipDraft.value    = []
-  membershipOriginal.value = []
-  membershipPopup.value    = null
+  membershipEntries.value  = []
+  membershipTargets.value  = []
+  attendanceEntries.value  = []
+  attendanceTargets.value  = []
+  activeRelation.value = null
 }
 
 async function loadPerson(slug: string) {
@@ -1224,7 +840,11 @@ async function loadPerson(slug: string) {
   //   2. Else direct Source with kind = 'portrait'
   //   3. Else first direct image by order (Sanity convention: gallery[0] ≈ portrait)
   try {
-    const [personRows, heroRows, galleryRows, refRows, membershipRows, rankRows, allRankRows, sectionRows, allUnitRows] = await Promise.all([
+    const [
+      personRows, heroRows, galleryRows, refRows,
+      memberEntries, memberTargets, attendEntries, attendTargets,
+      rankRows, allRankRows, sectionRows,
+    ] = await Promise.all([
       neo4jQuery<Neo4jPerson>(
         `MATCH (p:Person {slug: $slug})
          RETURN p.slug AS slug, p.canonicalName AS name,
@@ -1298,55 +918,10 @@ async function loadPerson(slug: string) {
          ORDER BY nbBacked DESC, s.type, coalesce(s.title, s.url)`,
         { slug },
       ),
-      // Memberships — direct MEMBER_OF edges with role / dates / description
-      // / sourceRefs metadata. Same info-marker pattern as PART_OF: rows with
-      // a description sort LAST.
-      neo4jQuery<{
-        unitSlug:   string
-        unitName:   string
-        role:       string | null
-        sourceRefs: string[] | null
-        startDate:  string | null
-        endDate:    string | null
-        sections:   SectionRow[]
-      }>(
-        `MATCH (p:Person {slug: $slug})-[m:MEMBER_OF]->(u:Unit)
-         WHERE coalesce(u.type, '') <> 'course'
-         OPTIONAL MATCH (p)-[:HAS_MEMBERSHIP_NOTE]->(d:Description)-[:ABOUT_UNIT]->(u)
-         OPTIONAL MATCH (d)-[:SOURCED_FROM]->(from:Source)
-         WITH p, m, u, d, from
-         OPTIONAL MATCH (d)-[cites:CITES]->(src:Source)
-         WITH p, m, u, d, from,
-              collect(CASE WHEN src IS NULL THEN NULL ELSE {
-                inline:       coalesce(cites.inline, false),
-                sourceId:     src.id,
-                sourceTitle:  src.title,
-                sourceUrl:    src.url,
-                sourceAuthor: src.authorFreeText
-              } END) AS rawCites
-         WITH p, m, u,
-              CASE WHEN d IS NULL THEN NULL ELSE {
-                order:     coalesce(d.order, 1),
-                content:   d.content,
-                citations: [x IN rawCites WHERE x IS NOT NULL],
-                sourcedFrom: CASE WHEN from IS NULL THEN NULL ELSE {
-                  id:             from.id,
-                  title:          from.title,
-                  url:            from.url,
-                  authorFreeText: from.authorFreeText,
-                  license:        from.license,
-                  attribution:    from.attribution
-                } END
-              } END AS section
-         WITH u, m, collect(section) AS rawSections
-         RETURN u.slug AS unitSlug, u.canonicalName AS unitName,
-                m.role AS role, m.sourceRefs AS sourceRefs,
-                m.startDate AS startDate, m.endDate AS endDate,
-                [x IN rawSections WHERE x IS NOT NULL] AS sections
-         ORDER BY CASE WHEN size([x IN rawSections WHERE x IS NOT NULL]) > 0 THEN 1 ELSE 0 END,
-                  m.startDate, unitName`,
-        { slug },
-      ),
+      MembershipStrategy.fetchEntries(slug),
+      MembershipStrategy.fetchTargets(),
+      AttendanceStrategy.fetchEntries(slug),
+      AttendanceStrategy.fetchTargets(),
       neo4jQuery<HeldRank>(
         `MATCH (p:Person {slug: $slug})-[h:HELD_RANK]->(r:Rank)
          RETURN r.slug AS rankSlug, r.canonicalName AS rankName, r.tier AS tier,
@@ -1385,11 +960,6 @@ async function loadPerson(slug: string) {
          ORDER BY order`,
         { slug },
       ),
-      neo4jQuery<UnitOption>(
-        `MATCH (u:Unit)
-         WHERE coalesce(u.type, '') <> 'course'
-         RETURN u.slug AS slug, u.canonicalName AS name ORDER BY u.canonicalName`,
-      ),
     ])
     heroImage.value = heroRows[0] ?? null
     const seen = new Set<string>()
@@ -1403,14 +973,14 @@ async function loadPerson(slug: string) {
         subjectType: r.subjectType as SlideImage['subjectType'],
       }))
     externalRefs.value = refRows
-    memberships.value = membershipRows
+    membershipEntries.value = memberEntries
+    membershipTargets.value = memberTargets
+    attendanceEntries.value = attendEntries
+    attendanceTargets.value = attendTargets
     heldRanks.value = rankRows
     allRanks.value = allRankRows
     sectionOriginal.value = sectionRows.map(rowToSection)
     sectionDraft.value    = sectionOriginal.value.map(cloneSection)
-    allUnits.value = allUnitRows
-    membershipOriginal.value = membershipRows.map(membershipFromRow)
-    membershipDraft.value    = membershipOriginal.value.map(cloneMembership)
     neo4jPerson.value = personRows[0] ?? null
   } catch (err) {
     console.error('PersonDetail hero/gallery fetch error:', err)
@@ -1914,6 +1484,14 @@ const personInitials = computed<string>(() => {
 .membership-edit-top {
   display: grid;
   grid-template-columns: 1fr 160px 28px;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.attendance-edit-top {
+  display: grid;
+  grid-template-columns: 1fr 28px;
   gap: 8px;
   align-items: center;
   margin-bottom: 8px;
