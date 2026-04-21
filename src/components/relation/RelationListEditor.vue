@@ -136,7 +136,7 @@ import SectionsEditor, { type Section } from '@/components/SectionsEditor.vue'
 import type { RelationEntry, RelationStrategy, RelationTarget } from './RelationStrategy.ts'
 
 const props = withDefaults(defineProps<{
-  personSlug: string
+  parentSlug: string
   entries:    RelationEntry[]
   targets:    RelationTarget[]
   strategy:   RelationStrategy
@@ -280,7 +280,7 @@ async function save() {
   saving.value = true
   error.value = null
   try {
-    await props.strategy.saveEntries(props.personSlug, props.entries)
+    await props.strategy.saveEntries(props.parentSlug, props.entries)
 
     const currentTargets  = new Set(props.entries.map(e => e.targetSlug).filter(Boolean))
     const previousTargets = new Set(originalEntries.value.filter(e => e.sections.length).map(e => e.targetSlug))
@@ -289,7 +289,7 @@ async function save() {
     for (const targetSlug of toSync) {
       const draft = props.entries.find(e => e.targetSlug === targetSlug)
       const sections = draft?.sections ?? []
-      await props.strategy.saveNote(props.personSlug, targetSlug, sections)
+      await props.strategy.saveNote(props.parentSlug, targetSlug, sections)
     }
 
     for (const e of props.entries) e.hasDescription = e.sections.length > 0

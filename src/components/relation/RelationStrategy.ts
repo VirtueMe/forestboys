@@ -29,8 +29,8 @@ export interface RelationEntry {
 
 export interface RelationStrategy {
   fetchTargets(): Promise<RelationTarget[]>
-  fetchEntries(personSlug: string): Promise<RelationEntry[]>
-  saveEntries(personSlug: string, entries: RelationEntry[]): Promise<void>
-  saveNote(personSlug: string, targetSlug: string, sections: Section[]): Promise<void>
+  fetchEntries(parentSlug: string): Promise<RelationEntry[]>
+  saveEntries(parentSlug: string, entries: RelationEntry[]): Promise<void>
+  saveNote(parentSlug: string, targetSlug: string, sections: Section[]): Promise<void>
   targetRoute(entry: RelationEntry): string
 }

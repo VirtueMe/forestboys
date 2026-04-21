@@ -153,6 +153,30 @@
             >{{ link.title || link.link }} <span class="ext-icon">↗</span></a>
           </div>
         </section>
+
+        <RelationListEditor
+          v-if="isAdmin && nodeKind === 'incident'"
+          :parent-slug="(route.params.slug as string)"
+          :entries="personEntries"
+          :targets="personTargets"
+          :strategy="PersonInvolvementStrategy"
+          :label="(nodeKind === 'incident' ? 'Involverte personer' : 'Deltakere')"
+          add-label="+ Legg til person"
+          empty-label="Ingen personer knyttet"
+          search-placeholder="Søk person…"
+          picker-chip-aria="Bytt person"
+          validation-empty="Velg person for alle oppføringer før du lagrer."
+          :show-dates="false"
+        />
+
+        <RelationListView
+          :entries="personEntries"
+          :strategy="PersonInvolvementStrategy"
+          :label="(nodeKind === 'operation' ? 'Deltakere' : 'Involverte personer')"
+          @open="e => (activePerson = e)"
+        />
+
+        <RelationInfoPopup :entry="activePerson" @close="activePerson = null" />
       </article>
     </template>
   </div>
@@ -167,6 +191,11 @@ import { useAuth, authFetch } from '../composables/useAuth.ts'
 import { SANITY_IMG } from '../config/sanity.ts'
 import { blocksToHtml } from '../utils/portableText.ts'
 import type { IdbEventDetail } from '../types/idb.ts'
+import RelationListEditor from '../components/relation/RelationListEditor.vue'
+import RelationListView   from '../components/relation/RelationListView.vue'
+import RelationInfoPopup  from '../components/relation/RelationInfoPopup.vue'
+import { PersonInvolvementStrategy } from '../components/relation/strategies.ts'
+import type { RelationEntry, RelationTarget } from '../components/relation/RelationStrategy.ts'
 
 const route = useRoute()
 const router = useRouter()
@@ -181,6 +210,24 @@ const isAdmin  = computed(() => user.value?.role === 'admin')
 type NodeKind = 'incident' | 'operation'
 const nodeKind  = ref<NodeKind | null>(null)
 const kindError = ref<string | null>(null)
+
+const personEntries = ref<RelationEntry[]>([])
+const personTargets = ref<RelationTarget[]>([])
+const activePerson  = ref<RelationEntry | null>(null)
+
+async function loadPersons(slug: string) {
+  try {
+    const [entries, targets] = await Promise.all([
+      PersonInvolvementStrategy.fetchEntries(slug),
+      PersonInvolvementStrategy.fetchTargets(),
+    ])
+    personEntries.value = entries
+    personTargets.value = targets
+  } catch {
+    personEntries.value = []
+    personTargets.value = []
+  }
+}
 
 async function loadNodeKind(slug: string) {
   try {
@@ -252,6 +299,7 @@ onMounted(async () => {
     const [detail] = await Promise.all([
       fetchEventDetailBySlug(slug),
       loadNodeKind(slug),
+      loadPersons(slug),
     ])
     event.value = detail
     if (!event.value) error.value = true

@@ -392,3 +392,113 @@ export const OperationStrategy: RelationStrategy = {
   },
   targetRoute(entry) { return `/outlines/${entry.targetSlug}` },
 }
+
+/**
+ * Inverse relation — PersonInvolvementStrategy is used from the Incident
+ * side: given an Incident slug (parentSlug), list the Persons who are
+ * INVOLVED_IN it. Uses the same Description nodes as IncidentStrategy;
+ * the note is person-scoped regardless of which side edits it.
+ */
+interface PersonEntryRow {
+  targetSlug: string
+  targetName: string
+  sections:   SectionRow[]
+}
+
+function personRowToEntry(r: PersonEntryRow): RelationEntry {
+  return {
+    targetSlug:     r.targetSlug,
+    targetName:     r.targetName,
+    startDate:      null,
+    endDate:        null,
+    sections:       (r.sections ?? []).map(rowToSection),
+    hasDescription: (r.sections ?? []).length > 0,
+  }
+}
+
+export const PersonInvolvementStrategy: RelationStrategy = {
+  async fetchTargets(): Promise<RelationTarget[]> {
+    const rows = await neo4jQuery<{ slug: string; name: string }>(`
+      MATCH (p:Person)
+      RETURN p.slug AS slug,
+             p.canonicalName + CASE WHEN p.birthYear IS NOT NULL THEN ' (' + toString(p.birthYear) + ')' ELSE '' END AS name
+      ORDER BY p.canonicalName
+    `)
+    return rows
+  },
+  async fetchEntries(incidentSlug) {
+    const rows = await neo4jQuery<PersonEntryRow>(`
+      MATCH (p:Person)-[:INVOLVED_IN]->(i:Incident {slug: $slug})
+      OPTIONAL MATCH (p)-[:HAS_INCIDENT_NOTE]->(d:Description)-[:ABOUT_INCIDENT]->(i)
+      OPTIONAL MATCH (d)-[:SOURCED_FROM]->(from:Source)
+      WITH p, d, from
+      OPTIONAL MATCH (d)-[cites:CITES]->(src:Source)
+      WITH p, d, from,
+           collect(CASE WHEN src IS NULL THEN NULL ELSE {
+             inline:       coalesce(cites.inline, false),
+             sourceId:     src.id,
+             sourceTitle:  src.title,
+             sourceUrl:    src.url,
+             sourceAuthor: src.authorFreeText
+           } END) AS rawCites
+      WITH p, d, from,
+           CASE WHEN d IS NULL THEN NULL ELSE {
+             order:     coalesce(d.order, 1),
+             content:   d.content,
+             citations: [x IN rawCites WHERE x IS NOT NULL],
+             sourcedFrom: CASE WHEN from IS NULL THEN NULL ELSE {
+               id:             from.id,
+               title:          from.title,
+               url:             from.url,
+               authorFreeText: from.authorFreeText,
+               license:        from.license,
+               attribution:    from.attribution
+             } END
+           } END AS section
+      WITH p, collect(section) AS rawSections
+      RETURN p.slug AS targetSlug, p.canonicalName AS targetName,
+             [x IN rawSections WHERE x IS NOT NULL] AS sections
+      ORDER BY targetName
+    `, { slug: incidentSlug })
+    return rows.map(personRowToEntry)
+  },
+  async saveEntries(incidentSlug, entries) {
+    const res = await authFetch(`/api/admin/incident/${encodeURIComponent(incidentSlug)}/persons`, {
+      method:  'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        persons: entries.map(e => ({ personSlug: e.targetSlug })),
+      }),
+    })
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({})) as { error?: string }
+      throw new Error(body.error ?? `HTTP ${res.status}`)
+    }
+  },
+  // saveNote flips the pivot — the note is stored on Person side, so the
+  // person-note endpoint (incident-note) does the work. incidentSlug is the
+  // "parent" here, targetSlug the person slug.
+  async saveNote(incidentSlug, personSlug, sections) {
+    const payload = {
+      sections: [...sections].sort((a, b) => a.order - b.order).map(s => ({
+        order:         s.order,
+        content:       s.content,
+        citations:     s.citations.map(c => ({ inline: c.inline, sourceId: c.source.id })),
+        sourcedFromId: s.sourcedFrom?.id ?? null,
+      })),
+    }
+    const res = await authFetch(
+      `/api/admin/person/${encodeURIComponent(personSlug)}/incident-note/${encodeURIComponent(incidentSlug)}`,
+      {
+        method:  'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify(payload),
+      },
+    )
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({})) as { error?: string }
+      throw new Error(body.error ?? `HTTP ${res.status} on note for ${personSlug}`)
+    }
+  },
+  targetRoute(entry) { return `/person/${entry.targetSlug}` },
+}

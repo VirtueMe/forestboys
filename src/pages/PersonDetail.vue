@@ -141,7 +141,7 @@
 
         <RelationListEditor
           v-if="neo4jPerson"
-          :person-slug="neo4jPerson.slug"
+          :parent-slug="neo4jPerson.slug"
           :entries="membershipEntries"
           :targets="membershipTargets"
           :strategy="MembershipStrategy"
@@ -158,7 +158,7 @@
 
         <RelationListEditor
           v-if="neo4jPerson"
-          :person-slug="neo4jPerson.slug"
+          :parent-slug="neo4jPerson.slug"
           :entries="attendanceEntries"
           :targets="attendanceTargets"
           :strategy="AttendanceStrategy"
@@ -173,7 +173,7 @@
 
         <RelationListEditor
           v-if="neo4jPerson"
-          :person-slug="neo4jPerson.slug"
+          :parent-slug="neo4jPerson.slug"
           :entries="operationEntries"
           :targets="operationTargets"
           :strategy="OperationStrategy"
@@ -188,7 +188,7 @@
 
         <RelationListEditor
           v-if="neo4jPerson"
-          :person-slug="neo4jPerson.slug"
+          :parent-slug="neo4jPerson.slug"
           :entries="incidentEntries"
           :targets="incidentTargets"
           :strategy="IncidentStrategy"
