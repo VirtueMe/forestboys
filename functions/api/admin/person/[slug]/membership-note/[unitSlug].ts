@@ -1,0 +1,110 @@
+/**
+ * PATCH /api/admin/person/:slug/membership-note/:unitSlug
+ *
+ * Replace-all the membership note sections for a single (person, unit) pair.
+ *
+ *   (Person)-[:HAS_MEMBERSHIP_NOTE]->(Description)-[:ABOUT_UNIT]->(Unit)
+ *
+ * Body: { sections: [{ order, content, citations?, sourcedFromId? }, ...] }
+ *
+ * Empty sections array clears the note entirely.
+ */
+
+import { requireAdmin } from '~/_lib/require-admin.ts'
+import { runCypher, type Neo4jEnv } from '~/_lib/neo4j.ts'
+
+interface Env extends Neo4jEnv {
+  SESSION_SECRET: string
+}
+
+interface CitationInput {
+  inline:   boolean
+  sourceId: string
+}
+
+interface SectionInput {
+  order:          number
+  content:        string
+  citations?:     CitationInput[]
+  sourcedFromId?: string | null
+}
+
+interface Body {
+  sections?: SectionInput[]
+}
+
+export const onRequestPatch: PagesFunction<Env> = async ({ request, env, params }) => {
+  const guard = await requireAdmin(request, env)
+  if (guard instanceof Response) return guard
+
+  const personSlug = String(params.slug)
+  const unitSlug   = String(params.unitSlug)
+  const body = await request.json<Body>().catch(() => null)
+  if (!body) return json({ error: 'Invalid JSON' }, 400)
+  const sections = body.sections
+  if (!Array.isArray(sections)) return json({ error: 'sections must be an array' }, 400)
+
+  for (const s of sections) {
+    if (!Number.isInteger(s.order) || s.order < 1) return json({ error: `Bad section order: ${s.order}` }, 400)
+    if (typeof s.content !== 'string') return json({ error: 'Bad section content' }, 400)
+    try { JSON.parse(s.content) } catch { return json({ error: 'section content must be JSON' }, 400) }
+    if (s.citations !== undefined) {
+      if (!Array.isArray(s.citations)) return json({ error: 'Bad citations type' }, 400)
+      for (const c of s.citations) {
+        if (typeof c.sourceId !== 'string' || !c.sourceId) return json({ error: 'Bad citation sourceId' }, 400)
+        if (typeof c.inline   !== 'boolean')                return json({ error: 'Bad citation inline' }, 400)
+      }
+    }
+    if (s.sourcedFromId !== undefined && s.sourcedFromId !== null && typeof s.sourcedFromId !== 'string') {
+      return json({ error: 'Bad sourcedFromId' }, 400)
+    }
+  }
+
+  const payload = sections.map(s => ({
+    id:            `desc:membership:${personSlug}:${unitSlug}:${s.order}`,
+    order:         s.order,
+    content:       s.content,
+    citations:     s.citations ?? [],
+    sourcedFromId: typeof s.sourcedFromId === 'string' ? s.sourcedFromId : null,
+  }))
+
+  try {
+    // Wipe existing note for this (person, unit) pair.
+    await runCypher(env, `
+      MATCH (p:Person {slug: $personSlug})-[r:HAS_MEMBERSHIP_NOTE]->(d:Description)-[a:ABOUT_UNIT]->(u:Unit {slug: $unitSlug})
+      DELETE r, a, d
+    `, { personSlug, unitSlug })
+
+    if (!payload.length) return json({ ok: true, count: 0 })
+
+    await runCypher(env, `
+      MATCH (p:Person {slug: $personSlug})
+      MATCH (u:Unit {slug: $unitSlug})
+      UNWIND $sections AS s
+      CREATE (p)-[:HAS_MEMBERSHIP_NOTE]->(d:Description { id: s.id, order: s.order, content: s.content })
+      CREATE (d)-[:ABOUT_UNIT]->(u)
+      WITH d, s
+      OPTIONAL MATCH (fromSrc:Source {id: s.sourcedFromId})
+      FOREACH (_ IN CASE WHEN s.sourcedFromId IS NOT NULL AND fromSrc IS NOT NULL THEN [1] ELSE [] END |
+        CREATE (d)-[:SOURCED_FROM]->(fromSrc)
+      )
+      WITH d, s
+      UNWIND (CASE WHEN size(s.citations) > 0 THEN s.citations ELSE [null] END) AS cite
+      OPTIONAL MATCH (citeSrc:Source {id: cite.sourceId})
+      FOREACH (_ IN CASE WHEN cite IS NOT NULL AND citeSrc IS NOT NULL THEN [1] ELSE [] END |
+        CREATE (d)-[:CITES {inline: cite.inline}]->(citeSrc)
+      )
+    `, { personSlug, unitSlug, sections: payload })
+
+    return json({ ok: true, count: payload.length })
+  } catch (e) {
+    return json({ error: (e as Error).message }, 502)
+  }
+}
+
+function json(data: unknown, status = 200): Response {
+  return new Response(JSON.stringify(data), {
+    status,
+    headers: { 'Content-Type': 'application/json' },
+  })
+}
