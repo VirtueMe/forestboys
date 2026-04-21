@@ -69,7 +69,7 @@
               <option :value="null">—</option>
               <option v-for="(roleName, value) in roleOptions" :key="value" :value="value">{{ roleName }}</option>
             </select>
-            <button type="button" class="rank-remove-btn" aria-label="Fjern" @click="removeEntry(i)">✕</button>
+            <button type="button" class="rank-remove-btn" @click="removeEntry(i)">Fjern</button>
           </div>
           <div v-if="showDates" class="membership-edit-dates">
             <input
@@ -254,6 +254,13 @@ function addEntry() {
 }
 
 function removeEntry(i: number) {
+  const e = props.entries[i]
+  if (!e) return
+  const name = e.targetName || e.targetSlug || 'denne oppføringen'
+  const msg = e.sections.length
+    ? `Fjerne ${name}? Beskrivelsen forsvinner også når du lagrer.`
+    : `Fjerne ${name}?`
+  if (!window.confirm(msg)) return
   props.entries.splice(i, 1)
   if (expandedIndex.value === i) expandedIndex.value = null
   else if (expandedIndex.value !== null && expandedIndex.value > i) expandedIndex.value--
@@ -439,7 +446,7 @@ function revert() {
 
 .membership-edit-top {
   display: grid;
-  grid-template-columns: 1fr 160px 28px;
+  grid-template-columns: 1fr 160px auto;
   gap: 8px;
   align-items: center;
   margin-bottom: 8px;
@@ -447,7 +454,7 @@ function revert() {
 
 .attendance-edit-top {
   display: grid;
-  grid-template-columns: 1fr 28px;
+  grid-template-columns: 1fr auto;
   gap: 8px;
   align-items: center;
   margin-bottom: 8px;
@@ -499,15 +506,16 @@ function revert() {
 }
 
 .rank-remove-btn {
-  width: 28px;
   height: 28px;
-  padding: 0;
+  padding: 0 10px;
   font-size: 12px;
+  font-weight: 600;
   color: #b91c1c;
   background: transparent;
   border: 1px solid var(--color-border);
   border-radius: 4px;
   cursor: pointer;
+  white-space: nowrap;
 }
 .rank-remove-btn:hover { background: #fef2f2; border-color: #fecaca; }
 

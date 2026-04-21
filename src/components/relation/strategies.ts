@@ -137,7 +137,7 @@ function rowToEntry(r: EntryRow, opts: { includeRole: boolean; includePassed: bo
 async function saveNoteForPair(
   personSlug: string,
   targetSlug: string,
-  endpoint:   'membership-note' | 'attendance-note',
+  endpoint:   'membership-note' | 'attendance-note' | 'incident-note' | 'operation-note',
   sections:   Section[],
 ): Promise<void> {
   const payload = {
@@ -243,4 +243,152 @@ export const AttendanceStrategy: RelationStrategy = {
     return saveNoteForPair(personSlug, targetSlug, 'attendance-note', sections)
   },
   targetRoute(entry) { return `/district/${entry.targetSlug}` },
+}
+
+/**
+ * Incident relation — Person is INVOLVED_IN one or more Incidents. Unlike
+ * Medlemskap/Kurs, the target is an Incident node (not a Unit) and has its
+ * own date. The Person→Incident edge itself carries no metadata; the per-
+ * person note lives on a Description attached via HAS_INCIDENT_NOTE.
+ */
+export const IncidentStrategy: RelationStrategy = {
+  async fetchTargets(): Promise<RelationTarget[]> {
+    const rows = await neo4jQuery<{ slug: string; name: string }>(`
+      MATCH (i:Incident)
+      RETURN i.slug AS slug,
+             i.title + CASE WHEN i.date IS NOT NULL THEN ' · ' + i.date ELSE '' END AS name
+      ORDER BY i.date DESC, i.title
+    `)
+    return rows
+  },
+  async fetchEntries(personSlug) {
+    const rows = await neo4jQuery<EntryRow>(`
+      MATCH (p:Person {slug: $slug})-[:INVOLVED_IN]->(i:Incident)
+      OPTIONAL MATCH (p)-[:HAS_INCIDENT_NOTE]->(d:Description)-[:ABOUT_INCIDENT]->(i)
+      OPTIONAL MATCH (d)-[:SOURCED_FROM]->(from:Source)
+      WITH p, i, d, from
+      OPTIONAL MATCH (d)-[cites:CITES]->(src:Source)
+      WITH p, i, d, from,
+           collect(CASE WHEN src IS NULL THEN NULL ELSE {
+             inline:       coalesce(cites.inline, false),
+             sourceId:     src.id,
+             sourceTitle:  src.title,
+             sourceUrl:    src.url,
+             sourceAuthor: src.authorFreeText
+           } END) AS rawCites
+      WITH i, d, from,
+           CASE WHEN d IS NULL THEN NULL ELSE {
+             order:     coalesce(d.order, 1),
+             content:   d.content,
+             citations: [x IN rawCites WHERE x IS NOT NULL],
+             sourcedFrom: CASE WHEN from IS NULL THEN NULL ELSE {
+               id:             from.id,
+               title:          from.title,
+               url:             from.url,
+               authorFreeText: from.authorFreeText,
+               license:        from.license,
+               attribution:    from.attribution
+             } END
+           } END AS section
+      WITH i, collect(section) AS rawSections
+      RETURN i.slug AS targetSlug,
+             i.title AS targetName,
+             i.date AS startDate,
+             NULL AS endDate,
+             [x IN rawSections WHERE x IS NOT NULL] AS sections
+      ORDER BY coalesce(i.date, ''), targetName
+    `, { slug: personSlug })
+    return rows.map(r => rowToEntry(r, { includeRole: false, includePassed: false }))
+  },
+  async saveEntries(personSlug, entries) {
+    const res = await authFetch(`/api/admin/person/${encodeURIComponent(personSlug)}/incidents`, {
+      method:  'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        incidents: entries.map(e => ({ incidentSlug: e.targetSlug })),
+      }),
+    })
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({})) as { error?: string }
+      throw new Error(body.error ?? `HTTP ${res.status}`)
+    }
+  },
+  saveNote(personSlug, targetSlug, sections) {
+    return saveNoteForPair(personSlug, targetSlug, 'incident-note', sections)
+  },
+  targetRoute(entry) { return `/events/${entry.targetSlug}` },
+}
+
+/**
+ * Operation relation — Person PARTICIPATED_IN one or more Operations. An
+ * Operation is a named mission (codeName) that groups Incidents. The
+ * person-side edge is independent of incident involvement: Jan often knows
+ * someone was part of Gunnerside without having a specific incident tied
+ * to that person.
+ */
+export const OperationStrategy: RelationStrategy = {
+  async fetchTargets(): Promise<RelationTarget[]> {
+    const rows = await neo4jQuery<{ slug: string; name: string }>(`
+      MATCH (op:Operation)
+      RETURN op.slug AS slug, op.codeName AS name
+      ORDER BY op.codeName
+    `)
+    return rows
+  },
+  async fetchEntries(personSlug) {
+    const rows = await neo4jQuery<EntryRow>(`
+      MATCH (p:Person {slug: $slug})-[:PARTICIPATED_IN]->(op:Operation)
+      OPTIONAL MATCH (p)-[:HAS_OPERATION_NOTE]->(d:Description)-[:ABOUT_OPERATION]->(op)
+      OPTIONAL MATCH (d)-[:SOURCED_FROM]->(from:Source)
+      WITH p, op, d, from
+      OPTIONAL MATCH (d)-[cites:CITES]->(src:Source)
+      WITH p, op, d, from,
+           collect(CASE WHEN src IS NULL THEN NULL ELSE {
+             inline:       coalesce(cites.inline, false),
+             sourceId:     src.id,
+             sourceTitle:  src.title,
+             sourceUrl:    src.url,
+             sourceAuthor: src.authorFreeText
+           } END) AS rawCites
+      WITH op, d, from,
+           CASE WHEN d IS NULL THEN NULL ELSE {
+             order:     coalesce(d.order, 1),
+             content:   d.content,
+             citations: [x IN rawCites WHERE x IS NOT NULL],
+             sourcedFrom: CASE WHEN from IS NULL THEN NULL ELSE {
+               id:             from.id,
+               title:          from.title,
+               url:             from.url,
+               authorFreeText: from.authorFreeText,
+               license:        from.license,
+               attribution:    from.attribution
+             } END
+           } END AS section
+      WITH op, collect(section) AS rawSections
+      RETURN op.slug AS targetSlug,
+             op.codeName AS targetName,
+             NULL AS startDate,
+             NULL AS endDate,
+             [x IN rawSections WHERE x IS NOT NULL] AS sections
+      ORDER BY targetName
+    `, { slug: personSlug })
+    return rows.map(r => rowToEntry(r, { includeRole: false, includePassed: false }))
+  },
+  async saveEntries(personSlug, entries) {
+    const res = await authFetch(`/api/admin/person/${encodeURIComponent(personSlug)}/operations`, {
+      method:  'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        operations: entries.map(e => ({ operationSlug: e.targetSlug })),
+      }),
+    })
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({})) as { error?: string }
+      throw new Error(body.error ?? `HTTP ${res.status}`)
+    }
+  },
+  saveNote(personSlug, targetSlug, sections) {
+    return saveNoteForPair(personSlug, targetSlug, 'operation-note', sections)
+  },
+  targetRoute(entry) { return `/outlines/${entry.targetSlug}` },
 }

@@ -170,6 +170,36 @@
           validation-empty="Velg kurs for alle oppføringer før du lagrer."
           show-passed
         />
+
+        <RelationListEditor
+          v-if="neo4jPerson"
+          :person-slug="neo4jPerson.slug"
+          :entries="operationEntries"
+          :targets="operationTargets"
+          :strategy="OperationStrategy"
+          label="Operasjoner"
+          add-label="+ Legg til operasjon"
+          empty-label="Ingen operasjoner"
+          search-placeholder="Søk operasjon…"
+          picker-chip-aria="Bytt operasjon"
+          validation-empty="Velg operasjon for alle oppføringer før du lagrer."
+          :show-dates="false"
+        />
+
+        <RelationListEditor
+          v-if="neo4jPerson"
+          :person-slug="neo4jPerson.slug"
+          :entries="incidentEntries"
+          :targets="incidentTargets"
+          :strategy="IncidentStrategy"
+          label="Hendelser"
+          add-label="+ Legg til hendelse"
+          empty-label="Ingen hendelser"
+          search-placeholder="Søk hendelse…"
+          picker-chip-aria="Bytt hendelse"
+          validation-empty="Velg hendelse for alle oppføringer før du lagrer."
+          :show-dates="false"
+        />
       </div>
 
       <!-- Hero image (reserves the same vertical space when no image exists) -->
@@ -285,6 +315,20 @@
         @open="openAttendance"
       />
 
+      <RelationListView
+        :entries="operationEntries"
+        :strategy="OperationStrategy"
+        label="Operasjoner"
+        @open="openOperation"
+      />
+
+      <RelationListView
+        :entries="incidentEntries"
+        :strategy="IncidentStrategy"
+        label="Hendelser"
+        @open="openIncident"
+      />
+
       <RelationInfoPopup
         :entry="activeRelation"
         :show-role="activeRelationShowsRole"
@@ -293,8 +337,8 @@
         @close="activeRelation = null"
       />
 
-      <!-- Hendelser -->
-      <section v-if="person.events?.length" class="section">
+      <!-- Hendelser (legacy IDB fallback — Neo4j Incident list above takes precedence) -->
+      <section v-if="person.events?.length && !incidentEntries.length" class="section">
         <div class="section-header-row">
           <h3 class="section-heading">Hendelser ({{ person.events.length }})</h3>
           <button class="sort-btn" @click="eventSortAsc = !eventSortAsc">
@@ -415,7 +459,7 @@ import RelationListView    from '../components/relation/RelationListView.vue'
 import RelationInfoPopup   from '../components/relation/RelationInfoPopup.vue'
 import RelationListEditor  from '../components/relation/RelationListEditor.vue'
 import type { RelationEntry, RelationTarget } from '../components/relation/RelationStrategy.ts'
-import { MembershipStrategy, AttendanceStrategy, ROLE_LABEL } from '../components/relation/strategies.ts'
+import { MembershipStrategy, AttendanceStrategy, IncidentStrategy, OperationStrategy, ROLE_LABEL } from '../components/relation/strategies.ts'
 import { authFetch } from '../composables/useAuth.ts'
 import { blocksToHtml } from '../utils/portableText.ts'
 
@@ -795,6 +839,10 @@ const membershipEntries  = ref<RelationEntry[]>([])
 const membershipTargets  = ref<RelationTarget[]>([])
 const attendanceEntries  = ref<RelationEntry[]>([])
 const attendanceTargets  = ref<RelationTarget[]>([])
+const incidentEntries    = ref<RelationEntry[]>([])
+const incidentTargets    = ref<RelationTarget[]>([])
+const operationEntries   = ref<RelationEntry[]>([])
+const operationTargets   = ref<RelationTarget[]>([])
 
 // Preview popup — shared between Medlemskap and Kurs since both feed
 // RelationInfoPopup with the same shape.
@@ -811,6 +859,16 @@ function openAttendance(e: RelationEntry) {
   activeRelationShowsRole.value   = false
   activeRelationShowsPassed.value = true
 }
+function openIncident(e: RelationEntry) {
+  activeRelation.value = e
+  activeRelationShowsRole.value   = false
+  activeRelationShowsPassed.value = false
+}
+function openOperation(e: RelationEntry) {
+  activeRelation.value = e
+  activeRelationShowsRole.value   = false
+  activeRelationShowsPassed.value = false
+}
 
 function resetPerson() {
   neo4jPerson.value   = null
@@ -824,6 +882,10 @@ function resetPerson() {
   membershipTargets.value  = []
   attendanceEntries.value  = []
   attendanceTargets.value  = []
+  incidentEntries.value    = []
+  incidentTargets.value    = []
+  operationEntries.value   = []
+  operationTargets.value   = []
   activeRelation.value = null
 }
 
@@ -843,6 +905,7 @@ async function loadPerson(slug: string) {
     const [
       personRows, heroRows, galleryRows, refRows,
       memberEntries, memberTargets, attendEntries, attendTargets,
+      incidEntries, incidTargets, operEntries, operTargets,
       rankRows, allRankRows, sectionRows,
     ] = await Promise.all([
       neo4jQuery<Neo4jPerson>(
@@ -922,6 +985,10 @@ async function loadPerson(slug: string) {
       MembershipStrategy.fetchTargets(),
       AttendanceStrategy.fetchEntries(slug),
       AttendanceStrategy.fetchTargets(),
+      IncidentStrategy.fetchEntries(slug),
+      IncidentStrategy.fetchTargets(),
+      OperationStrategy.fetchEntries(slug),
+      OperationStrategy.fetchTargets(),
       neo4jQuery<HeldRank>(
         `MATCH (p:Person {slug: $slug})-[h:HELD_RANK]->(r:Rank)
          RETURN r.slug AS rankSlug, r.canonicalName AS rankName, r.tier AS tier,
@@ -977,6 +1044,10 @@ async function loadPerson(slug: string) {
     membershipTargets.value = memberTargets
     attendanceEntries.value = attendEntries
     attendanceTargets.value = attendTargets
+    incidentEntries.value   = incidEntries
+    incidentTargets.value   = incidTargets
+    operationEntries.value  = operEntries
+    operationTargets.value  = operTargets
     heldRanks.value = rankRows
     allRanks.value = allRankRows
     sectionOriginal.value = sectionRows.map(rowToSection)
