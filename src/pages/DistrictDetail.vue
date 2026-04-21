@@ -188,6 +188,25 @@
         </div>
       </details>
 
+      <!-- Admin: edit members (or attendees if this is a course) -->
+      <RelationListEditor
+        v-if="isAdmin && unitSlug"
+        :parent-slug="unitSlug"
+        :entries="personEntries"
+        :targets="personTargets"
+        :strategy="personStrategy"
+        :label="isCourse ? 'Deltakere (rediger)' : 'Medlemmer (rediger)'"
+        add-label="+ Legg til person"
+        empty-label="Ingen personer knyttet"
+        search-placeholder="Søk person…"
+        picker-chip-aria="Bytt person"
+        validation-empty="Velg person for alle oppføringer før du lagrer."
+        :show-role="!isCourse"
+        :role-options="!isCourse ? ROLE_LABEL : undefined"
+        :default-role="!isCourse ? 'member' : null"
+        :show-passed="isCourse"
+      />
+
       <!-- Lenker — general external references (sibling concept to inline source citations) -->
       <details class="section" open>
         <summary class="section-summary">
@@ -218,13 +237,17 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { RouterLink } from 'vue-router'
 import DetailPage from '../components/DetailPage.vue'
 import { neo4jQuery } from '../composables/useNeo4j.ts'
 import { blocksToHtml } from '../utils/portableText.ts'
 import ImageSlider, { type SlideImage } from '../components/ImageSlider.vue'
 import SourceRef from '../components/SourceRef.vue'
+import { useAuth } from '../composables/useAuth.ts'
+import RelationListEditor from '../components/relation/RelationListEditor.vue'
+import { UnitMembersStrategy, UnitAttendeesStrategy } from '../components/relation/strategies.ts'
+import type { RelationEntry, RelationTarget } from '../components/relation/RelationStrategy.ts'
 
 
 interface UnitNode {
@@ -255,7 +278,34 @@ interface Parent {
 }
 
 const unit        = ref<UnitNode | null>(null)
+const unitSlug    = ref<string>('')
 const descriptions = ref<DescriptionNode[]>([])
+
+const { user } = useAuth()
+const isAdmin  = computed(() => user.value?.role === 'admin')
+const isCourse = computed(() => unit.value?.type === 'course')
+
+const personEntries = ref<RelationEntry[]>([])
+const personTargets = ref<RelationTarget[]>([])
+const personStrategy = computed(() => (isCourse.value ? UnitAttendeesStrategy : UnitMembersStrategy))
+
+async function loadUnitPersons(slug: string) {
+  try {
+    const [entries, targets] = await Promise.all([
+      personStrategy.value.fetchEntries(slug),
+      personStrategy.value.fetchTargets(),
+    ])
+    personEntries.value = entries
+    personTargets.value = targets
+  } catch {
+    personEntries.value = []
+    personTargets.value = []
+  }
+}
+
+watch([unitSlug, isCourse], ([slug]) => {
+  if (slug) void loadUnitPersons(slug)
+})
 
 // Hide the attribution footer when there's only one Description and it's the
 // default migration signature with no sourceRefs — the entry is implicitly
@@ -327,6 +377,7 @@ function resetUnit() {
 }
 
 async function loadUnit(slug: string) {
+  unitSlug.value = slug
   try {
     const [unitRows, descRows, parentRows, subUnitRows, memberRows, eventRows, courseRows, refRows, galleryRows] = await Promise.all([
       neo4jQuery<UnitNode>(

@@ -155,12 +155,12 @@
         </section>
 
         <RelationListEditor
-          v-if="isAdmin && nodeKind === 'incident'"
+          v-if="isAdmin && nodeKind"
           :parent-slug="(route.params.slug as string)"
           :entries="personEntries"
           :targets="personTargets"
-          :strategy="PersonInvolvementStrategy"
-          :label="(nodeKind === 'incident' ? 'Involverte personer' : 'Deltakere')"
+          :strategy="personStrategy"
+          :label="personLabel"
           add-label="+ Legg til person"
           empty-label="Ingen personer knyttet"
           search-placeholder="Søk person…"
@@ -171,8 +171,8 @@
 
         <RelationListView
           :entries="personEntries"
-          :strategy="PersonInvolvementStrategy"
-          :label="(nodeKind === 'operation' ? 'Deltakere' : 'Involverte personer')"
+          :strategy="personStrategy"
+          :label="personLabel"
           @open="e => (activePerson = e)"
         />
 
@@ -194,7 +194,7 @@ import type { IdbEventDetail } from '../types/idb.ts'
 import RelationListEditor from '../components/relation/RelationListEditor.vue'
 import RelationListView   from '../components/relation/RelationListView.vue'
 import RelationInfoPopup  from '../components/relation/RelationInfoPopup.vue'
-import { PersonInvolvementStrategy } from '../components/relation/strategies.ts'
+import { PersonInvolvementStrategy, PersonParticipationStrategy } from '../components/relation/strategies.ts'
 import type { RelationEntry, RelationTarget } from '../components/relation/RelationStrategy.ts'
 
 const route = useRoute()
@@ -215,11 +215,18 @@ const personEntries = ref<RelationEntry[]>([])
 const personTargets = ref<RelationTarget[]>([])
 const activePerson  = ref<RelationEntry | null>(null)
 
+const personStrategy = computed(() =>
+  nodeKind.value === 'operation' ? PersonParticipationStrategy : PersonInvolvementStrategy,
+)
+const personLabel = computed(() =>
+  nodeKind.value === 'operation' ? 'Deltakere' : 'Involverte personer',
+)
+
 async function loadPersons(slug: string) {
   try {
     const [entries, targets] = await Promise.all([
-      PersonInvolvementStrategy.fetchEntries(slug),
-      PersonInvolvementStrategy.fetchTargets(),
+      personStrategy.value.fetchEntries(slug),
+      personStrategy.value.fetchTargets(),
     ])
     personEntries.value = entries
     personTargets.value = targets
@@ -262,6 +269,7 @@ async function flipKind(target: NodeKind) {
       return
     }
     nodeKind.value = body.kind ?? target
+    await loadPersons(slug)
   } catch (e) {
     kindError.value = (e as Error).message
   }
