@@ -39,9 +39,37 @@
 
       <hr class="divider" />
 
+      <!-- Admin: event scalar editor -->
+      <section v-if="isAdmin && nodeKind" class="edit-section">
+        <h3 class="edit-section-heading">{{ nodeKind === 'operation' ? 'Operasjon' : 'Hendelse' }}</h3>
+        <div class="edit-row">
+          <label class="edit-label" for="edit-name">{{ nodeKind === 'operation' ? 'Kodenavn' : 'Tittel' }}</label>
+          <input id="edit-name" v-model="editForm.name" class="edit-input" type="text" />
+        </div>
+        <div class="edit-row">
+          <label class="edit-label" for="edit-date">Dato</label>
+          <input
+            id="edit-date"
+            v-model="editForm.date"
+            class="edit-input edit-input-date"
+            type="text"
+            placeholder="YYYY-MM-DD"
+          />
+        </div>
+        <footer v-if="editDirty" class="edit-save-bar">
+          <span class="edit-save-prompt">Ser det bra ut?</span>
+          <button type="button" class="edit-btn-primary" :disabled="editSaving" @click="saveEdit">
+            {{ editSaving ? 'Lagrer…' : 'Lagre' }}
+          </button>
+          <button type="button" class="edit-link-revert" :disabled="editSaving" @click="revertEdit">Angre</button>
+        </footer>
+        <div v-if="editError" class="edit-save-error">{{ editError }}</div>
+      </section>
+
       <!-- Article -->
       <article class="article">
-        <h2 class="event-title">{{ event.title }}</h2>
+        <h2 class="event-title">{{ displayName || event.title }}</h2>
+        <p v-if="displayDate" class="event-date">{{ displayDate }}</p>
 
         <!-- Beskrivelse -->
         <section v-if="event.description?.length" class="section">
@@ -327,16 +355,74 @@ async function loadPersons(slug: string) {
 
 async function loadNodeKind(slug: string) {
   try {
-    const rows = await neo4jQuery<{ kind: NodeKind | null }>(`
+    const rows = await neo4jQuery<{ kind: NodeKind | null; name: string | null; date: string | null }>(`
       MATCH (n {slug: $slug})
       WHERE n:Incident OR n:Operation
-      RETURN CASE WHEN 'Operation' IN labels(n) THEN 'operation' ELSE 'incident' END AS kind
+      RETURN CASE WHEN 'Operation' IN labels(n) THEN 'operation' ELSE 'incident' END AS kind,
+             coalesce(n.codeName, n.title) AS name,
+             n.date AS date
     `, { slug })
-    nodeKind.value = rows[0]?.kind ?? null
+    const row = rows[0]
+    nodeKind.value = row?.kind ?? null
+    if (row) {
+      editForm.value = { name: row.name ?? '', date: row.date ?? '' }
+      editOriginal.value = { ...editForm.value }
+    }
   } catch {
     nodeKind.value = null
   }
 }
+
+interface EditForm { name: string; date: string }
+const editForm     = ref<EditForm>({ name: '', date: '' })
+const editOriginal = ref<EditForm>({ name: '', date: '' })
+const editSaving   = ref(false)
+const editError    = ref<string | null>(null)
+const editDirty    = computed(() =>
+  editForm.value.name !== editOriginal.value.name || editForm.value.date !== editOriginal.value.date,
+)
+
+function revertEdit() {
+  editForm.value = { ...editOriginal.value }
+  editError.value = null
+}
+
+async function saveEdit() {
+  const slug = String(route.params.slug)
+  if (!slug) return
+  const body: Record<string, unknown> = {}
+  if (editForm.value.name !== editOriginal.value.name) body.name = editForm.value.name.trim()
+  if (editForm.value.date !== editOriginal.value.date) body.date = editForm.value.date.trim() || null
+  if (!Object.keys(body).length) return
+  editSaving.value = true
+  editError.value = null
+  try {
+    const res = await authFetch(`/api/admin/event/${encodeURIComponent(slug)}`, {
+      method:  'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify(body),
+    })
+    const out = await res.json().catch(() => ({})) as { name?: string; date?: string | null; error?: string }
+    if (!res.ok) {
+      editError.value = out.error ?? `HTTP ${res.status}`
+      return
+    }
+    editOriginal.value = { name: out.name ?? editForm.value.name, date: out.date ?? '' }
+    editForm.value = { ...editOriginal.value }
+  } catch (e) {
+    editError.value = (e as Error).message
+  } finally {
+    editSaving.value = false
+  }
+}
+
+/** Live preview overlay — show draft values in the article header while dirty. */
+const displayName = computed(() =>
+  editDirty.value ? editForm.value.name : (editOriginal.value.name || (event.value?.title ?? '')),
+)
+const displayDate = computed(() =>
+  editDirty.value ? editForm.value.date : editOriginal.value.date,
+)
 
 async function flipKind(target: NodeKind) {
   const slug = String(route.params.slug)
@@ -414,6 +500,99 @@ onMounted(async () => {
   min-height: 0;
   overflow-y: auto;
   background: var(--color-bg);
+}
+
+/* ── Admin scalar editor ─────────────────────────────────── */
+.edit-section {
+  margin: 0 16px 16px;
+  padding: 16px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+}
+.edit-section-heading {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-muted);
+  margin: 0 0 12px;
+}
+.edit-row {
+  display: grid;
+  grid-template-columns: 120px 1fr;
+  gap: 12px;
+  align-items: center;
+  margin-bottom: 10px;
+}
+.edit-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--color-text);
+}
+.edit-input {
+  width: 100%;
+  padding: 8px 10px;
+  font-size: 14px;
+  color: var(--color-text);
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: 4px;
+  box-sizing: border-box;
+  font-family: inherit;
+}
+.edit-input:focus {
+  outline: 2px solid var(--color-navy);
+  outline-offset: -1px;
+  border-color: var(--color-navy);
+}
+.edit-input-date { font-family: monospace; font-size: 12px; max-width: 160px; }
+.edit-save-bar {
+  margin-top: 12px;
+  padding: 10px 14px;
+  background: #fef3c7;
+  border: 1px solid #fcd34d;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.edit-save-prompt { flex: 1; font-size: 13px; color: #92400e; font-weight: 600; }
+.edit-btn-primary {
+  padding: 8px 14px;
+  font-size: 12px;
+  font-weight: 600;
+  background: var(--color-navy);
+  color: #fff;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+.edit-btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+.edit-link-revert {
+  background: transparent;
+  border: none;
+  padding: 0;
+  font-size: 12px;
+  color: #92400e;
+  text-decoration: underline;
+  cursor: pointer;
+}
+.edit-link-revert:disabled { opacity: 0.5; cursor: not-allowed; }
+.edit-save-error {
+  margin-top: 8px;
+  padding: 8px 10px;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  border-radius: 6px;
+  font-size: 12px;
+  color: #b91c1c;
+}
+.event-date {
+  font-family: monospace;
+  font-size: 13px;
+  color: var(--color-muted);
+  margin: -4px 0 16px;
 }
 
 /* ── Kind toggle (admin) ─────────────────────────────────── */
