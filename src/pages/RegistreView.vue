@@ -196,7 +196,7 @@ function informasjonRoute(e: NeoRow): string {
   // Entity-specific detail routes (may not all be built yet — fine for now).
   switch (e.entityType) {
     case 'article':   return `/article/${e.slug}`
-    case 'operation': return `/operation/${e.slug}`
+    case 'operation': return `/events/${e.slug}`
     case 'equipment': return `/equipment/${e.slug}`
     case 'source':    return `/source/${e.slug}`
     default:          return `/outlines/${e.slug}`

@@ -7,46 +7,149 @@
     page-class="org-detail"
   >
     <template v-if="org">
+      <AdminViewTabs v-model="mode" />
+
       <!-- Header -->
       <div class="page-header">
         <RouterLink to="/registre" class="back-link">&#x2039; Tilbake</RouterLink>
         <div class="org-title-row">
-          <span v-if="org.color" class="color-dot" :style="{ background: org.color }"></span>
-          <h1 class="org-name">{{ org.name }}</h1>
-          <span v-if="org.abbreviation && org.abbreviation !== org.name" class="abbr-badge">{{ org.abbreviation }}</span>
+          <span v-if="displayColor" class="color-dot" :style="{ background: displayColor }"></span>
+          <h1 class="org-name">{{ displayName }}</h1>
+          <span v-if="displayAbbreviation && displayAbbreviation !== displayName" class="abbr-badge">{{ displayAbbreviation }}</span>
         </div>
-        <p v-if="org.formalName" class="org-meta">{{ org.formalName }}</p>
-        <p v-if="org.foundedDate || org.dissolvedDate || org.country" class="org-period">
-          <span v-if="org.foundedDate || org.dissolvedDate">
-            Etablert {{ org.foundedDate ?? '?' }}<span v-if="org.dissolvedDate"> – {{ org.dissolvedDate }}</span>
+        <p v-if="displayFormalName" class="org-meta">{{ displayFormalName }}</p>
+        <p v-if="displayFoundedDate || displayDissolvedDate || displayCountry" class="org-period">
+          <span v-if="displayFoundedDate || displayDissolvedDate">
+            Etablert {{ displayFoundedDate || '?' }}<span v-if="displayDissolvedDate"> – {{ displayDissolvedDate }}</span>
           </span>
-          <span v-if="org.country" class="org-country">{{ org.country }}</span>
+          <span v-if="displayCountry" class="org-country">{{ displayCountry }}</span>
         </p>
       </div>
 
-      <!-- Beskrivelse (stacked Descriptions, newest first) -->
-      <details v-if="descriptions.length" class="section" open>
+      <!-- Admin: organization scalar editor -->
+      <div v-if="mode === 'edit'" class="edit-pane">
+      <section class="edit-section">
+        <h3 class="edit-section-heading">Organisasjon</h3>
+        <div class="edit-row">
+          <label class="edit-label" for="edit-name">Navn</label>
+          <input id="edit-name" v-model="editForm.name" class="edit-input" type="text" />
+        </div>
+        <div class="edit-row">
+          <label class="edit-label" for="edit-formalName">Formelt navn</label>
+          <input id="edit-formalName" v-model="editForm.formalName" class="edit-input" type="text" />
+        </div>
+        <div class="edit-row">
+          <label class="edit-label" for="edit-abbreviation">Forkortelse</label>
+          <input id="edit-abbreviation" v-model="editForm.abbreviation" class="edit-input" type="text" />
+        </div>
+        <div class="edit-row">
+          <label class="edit-label" for="edit-sortingName">Sorteringsnavn</label>
+          <input id="edit-sortingName" v-model="editForm.sortingName" class="edit-input" type="text" />
+        </div>
+        <div class="edit-row">
+          <label class="edit-label" for="edit-color">Farge</label>
+          <div class="edit-color-row">
+            <input id="edit-color" v-model="editForm.color" class="edit-input edit-input-color-text" type="text" placeholder="#aabbcc" />
+            <span v-if="editForm.color" class="edit-color-swatch" :style="{ background: editForm.color }"></span>
+          </div>
+        </div>
+        <div class="edit-row">
+          <label class="edit-label" for="edit-country">Land</label>
+          <input id="edit-country" v-model="editForm.country" class="edit-input" type="text" />
+        </div>
+        <div class="edit-row">
+          <label class="edit-label" for="edit-foundedDate">Etablert</label>
+          <input id="edit-foundedDate" v-model="editForm.foundedDate" class="edit-input edit-input-date" type="text" placeholder="YYYY-MM-DD" />
+        </div>
+        <div class="edit-row">
+          <label class="edit-label" for="edit-dissolvedDate">Oppløst</label>
+          <input id="edit-dissolvedDate" v-model="editForm.dissolvedDate" class="edit-input edit-input-date" type="text" placeholder="YYYY-MM-DD" />
+        </div>
+        <footer v-if="editDirty" class="edit-save-bar">
+          <span class="edit-save-prompt">Ser det bra ut?</span>
+          <button type="button" class="edit-btn-primary" :disabled="editSaving" @click="saveEdit">
+            {{ editSaving ? 'Lagrer…' : 'Lagre' }}
+          </button>
+          <button type="button" class="edit-link-revert" :disabled="editSaving" @click="revertEdit">Angre</button>
+        </footer>
+        <div v-if="editError" class="edit-save-error">{{ editError }}</div>
+      </section>
+
+      <section class="edit-section">
+        <h3 class="edit-section-heading">Beskrivelse</h3>
+        <SectionsEditor :sections="sectionDraft" />
+      </section>
+      <footer v-if="sectionsDirty" class="edit-save-bar">
+        <span class="edit-save-prompt">Ser det bra ut?</span>
+        <button type="button" class="edit-btn-primary" :disabled="sectionsSaving" @click="saveSections">
+          {{ sectionsSaving ? 'Lagrer…' : 'Lagre' }}
+        </button>
+        <button type="button" class="edit-link-revert" :disabled="sectionsSaving" @click="revertSections">Angre</button>
+      </footer>
+      <div v-if="sectionsError" class="edit-save-error">{{ sectionsError }}</div>
+      </div>
+
+      <!-- Beskrivelse (HAS_CONTENT sections with citations + Kilder footer) -->
+      <details v-if="sectionsForPreview.length" class="section" open>
         <summary class="section-summary">
-          <h3 class="section-heading">Beskrivelse<span v-if="descriptions.length > 1"> ({{ descriptions.length }})</span></h3>
+          <h3 class="section-heading">Beskrivelse</h3>
         </summary>
         <div class="section-body">
-          <article
-            v-for="(d, i) in descriptions"
-            :key="`${d.recordedDate ?? 'd'}-${i}`"
-            class="description-entry"
-          >
-            <!-- eslint-disable vue/no-v-html -->
-            <div class="portable-text" v-html="d.html"></div>
-            <!-- eslint-enable vue/no-v-html -->
-            <footer
-              v-if="showDescriptionAttribution(d)"
-              class="description-attribution"
-            >
-              <span v-if="d.author" class="description-author">{{ d.author }}</span>
-              <span v-if="d.recordedDate" class="description-date">{{ d.recordedDate }}</span>
-              <SourceRef v-if="d.sourceRefs?.length" :refs="d.sourceRefs" />
-            </footer>
-          </article>
+          <template v-for="entry in sectionsForPreview" :key="entry.order">
+            <div class="section-wrap">
+              <!-- eslint-disable vue/no-v-html -->
+              <div
+                class="portable-text"
+                :class="{ 'is-quote': entry.section.citations.length > 0 || entry.section.sourcedFrom }"
+                v-html="entry.html"
+              ></div>
+              <!-- eslint-enable vue/no-v-html -->
+              <div v-if="entry.section.sourcedFrom" class="sourced-from">
+                <span class="sourced-label">Fra:</span>
+                <a
+                  v-if="entry.section.sourcedFrom.url"
+                  :href="entry.section.sourcedFrom.url"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  class="sourced-link"
+                >{{ entry.section.sourcedFrom.attribution || entry.section.sourcedFrom.title || entry.section.sourcedFrom.id }} ↗</a>
+                <span v-else class="sourced-link">{{ entry.section.sourcedFrom.attribution || entry.section.sourcedFrom.title || entry.section.sourcedFrom.id }}</span>
+                <span v-if="entry.section.sourcedFrom.license" class="sourced-license">{{ entry.section.sourcedFrom.license }}</span>
+              </div>
+              <div v-if="inlineCites(entry.section).length" class="inline-cites">
+                <a
+                  v-for="c in inlineCites(entry.section)"
+                  :key="c.source.id"
+                  :href="c.source.url ?? '#'"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  class="cite-chip"
+                >
+                  {{ c.source.title || c.source.id }}
+                  <span v-if="c.source.authorFreeText" class="cite-chip-author">— {{ c.source.authorFreeText }}</span>
+                  <span class="cite-chip-arrow">↗</span>
+                </a>
+              </div>
+              <div v-if="sectionFootnoteCites(entry.section).length" class="section-footnotes">
+                <sup v-for="c in sectionFootnoteCites(entry.section)" :key="c.source.id">[{{ c.footnoteNumber }}]</sup>
+              </div>
+            </div>
+          </template>
+          <footer v-if="orgFootnotes.length" class="card-kilder">
+            <div class="kilder-label">Kilder</div>
+            <ol class="kilder-list">
+              <li v-for="c in orgFootnotes" :key="c.source.id" :value="c.footnoteNumber">
+                <component
+                  :is="c.source.url ? 'a' : 'span'"
+                  v-bind="c.source.url ? { href: c.source.url, target: '_blank', rel: 'noopener noreferrer' } : {}"
+                  class="kilder-ref"
+                >{{ c.source.title || c.source.id
+                  }}<span v-if="c.source.authorFreeText" class="kilder-author"> — {{ c.source.authorFreeText }}</span>
+                </component>
+                <span v-if="c.source.url" class="kilder-arrow"> ↗</span>
+              </li>
+            </ol>
+          </footer>
         </div>
       </details>
 
@@ -85,7 +188,7 @@
             <RouterLink
               v-for="op in operations"
               :key="op.slug"
-              :to="`/operation/${op.slug}`"
+              :to="`/events/${op.slug}`"
               class="section-link"
             >
               {{ op.name }}
@@ -174,12 +277,15 @@
 
 <script setup lang="ts">
 import { ref, computed } from 'vue'
-import { RouterLink } from 'vue-router'
+import { RouterLink, useRoute } from 'vue-router'
 import { neo4jQuery } from '../composables/useNeo4j.ts'
+import { authFetch } from '../composables/useAuth.ts'
 import { blocksToHtml } from '../utils/portableText.ts'
 import DetailPage from '../components/DetailPage.vue'
 import ImageSlider, { type SlideImage } from '../components/ImageSlider.vue'
 import SourceRef from '../components/SourceRef.vue'
+import AdminViewTabs, { type AdminViewMode } from '../components/AdminViewTabs.vue'
+import SectionsEditor, { type Section, type Citation } from '../components/SectionsEditor.vue'
 
 interface OrgNode {
   name: string
@@ -192,11 +298,24 @@ interface OrgNode {
   country: string | null
 }
 
-interface DescriptionNode {
-  html: string
-  recordedDate: string | null
-  author: string | null
-  sourceRefs: string[] | null
+interface SectionRow {
+  order:   number | null
+  content: string | null
+  citations: Array<{
+    inline:       boolean | null
+    sourceId:     string | null
+    sourceTitle:  string | null
+    sourceUrl:    string | null
+    sourceAuthor: string | null
+  }>
+  sourcedFrom: {
+    id:             string
+    title:          string | null
+    url:            string | null
+    authorFreeText: string | null
+    license:        string | null
+    attribution:    string | null
+  } | null
 }
 
 interface ChildUnit {
@@ -215,19 +334,16 @@ const ROLE_LABEL: Record<string, string> = {
   parent:         'overordnet',
 }
 
-const org          = ref<OrgNode | null>(null)
-const descriptions = ref<DescriptionNode[]>([])
+const route        = useRoute()
+const mode         = ref<AdminViewMode>('preview')
 
-const MIGRATION_AUTHORS = new Set([
-  'sanity-outline-migration',
-  'sanity-migration',
-])
-function showDescriptionAttribution(d: DescriptionNode): boolean {
-  if (descriptions.value.length > 1) return true
-  if (d.sourceRefs?.length) return true
-  if (d.author && !MIGRATION_AUTHORS.has(d.author)) return true
-  return false
-}
+const org          = ref<OrgNode | null>(null)
+
+const sectionDraft    = ref<Section[]>([])
+const sectionOriginal = ref<Section[]>([])
+const sectionsSaving  = ref(false)
+const sectionsError   = ref<string | null>(null)
+
 const units        = ref<ChildUnit[]>([])
 const expandedUnit = ref<string | null>(null)
 function toggleUnitInfo(slug: string) {
@@ -239,9 +355,34 @@ const people       = ref<{ slug: string; name: string; eventCount: number }[]>([
 const externalRefs = ref<{ id: string; title: string | null; url: string; type: string; domain: string | null; nbBacked: boolean }[]>([])
 const galleryImages = ref<SlideImage[]>([])
 
+interface EditForm {
+  name:          string
+  formalName:    string
+  abbreviation:  string
+  sortingName:   string
+  color:         string
+  country:       string
+  foundedDate:   string
+  dissolvedDate: string
+}
+const EMPTY_EDIT: EditForm = {
+  name: '', formalName: '', abbreviation: '', sortingName: '',
+  color: '', country: '', foundedDate: '', dissolvedDate: '',
+}
+const editForm     = ref<EditForm>({ ...EMPTY_EDIT })
+const editOriginal = ref<EditForm>({ ...EMPTY_EDIT })
+const editSaving   = ref(false)
+const editError    = ref<string | null>(null)
+const editDirty    = computed(() =>
+  (Object.keys(EMPTY_EDIT) as (keyof EditForm)[])
+    .some(k => editForm.value[k] !== editOriginal.value[k]),
+)
+
 function resetOrg() {
   org.value          = null
-  descriptions.value = []
+  sectionDraft.value    = []
+  sectionOriginal.value = []
+  sectionsError.value   = null
   units.value        = []
   operations.value   = []
   events.value       = []
@@ -249,11 +390,83 @@ function resetOrg() {
   externalRefs.value = []
   galleryImages.value = []
   expandedUnit.value = null
+  editForm.value     = { ...EMPTY_EDIT }
+  editOriginal.value = { ...EMPTY_EDIT }
+  editError.value    = null
+}
+
+function hydrateEditForm(o: OrgNode) {
+  const f: EditForm = {
+    name:          o.name ?? '',
+    formalName:    o.formalName ?? '',
+    abbreviation:  o.abbreviation ?? '',
+    sortingName:   o.sortingName ?? '',
+    color:         o.color ?? '',
+    country:       o.country ?? '',
+    foundedDate:   o.foundedDate ?? '',
+    dissolvedDate: o.dissolvedDate ?? '',
+  }
+  editForm.value     = { ...f }
+  editOriginal.value = { ...f }
+  editError.value    = null
+}
+
+function revertEdit() {
+  editForm.value  = { ...editOriginal.value }
+  editError.value = null
+}
+
+async function saveEdit() {
+  const slug = String(route.params.slug)
+  if (!slug) return
+  const body: Record<string, unknown> = {}
+  const f = editForm.value, o = editOriginal.value
+  if (f.name          !== o.name)          body.name          = f.name.trim()
+  if (f.formalName    !== o.formalName)    body.formalName    = f.formalName.trim()    || null
+  if (f.abbreviation  !== o.abbreviation)  body.abbreviation  = f.abbreviation.trim()  || null
+  if (f.sortingName   !== o.sortingName)   body.sortingName   = f.sortingName.trim()   || null
+  if (f.color         !== o.color)         body.color         = f.color.trim()         || null
+  if (f.country       !== o.country)       body.country       = f.country.trim()       || null
+  if (f.foundedDate   !== o.foundedDate)   body.foundedDate   = f.foundedDate.trim()   || null
+  if (f.dissolvedDate !== o.dissolvedDate) body.dissolvedDate = f.dissolvedDate.trim() || null
+  if (!Object.keys(body).length) return
+
+  editSaving.value = true
+  editError.value  = null
+  try {
+    const res = await authFetch(`/api/admin/organization/${encodeURIComponent(slug)}`, {
+      method:  'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify(body),
+    })
+    const out = await res.json().catch(() => ({})) as Partial<OrgNode> & { error?: string }
+    if (!res.ok) {
+      editError.value = out.error ?? `HTTP ${res.status}`
+      return
+    }
+    if (org.value && out.name !== undefined) {
+      org.value = {
+        name:          out.name ?? '',
+        formalName:    out.formalName    ?? null,
+        abbreviation:  out.abbreviation  ?? null,
+        sortingName:   out.sortingName   ?? null,
+        color:         out.color         ?? null,
+        country:       out.country       ?? null,
+        foundedDate:   out.foundedDate   ?? null,
+        dissolvedDate: out.dissolvedDate ?? null,
+      }
+      hydrateEditForm(org.value)
+    }
+  } catch (e) {
+    editError.value = (e as Error).message
+  } finally {
+    editSaving.value = false
+  }
 }
 
 async function loadOrg(slug: string) {
   try {
-    const [orgRows, descRows, unitRows, opRows, eventRows, peopleRows, refRows, galleryRows] = await Promise.all([
+    const [orgRows, sectionRows, unitRows, opRows, eventRows, peopleRows, refRows, galleryRows] = await Promise.all([
       neo4jQuery<OrgNode>(
         `MATCH (o:Organization {slug: $slug})
          RETURN o.canonicalName AS name,
@@ -266,17 +479,33 @@ async function loadOrg(slug: string) {
                 o.country       AS country`,
         { slug },
       ),
-      // Descriptions — ALL entries ABOUT this org, stacked newest-first.
-      // `sourceRefs` forward-compatible: no FROM Source edges exist today.
-      neo4jQuery<{ content: string | null; recordedDate: string | null; author: string | null; sourceRefs: string[] }>(
-        `MATCH (d:Description)-[:ABOUT]->(o:Organization {slug: $slug})
-         OPTIONAL MATCH (d)-[:FROM]->(s:Source)
-         WITH d, collect(s.id) AS sourceRefs
-         RETURN d.content AS content,
-                d.recordedDate AS recordedDate,
-                d.author AS author,
-                [x IN sourceRefs WHERE x IS NOT NULL] AS sourceRefs
-         ORDER BY d.recordedDate DESC, d.id`,
+      // Descriptions — HAS_CONTENT sections on this Organization, same shape
+      // as Person's sections (order, content, CITES, SOURCED_FROM).
+      neo4jQuery<SectionRow>(
+        `MATCH (o:Organization {slug: $slug})-[:HAS_CONTENT]->(d:Description)
+         OPTIONAL MATCH (d)-[:SOURCED_FROM]->(from:Source)
+         WITH d, from
+         OPTIONAL MATCH (d)-[cites:CITES]->(src:Source)
+         WITH d, from,
+              collect(CASE WHEN src IS NULL THEN NULL ELSE {
+                inline:       coalesce(cites.inline, false),
+                sourceId:     src.id,
+                sourceTitle:  src.title,
+                sourceUrl:    src.url,
+                sourceAuthor: src.authorFreeText
+              } END) AS rawCites
+         RETURN coalesce(d.order, 1) AS \`order\`,
+                d.content AS content,
+                [x IN rawCites WHERE x IS NOT NULL] AS citations,
+                CASE WHEN from IS NULL THEN NULL ELSE {
+                  id:             from.id,
+                  title:          from.title,
+                  url:             from.url,
+                  authorFreeText: from.authorFreeText,
+                  license:        from.license,
+                  attribution:    from.attribution
+                } END AS sourcedFrom
+         ORDER BY \`order\``,
         { slug },
       ),
       // Sub-units — PART_OF edges carry role/description/order per reporting
@@ -372,6 +601,7 @@ async function loadOrg(slug: string) {
     ])
 
     org.value          = orgRows[0] ?? null
+    if (org.value) hydrateEditForm(org.value)
     operations.value   = opRows
     units.value        = unitRows
     events.value       = eventRows
@@ -389,20 +619,10 @@ async function loadOrg(slug: string) {
         subjectType: r.subjectType as SlideImage['subjectType'],
       }))
 
-    descriptions.value = descRows.flatMap(row => {
-      if (!row.content) return []
-      try {
-        const blocks = JSON.parse(row.content) as unknown[]
-        const html = blocksToHtml(blocks)
-        if (!html) return []
-        return [{
-          html,
-          recordedDate: row.recordedDate,
-          author: row.author,
-          sourceRefs: row.sourceRefs?.length ? row.sourceRefs : null,
-        }]
-      } catch { return [] }
-    })
+    const hydrated = sectionRows.map(rowToSection)
+    sectionOriginal.value = hydrated
+    sectionDraft.value    = hydrated.map(cloneSection)
+    sectionsError.value   = null
   } catch (err) {
     console.error('OrganizationDetail fetch error:', err)
     org.value = null
@@ -415,6 +635,132 @@ function formatDate(iso?: string | null): string {
   if (!iso) return '–'
   const [y, m, d] = iso.split('-').map(Number)
   return `${d}. ${MONTHS[m - 1]} ${y}`
+}
+
+/** Live preview — draft values overlay the page header while dirty. */
+const displayName          = computed(() => editDirty.value ? editForm.value.name          : (org.value?.name ?? ''))
+const displayFormalName    = computed(() => editDirty.value ? editForm.value.formalName    : (org.value?.formalName ?? ''))
+const displayAbbreviation  = computed(() => editDirty.value ? editForm.value.abbreviation  : (org.value?.abbreviation ?? ''))
+const displayColor         = computed(() => editDirty.value ? editForm.value.color         : (org.value?.color ?? ''))
+const displayCountry       = computed(() => editDirty.value ? editForm.value.country       : (org.value?.country ?? ''))
+const displayFoundedDate   = computed(() => editDirty.value ? editForm.value.foundedDate   : (org.value?.foundedDate ?? ''))
+const displayDissolvedDate = computed(() => editDirty.value ? editForm.value.dissolvedDate : (org.value?.dissolvedDate ?? ''))
+
+// ── Beskrivelse sections (HAS_CONTENT → Description) ───────────────
+function rowToSection(r: SectionRow): Section {
+  return {
+    order:   r.order ?? 1,
+    content: r.content ?? '[]',
+    citations: (r.citations ?? [])
+      .filter(c => c.sourceId)
+      .map(c => ({
+        inline: c.inline ?? false,
+        source: {
+          id:             c.sourceId!,
+          title:          c.sourceTitle,
+          url:            c.sourceUrl,
+          authorFreeText: c.sourceAuthor,
+        },
+      })),
+    sourcedFrom: r.sourcedFrom ? { ...r.sourcedFrom } : null,
+  }
+}
+
+function cloneSection(s: Section): Section {
+  return {
+    ...s,
+    citations:   s.citations.map(c => ({ ...c, source: { ...c.source } })),
+    sourcedFrom: s.sourcedFrom ? { ...s.sourcedFrom } : null,
+  }
+}
+
+function sectionsSignature(arr: Section[]): string {
+  return JSON.stringify(
+    [...arr]
+      .sort((a, b) => a.order - b.order)
+      .map(s => [
+        s.order,
+        s.content,
+        s.citations.map(c => [c.inline, c.source.id]),
+        s.sourcedFrom?.id ?? null,
+      ]),
+  )
+}
+
+const sectionsDirty = computed(() =>
+  sectionsSignature(sectionDraft.value) !== sectionsSignature(sectionOriginal.value),
+)
+
+function revertSections() {
+  sectionDraft.value = sectionOriginal.value.map(cloneSection)
+  sectionsError.value = null
+}
+
+async function saveSections() {
+  const slug = String(route.params.slug)
+  if (!slug) return
+  sectionsSaving.value = true
+  sectionsError.value  = null
+  try {
+    const payload = {
+      sections: [...sectionDraft.value]
+        .sort((a, b) => a.order - b.order)
+        .map(s => ({
+          order:          s.order,
+          content:        s.content,
+          citations:      s.citations.map(c => ({ inline: c.inline, sourceId: c.source.id })),
+          sourcedFromId:  s.sourcedFrom?.id ?? null,
+        })),
+    }
+    const res = await authFetch(`/api/admin/organization/${encodeURIComponent(slug)}/sections`, {
+      method:  'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify(payload),
+    })
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({})) as { error?: string }
+      sectionsError.value = body.error ?? `HTTP ${res.status}`
+      return
+    }
+    sectionOriginal.value = sectionDraft.value.map(cloneSection)
+  } catch (e) {
+    sectionsError.value = (e as Error).message
+  } finally {
+    sectionsSaving.value = false
+  }
+}
+
+interface RenderedSection {
+  order: number
+  html:  string
+  section: Section
+}
+
+const sectionsForPreview = computed<RenderedSection[]>(() => {
+  const source = sectionsDirty.value ? sectionDraft.value : sectionOriginal.value
+  return [...source]
+    .sort((a, b) => a.order - b.order)
+    .map(s => {
+      let html = ''
+      try { html = blocksToHtml(JSON.parse(s.content) as unknown[]) } catch { /* skip */ }
+      return { order: s.order, html, section: s }
+    })
+})
+
+const orgFootnotes = computed<(Citation & { footnoteNumber: number })[]>(() => {
+  const source = sectionsDirty.value ? sectionDraft.value : sectionOriginal.value
+  const out: (Citation & { footnoteNumber: number })[] = []
+  for (const s of [...source].sort((a, b) => a.order - b.order)) {
+    for (const c of s.citations) {
+      if (!c.inline) out.push({ ...c, footnoteNumber: out.length + 1 })
+    }
+  }
+  return out
+})
+
+function inlineCites(s: Section): Citation[] { return s.citations.filter(c => c.inline) }
+function sectionFootnoteCites(s: Section): (Citation & { footnoteNumber: number })[] {
+  return orgFootnotes.value.filter(fn => s.citations.some(c => !c.inline && c.source.id === fn.source.id))
 }
 
 const eventSortAsc = ref(true)
@@ -512,6 +858,104 @@ const sortedEvents = computed(() => {
   letter-spacing: 0.06em;
 }
 
+/* ── Admin: scalar editor ───────────────────────────────────── */
+.edit-section {
+  padding: 16px;
+  background: var(--color-surface);
+  border-bottom: 1px solid var(--color-border);
+}
+.edit-section-heading {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-muted);
+  margin: 0 0 12px;
+}
+.edit-row {
+  display: grid;
+  grid-template-columns: 120px 1fr;
+  gap: 12px;
+  align-items: center;
+  margin-bottom: 10px;
+}
+.edit-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--color-text);
+}
+.edit-input {
+  width: 100%;
+  padding: 8px 10px;
+  font-size: 14px;
+  color: var(--color-text);
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: 4px;
+  box-sizing: border-box;
+  font-family: inherit;
+}
+.edit-input:focus {
+  outline: 2px solid var(--color-navy);
+  outline-offset: -1px;
+  border-color: var(--color-navy);
+}
+.edit-input-date { font-family: monospace; font-size: 12px; max-width: 160px; }
+.edit-color-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.edit-input-color-text { font-family: monospace; font-size: 12px; max-width: 140px; }
+.edit-color-swatch {
+  width: 22px;
+  height: 22px;
+  border-radius: 4px;
+  border: 1px solid var(--color-border-mid);
+  flex-shrink: 0;
+}
+.edit-save-bar {
+  margin-top: 12px;
+  padding: 10px 14px;
+  background: #fef3c7;
+  border: 1px solid #fcd34d;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.edit-save-prompt { flex: 1; font-size: 13px; color: #92400e; font-weight: 600; }
+.edit-btn-primary {
+  padding: 8px 14px;
+  font-size: 12px;
+  font-weight: 600;
+  background: var(--color-navy);
+  color: #fff;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+.edit-btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+.edit-link-revert {
+  background: transparent;
+  border: none;
+  padding: 0;
+  font-size: 12px;
+  color: #92400e;
+  text-decoration: underline;
+  cursor: pointer;
+}
+.edit-link-revert:disabled { opacity: 0.5; cursor: not-allowed; }
+.edit-save-error {
+  margin-top: 8px;
+  padding: 8px 10px;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  border-radius: 6px;
+  font-size: 12px;
+  color: #b91c1c;
+}
+
 /* ── Sections (collapsible via native <details>) ────────────── */
 .section {
   border-bottom: 1px solid var(--color-border);
@@ -589,29 +1033,95 @@ const sortedEvents = computed(() => {
 /* ── Portable text (Description rendering) ──────────────────── */
 .portable-text { margin-top: 4px; }
 
-.description-entry { margin: 0; }
-.description-entry + .description-entry {
-  margin-top: 16px;
-  padding-top: 16px;
-  border-top: 1px solid var(--color-border);
+.section-wrap { position: relative; }
+.section-wrap + .section-wrap { margin-top: 8px; }
+
+.is-quote {
+  border-left: 3px solid var(--color-border);
+  padding: 2px 14px;
+  margin: 12px 0 12px 2px;
+  font-style: italic;
+  color: var(--color-text);
 }
 
-.description-attribution {
+.sourced-from {
   display: flex;
   flex-wrap: wrap;
-  align-items: center;
-  gap: 8px;
-  margin-top: 8px;
-  padding-top: 6px;
-  border-top: 1px dashed var(--color-border);
+  align-items: baseline;
+  gap: 6px;
+  margin: -6px 0 12px 18px;
   font-size: 11px;
   color: var(--color-muted);
 }
-.description-author {
-  font-weight: 600;
-  color: var(--color-text);
+.sourced-label  { font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; font-size: 10px; }
+.sourced-link   { color: var(--color-navy); text-decoration: underline; }
+.sourced-license {
+  font-family: monospace;
+  font-size: 10px;
+  padding: 1px 6px;
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  color: var(--color-muted);
 }
-.description-date { font-variant-numeric: tabular-nums; }
+
+.inline-cites {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 6px 0 10px;
+}
+.cite-chip {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 4px;
+  padding: 3px 8px;
+  font-size: 11px;
+  color: var(--color-navy);
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  text-decoration: none;
+}
+.cite-chip:hover       { border-color: var(--color-navy); }
+.cite-chip-author      { color: var(--color-muted); }
+.cite-chip-arrow       { font-size: 10px; opacity: 0.6; }
+
+.section-footnotes {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  gap: 2px;
+  font-size: 11px;
+  color: var(--color-muted);
+}
+
+.card-kilder {
+  border-top: 1px solid var(--color-border);
+  margin-top: 12px;
+  padding-top: 10px;
+}
+.kilder-label {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-muted);
+  margin-bottom: 6px;
+}
+.kilder-list {
+  margin: 0;
+  padding-left: 22px;
+  font-size: 11px;
+  color: var(--color-muted);
+  line-height: 1.5;
+}
+.kilder-list li        { margin-bottom: 3px; }
+.kilder-ref            { color: inherit; text-decoration: none; }
+.kilder-list a.kilder-ref { color: var(--color-navy); text-decoration: underline; }
+.kilder-list a.kilder-ref .kilder-author { color: var(--color-muted); }
+.kilder-arrow { font-size: 10px; opacity: 0.6; color: var(--color-navy); }
 
 .portable-text :deep(p) {
   margin: 0 0 0.75em;
