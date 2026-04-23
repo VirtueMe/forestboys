@@ -12,6 +12,16 @@ No UI framework — plain CSS with custom properties.
 
 ---
 
+## Design
+
+Visual identity is specified in `DESIGN.md` (light) and `DESIGN-dark.md` (dark).
+Follow both files when building any UI — tokens, typography, component patterns,
+and anti-patterns. The aesthetic is **Archival Paper**: warm paper tones, serif
+body + sans UI, a single restrained red accent. When a component is ambiguous,
+the anti-patterns list is load-bearing.
+
+---
+
 ## Data
 
 Sanity CMS project `7r6kqtqy`, dataset `production`.
