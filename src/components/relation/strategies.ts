@@ -22,6 +22,15 @@ export const ROLE_LABEL: Record<string, string> = {
   member:         'medlem',
 }
 
+/** Roles valid on PART_OF (Unit → Organization). Must mirror the backend's
+ *  VALID_ROLES in /api/admin/organization/:slug/units. */
+export const PART_OF_ROLE_LABEL: Record<string, string> = {
+  administrative: 'administrativt',
+  operational:    'operativt',
+  sponsor:        'sponsor',
+  parent:         'overordnet',
+}
+
 interface CitationRow {
   inline:       boolean | null
   sourceId:     string | null
@@ -851,4 +860,126 @@ export const OperationIncidentsStrategy: RelationStrategy = {
   },
   saveNote: noopSaveNote,
   targetRoute(entry) { return `/events/${entry.targetSlug}` },
+}
+
+/**
+ * OrganizationUnitsStrategy — PART_OF edges from Unit to Organization.
+ * Used on OrganizationDetail to edit Underavdelinger. Edge carries role +
+ * order. Description is modelled as a Description node owned by the
+ * Organization:
+ *   (o:Organization)-[:HAS_MEMBER_UNIT_NOTE]->(d:Description)-[:ABOUT_UNIT]->(u:Unit)
+ * sourceRefs on existing edges are preserved by the backend (MERGE + SET
+ * named fields only).
+ */
+interface UnitPartOfRow {
+  targetSlug: string
+  targetName: string
+  role:       string | null
+  order:      number | null
+  sections:   SectionRow[] | null
+}
+
+function unitPartOfRowToEntry(r: UnitPartOfRow): RelationEntry {
+  const sections = (r.sections ?? []).map(rowToSection)
+  return {
+    targetSlug:     r.targetSlug,
+    targetName:     r.targetName,
+    startDate:      null,
+    endDate:        null,
+    role:           r.role ?? null,
+    order:          r.order ?? null,
+    sections,
+    hasDescription: sections.length > 0,
+  }
+}
+
+export const OrganizationUnitsStrategy: RelationStrategy = {
+  async fetchTargets() {
+    const rows = await neo4jQuery<{ slug: string; name: string }>(`
+      MATCH (u:Unit)
+      RETURN u.slug AS slug, u.canonicalName AS name
+      ORDER BY name
+    `)
+    return rows
+  },
+  async fetchEntries(orgSlug) {
+    const rows = await neo4jQuery<UnitPartOfRow>(`
+      MATCH (u:Unit)-[r:PART_OF]->(o:Organization {slug: $slug})
+      OPTIONAL MATCH (o)-[:HAS_MEMBER_UNIT_NOTE]->(d:Description)-[:ABOUT_UNIT]->(u)
+      OPTIONAL MATCH (d)-[:SOURCED_FROM]->(from:Source)
+      WITH u, r, d, from
+      OPTIONAL MATCH (d)-[cites:CITES]->(src:Source)
+      WITH u, r, d, from,
+           collect(CASE WHEN src IS NULL THEN NULL ELSE {
+             inline:       coalesce(cites.inline, false),
+             sourceId:     src.id,
+             sourceTitle:  src.title,
+             sourceUrl:    src.url,
+             sourceAuthor: src.authorFreeText
+           } END) AS rawCites
+      WITH u, r,
+           CASE WHEN d IS NULL THEN NULL ELSE {
+             order:     coalesce(d.order, 1),
+             content:   d.content,
+             citations: [x IN rawCites WHERE x IS NOT NULL],
+             sourcedFrom: CASE WHEN from IS NULL THEN NULL ELSE {
+               id:             from.id,
+               title:          from.title,
+               url:             from.url,
+               authorFreeText: from.authorFreeText,
+               license:        from.license,
+               attribution:    from.attribution
+             } END
+           } END AS section
+      WITH u, r, collect(section) AS rawSections
+      RETURN u.slug          AS targetSlug,
+             u.canonicalName AS targetName,
+             r.role          AS role,
+             r.order         AS \`order\`,
+             [x IN rawSections WHERE x IS NOT NULL] AS sections
+      ORDER BY CASE WHEN size([x IN rawSections WHERE x IS NOT NULL]) > 0 THEN 1 ELSE 0 END,
+               coalesce(r.order, 999), targetName
+    `, { slug: orgSlug })
+    return rows.map(unitPartOfRowToEntry)
+  },
+  async saveEntries(orgSlug, entries) {
+    const res = await authFetch(`/api/admin/organization/${encodeURIComponent(orgSlug)}/units`, {
+      method:  'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        units: entries.map(e => ({
+          unitSlug: e.targetSlug,
+          role:     e.role ?? null,
+          order:    typeof e.order === 'number' ? e.order : null,
+        })),
+      }),
+    })
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({})) as { error?: string }
+      throw new Error(body.error ?? `HTTP ${res.status}`)
+    }
+  },
+  async saveNote(orgSlug, unitSlug, sections) {
+    const payload = {
+      sections: [...sections].sort((a, b) => a.order - b.order).map(s => ({
+        order:         s.order,
+        content:       s.content,
+        citations:     s.citations.map(c => ({ inline: c.inline, sourceId: c.source.id })),
+        sourcedFromId: s.sourcedFrom?.id ?? null,
+      })),
+    }
+    const res = await authFetch(
+      `/api/admin/organization/${encodeURIComponent(orgSlug)}/member-unit-note/${encodeURIComponent(unitSlug)}`,
+      {
+        method:  'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify(payload),
+      },
+    )
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({})) as { error?: string }
+      throw new Error(body.error ?? `HTTP ${res.status} on note for ${unitSlug}`)
+    }
+  },
+  targetRoute(entry) { return `/district/${entry.targetSlug}` },
 }

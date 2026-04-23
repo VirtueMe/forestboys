@@ -23,6 +23,9 @@ export interface RelationEntry {
   role?:          string | null
   /** Only populated when the strategy exposes a pass/fail flag (courses). */
   passed?:        boolean | null
+  /** Edge sort order — lower appears first. Only populated when the strategy
+   *  exposes order (e.g. PART_OF with curated org/unit ordering). */
+  order?:         number | null
   sections:       Section[]
   hasDescription: boolean
 }

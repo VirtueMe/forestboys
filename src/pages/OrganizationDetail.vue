@@ -87,10 +87,42 @@
         <button type="button" class="edit-link-revert" :disabled="sectionsSaving" @click="revertSections">Angre</button>
       </footer>
       <div v-if="sectionsError" class="edit-save-error">{{ sectionsError }}</div>
+
+      <RelationListEditor
+        :parent-slug="orgSlug"
+        :entries="unitEntries"
+        :targets="unitTargets"
+        :strategy="OrganizationUnitsStrategy"
+        label="Underavdelinger"
+        add-label="+ Legg til underavdeling"
+        empty-label="Ingen underavdelinger"
+        search-placeholder="Søk avdeling…"
+        picker-chip-aria="Bytt avdeling"
+        validation-empty="Velg avdeling for alle rader før du lagrer."
+        show-role
+        :role-options="PART_OF_ROLE_LABEL"
+        :show-dates="false"
+        :signature-extra="unitEntrySignatureExtra"
+        :summary-extra="unitSummaryExtra"
+      >
+        <template #extra-fields="{ entry }">
+          <div class="unit-edge-row">
+            <label class="unit-edge-label">Rekkefølge</label>
+            <input
+              class="edit-input edit-input-order"
+              type="number"
+              min="0"
+              inputmode="numeric"
+              :value="entry.order ?? ''"
+              @input="entry.order = ($event.target as HTMLInputElement).value === '' ? null : Number(($event.target as HTMLInputElement).value)"
+            />
+          </div>
+        </template>
+      </RelationListEditor>
       </div>
 
       <!-- Beskrivelse (HAS_CONTENT sections with citations + Kilder footer) -->
-      <details v-if="sectionsForPreview.length" class="section" open>
+      <details v-if="mode !== 'edit' && sectionsForPreview.length" class="section" open>
         <summary class="section-summary">
           <h3 class="section-heading">Beskrivelse</h3>
         </summary>
@@ -153,32 +185,34 @@
         </div>
       </details>
 
-      <!-- Underavdelinger -->
-      <details v-if="units.length" class="section" open>
-        <summary class="section-summary"><h3 class="section-heading">Underavdelinger ({{ units.length }})</h3></summary>
+      <!-- Underavdelinger (PART_OF edges) -->
+      <details v-if="mode !== 'edit' && unitEntries.length" class="section" open>
+        <summary class="section-summary"><h3 class="section-heading">Underavdelinger ({{ unitEntries.length }})</h3></summary>
         <div class="section-body">
           <div class="relation-list">
-            <div v-for="u in units" :key="u.slug" class="relation-row">
-              <RouterLink :to="`/district/${u.slug}`" class="relation-link">{{ u.name }}</RouterLink>
-              <span v-if="u.role" class="relation-role">{{ ROLE_LABEL[u.role] ?? u.role }}</span>
+            <div v-for="u in unitEntries" :key="u.targetSlug" class="relation-row">
+              <RouterLink :to="`/district/${u.targetSlug}`" class="relation-link">{{ u.targetName }}</RouterLink>
+              <span v-if="u.role" class="relation-role">{{ PART_OF_ROLE_LABEL[u.role] ?? u.role }}</span>
               <button
-                v-if="u.description"
+                v-if="u.hasDescription"
                 class="info-marker"
                 type="button"
-                :aria-expanded="expandedUnit === u.slug"
                 aria-label="Vis forklaring"
-                @click="toggleUnitInfo(u.slug)"
+                @click="activeUnit = u"
               >
                 i
               </button>
-              <div v-if="u.description && expandedUnit === u.slug" class="relation-desc">
-                <p class="relation-desc-text">{{ u.description }}</p>
-                <SourceRef v-if="u.sourceRefs?.length" :refs="u.sourceRefs" />
-              </div>
             </div>
           </div>
         </div>
       </details>
+
+      <RelationInfoPopup
+        :entry="activeUnit"
+        :role-options="PART_OF_ROLE_LABEL"
+        show-role
+        @close="activeUnit = null"
+      />
 
       <!-- Operasjoner -->
       <details v-if="operations.length" class="section" open>
@@ -283,9 +317,12 @@ import { authFetch } from '../composables/useAuth.ts'
 import { blocksToHtml } from '../utils/portableText.ts'
 import DetailPage from '../components/DetailPage.vue'
 import ImageSlider, { type SlideImage } from '../components/ImageSlider.vue'
-import SourceRef from '../components/SourceRef.vue'
 import AdminViewTabs, { type AdminViewMode } from '../components/AdminViewTabs.vue'
 import SectionsEditor, { type Section, type Citation } from '../components/SectionsEditor.vue'
+import RelationListEditor from '../components/relation/RelationListEditor.vue'
+import RelationInfoPopup  from '../components/relation/RelationInfoPopup.vue'
+import { OrganizationUnitsStrategy, PART_OF_ROLE_LABEL } from '../components/relation/strategies.ts'
+import type { RelationEntry, RelationTarget } from '../components/relation/RelationStrategy.ts'
 
 interface OrgNode {
   name: string
@@ -318,23 +355,8 @@ interface SectionRow {
   } | null
 }
 
-interface ChildUnit {
-  name: string
-  slug: string
-  role: string | null
-  description: string | null
-  sourceRefs: string[] | null
-  order: number
-}
-
-const ROLE_LABEL: Record<string, string> = {
-  administrative: 'administrativt',
-  operational:    'operativt',
-  sponsor:        'sponsor',
-  parent:         'overordnet',
-}
-
 const route        = useRoute()
+const orgSlug      = computed(() => String(route.params.slug))
 const mode         = ref<AdminViewMode>('preview')
 
 const org          = ref<OrgNode | null>(null)
@@ -344,11 +366,17 @@ const sectionOriginal = ref<Section[]>([])
 const sectionsSaving  = ref(false)
 const sectionsError   = ref<string | null>(null)
 
-const units        = ref<ChildUnit[]>([])
-const expandedUnit = ref<string | null>(null)
-function toggleUnitInfo(slug: string) {
-  expandedUnit.value = expandedUnit.value === slug ? null : slug
+const unitEntries  = ref<RelationEntry[]>([])
+const unitTargets  = ref<RelationTarget[]>([])
+const activeUnit   = ref<RelationEntry | null>(null)
+
+function unitEntrySignatureExtra(e: RelationEntry): string {
+  return `${e.order ?? ''}`
 }
+function unitSummaryExtra(e: RelationEntry): string {
+  return typeof e.order === 'number' ? `#${e.order}` : ''
+}
+
 const operations   = ref<{ name: string; slug: string }[]>([])
 const events       = ref<{ slug: string; title: string; date: string | null }[]>([])
 const people       = ref<{ slug: string; name: string; eventCount: number }[]>([])
@@ -383,13 +411,14 @@ function resetOrg() {
   sectionDraft.value    = []
   sectionOriginal.value = []
   sectionsError.value   = null
-  units.value        = []
+  unitEntries.value  = []
+  unitTargets.value  = []
+  activeUnit.value   = null
   operations.value   = []
   events.value       = []
   people.value       = []
   externalRefs.value = []
   galleryImages.value = []
-  expandedUnit.value = null
   editForm.value     = { ...EMPTY_EDIT }
   editOriginal.value = { ...EMPTY_EDIT }
   editError.value    = null
@@ -466,7 +495,7 @@ async function saveEdit() {
 
 async function loadOrg(slug: string) {
   try {
-    const [orgRows, sectionRows, unitRows, opRows, eventRows, peopleRows, refRows, galleryRows] = await Promise.all([
+    const [orgRows, sectionRows, fetchedUnitEntries, fetchedUnitTargets, opRows, eventRows, peopleRows, refRows, galleryRows] = await Promise.all([
       neo4jQuery<OrgNode>(
         `MATCH (o:Organization {slug: $slug})
          RETURN o.canonicalName AS name,
@@ -508,25 +537,11 @@ async function loadOrg(slug: string) {
          ORDER BY \`order\``,
         { slug },
       ),
-      // Sub-units — PART_OF edges carry role/description/order per reporting
-      // line (e.g. KP F is PART_OF SOE with role='operational'). The info
-      // marker in the UI surfaces the description when set.
-      //
-      // Convention: edges with a description are "context info" / special
-      // cases and sort last — primary members surface first, annotated ones
-      // follow (e.g. KP F sinks below Kompani Linge on SOE's page).
-      neo4jQuery<ChildUnit>(
-        `MATCH (u:Unit)-[r:PART_OF]->(o:Organization {slug: $slug})
-         RETURN u.canonicalName AS name,
-                u.slug          AS slug,
-                r.role          AS role,
-                r.description   AS description,
-                r.sourceRefs    AS sourceRefs,
-                coalesce(r.order, 999) AS \`order\`
-         ORDER BY CASE WHEN r.description IS NOT NULL THEN 1 ELSE 0 END,
-                  \`order\`, name`,
-        { slug },
-      ),
+      // Sub-units — PART_OF edges carry role/description/order. Convention:
+      // edges with a description are "context info" / special cases and sort
+      // last (e.g. KP F sinks below Kompani Linge on SOE's page).
+      OrganizationUnitsStrategy.fetchEntries(slug),
+      OrganizationUnitsStrategy.fetchTargets(),
       // Operations orchestrated by this org (round-2 classified outlines).
       neo4jQuery<{ name: string; slug: string }>(
         `MATCH (op:Operation)-[:ORCHESTRATED_BY]->(o:Organization {slug: $slug})
@@ -603,7 +618,8 @@ async function loadOrg(slug: string) {
     org.value          = orgRows[0] ?? null
     if (org.value) hydrateEditForm(org.value)
     operations.value   = opRows
-    units.value        = unitRows
+    unitEntries.value  = fetchedUnitEntries
+    unitTargets.value  = fetchedUnitTargets
     events.value       = eventRows
     people.value       = peopleRows
     externalRefs.value = refRows
@@ -1261,21 +1277,23 @@ const sortedEvents = computed(() => {
   color: #fff;
 }
 
-.relation-desc {
-  flex-basis: 100%;
-  margin: 4px 0 2px;
-  padding: 8px 10px;
-  background: var(--color-bg);
-  border-left: 3px solid var(--color-navy);
-  border-radius: 0 3px 3px 0;
+.edit-pane { padding-bottom: 24px; border-bottom: 1px solid var(--color-border); margin-bottom: 24px; }
+
+/* ── RelationListEditor slot — PART_OF edge fields ──────────── */
+.unit-edge-row {
+  display: grid;
+  grid-template-columns: 120px 1fr;
+  gap: 10px;
+  align-items: center;
+  margin-top: 6px;
 }
-.relation-desc-text {
-  margin: 0 0 4px;
-  font-size: 12px;
-  line-height: 1.5;
-  color: var(--color-text);
+.unit-edge-label {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: var(--color-muted);
 }
-.relation-desc-text:last-child { margin-bottom: 0; }
+.edit-input-order { max-width: 100px; font-family: monospace; }
 
 /* ── Event items ────────────────────────────────────────────── */
 .event-item {

@@ -107,6 +107,7 @@
               Ikke bestått
             </label>
           </div>
+          <slot name="extra-fields" :entry="e"></slot>
           <div v-if="showDescription" class="membership-desc-wrap">
             <label class="membership-desc-label">Beskrivelse</label>
             <SectionsEditor :sections="e.sections" />
@@ -164,6 +165,12 @@ const props = withDefaults(defineProps<{
   createHref?:      string
   /** Auto-expand the row whose targetSlug matches this on mount / prop change. */
   expandSlug?:      string | null
+  /** Optional signature contribution for dirty tracking when the caller
+   *  mutates per-entry fields via the `extra-fields` slot. Return any string
+   *  that changes when the caller's fields change. */
+  signatureExtra?:  ((e: RelationEntry) => string) | null
+  /** Optional summary contribution shown in the row header. */
+  summaryExtra?:    ((e: RelationEntry) => string) | null
 }>(), {
   showRole:        false,
   showDates:       true,
@@ -174,6 +181,8 @@ const props = withDefaults(defineProps<{
   createLabel:     undefined,
   createHref:      undefined,
   expandSlug:      null,
+  signatureExtra:  null,
+  summaryExtra:    null,
 })
 
 const emit = defineEmits<{ saved: [] }>()
@@ -211,6 +220,7 @@ function entrySignature(arr: RelationEntry[]): string {
     arr.map(e => [
       e.targetSlug, e.role ?? null, e.passed ?? null,
       e.startDate, e.endDate, sectionsSignature(e.sections),
+      props.signatureExtra ? props.signatureExtra(e) : '',
     ]),
   )
 }
@@ -294,6 +304,10 @@ function summaryOf(e: RelationEntry): string {
   if (e.startDate || e.endDate) bits.push(`${e.startDate ?? '?'}${e.endDate ? ` – ${e.endDate}` : ''}`)
   if (props.showPassed && e.passed === true)  bits.push('Bestått')
   if (props.showPassed && e.passed === false) bits.push('Ikke bestått')
+  if (props.summaryExtra) {
+    const extra = props.summaryExtra(e)
+    if (extra) bits.push(extra)
+  }
   return bits.join(' · ')
 }
 
