@@ -53,48 +53,57 @@ function periodOf(e: RelationEntry): string {
 .relation-list {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: var(--space-xs);
 }
 .relation-row {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 8px;
-  padding: 4px 0;
+  gap: var(--space-sm);
+  padding: var(--space-xs) 0;
 }
 .relation-link {
-  font-size: 13px;
-  color: var(--color-navy);
-  text-decoration: none;
+  font-family: var(--font-sans);
+  font-size: var(--size-body-ui);
+  color: var(--ink);
+  text-decoration: underline;
+  text-decoration-color: var(--rule);
+  text-underline-offset: 3px;
 }
-.relation-link:hover { text-decoration: underline; }
+.relation-link:hover {
+  color: var(--faded-red);
+  text-decoration-color: var(--faded-red);
+}
 
 .relation-role {
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 0.06em;
+  font-family: var(--font-sans);
+  font-size: var(--size-caps);
+  font-weight: 600;
+  letter-spacing: var(--tracking-caps);
   text-transform: uppercase;
-  color: var(--color-muted);
-  padding: 1px 6px;
-  border: 1px solid var(--color-border-mid);
-  border-radius: 3px;
+  color: var(--ink-soft);
+  padding: var(--space-xs) var(--space-sm);
+  background: var(--paper-sunken);
+  border-radius: var(--radius-pill);
 }
 
 .member-period {
-  font-size: 11px;
-  color: var(--color-muted);
+  font-family: var(--font-sans);
+  font-size: var(--size-label);
+  color: var(--muted);
   font-variant-numeric: tabular-nums;
 }
 
 .info-marker {
-  width: 18px;
-  height: 18px;
-  border-radius: 50%;
-  border: 1px solid var(--color-border-mid);
-  background: var(--color-surface);
-  color: var(--color-muted);
-  font-size: 11px;
-  font-weight: 700;
+  width: 20px;
+  height: 20px;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--rule);
+  background: var(--paper-raised);
+  color: var(--ink-soft);
+  font-family: var(--font-serif);
+  font-size: var(--size-label);
+  font-weight: 600;
   font-style: italic;
   line-height: 1;
   cursor: pointer;
@@ -102,26 +111,29 @@ function periodOf(e: RelationEntry): string {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  transition: background 0.1s, border-color 0.1s, color 0.1s;
+  transition: background 120ms ease-out, border-color 120ms ease-out, color 120ms ease-out;
   -webkit-tap-highlight-color: transparent;
   margin-left: auto;
 }
 .info-marker:hover,
 .info-marker[aria-expanded="true"] {
-  background: var(--color-navy);
-  border-color: var(--color-navy);
-  color: #fff;
+  background: var(--faded-red);
+  border-color: var(--faded-red);
+  color: var(--paper);
 }
 
 .passed-chip {
   display: inline-flex;
   align-items: center;
-  padding: 1px 8px;
-  font-size: 11px;
+  padding: var(--space-xs) var(--space-sm);
+  font-family: var(--font-sans);
+  font-size: var(--size-caps);
   font-weight: 600;
-  border-radius: 10px;
+  letter-spacing: var(--tracking-caps);
+  text-transform: uppercase;
+  border-radius: var(--radius-pill);
   border: 1px solid transparent;
 }
-.passed-chip--ok { background: #ecfdf5; color: #047857; border-color: #a7f3d0; }
-.passed-chip--no { background: #fef2f2; color: #b91c1c; border-color: #fecaca; }
+.passed-chip--ok { background: var(--moss); color: var(--paper); }
+.passed-chip--no { background: var(--paper-sunken); color: var(--danger); border-color: var(--rule); }
 </style>

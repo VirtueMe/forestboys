@@ -34,28 +34,30 @@ const isAdmin = computed(() => user.value?.role === 'admin')
   top: 0;
   z-index: 5;
   display: flex;
-  gap: 4px;
-  padding: 6px 12px;
-  background: var(--color-surface);
-  border-bottom: 1px solid var(--color-border);
-  box-shadow: 0 1px 0 rgba(0, 0, 0, 0.02);
+  gap: var(--space-xs);
+  padding: var(--space-sm) var(--space-md);
+  background: var(--paper-raised);
+  border-bottom: 1px solid var(--rule);
+  box-shadow: var(--shadow-sm);
 }
 
 .admin-tab {
-  padding: 8px 14px;
-  font-size: 12px;
+  padding: var(--space-sm) var(--space-md);
+  font-family: var(--font-sans);
+  font-size: var(--size-caps);
   font-weight: 600;
-  color: var(--color-muted);
+  letter-spacing: var(--tracking-caps);
+  text-transform: uppercase;
+  color: var(--muted);
   background: transparent;
   border: none;
   border-bottom: 2px solid transparent;
   margin-bottom: -1px;
   cursor: pointer;
-  font-family: inherit;
 }
 
 .admin-tab.active {
-  color: var(--color-navy);
-  border-bottom-color: var(--color-navy);
+  color: var(--ink);
+  border-bottom-color: var(--faded-red);
 }
 </style>
