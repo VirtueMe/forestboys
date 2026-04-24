@@ -20,7 +20,7 @@
       <!-- Beskrivelse -->
       <section v-if="item.description" class="section">
         <h3 class="section-heading">Beskrivelse</h3>
-        <p class="plain-text">{{ item.description }}</p>
+        <LegacyDescription :text="item.description" />
       </section>
 
       <!-- Hendelser -->
@@ -108,6 +108,7 @@ import { ref, computed, onMounted } from 'vue'
 import { useRoute, RouterLink } from 'vue-router'
 import { useLocationCache } from '../composables/useLocationCache.ts'
 import { SANITY_IMG } from '../config/sanity.ts'
+import LegacyDescription from '../components/LegacyDescription.vue'
 
 const route = useRoute()
 const { stations, loading, init } = useLocationCache()
@@ -262,14 +263,6 @@ function nextImage() {
   cursor: pointer;
 }
 .sort-btn:hover { border-color: var(--focus); color: var(--focus); }
-
-.plain-text {
-  font-size: 14px;
-  line-height: 1.75;
-  color: var(--ink);
-  margin: 0;
-  white-space: pre-line;
-}
 
 .link-list { display: flex; flex-direction: column; gap: 2px; }
 

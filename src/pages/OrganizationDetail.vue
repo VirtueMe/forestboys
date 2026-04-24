@@ -75,18 +75,12 @@
         <div v-if="editError" class="edit-save-error">{{ editError }}</div>
       </section>
 
-      <section class="edit-section">
-        <h3 class="edit-section-heading">Beskrivelse</h3>
-        <SectionsEditor :sections="sectionDraft" />
-      </section>
-      <footer v-if="sectionsDirty" class="edit-save-bar">
-        <span class="edit-save-prompt">Ser det bra ut?</span>
-        <button type="button" class="edit-btn-primary" :disabled="sectionsSaving" @click="saveSections">
-          {{ sectionsSaving ? 'Lagrer…' : 'Lagre' }}
-        </button>
-        <button type="button" class="edit-link-revert" :disabled="sectionsSaving" @click="revertSections">Angre</button>
-      </footer>
-      <div v-if="sectionsError" class="edit-save-error">{{ sectionsError }}</div>
+      <DescriptionEditor
+        ref="descEditor"
+        :saved="savedSections"
+        :endpoint="`/api/admin/organization/${encodeURIComponent(orgSlug)}/sections`"
+        @saved="sections => savedSections = sections"
+      />
 
       <RelationListEditor
         :parent-slug="orgSlug"
@@ -121,67 +115,13 @@
       </RelationListEditor>
       </div>
 
-      <!-- Beskrivelse (HAS_CONTENT sections with citations + Kilder footer) -->
-      <details v-if="mode !== 'edit' && sectionsForPreview.length" class="section" open>
+      <!-- Beskrivelse (HAS_CONTENT sections rendered with citations + Kilder) -->
+      <details v-if="mode !== 'edit' && previewSections.length" class="section" open>
         <summary class="section-summary">
           <h3 class="section-heading">Beskrivelse</h3>
         </summary>
         <div class="section-body">
-          <template v-for="entry in sectionsForPreview" :key="entry.order">
-            <div class="section-wrap">
-              <!-- eslint-disable vue/no-v-html -->
-              <div
-                class="portable-text"
-                :class="{ 'is-quote': entry.section.citations.length > 0 || entry.section.sourcedFrom }"
-                v-html="entry.html"
-              ></div>
-              <!-- eslint-enable vue/no-v-html -->
-              <div v-if="entry.section.sourcedFrom" class="sourced-from">
-                <span class="sourced-label">Fra:</span>
-                <a
-                  v-if="entry.section.sourcedFrom.url"
-                  :href="entry.section.sourcedFrom.url"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  class="sourced-link"
-                >{{ entry.section.sourcedFrom.attribution || entry.section.sourcedFrom.title || entry.section.sourcedFrom.id }} ↗</a>
-                <span v-else class="sourced-link">{{ entry.section.sourcedFrom.attribution || entry.section.sourcedFrom.title || entry.section.sourcedFrom.id }}</span>
-                <span v-if="entry.section.sourcedFrom.license" class="sourced-license">{{ entry.section.sourcedFrom.license }}</span>
-              </div>
-              <div v-if="inlineCites(entry.section).length" class="inline-cites">
-                <a
-                  v-for="c in inlineCites(entry.section)"
-                  :key="c.source.id"
-                  :href="c.source.url ?? '#'"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  class="cite-chip"
-                >
-                  {{ c.source.title || c.source.id }}
-                  <span v-if="c.source.authorFreeText" class="cite-chip-author">— {{ c.source.authorFreeText }}</span>
-                  <span class="cite-chip-arrow">↗</span>
-                </a>
-              </div>
-              <div v-if="sectionFootnoteCites(entry.section).length" class="section-footnotes">
-                <sup v-for="c in sectionFootnoteCites(entry.section)" :key="c.source.id">[{{ c.footnoteNumber }}]</sup>
-              </div>
-            </div>
-          </template>
-          <footer v-if="orgFootnotes.length" class="card-kilder">
-            <div class="kilder-label">Kilder</div>
-            <ol class="kilder-list">
-              <li v-for="c in orgFootnotes" :key="c.source.id" :value="c.footnoteNumber">
-                <component
-                  :is="c.source.url ? 'a' : 'span'"
-                  v-bind="c.source.url ? { href: c.source.url, target: '_blank', rel: 'noopener noreferrer' } : {}"
-                  class="kilder-ref"
-                >{{ c.source.title || c.source.id
-                  }}<span v-if="c.source.authorFreeText" class="kilder-author"> — {{ c.source.authorFreeText }}</span>
-                </component>
-                <span v-if="c.source.url" class="kilder-arrow"> ↗</span>
-              </li>
-            </ol>
-          </footer>
+          <DescriptionPreview :sections="previewSections" />
         </div>
       </details>
 
@@ -310,15 +250,16 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, useTemplateRef } from 'vue'
 import { RouterLink, useRoute } from 'vue-router'
 import { neo4jQuery } from '../composables/useNeo4j.ts'
 import { authFetch } from '../composables/useAuth.ts'
-import { blocksToHtml } from '../utils/portableText.ts'
 import DetailPage from '../components/DetailPage.vue'
 import ImageSlider, { type SlideImage } from '../components/ImageSlider.vue'
 import AdminViewTabs, { type AdminViewMode } from '../components/AdminViewTabs.vue'
-import SectionsEditor, { type Section, type Citation } from '../components/SectionsEditor.vue'
+import { type Section }   from '../components/SectionsEditor.vue'
+import DescriptionPreview from '../components/DescriptionPreview.vue'
+import DescriptionEditor  from '../components/DescriptionEditor.vue'
 import RelationListEditor from '../components/relation/RelationListEditor.vue'
 import RelationInfoPopup  from '../components/relation/RelationInfoPopup.vue'
 import { OrganizationUnitsStrategy, PART_OF_ROLE_LABEL } from '../components/relation/strategies.ts'
@@ -361,10 +302,8 @@ const mode         = ref<AdminViewMode>('preview')
 
 const org          = ref<OrgNode | null>(null)
 
-const sectionDraft    = ref<Section[]>([])
-const sectionOriginal = ref<Section[]>([])
-const sectionsSaving  = ref(false)
-const sectionsError   = ref<string | null>(null)
+const savedSections = ref<Section[]>([])
+const descEditor = useTemplateRef<{ draft: Section[]; dirty: boolean } | null>('descEditor')
 
 const unitEntries  = ref<RelationEntry[]>([])
 const unitTargets  = ref<RelationTarget[]>([])
@@ -408,9 +347,7 @@ const editDirty    = computed(() =>
 
 function resetOrg() {
   org.value          = null
-  sectionDraft.value    = []
-  sectionOriginal.value = []
-  sectionsError.value   = null
+  savedSections.value   = []
   unitEntries.value  = []
   unitTargets.value  = []
   activeUnit.value   = null
@@ -635,10 +572,7 @@ async function loadOrg(slug: string) {
         subjectType: r.subjectType as SlideImage['subjectType'],
       }))
 
-    const hydrated = sectionRows.map(rowToSection)
-    sectionOriginal.value = hydrated
-    sectionDraft.value    = hydrated.map(cloneSection)
-    sectionsError.value   = null
+    savedSections.value = sectionRows.map(rowToSection)
   } catch (err) {
     console.error('OrganizationDetail fetch error:', err)
     org.value = null
@@ -682,102 +616,11 @@ function rowToSection(r: SectionRow): Section {
   }
 }
 
-function cloneSection(s: Section): Section {
-  return {
-    ...s,
-    citations:   s.citations.map(c => ({ ...c, source: { ...c.source } })),
-    sourcedFrom: s.sourcedFrom ? { ...s.sourcedFrom } : null,
-  }
-}
-
-function sectionsSignature(arr: Section[]): string {
-  return JSON.stringify(
-    [...arr]
-      .sort((a, b) => a.order - b.order)
-      .map(s => [
-        s.order,
-        s.content,
-        s.citations.map(c => [c.inline, c.source.id]),
-        s.sourcedFrom?.id ?? null,
-      ]),
-  )
-}
-
-const sectionsDirty = computed(() =>
-  sectionsSignature(sectionDraft.value) !== sectionsSignature(sectionOriginal.value),
+/** Sections to render in the Beskrivelse preview — overlays the editor's
+ *  unsaved draft when dirty so the user sees changes live. */
+const previewSections = computed<Section[]>(() =>
+  descEditor.value?.dirty ? descEditor.value.draft : savedSections.value,
 )
-
-function revertSections() {
-  sectionDraft.value = sectionOriginal.value.map(cloneSection)
-  sectionsError.value = null
-}
-
-async function saveSections() {
-  const slug = String(route.params.slug)
-  if (!slug) return
-  sectionsSaving.value = true
-  sectionsError.value  = null
-  try {
-    const payload = {
-      sections: [...sectionDraft.value]
-        .sort((a, b) => a.order - b.order)
-        .map(s => ({
-          order:          s.order,
-          content:        s.content,
-          citations:      s.citations.map(c => ({ inline: c.inline, sourceId: c.source.id })),
-          sourcedFromId:  s.sourcedFrom?.id ?? null,
-        })),
-    }
-    const res = await authFetch(`/api/admin/organization/${encodeURIComponent(slug)}/sections`, {
-      method:  'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body:    JSON.stringify(payload),
-    })
-    if (!res.ok) {
-      const body = await res.json().catch(() => ({})) as { error?: string }
-      sectionsError.value = body.error ?? `HTTP ${res.status}`
-      return
-    }
-    sectionOriginal.value = sectionDraft.value.map(cloneSection)
-  } catch (e) {
-    sectionsError.value = (e as Error).message
-  } finally {
-    sectionsSaving.value = false
-  }
-}
-
-interface RenderedSection {
-  order: number
-  html:  string
-  section: Section
-}
-
-const sectionsForPreview = computed<RenderedSection[]>(() => {
-  const source = sectionsDirty.value ? sectionDraft.value : sectionOriginal.value
-  return [...source]
-    .sort((a, b) => a.order - b.order)
-    .map(s => {
-      let html = ''
-      try { html = blocksToHtml(JSON.parse(s.content) as unknown[]) } catch { /* skip */ }
-      return { order: s.order, html, section: s }
-    })
-})
-
-const orgFootnotes = computed<(Citation & { footnoteNumber: number })[]>(() => {
-  const source = sectionsDirty.value ? sectionDraft.value : sectionOriginal.value
-  const out: (Citation & { footnoteNumber: number })[] = []
-  for (const s of [...source].sort((a, b) => a.order - b.order)) {
-    for (const c of s.citations) {
-      if (!c.inline) out.push({ ...c, footnoteNumber: out.length + 1 })
-    }
-  }
-  return out
-})
-
-function inlineCites(s: Section): Citation[] { return s.citations.filter(c => c.inline) }
-function sectionFootnoteCites(s: Section): (Citation & { footnoteNumber: number })[] {
-  return orgFootnotes.value.filter(fn => s.citations.some(c => !c.inline && c.source.id === fn.source.id))
-}
 
 const eventSortAsc = ref(true)
 
@@ -1073,165 +916,6 @@ const sortedEvents = computed(() => {
   touch-action: manipulation;
 }
 .sort-btn:hover { background: var(--paper-sunken); }
-
-/* ── Portable text (Description rendering) ──────────────────── */
-.portable-text {
-  margin-top: var(--space-xs);
-  font-family: var(--font-serif);
-  font-size: var(--size-body);
-  line-height: var(--leading-prose);
-  color: var(--ink);
-  max-width: var(--prose-max-width);
-}
-
-.section-wrap { position: relative; }
-.section-wrap + .section-wrap { margin-top: var(--space-sm); }
-
-.is-quote {
-  border-left: 2px solid var(--rule);
-  padding: 2px var(--space-md);
-  margin: var(--space-md) 0;
-  font-style: italic;
-  color: var(--ink-soft);
-}
-
-.sourced-from {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  gap: var(--space-xs);
-  margin: calc(var(--space-sm) * -1) 0 var(--space-md) var(--space-md);
-  font-family: var(--font-sans);
-  font-size: var(--size-label);
-  color: var(--muted);
-}
-.sourced-label  {
-  font-size: var(--size-caps);
-  font-weight: 600;
-  letter-spacing: var(--tracking-caps);
-  text-transform: uppercase;
-}
-.sourced-link {
-  color: var(--ink);
-  text-decoration: underline;
-  text-decoration-color: var(--rule);
-  text-underline-offset: 3px;
-}
-.sourced-link:hover { color: var(--faded-red); text-decoration-color: var(--faded-red); }
-.sourced-license {
-  font-family: var(--font-mono);
-  font-size: var(--size-caps);
-  padding: var(--space-xs) var(--space-sm);
-  background: var(--paper-sunken);
-  border-radius: var(--radius-pill);
-  color: var(--muted);
-}
-
-.inline-cites {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-xs);
-  margin: var(--space-sm) 0;
-}
-.cite-chip {
-  display: inline-flex;
-  align-items: baseline;
-  gap: var(--space-xs);
-  padding: var(--space-xs) var(--space-sm);
-  font-family: var(--font-sans);
-  font-size: var(--size-label);
-  color: var(--ink-soft);
-  background: var(--paper-sunken);
-  border-radius: var(--radius-pill);
-  text-decoration: none;
-}
-.cite-chip:hover       { color: var(--faded-red); }
-.cite-chip-author      { color: var(--muted); }
-.cite-chip-arrow       { font-size: var(--size-caps); opacity: 0.6; }
-
-.section-footnotes {
-  position: absolute;
-  right: 0;
-  bottom: 0;
-  display: flex;
-  gap: 2px;
-  font-family: var(--font-sans);
-  font-size: var(--size-label);
-  color: var(--muted);
-}
-
-.card-kilder {
-  border-top: 1px solid var(--rule);
-  margin-top: var(--space-md);
-  padding-top: var(--space-md);
-}
-.kilder-label {
-  font-family: var(--font-sans);
-  font-size: var(--size-caps);
-  font-weight: 600;
-  letter-spacing: var(--tracking-caps);
-  text-transform: uppercase;
-  color: var(--muted);
-  margin-bottom: var(--space-sm);
-}
-.kilder-list {
-  margin: 0;
-  padding-left: var(--space-lg);
-  font-family: var(--font-sans);
-  font-size: var(--size-label);
-  color: var(--muted);
-  line-height: var(--leading-normal);
-}
-.kilder-list li        { margin-bottom: var(--space-xs); }
-.kilder-ref            { color: inherit; text-decoration: none; }
-.kilder-list a.kilder-ref {
-  color: var(--ink);
-  text-decoration: underline;
-  text-decoration-color: var(--rule);
-  text-underline-offset: 3px;
-}
-.kilder-list a.kilder-ref:hover { color: var(--faded-red); text-decoration-color: var(--faded-red); }
-.kilder-list a.kilder-ref .kilder-author { color: var(--muted); }
-.kilder-arrow { font-size: var(--size-caps); opacity: 0.6; color: var(--ink); }
-
-.portable-text :deep(p) {
-  margin: 0 0 0.75em;
-}
-.portable-text :deep(p:last-child) { margin-bottom: 0; }
-
-.portable-text :deep(ul),
-.portable-text :deep(ol) {
-  margin: 0.5em 0 0.75em;
-  padding-left: 1.5em;
-}
-.portable-text :deep(li) {
-  margin: 0.25em 0;
-}
-
-.portable-text :deep(h1),
-.portable-text :deep(h2),
-.portable-text :deep(h3),
-.portable-text :deep(h4) {
-  font-family: var(--font-serif);
-  font-size: var(--size-h3);
-  font-weight: 600;
-  margin: 1em 0 0.4em;
-  color: var(--ink);
-}
-
-.portable-text :deep(strong) { font-weight: 600; }
-.portable-text :deep(em)     { font-style: italic; }
-.portable-text :deep(a) {
-  color: var(--ink);
-  text-decoration: underline;
-  text-decoration-color: var(--rule);
-  text-underline-offset: 3px;
-  cursor: pointer;
-}
-.portable-text :deep(a:hover) {
-  color: var(--faded-red);
-  text-decoration-color: var(--faded-red);
-}
 
 /* ── Link list ──────────────────────────────────────────────── */
 .link-list { display: flex; flex-direction: column; gap: var(--space-xs); }

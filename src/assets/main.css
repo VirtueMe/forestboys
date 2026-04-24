@@ -114,3 +114,27 @@ html, body, #app {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
+
+/* ── Global section primitive ──────────────────────────────────
+ * Detail-page card section. Targets <section class="section"> so the
+ * styling applies regardless of which component owns the markup (Vue
+ * scoped CSS otherwise wouldn't reach descendants).
+ *
+ * Organization's collapsible `<details class="section">` deliberately
+ * skips this rule (different element) and styles itself locally. */
+section.section {
+  padding: var(--space-md);
+  background: var(--paper-raised);
+  border-bottom: 1px solid var(--rule);
+}
+section.section:last-of-type { margin-bottom: var(--space-xl); }
+
+.section-heading {
+  font-family: var(--font-sans);
+  font-size: var(--size-caps);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-caps);
+  color: var(--muted);
+  margin: 0 0 var(--space-sm);
+}
