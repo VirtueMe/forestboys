@@ -1,7 +1,7 @@
 <template>
   <div class="station-detail">
-    <div v-if="loading" class="status">Laster…</div>
-
+    <StationCreateForm v-if="isCreate" @created="onCreated" />
+    <div v-else-if="loading" class="status">Laster…</div>
     <div v-else-if="!item" class="status">Stasjon ikke funnet.</div>
 
     <template v-else>
@@ -105,15 +105,23 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
-import { useRoute, RouterLink } from 'vue-router'
+import { useRoute, useRouter, RouterLink } from 'vue-router'
 import { useLocationCache } from '../composables/useLocationCache.ts'
 import { SANITY_IMG } from '../config/sanity.ts'
 import LegacyDescription from '../components/LegacyDescription.vue'
+import StationCreateForm from '../components/station/StationCreateForm.vue'
 
-const route = useRoute()
+const route  = useRoute()
+const router = useRouter()
 const { stations, loading, init } = useLocationCache()
 
-onMounted(async () => { await init() })
+const isCreate = computed(() => String(route.params.slug) === 'new')
+
+function onCreated(newSlug: string) {
+  void router.replace(`/station/${newSlug}`)
+}
+
+onMounted(async () => { if (!isCreate.value) await init() })
 
 const item = computed(() =>
   stations.value.find(s => s.slug === (route.params.slug as string)) ?? null,

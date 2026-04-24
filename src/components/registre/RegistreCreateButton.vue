@@ -110,21 +110,15 @@ watch(name, v => {
   if (!slugEdited.value) slug.value = slugify(v)
 })
 
+/** Kinds with a dedicated in-page `/<type>/new` create flow. Anything
+ *  else falls back to the modal (legacy for kinds whose detail pages
+ *  haven't been given the treatment yet). */
+const IN_PAGE_KINDS: Kind[] = ['organization', 'person', 'unit', 'station']
+
 function pick(k: Kind) {
   open.value = false
-  // Organization / Person / Avdeling use the in-page create flow on
-  // /<type>/new; the rest still go through the modal until their pages
-  // get the same treatment.
-  if (k === 'organization') {
-    router.push('/organization/new')
-    return
-  }
-  if (k === 'person') {
-    router.push('/person/new')
-    return
-  }
-  if (k === 'unit') {
-    router.push('/district/new')
+  if (IN_PAGE_KINDS.includes(k)) {
+    router.push(KIND_ROUTE[k]('new'))
     return
   }
   kind.value = k
