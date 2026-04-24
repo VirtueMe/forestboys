@@ -111,13 +111,20 @@ watch(name, v => {
 })
 
 function pick(k: Kind) {
+  open.value = false
+  // Organization uses the new in-page create flow on /organization/new;
+  // the rest still go through the modal until their pages get the same
+  // treatment.
+  if (k === 'organization') {
+    router.push('/organization/new')
+    return
+  }
   kind.value = k
   name.value = ''
   slug.value = ''
   slugEdited.value = false
   slugEditable.value = false
   error.value = null
-  open.value = false
   modalOpen.value = true
   void nextTick(() => nameRef.value?.focus())
 }

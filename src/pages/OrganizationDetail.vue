@@ -8,6 +8,7 @@
   >
     <template v-if="org">
       <OrganizationHeader
+        v-if="!isCreate"
         :name="displayName"
         :abbreviation="displayAbbreviation"
         :formal-name="displayFormalName"
@@ -17,7 +18,7 @@
         :country="displayCountry"
       />
 
-      <AdminViewTabs v-model="mode" />
+      <AdminViewTabs v-if="!isCreate" v-model="mode" />
 
       <OrganizationEditPane
         v-if="mode === 'edit'"
@@ -31,15 +32,19 @@
         :operation-targets="operationTargets"
         :incident-entries="incidentEntries"
         :incident-targets="incidentTargets"
+        :create-mode="isCreate"
         :create-event-href="createEventHref"
         @saved-scalar="onScalarSaved"
         @saved-sections="sections => savedSections = sections"
+        @created="onCreated"
       />
 
       <!-- Always-visible read-only sections. The editable ones
            (Beskrivelse, Underavdelinger, Operasjoner, Hendelser) hide in
-           edit mode; the rest (Galleri, Deltakere, Lenker) stay visible. -->
+           edit mode; the rest (Galleri, Deltakere, Lenker) stay visible.
+           In create mode there's nothing to show yet. -->
       <OrganizationViewPane
+        v-if="!isCreate"
         :preview-sections="previewSections"
         :unit-entries="unitEntries"
         :operation-entries="operationEntries"
@@ -54,8 +59,8 @@
 </template>
 
 <script setup lang="ts">
-import { computed, useTemplateRef } from 'vue'
-import { useRoute } from 'vue-router'
+import { computed, useTemplateRef, watch } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import { useOrganizationData, type OrgNode } from '../composables/useOrganizationData.ts'
 import DetailPage from '../components/DetailPage.vue'
 import AdminViewTabs, { type AdminViewMode } from '../components/AdminViewTabs.vue'
@@ -67,8 +72,18 @@ import OrganizationViewPane from '../components/organization/OrganizationViewPan
 import type { OrgDraft }    from '../components/organization/OrganizationScalarEditor.vue'
 
 const route   = useRoute()
+const router  = useRouter()
 const orgSlug = computed(() => String(route.params.slug))
+const isCreate = computed(() => orgSlug.value === 'new')
 const mode    = ref<AdminViewMode>('preview')
+
+// Force edit mode whenever we're on /organization/new — the preview pane
+// has nothing to show yet.
+watch(isCreate, v => { if (v) mode.value = 'edit' }, { immediate: true })
+
+function onCreated(newSlug: string) {
+  void router.replace(`/organization/${newSlug}`)
+}
 
 // Neo4j data layer.
 const {

@@ -96,6 +96,16 @@ export function useOrganizationData() {
   }
 
   async function loadOrg(slug: string) {
+    // Create mode — `/organization/new` lands here before the node exists.
+    // Populate `org` with a blank skeleton so the page renders the edit form
+    // instead of the "ikke funnet" state; skip all relation/gallery fetches.
+    if (slug === 'new') {
+      org.value = {
+        name: '', formalName: null, abbreviation: null, sortingName: null,
+        color: null, foundedDate: null, dissolvedDate: null, country: null,
+      }
+      return
+    }
     try {
       const [
         orgRows, sectionRows,

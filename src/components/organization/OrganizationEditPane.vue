@@ -4,55 +4,59 @@
       ref="scalarEditor"
       :slug="slug"
       :saved="org"
+      :create-mode="createMode"
       @saved="out => emit('savedScalar', out)"
+      @created="slug => emit('created', slug)"
     />
 
-    <DescriptionEditor
-      ref="descEditor"
-      :saved="savedSections"
-      :endpoint="`/api/admin/organization/${encodeURIComponent(slug)}/sections`"
-      @saved="sections => emit('savedSections', sections)"
-    />
+    <template v-if="!createMode">
+      <DescriptionEditor
+        ref="descEditor"
+        :saved="savedSections"
+        :endpoint="`/api/admin/organization/${encodeURIComponent(slug)}/sections`"
+        @saved="sections => emit('savedSections', sections)"
+      />
 
-    <OrganizationUnitsEditor
-      :slug="slug"
-      :entries="unitEntries"
-      :targets="unitTargets"
-    />
+      <OrganizationUnitsEditor
+        :slug="slug"
+        :entries="unitEntries"
+        :targets="unitTargets"
+      />
 
-    <RelationListEditor
-      :parent-slug="slug"
-      :entries="operationEntries"
-      :targets="operationTargets"
-      :strategy="OrgOperationsStrategy"
-      label="Operasjoner"
-      add-label="+ Legg til operasjon"
-      empty-label="Ingen operasjoner"
-      search-placeholder="Søk operasjon…"
-      picker-chip-aria="Bytt operasjon"
-      validation-empty="Velg operasjon for alle rader før du lagrer."
-      :show-dates="false"
-      :show-description="false"
-      create-label="+ Opprett ny operasjon"
-      :create-href="createEventHref?.('operation')"
-    />
+      <RelationListEditor
+        :parent-slug="slug"
+        :entries="operationEntries"
+        :targets="operationTargets"
+        :strategy="OrgOperationsStrategy"
+        label="Operasjoner"
+        add-label="+ Legg til operasjon"
+        empty-label="Ingen operasjoner"
+        search-placeholder="Søk operasjon…"
+        picker-chip-aria="Bytt operasjon"
+        validation-empty="Velg operasjon for alle rader før du lagrer."
+        :show-dates="false"
+        :show-description="false"
+        create-label="+ Opprett ny operasjon"
+        :create-href="createEventHref?.('operation')"
+      />
 
-    <RelationListEditor
-      :parent-slug="slug"
-      :entries="incidentEntries"
-      :targets="incidentTargets"
-      :strategy="OrgIncidentsStrategy"
-      label="Hendelser"
-      add-label="+ Legg til hendelse"
-      empty-label="Ingen hendelser"
-      search-placeholder="Søk hendelse…"
-      picker-chip-aria="Bytt hendelse"
-      validation-empty="Velg hendelse for alle rader før du lagrer."
-      :show-dates="false"
-      :show-description="false"
-      create-label="+ Opprett ny hendelse"
-      :create-href="createEventHref?.('incident')"
-    />
+      <RelationListEditor
+        :parent-slug="slug"
+        :entries="incidentEntries"
+        :targets="incidentTargets"
+        :strategy="OrgIncidentsStrategy"
+        label="Hendelser"
+        add-label="+ Legg til hendelse"
+        empty-label="Ingen hendelser"
+        search-placeholder="Søk hendelse…"
+        picker-chip-aria="Bytt hendelse"
+        validation-empty="Velg hendelse for alle rader før du lagrer."
+        :show-dates="false"
+        :show-description="false"
+        create-label="+ Opprett ny hendelse"
+        :create-href="createEventHref?.('incident')"
+      />
+    </template>
   </div>
 </template>
 
@@ -92,6 +96,10 @@ defineProps<{
   operationTargets:  RelationTarget[]
   incidentEntries:   RelationEntry[]
   incidentTargets:   RelationTarget[]
+  /** When true, `slug` is the sentinel `new` and the scalar editor is
+   *  in create mode. Description + relation editors are hidden (nothing
+   *  to attach to yet). */
+  createMode?:       boolean
   /** Returns the `/events/new?...#new` href used by the "+ Opprett ny"
    *  link inside the operation/incident pickers. */
   createEventHref?: (kind: 'incident' | 'operation') => string
@@ -100,6 +108,7 @@ defineProps<{
 const emit = defineEmits<{
   savedScalar:   [out: Partial<OrgNode>]
   savedSections: [sections: Section[]]
+  created:       [slug: string]
 }>()
 
 const scalarEditor = useTemplateRef<{ draft: OrgDraft;  dirty: boolean } | null>('scalarEditor')
