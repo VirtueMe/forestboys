@@ -1,19 +1,117 @@
-:root {
-  --color-bg:         #f5f0e8;
-  --color-surface:    #ffffff;
-  --color-border:     #e0d8c8;
-  --color-border-mid: #d4c9b0;
-  --color-handle:     #c4b99a;
-  --color-text:       #1a1008;
-  --color-muted:      #8a7a60;
-  --color-navy:       #1e3a5f;
-  --color-red:        #8b1a1a;
-  --color-green:      #2d6a4f;
-  --color-you:        #1a73e8;
+/*
+ * Archival Paper — design tokens.
+ *
+ * Single source of truth for colors, typography, spacing, radii, shadows.
+ * Light defaults; dark overrides live under prefers-color-scheme.
+ *
+ * Full spec: DESIGN.md (light) + DESIGN-dark.md (dark). Do not introduce
+ * off-spec values at the component level — extend the spec and the tokens
+ * first.
+ *
+ * Legacy aliases (--color-bg, --color-surface, …) keep existing components
+ * rendering during the Phase-2/3 retrofit. New code should reference the
+ * canonical tokens (--paper, --ink, --rule, …). The alias layer is
+ * scheduled for deletion once the sweep is done.
+ */
 
-  --drawer-height:    420px;
-  --sidebar-width:    360px;
-  --nav-height:       48px;
+:root {
+  /* ── Colors (light) ──────────────────────────────────────── */
+  --ink:            #1A1A1A;
+  --ink-soft:       #3D3A35;
+  --paper:          #F4EFE4;
+  --paper-raised:   #FBF7EE;
+  --paper-sunken:   #E8DFCC;
+  --rule:           #C8BFA9;
+  --muted:          #6B6459;
+  --faded-red:      #8B2E1F;
+  --faded-red-soft: #A85A48;
+  --moss:           #4F5A3E;
+  --focus:          #3A5A74;
+  --danger:         #8B2E1F;
+
+  /* ── Typography ──────────────────────────────────────────── */
+  --font-serif:     'Crimson Pro', Georgia, 'Times New Roman', serif;
+  --font-sans:      'Public Sans', system-ui, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif;
+  --font-mono:      'JetBrains Mono', ui-monospace, 'SF Mono', Consolas, monospace;
+
+  --size-display:   2.75rem;
+  --size-h1:        2rem;
+  --size-h2:        1.5rem;
+  --size-h3:        1.125rem;
+  --size-body:      1.0625rem;
+  --size-body-ui:   0.9375rem;
+  --size-label:     0.8125rem;
+  --size-caps:      0.75rem;
+  --size-mono:      0.875rem;
+
+  --leading-tight:  1.1;
+  --leading-snug:   1.25;
+  --leading-normal: 1.45;
+  --leading-prose:  1.55;
+
+  --tracking-caps:  0.08em;
+  --tracking-tight: -0.01em;
+
+  /* ── Spacing (8px grid, 4px half-step) ───────────────────── */
+  --space-xs:  4px;
+  --space-sm:  8px;
+  --space-md:  16px;
+  --space-lg:  24px;
+  --space-xl:  40px;
+  --space-xxl: 64px;
+
+  /* ── Radii ───────────────────────────────────────────────── */
+  --radius-sm:   2px;
+  --radius-md:   4px;
+  --radius-lg:   8px;
+  --radius-pill: 999px;
+
+  /* ── Shadows ─────────────────────────────────────────────── */
+  --shadow-sm:         0 1px 2px rgba(26, 26, 26, 0.06);
+  --shadow-md:         0 2px 8px rgba(26, 26, 26, 0.08);
+  --shadow-lg:         0 8px 24px rgba(26, 26, 26, 0.10);
+  --shadow-inset-rule: inset 0 -1px 0 var(--rule);
+
+  /* ── Layout ──────────────────────────────────────────────── */
+  --nav-height:        48px;
+  --content-max-width: 1320px;
+  --prose-max-width:   68ch;
+  --drawer-height:     420px;
+  --sidebar-width:     360px;
+
+  /* ── Legacy aliases (Phase 1 compatibility) ──────────────── */
+  --color-bg:         var(--paper);
+  --color-surface:    var(--paper-raised);
+  --color-border:     var(--rule);
+  --color-border-mid: var(--rule);
+  --color-handle:     var(--rule);
+  --color-text:       var(--ink);
+  --color-muted:      var(--muted);
+  --color-navy:       var(--focus);
+  --color-red:        var(--faded-red);
+  --color-green:      var(--moss);
+  --color-you:        var(--focus);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --ink:            #EDE6D6;
+    --ink-soft:       #B8B0A0;
+    --paper:          #1C1A17;
+    --paper-raised:   #252320;
+    --paper-sunken:   #151311;
+    --rule:           #3A352E;
+    --muted:          #807867;
+    --faded-red:      #C8604E;
+    --faded-red-soft: #A85A48;
+    --moss:           #8A9672;
+    --focus:          #7FA4C3;
+    --danger:         #C8604E;
+
+    --shadow-sm:      0 1px 2px rgba(0, 0, 0, 0.30);
+    --shadow-md:      0 2px 8px rgba(0, 0, 0, 0.40);
+    --shadow-lg:      0 8px 24px rgba(0, 0, 0, 0.55);
+  }
 }
 
 *, *::before, *::after {
@@ -25,8 +123,11 @@
 html, body, #app {
   height: 100%;
   overflow: hidden;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
-  font-size: 14px;
-  color: var(--color-text);
-  background: var(--color-bg);
+  font-family: var(--font-sans);
+  font-size: var(--size-body-ui);
+  line-height: var(--leading-normal);
+  color: var(--ink);
+  background: var(--paper);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
