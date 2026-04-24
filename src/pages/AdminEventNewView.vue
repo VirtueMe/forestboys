@@ -54,6 +54,11 @@
       <span class="for-person">{{ forPerson }}</span>
     </div>
 
+    <div v-if="forOrg" class="edit-row">
+      <label class="edit-label">Knyttes til org</label>
+      <span class="for-person">{{ forOrg }}</span>
+    </div>
+
     <footer class="edit-save-bar">
       <span class="edit-save-prompt">Opprett og gå tilbake?</span>
       <button type="button" class="edit-btn-primary" :disabled="!canSave || saving" @click="save">
@@ -82,6 +87,7 @@ const name      = ref('')
 const slug      = ref('')
 const date      = ref('')
 const forPerson = ref(typeof route.query.forPerson === 'string' ? route.query.forPerson : '')
+const forOrg    = ref(typeof route.query.forOrg    === 'string' ? route.query.forOrg    : '')
 const returnTo  = typeof route.query.returnTo  === 'string' ? route.query.returnTo  : ''
 
 const saving = ref(false)
@@ -120,6 +126,7 @@ async function save() {
         name:      name.value.trim(),
         date:      date.value.trim() || null,
         forPerson: forPerson.value || null,
+        forOrg:    forOrg.value    || null,
       }),
     })
     const body = await res.json().catch(() => ({})) as { slug?: string; error?: string }

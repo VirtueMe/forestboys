@@ -86,7 +86,7 @@ const pendingExpandEvent = ref<string | null>(null)
 function createEventHref(kind: 'incident' | 'operation'): string {
   const slug = neo4jPerson.value?.slug ?? ''
   const q = new URLSearchParams({ kind, forPerson: slug, returnTo: `/person/${slug}` })
-  return `/admin/event/new?${q.toString()}`
+  return `/events/new?${q.toString()}#new`
 }
 
 watch(

@@ -142,7 +142,7 @@ defineProps<{
   slug:                 string
   data:                 PersonRelationsData
   pendingExpandEvent?:  string | null
-  /** Returns the `/admin/event/new?...` href used by the "+ Opprett ny" button
+  /** Returns the `/events/new?...#new` href used by the "+ Opprett ny" button
    *  inside the Operasjon/Hendelse pickers. */
   createEventHref?:    (kind: 'incident' | 'operation') => string
 }>()

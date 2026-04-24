@@ -1,5 +1,6 @@
 <template>
-  <div class="events-page">
+  <AdminEventNewView v-if="isCreateMode" />
+  <div v-else class="events-page">
     <!-- Filters — always visible; top row swaps between back link and search -->
     <div class="filters">
       <RouterLink v-if="isDetail" to="/events" class="back-link">&#x2039; Tilbake</RouterLink>
@@ -115,12 +116,18 @@ import EventPanel from '../components/EventPanel.vue'
 import AppModal   from '../components/AppModal.vue'
 import DatePanel  from '../components/DatePanel.vue'
 import CustomSelect from '../components/CustomSelect.vue'
+import AdminEventNewView from './AdminEventNewView.vue'
 import { Timeline } from '@knight-lab/timelinejs'
 import '@knight-lab/timelinejs/dist/css/timeline.css'
 import type { IdbEvent } from '../types/idb.ts'
 
 const route  = useRoute()
 const router = useRouter()
+
+/** When the URL hash is `#new`, this page becomes the create form
+ *  (mounting AdminEventNewView). The slug in the URL is a placeholder
+ *  ('new'), and we skip the normal load + timeline init. */
+const isCreateMode = computed(() => route.hash === '#new')
 
 // ── Date modal ────────────────────────────────────────────────
 const dateModalOpen  = ref(false)
@@ -271,6 +278,7 @@ function fmt(n: number): string {
 let ro: ResizeObserver | null = null
 
 onMounted(async () => {
+  if (isCreateMode.value) return
   await init()
   const pc = getPageContent()
   if (pc) {

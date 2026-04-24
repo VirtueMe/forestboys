@@ -18,6 +18,7 @@
         :multiple="true"
         @update:model-value="selectedTypes = ($event as string[])"
       />
+      <RegistreCreateButton v-if="isAdmin" class="create-row" />
     </div>
 
     <!-- List -->
@@ -73,7 +74,12 @@
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import { RouterLink } from 'vue-router'
 import { neo4jQuery } from '../composables/useNeo4j.ts'
+import { useAuth } from '../composables/useAuth.ts'
 import CustomSelect from '../components/CustomSelect.vue'
+import RegistreCreateButton from '../components/registre/RegistreCreateButton.vue'
+
+const { user } = useAuth()
+const isAdmin = computed(() => user.value?.role === 'admin')
 
 // Registre runs entirely on Neo4j — no Sanity, no useLocationCache.
 // Each category gets its own small query; "Informasjon" unions the
@@ -303,6 +309,9 @@ function fmt(n: number): string {
   background: var(--paper-raised);
   border-bottom: 1px solid var(--rule);
 }
+
+.create-row { align-self: stretch; }
+.create-row :deep(.create-btn) { width: 100%; }
 
 .search-input {
   width: 100%;

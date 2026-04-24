@@ -23,7 +23,6 @@ import { ensureUser } from '../composables/useAuth.ts'
 const AdminLayout      = () => import('../pages/AdminLayout.vue')
 const AdminPagesView    = () => import('../pages/AdminPagesView.vue')
 const AdminSourcesView  = () => import('../pages/AdminSourcesView.vue')
-const AdminEventNewView = () => import('../pages/AdminEventNewView.vue')
 
 const MAP_PARAMS = ['lat', 'lng', 'z', 'orgs', 'dists', 'q', 'si']
 
@@ -64,7 +63,6 @@ const router = createRouter({
         { path: 'pages',         redirect: '/admin/pages/home' },
         { path: 'pages/:slug',   component: AdminPagesView },
         { path: 'sources',       component: AdminSourcesView },
-        { path: 'event/new',     component: AdminEventNewView },
       ],
     },
   ],

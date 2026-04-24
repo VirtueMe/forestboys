@@ -1,12 +1,16 @@
 /**
  * POST /api/admin/event — create an Incident or Operation.
  *
- * Body: { kind: 'incident' | 'operation', slug, name, date?, forPerson? }
+ * Body: { kind: 'incident' | 'operation', slug, name, date?, forPerson?, forOrg? }
  *
  * When `forPerson` is a Person slug, also creates the appropriate edge in
  * the same transaction (INVOLVED_IN for incident, PARTICIPATED_IN for
  * operation), so the PersonDetail caller lands back with the relation
  * already wired.
+ *
+ * When `forOrg` is an Organization slug, creates an ORCHESTRATED_BY edge
+ * from the new event to the org (Operasjoner / Hendelser sections on
+ * OrganizationDetail use this).
  */
 
 import { requireAdmin } from '~/_lib/require-admin.ts'
@@ -22,6 +26,7 @@ interface Body {
   name?:      string
   date?:      string | null
   forPerson?: string | null
+  forOrg?:    string | null
 }
 
 function isDateOrNull(v: unknown): v is string | null {
@@ -36,13 +41,16 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
   const body = await request.json<Body>().catch(() => null)
   if (!body) return json({ error: 'Invalid JSON' }, 400)
 
-  const { kind, slug, name, date, forPerson } = body
+  const { kind, slug, name, date, forPerson, forOrg } = body
   if (kind !== 'incident' && kind !== 'operation') return json({ error: "kind must be 'incident' or 'operation'" }, 400)
   if (typeof slug !== 'string' || !/^[a-z0-9-]+$/.test(slug)) return json({ error: 'slug must be lowercase kebab-case' }, 400)
   if (typeof name !== 'string' || !name.trim()) return json({ error: 'name must be a non-empty string' }, 400)
   if (!isDateOrNull(date)) return json({ error: `Bad date: ${String(date)}` }, 400)
   if (forPerson !== undefined && forPerson !== null && (typeof forPerson !== 'string' || !forPerson)) {
     return json({ error: 'Bad forPerson' }, 400)
+  }
+  if (forOrg !== undefined && forOrg !== null && (typeof forOrg !== 'string' || !forOrg)) {
+    return json({ error: 'Bad forOrg' }, 400)
   }
 
   const label    = kind === 'operation' ? 'Operation' : 'Incident'
@@ -63,7 +71,12 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
       FOREACH (_ IN CASE WHEN p IS NOT NULL THEN [1] ELSE [] END |
         CREATE (p)-[:${personEdge}]->(n)
       )
-    `, { slug, name: name.trim(), date: date ?? null, forPerson: forPerson ?? null })
+      WITH n
+      OPTIONAL MATCH (o:Organization {slug: $forOrg})
+      FOREACH (_ IN CASE WHEN o IS NOT NULL THEN [1] ELSE [] END |
+        CREATE (n)-[:ORCHESTRATED_BY]->(o)
+      )
+    `, { slug, name: name.trim(), date: date ?? null, forPerson: forPerson ?? null, forOrg: forOrg ?? null })
 
     return json({ ok: true, slug, kind })
   } catch (e) {

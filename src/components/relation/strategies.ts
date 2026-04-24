@@ -983,3 +983,97 @@ export const OrganizationUnitsStrategy: RelationStrategy = {
   },
   targetRoute(entry) { return `/district/${entry.targetSlug}` },
 }
+
+/**
+ * Editable strategies for the Organization page's "Operasjoner" /
+ * "Hendelser" sections — manage the ORCHESTRATED_BY edge set from this
+ * Org's child events.
+ *
+ * The "+ Opprett ny" affordance inside the picker jumps to
+ * AdminEventNewView with `?forOrg=`, which creates the event AND wires
+ * the edge in the same transaction.
+ */
+async function noteIsNoop(): Promise<void> { /* no description note on these edges */ }
+
+export const OrgOperationsStrategy: RelationStrategy = {
+  async fetchTargets() {
+    const rows = await neo4jQuery<{ slug: string; name: string }>(`
+      MATCH (op:Operation)
+      RETURN op.slug AS slug, op.codeName AS name
+      ORDER BY op.codeName
+    `)
+    return rows
+  },
+  async fetchEntries(orgSlug) {
+    const rows = await neo4jQuery<{ targetSlug: string; targetName: string; date: string | null }>(`
+      MATCH (op:Operation)-[:ORCHESTRATED_BY]->(o:Organization {slug: $slug})
+      RETURN op.slug AS targetSlug, op.codeName AS targetName, op.date AS date
+      ORDER BY op.codeName
+    `, { slug: orgSlug })
+    return rows.map(r => ({
+      targetSlug:     r.targetSlug,
+      targetName:     r.targetName,
+      startDate:      r.date,
+      endDate:        null,
+      sections:       [],
+      hasDescription: false,
+    }))
+  },
+  async saveEntries(orgSlug, entries) {
+    const res = await authFetch(`/api/admin/organization/${encodeURIComponent(orgSlug)}/operations`, {
+      method:  'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        operations: entries.map(e => ({ operationSlug: e.targetSlug })),
+      }),
+    })
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({})) as { error?: string }
+      throw new Error(body.error ?? `HTTP ${res.status}`)
+    }
+  },
+  saveNote: noteIsNoop,
+  targetRoute(entry) { return `/events/${entry.targetSlug}` },
+}
+
+export const OrgIncidentsStrategy: RelationStrategy = {
+  async fetchTargets() {
+    const rows = await neo4jQuery<{ slug: string; name: string }>(`
+      MATCH (i:Incident)
+      RETURN i.slug AS slug,
+             i.title + CASE WHEN i.date IS NOT NULL THEN ' · ' + i.date ELSE '' END AS name
+      ORDER BY i.date DESC, i.title
+    `)
+    return rows
+  },
+  async fetchEntries(orgSlug) {
+    const rows = await neo4jQuery<{ targetSlug: string; targetName: string; date: string | null }>(`
+      MATCH (i:Incident)-[:ORCHESTRATED_BY]->(o:Organization {slug: $slug})
+      RETURN i.slug AS targetSlug, i.title AS targetName, i.date AS date
+      ORDER BY i.date, i.title
+    `, { slug: orgSlug })
+    return rows.map(r => ({
+      targetSlug:     r.targetSlug,
+      targetName:     r.targetName,
+      startDate:      r.date,
+      endDate:        null,
+      sections:       [],
+      hasDescription: false,
+    }))
+  },
+  async saveEntries(orgSlug, entries) {
+    const res = await authFetch(`/api/admin/organization/${encodeURIComponent(orgSlug)}/incidents`, {
+      method:  'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        incidents: entries.map(e => ({ incidentSlug: e.targetSlug })),
+      }),
+    })
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({})) as { error?: string }
+      throw new Error(body.error ?? `HTTP ${res.status}`)
+    }
+  },
+  saveNote: noteIsNoop,
+  targetRoute(entry) { return `/events/${entry.targetSlug}` },
+}
