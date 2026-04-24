@@ -202,20 +202,20 @@ async function setStatus(item: ReviewItem, status: 'approved' | 'rejected') {
   flex: 1;
   min-height: 0;
   overflow-y: auto;
-  background: var(--color-bg);
+  background: var(--paper);
 }
 
 /* ── Header ─────────────────────────────────────────────────── */
 .page-header {
   padding: 20px 16px 12px;
-  background: var(--color-surface);
-  border-bottom: 1px solid var(--color-border);
+  background: var(--paper-raised);
+  border-bottom: 1px solid var(--rule);
 }
 
 .page-title {
   font-size: 20px;
   font-weight: 700;
-  color: var(--color-text);
+  color: var(--ink);
   margin: 0 0 4px;
   display: flex;
   align-items: center;
@@ -232,13 +232,13 @@ async function setStatus(item: ReviewItem, status: 'approved' | 'rejected') {
   font-size: 11px;
   font-weight: 700;
   color: #fff;
-  background: var(--color-navy);
+  background: var(--focus);
   border-radius: 11px;
 }
 
 .page-subtitle {
   font-size: 12px;
-  color: var(--color-muted);
+  color: var(--muted);
   margin: 0;
 }
 
@@ -247,8 +247,8 @@ async function setStatus(item: ReviewItem, status: 'approved' | 'rejected') {
   display: flex;
   gap: 4px;
   padding: 10px 16px;
-  background: var(--color-surface);
-  border-bottom: 1px solid var(--color-border);
+  background: var(--paper-raised);
+  border-bottom: 1px solid var(--rule);
   overflow-x: auto;
 }
 
@@ -258,9 +258,9 @@ async function setStatus(item: ReviewItem, status: 'approved' | 'rejected') {
   gap: 5px;
   font-size: 12px;
   font-weight: 500;
-  color: var(--color-muted);
+  color: var(--muted);
   background: none;
-  border: 1px solid var(--color-border);
+  border: 1px solid var(--rule);
   border-radius: 4px;
   padding: 5px 10px;
   cursor: pointer;
@@ -269,23 +269,23 @@ async function setStatus(item: ReviewItem, status: 'approved' | 'rejected') {
 }
 
 .filter-btn:hover {
-  color: var(--color-text);
-  border-color: var(--color-border-mid);
+  color: var(--ink);
+  border-color: var(--rule);
 }
 
 .filter-btn.active {
-  color: var(--color-navy);
-  border-color: var(--color-navy);
-  background: var(--color-bg);
+  color: var(--focus);
+  border-color: var(--focus);
+  background: var(--paper);
   font-weight: 600;
 }
 
 .filter-count {
   font-size: 10px;
   font-weight: 700;
-  color: var(--color-muted);
-  background: var(--color-bg);
-  border: 1px solid var(--color-border);
+  color: var(--muted);
+  background: var(--paper);
+  border: 1px solid var(--rule);
   border-radius: 8px;
   padding: 0 5px;
   min-width: 16px;
@@ -293,8 +293,8 @@ async function setStatus(item: ReviewItem, status: 'approved' | 'rejected') {
 }
 
 .filter-btn.active .filter-count {
-  color: var(--color-navy);
-  border-color: var(--color-navy);
+  color: var(--focus);
+  border-color: var(--focus);
 }
 
 /* ── Status ─────────────────────────────────────────────────── */
@@ -302,9 +302,9 @@ async function setStatus(item: ReviewItem, status: 'approved' | 'rejected') {
   padding: 48px 24px;
   text-align: center;
   font-size: 13px;
-  color: var(--color-muted);
+  color: var(--muted);
 }
-.error { color: var(--color-red, #c0392b); }
+.error { color: var(--faded-red, #c0392b); }
 
 /* ── Operation group ────────────────────────────────────────── */
 .op-group {
@@ -316,8 +316,8 @@ async function setStatus(item: ReviewItem, status: 'approved' | 'rejected') {
   align-items: center;
   gap: 8px;
   padding: 10px 16px;
-  background: var(--color-surface);
-  border-bottom: 1px solid var(--color-border);
+  background: var(--paper-raised);
+  border-bottom: 1px solid var(--rule);
   position: sticky;
   top: 0;
   z-index: 1;
@@ -328,14 +328,14 @@ async function setStatus(item: ReviewItem, status: 'approved' | 'rejected') {
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.07em;
-  color: var(--color-muted);
+  color: var(--muted);
 }
 
 .op-count {
   font-size: 10px;
-  color: var(--color-muted);
-  background: var(--color-bg);
-  border: 1px solid var(--color-border);
+  color: var(--muted);
+  background: var(--paper);
+  border: 1px solid var(--rule);
   border-radius: 8px;
   padding: 0 5px;
 }
@@ -351,8 +351,8 @@ async function setStatus(item: ReviewItem, status: 'approved' | 'rejected') {
   align-items: center;
   gap: 12px;
   padding: 10px 16px;
-  border-bottom: 1px solid var(--color-border);
-  background: var(--color-surface);
+  border-bottom: 1px solid var(--rule);
+  background: var(--paper-raised);
   flex-wrap: wrap;
   transition: background 0.1s;
 }
@@ -402,19 +402,19 @@ async function setStatus(item: ReviewItem, status: 'approved' | 'rejected') {
 .raw-name {
   font-size: 13px;
   font-weight: 600;
-  color: var(--color-text);
+  color: var(--ink);
   white-space: nowrap;
 }
 
 .arrow {
   font-size: 11px;
-  color: var(--color-muted);
+  color: var(--muted);
   flex-shrink: 0;
 }
 
 .resolved-slug {
   font-size: 11px;
-  color: var(--color-navy);
+  color: var(--focus);
   text-decoration: none;
   font-family: monospace;
   overflow: hidden;
@@ -423,11 +423,11 @@ async function setStatus(item: ReviewItem, status: 'approved' | 'rejected') {
 }
 
 .resolved-slug:hover { text-decoration: underline; }
-.resolved-slug.unresolved { color: var(--color-muted); font-family: inherit; }
+.resolved-slug.unresolved { color: var(--muted); font-family: inherit; }
 
 .codename {
   font-size: 11px;
-  color: var(--color-muted);
+  color: var(--muted);
   font-style: italic;
   white-space: nowrap;
   flex-shrink: 0;
@@ -451,7 +451,7 @@ async function setStatus(item: ReviewItem, status: 'approved' | 'rejected') {
   white-space: nowrap;
 }
 
-.conf--auto-generated { color: var(--color-muted); background: var(--color-bg); border: 1px solid var(--color-border); }
+.conf--auto-generated { color: var(--muted); background: var(--paper); border: 1px solid var(--rule); }
 .conf--last-word      { color: #6c3483; background: #f5eef8; border: 1px solid #c39bd3; }
 .conf--initial        { color: #6c3483; background: #f5eef8; border: 1px solid #c39bd3; }
 .conf--high           { color: #1e8449; background: #eafaf1; border: 1px solid #82e0aa; }
@@ -460,7 +460,7 @@ async function setStatus(item: ReviewItem, status: 'approved' | 'rejected') {
 
 .reviewed-at {
   font-size: 10px;
-  color: var(--color-muted);
+  color: var(--muted);
 }
 
 /* ── Actions ────────────────────────────────────────────────── */
@@ -493,13 +493,13 @@ async function setStatus(item: ReviewItem, status: 'approved' | 'rejected') {
 }
 
 .action-btn.reject {
-  color: var(--color-muted);
-  border-color: var(--color-border);
-  background: var(--color-bg);
+  color: var(--muted);
+  border-color: var(--rule);
+  background: var(--paper);
 }
 .action-btn.reject:hover:not(:disabled) {
-  color: var(--color-text);
-  border-color: var(--color-border-mid);
+  color: var(--ink);
+  border-color: var(--rule);
 }
 
 .item-resolved-label {
@@ -509,7 +509,7 @@ async function setStatus(item: ReviewItem, status: 'approved' | 'rejected') {
 }
 
 .resolved--approved { color: #1e8449; }
-.resolved--rejected { color: var(--color-muted); }
+.resolved--rejected { color: var(--muted); }
 
 @media (max-width: 480px) {
   .item-actions {

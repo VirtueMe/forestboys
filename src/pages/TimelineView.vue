@@ -11,16 +11,16 @@
   min-height: 0;
   overflow-y: auto;
   padding: 40px 24px;
-  background: var(--color-bg);
+  background: var(--paper);
 }
 h1 {
   font-size: 22px;
   font-weight: 700;
-  color: var(--color-navy);
+  color: var(--focus);
   margin-bottom: 8px;
 }
 .soon {
   font-size: 13px;
-  color: var(--color-muted);
+  color: var(--muted);
 }
 </style>

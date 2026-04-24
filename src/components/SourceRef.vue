@@ -148,8 +148,8 @@ watch(() => props.refs, refs => {
 .source-refs {
   display: inline-flex;
   flex-wrap: wrap;
-  gap: 4px;
-  margin-left: 6px;
+  gap: var(--space-xs);
+  margin-left: var(--space-xs);
   vertical-align: middle;
 }
 
@@ -161,29 +161,28 @@ watch(() => props.refs, refs => {
 .source-chip {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
+  gap: var(--space-xs);
   max-width: 200px;
-  padding: 2px 8px;
-  font-size: 11px;
+  padding: var(--space-xs) var(--space-sm);
+  font-family: var(--font-sans);
+  font-size: var(--size-caps);
   font-weight: 500;
-  color: var(--color-muted);
-  background: var(--color-surface);
-  border: 1px solid var(--color-border-mid);
-  border-radius: 10px;
+  color: var(--ink-soft);
+  background: var(--paper-sunken);
+  border-radius: var(--radius-pill);
   cursor: pointer;
-  transition: border-color 0.1s, background 0.1s, color 0.1s;
+  transition: background 120ms ease-out, color 120ms ease-out;
   -webkit-tap-highlight-color: transparent;
 }
 .source-chip:hover,
 .source-chip--open {
-  border-color: var(--color-navy);
-  color: var(--color-navy);
-  background: var(--color-bg);
+  background: var(--ink);
+  color: var(--paper);
 }
 
 .source-chip-icon {
-  font-weight: 700;
-  font-size: 12px;
+  font-weight: 600;
+  font-size: var(--size-label);
   line-height: 1;
 }
 
@@ -195,43 +194,47 @@ watch(() => props.refs, refs => {
 }
 
 .source-chip-fragment {
-  font-size: 10px;
-  color: var(--color-muted);
+  font-family: var(--font-mono);
+  font-size: var(--size-caps);
+  color: inherit;
+  opacity: 0.7;
   font-variant-numeric: tabular-nums;
   flex-shrink: 0;
 }
 
 .source-popover {
   position: absolute;
-  top: calc(100% + 6px);
+  top: calc(100% + var(--space-xs));
   left: 0;
   z-index: 50;
   min-width: 240px;
   max-width: 320px;
-  padding: 10px 12px;
-  background: var(--color-surface);
-  border: 1px solid var(--color-border-mid);
-  border-radius: 6px;
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.12);
-  font-size: 12px;
-  line-height: 1.45;
-  color: var(--color-text);
+  padding: var(--space-md);
+  background: var(--paper-raised);
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-md);
+  font-family: var(--font-sans);
+  font-size: var(--size-label);
+  line-height: var(--leading-normal);
+  color: var(--ink);
 }
 
 .source-popover-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 8px;
-  margin-bottom: 4px;
+  gap: var(--space-sm);
+  margin-bottom: var(--space-xs);
 }
 
 .source-popover-type {
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 0.06em;
+  font-family: var(--font-sans);
+  font-size: var(--size-caps);
+  font-weight: 600;
+  letter-spacing: var(--tracking-caps);
   text-transform: uppercase;
-  color: var(--color-muted);
+  color: var(--muted);
 }
 
 .source-popover-close {
@@ -239,31 +242,33 @@ watch(() => props.refs, refs => {
   height: 22px;
   background: none;
   border: 0;
-  color: var(--color-muted);
-  font-size: 18px;
+  color: var(--muted);
+  font-size: var(--size-h3);
   line-height: 1;
   cursor: pointer;
   padding: 0;
-  border-radius: 3px;
+  border-radius: var(--radius-md);
   -webkit-tap-highlight-color: transparent;
 }
 .source-popover-close:hover {
-  background: var(--color-bg);
-  color: var(--color-text);
+  background: var(--paper-sunken);
+  color: var(--faded-red);
 }
 
 .source-popover-title {
-  margin: 0 0 6px;
-  font-size: 13px;
+  margin: 0 0 var(--space-xs);
+  font-family: var(--font-sans);
+  font-size: var(--size-body-ui);
   font-weight: 600;
-  color: var(--color-text);
-  line-height: 1.35;
+  color: var(--ink);
+  line-height: var(--leading-snug);
 }
 
 .source-popover-meta {
-  margin: 0 0 4px;
-  font-size: 11px;
-  color: var(--color-muted);
+  margin: 0 0 var(--space-xs);
+  font-family: var(--font-sans);
+  font-size: var(--size-label);
+  color: var(--muted);
 }
 
 .source-popover-missing {
@@ -272,11 +277,14 @@ watch(() => props.refs, refs => {
 
 .source-popover-link {
   display: inline-block;
-  margin-top: 6px;
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--color-navy);
-  text-decoration: none;
+  margin-top: var(--space-sm);
+  font-family: var(--font-sans);
+  font-size: var(--size-label);
+  font-weight: 500;
+  color: var(--ink);
+  text-decoration: underline;
+  text-decoration-color: var(--rule);
+  text-underline-offset: 3px;
 }
-.source-popover-link:hover { text-decoration: underline; }
+.source-popover-link:hover { color: var(--faded-red); text-decoration-color: var(--faded-red); }
 </style>

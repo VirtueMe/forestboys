@@ -306,9 +306,9 @@ function itemTags(item: MapItem | IdbPerson): string[] {
 }
 
 function itemAccent(item: MapItem | IdbPerson): string {
-  if ('color' in item && item.color === 'red') return 'var(--color-red)'
-  if ('color' in item && item.color === 'green') return 'var(--color-green)'
-  return 'var(--color-navy)'
+  if ('color' in item && item.color === 'red') return 'var(--faded-red)'
+  if ('color' in item && item.color === 'green') return 'var(--moss)'
+  return 'var(--focus)'
 }
 
 function selectItem(item: MapItem | IdbPerson) {
@@ -479,7 +479,7 @@ onMounted(async () => {
 }
 .status {
   padding: 20px;
-  color: var(--color-muted);
+  color: var(--muted);
   font-size: 13px;
 }
 </style>

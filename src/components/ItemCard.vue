@@ -23,7 +23,7 @@ withDefaults(defineProps<{
   accentColor?: string
 }>(), {
   tags: () => [],
-  accentColor: 'var(--color-border)',
+  accentColor: 'var(--rule)',
 })
 
 const emit = defineEmits<{ select: [] }>()
@@ -33,26 +33,30 @@ const emit = defineEmits<{ select: [] }>()
 .item-card {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: var(--space-sm);
   width: 100%;
-  padding: 8px;
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-radius: 6px;
+  padding: var(--space-sm);
+  background: var(--paper-raised);
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-md);
   cursor: pointer;
   text-align: left;
-  transition: background 0.1s;
+  transition: background 120ms ease-out, box-shadow 120ms ease-out;
   height: 72px;
   flex-shrink: 0;
 }
-.item-card:hover, .item-card:focus-visible {
-  background: var(--color-bg);
-  outline: none;
+.item-card:hover {
+  background: var(--paper-sunken);
+  box-shadow: var(--shadow-sm);
+}
+.item-card:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
 }
 .thumb, .thumb-placeholder {
   width: 56px;
   height: 56px;
-  border-radius: 4px;
+  border-radius: var(--radius-md);
   flex-shrink: 0;
   overflow: hidden;
 }
@@ -66,17 +70,19 @@ const emit = defineEmits<{ select: [] }>()
   min-width: 0;
 }
 .name {
+  font-family: var(--font-sans);
   font-weight: 600;
-  font-size: 13px;
-  line-height: 1.3;
+  font-size: var(--size-body-ui);
+  line-height: var(--leading-snug);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  color: var(--color-text);
+  color: var(--ink);
 }
 .subtitle {
-  font-size: 11px;
-  color: var(--color-muted);
+  font-family: var(--font-sans);
+  font-size: var(--size-label);
+  color: var(--muted);
   margin-top: 2px;
   white-space: nowrap;
   overflow: hidden;
@@ -84,18 +90,21 @@ const emit = defineEmits<{ select: [] }>()
 }
 .tags {
   display: flex;
-  gap: 4px;
-  margin-top: 4px;
+  gap: var(--space-xs);
+  margin-top: var(--space-xs);
   flex-wrap: nowrap;
   overflow: hidden;
 }
 .tag {
-  font-size: 10px;
-  padding: 1px 5px;
-  border-radius: 3px;
-  background: var(--color-bg);
-  border: 1px solid var(--color-border);
-  color: var(--color-muted);
+  font-family: var(--font-sans);
+  font-size: var(--size-caps);
+  font-weight: 600;
+  letter-spacing: var(--tracking-caps);
+  text-transform: uppercase;
+  padding: var(--space-xs) var(--space-sm);
+  border-radius: var(--radius-pill);
+  background: var(--paper-sunken);
+  color: var(--ink-soft);
   white-space: nowrap;
 }
 </style>

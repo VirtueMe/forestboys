@@ -196,87 +196,91 @@ function onSourceSaved(updated: SourceRef) {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
-  margin-bottom: 6px;
+  gap: var(--space-md);
+  margin-bottom: var(--space-sm);
 }
 
 .sections-editor-label {
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.08em;
+  font-family: var(--font-sans);
+  font-size: var(--size-caps);
+  font-weight: 600;
+  letter-spacing: var(--tracking-caps);
   text-transform: uppercase;
-  color: var(--color-muted);
+  color: var(--muted);
 }
 
 .btn-secondary-outline {
-  padding: 4px 10px;
-  font-size: 11px;
-  font-weight: 600;
+  padding: var(--space-xs) var(--space-sm);
+  font-family: var(--font-sans);
+  font-size: var(--size-label);
+  font-weight: 500;
   background: transparent;
-  color: var(--color-navy);
-  border: 1px solid var(--color-border);
-  border-radius: 4px;
+  color: var(--ink);
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-md);
   cursor: pointer;
 }
-.btn-secondary-outline:hover { border-color: var(--color-navy); }
+.btn-secondary-outline:hover { background: var(--paper-sunken); }
 
-.sections { display: flex; flex-direction: column; gap: 16px; }
+.sections { display: flex; flex-direction: column; gap: var(--space-md); }
 
 .sections-empty {
-  padding: 16px;
+  padding: var(--space-md);
   text-align: center;
-  font-size: 13px;
-  color: var(--color-muted);
+  font-family: var(--font-sans);
+  font-size: var(--size-body-ui);
+  color: var(--muted);
   font-style: italic;
-  border: 1px dashed var(--color-border);
-  border-radius: 6px;
+  border: 1px dashed var(--rule);
+  border-radius: var(--radius-md);
 }
 
 .section-block {
-  padding: 12px;
-  background: var(--color-bg);
-  border: 1px solid var(--color-border);
-  border-radius: 6px;
+  padding: var(--space-md);
+  background: var(--paper);
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-md);
 }
 
 .section-controls {
   display: flex;
   align-items: center;
-  gap: 6px;
-  margin-bottom: 10px;
+  gap: var(--space-xs);
+  margin-bottom: var(--space-sm);
 }
 
 .section-index {
   flex: 1;
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.06em;
+  font-family: var(--font-sans);
+  font-size: var(--size-caps);
+  font-weight: 600;
+  letter-spacing: var(--tracking-caps);
   text-transform: uppercase;
-  color: var(--color-muted);
+  color: var(--muted);
 }
 
 .section-btn {
   width: 24px;
   height: 24px;
   padding: 0;
-  font-size: 12px;
+  font-size: var(--size-label);
   background: transparent;
-  border: 1px solid var(--color-border);
-  border-radius: 3px;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-md);
   cursor: pointer;
-  color: var(--color-text);
+  color: var(--ink);
 }
-.section-btn:hover { border-color: var(--color-navy); }
-.section-btn-delete { color: #b91c1c; }
-.section-btn-delete:hover { background: #fef2f2; border-color: #fecaca; }
+.section-btn:hover { background: var(--paper-sunken); }
+.section-btn-delete { color: var(--danger); }
+.section-btn-delete:hover { background: var(--paper-sunken); border-color: var(--danger); }
 
 .section-cites {
-  margin-top: 10px;
-  padding-top: 10px;
-  border-top: 1px dashed var(--color-border);
+  margin-top: var(--space-sm);
+  padding-top: var(--space-sm);
+  border-top: 1px dashed var(--rule);
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: var(--space-xs);
 }
 
 .section-cites-header {
@@ -286,11 +290,12 @@ function onSourceSaved(updated: SourceRef) {
 }
 
 .section-cites-label {
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.06em;
+  font-family: var(--font-sans);
+  font-size: var(--size-caps);
+  font-weight: 600;
+  letter-spacing: var(--tracking-caps);
   text-transform: uppercase;
-  color: var(--color-muted);
+  color: var(--muted);
 }
 
 .section-cites-list {
@@ -299,26 +304,28 @@ function onSourceSaved(updated: SourceRef) {
   margin: 0;
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: var(--space-xs);
 }
 
 .section-cite-item {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 6px 8px;
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-radius: 4px;
-  font-size: 12px;
+  gap: var(--space-sm);
+  padding: var(--space-xs) var(--space-sm);
+  background: var(--paper-raised);
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-md);
+  font-family: var(--font-sans);
+  font-size: var(--size-label);
 }
 
 .section-cite-inline {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
-  font-size: 11px;
-  color: var(--color-muted);
+  gap: var(--space-xs);
+  font-family: var(--font-sans);
+  font-size: var(--size-caps);
+  color: var(--muted);
   cursor: pointer;
   user-select: none;
   flex-shrink: 0;
@@ -332,49 +339,51 @@ function onSourceSaved(updated: SourceRef) {
 }
 
 .section-cite-author {
-  font-size: 11px;
-  color: var(--color-muted);
+  font-family: var(--font-sans);
+  font-size: var(--size-caps);
+  color: var(--muted);
   flex-shrink: 0;
 }
 
 .section-cite-edit { list-style: none; padding: 0; }
 
 .section-sourced {
-  margin-top: 10px;
-  padding-top: 10px;
-  border-top: 1px dashed var(--color-border);
+  margin-top: var(--space-sm);
+  padding-top: var(--space-sm);
+  border-top: 1px dashed var(--rule);
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: var(--space-xs);
 }
 
 .section-sourced-label {
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.06em;
+  font-family: var(--font-sans);
+  font-size: var(--size-caps);
+  font-weight: 600;
+  letter-spacing: var(--tracking-caps);
   text-transform: uppercase;
-  color: var(--color-muted);
+  color: var(--muted);
 }
 
 .section-sourced-chip {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 6px 8px;
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-radius: 4px;
-  font-size: 12px;
+  gap: var(--space-sm);
+  padding: var(--space-xs) var(--space-sm);
+  background: var(--paper-raised);
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-md);
+  font-family: var(--font-sans);
+  font-size: var(--size-label);
 }
 
 .sc-title { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .sc-license {
-  font-family: monospace;
-  font-size: 10px;
-  padding: 1px 6px;
-  background: var(--color-bg);
-  border: 1px solid var(--color-border);
-  border-radius: 8px;
-  color: var(--color-muted);
+  font-family: var(--font-mono);
+  font-size: var(--size-caps);
+  padding: var(--space-xs) var(--space-sm);
+  background: var(--paper-sunken);
+  border-radius: var(--radius-pill);
+  color: var(--muted);
 }
 </style>

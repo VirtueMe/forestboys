@@ -28,13 +28,13 @@ const emit = defineEmits<{ change: [page: number] }>()
   height: 7px;
   border-radius: 50%;
   border: none;
-  background: var(--color-border-mid);
+  background: var(--rule);
   cursor: pointer;
   padding: 0;
   transition: background 0.15s, transform 0.15s;
 }
 .dot.active {
-  background: var(--color-navy);
+  background: var(--focus);
   transform: scale(1.2);
 }
 </style>

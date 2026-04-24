@@ -499,15 +499,15 @@ onMounted(async () => {
   flex: 1;
   min-height: 0;
   overflow-y: auto;
-  background: var(--color-bg);
+  background: var(--paper);
 }
 
 /* ── Admin scalar editor ─────────────────────────────────── */
 .edit-section {
   margin: 0 16px 16px;
   padding: 16px;
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
+  background: var(--paper-raised);
+  border: 1px solid var(--rule);
   border-radius: 6px;
 }
 .edit-section-heading {
@@ -515,7 +515,7 @@ onMounted(async () => {
   font-weight: 700;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: var(--color-muted);
+  color: var(--muted);
   margin: 0 0 12px;
 }
 .edit-row {
@@ -528,23 +528,23 @@ onMounted(async () => {
 .edit-label {
   font-size: 12px;
   font-weight: 600;
-  color: var(--color-text);
+  color: var(--ink);
 }
 .edit-input {
   width: 100%;
   padding: 8px 10px;
   font-size: 14px;
-  color: var(--color-text);
-  background: var(--color-bg);
-  border: 1px solid var(--color-border);
+  color: var(--ink);
+  background: var(--paper);
+  border: 1px solid var(--rule);
   border-radius: 4px;
   box-sizing: border-box;
   font-family: inherit;
 }
 .edit-input:focus {
-  outline: 2px solid var(--color-navy);
+  outline: 2px solid var(--focus);
   outline-offset: -1px;
-  border-color: var(--color-navy);
+  border-color: var(--focus);
 }
 .edit-input-date { font-family: monospace; font-size: 12px; max-width: 160px; }
 .edit-save-bar {
@@ -562,7 +562,7 @@ onMounted(async () => {
   padding: 8px 14px;
   font-size: 12px;
   font-weight: 600;
-  background: var(--color-navy);
+  background: var(--focus);
   color: #fff;
   border: none;
   border-radius: 4px;
@@ -591,7 +591,7 @@ onMounted(async () => {
 .event-date {
   font-family: monospace;
   font-size: 13px;
-  color: var(--color-muted);
+  color: var(--muted);
   margin: -4px 0 16px;
 }
 
@@ -602,8 +602,8 @@ onMounted(async () => {
   gap: 12px;
   padding: 8px 16px;
   margin: 0 16px 12px;
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
+  background: var(--paper-raised);
+  border: 1px solid var(--rule);
   border-radius: 6px;
   font-size: 12px;
 }
@@ -611,12 +611,12 @@ onMounted(async () => {
   font-weight: 700;
   letter-spacing: 0.06em;
   text-transform: uppercase;
-  color: var(--color-muted);
+  color: var(--muted);
   font-size: 11px;
 }
 .kind-seg {
   display: inline-flex;
-  border: 1px solid var(--color-border);
+  border: 1px solid var(--rule);
   border-radius: 4px;
   overflow: hidden;
 }
@@ -625,11 +625,11 @@ onMounted(async () => {
   align-items: center;
   padding: 6px 14px;
   font-size: 13px;
-  color: var(--color-muted);
+  color: var(--muted);
   cursor: pointer;
   user-select: none;
 }
-.kind-seg-opt + .kind-seg-opt { border-left: 1px solid var(--color-border); }
+.kind-seg-opt + .kind-seg-opt { border-left: 1px solid var(--rule); }
 .kind-seg-opt input[type="radio"] {
   position: absolute;
   width: 1px; height: 1px;
@@ -637,7 +637,7 @@ onMounted(async () => {
   pointer-events: none;
 }
 .kind-seg-opt.active {
-  background: var(--color-navy);
+  background: var(--focus);
   color: #fff;
   font-weight: 600;
 }
@@ -653,7 +653,7 @@ onMounted(async () => {
   border: none;
   font-size: 13px;
   font-weight: 600;
-  color: var(--color-navy);
+  color: var(--focus);
   cursor: pointer;
   padding: 12px 16px;
   display: block;
@@ -664,9 +664,9 @@ onMounted(async () => {
   padding: 48px 24px;
   text-align: center;
   font-size: 13px;
-  color: var(--color-muted);
+  color: var(--muted);
 }
-.error { color: var(--color-red); }
+.error { color: var(--faded-red); }
 
 /* ── Timeline section ─────────────────────────────────────── */
 .timeline-section {
@@ -676,7 +676,7 @@ onMounted(async () => {
 .timeline-heading {
   font-size: 16px;
   font-weight: 700;
-  color: var(--color-text);
+  color: var(--ink);
   margin: 0 0 10px;
 }
 
@@ -689,18 +689,18 @@ onMounted(async () => {
 .filter-select {
   font-size: 13px;
   padding: 4px 8px;
-  border: 1px solid var(--color-border);
+  border: 1px solid var(--rule);
   border-radius: 4px;
-  background: var(--color-surface);
-  color: var(--color-text);
+  background: var(--paper-raised);
+  color: var(--ink);
   cursor: pointer;
 }
 
 .timeline-placeholder {
   width: 100%;
   height: 180px;
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
+  background: var(--paper-raised);
+  border: 1px solid var(--rule);
   border-radius: 6px;
   margin-bottom: 16px;
 }
@@ -708,7 +708,7 @@ onMounted(async () => {
 /* ── Divider ──────────────────────────────────────────────── */
 .divider {
   border: none;
-  border-top: 1px solid var(--color-border);
+  border-top: 1px solid var(--rule);
   margin: 0;
 }
 
@@ -721,21 +721,21 @@ onMounted(async () => {
 .event-title {
   font-size: 20px;
   font-weight: 700;
-  color: var(--color-text);
+  color: var(--ink);
   margin: 0 0 8px;
   line-height: 1.3;
 }
 
 /* ── Section ──────────────────────────────────────────────── */
 .section {
-  border-top: 0.5px solid var(--color-border);
+  border-top: 0.5px solid var(--rule);
   padding: 14px 0;
 }
 
 .section-heading {
   font-size: 13px;
   font-weight: 700;
-  color: var(--color-muted);
+  color: var(--muted);
   margin: 0 0 8px;
   text-transform: uppercase;
   letter-spacing: 0.05em;
@@ -746,7 +746,7 @@ onMounted(async () => {
   margin: 0 0 0.75em;
   font-size: 14px;
   line-height: 1.75;
-  color: var(--color-text);
+  color: var(--ink);
   white-space: pre-line;
 }
 
@@ -758,17 +758,17 @@ onMounted(async () => {
   tab-size: 4;
   white-space: pre-wrap;
   overflow-x: auto;
-  background: color-mix(in srgb, var(--color-border) 50%, var(--color-surface));
+  background: color-mix(in srgb, var(--rule) 50%, var(--paper-raised));
   border-radius: 3px;
   padding: 8px 10px;
   line-height: 1.65;
-  color: var(--color-text);
+  color: var(--ink);
   margin: 0 0 0.75em;
 }
 
 .portable-text :deep(strong) {
   font-weight: 600;
-  color: var(--color-text);
+  color: var(--ink);
 }
 
 .portable-text :deep(u) { text-decoration: underline; }
@@ -776,7 +776,7 @@ onMounted(async () => {
 
 .portable-text :deep(a.internal-link),
 .portable-text :deep(a.external-link) {
-  color: var(--color-navy);
+  color: var(--focus);
   text-decoration: underline;
   cursor: pointer;
 }
@@ -791,7 +791,7 @@ onMounted(async () => {
 .section-link {
   display: block;
   font-size: 13px;
-  color: var(--color-navy);
+  color: var(--focus);
   text-decoration: none;
   padding: 2px 0;
 }
@@ -820,17 +820,17 @@ onMounted(async () => {
   object-fit: contain;
   display: block;
   border-radius: 4px;
-  background: var(--color-border);
+  background: var(--rule);
 }
 
 .carousel-btn {
   background: none;
-  border: 1px solid var(--color-border);
+  border: 1px solid var(--rule);
   border-radius: 50%;
   width: 32px;
   height: 32px;
   font-size: 20px;
-  color: var(--color-navy);
+  color: var(--focus);
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -839,11 +839,11 @@ onMounted(async () => {
   line-height: 1;
 }
 
-.carousel-btn:hover { border-color: var(--color-border-mid); }
+.carousel-btn:hover { border-color: var(--rule); }
 
 .carousel-count {
   font-size: 11px;
-  color: var(--color-muted);
+  color: var(--muted);
   text-align: center;
   margin: 6px 0 0;
 }
@@ -851,7 +851,7 @@ onMounted(async () => {
 /* ── External links ───────────────────────────────────────── */
 .ext-link {
   font-size: 13px;
-  color: var(--color-navy);
+  color: var(--focus);
   text-decoration: none;
   padding: 2px 0;
   word-break: break-all;

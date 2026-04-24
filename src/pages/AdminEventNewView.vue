@@ -147,14 +147,14 @@ async function save() {
   max-width: 560px;
   margin: 24px auto;
   padding: 24px;
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
+  background: var(--paper-raised);
+  border: 1px solid var(--rule);
   border-radius: 8px;
 }
 .page-heading {
   font-size: 18px;
   font-weight: 700;
-  color: var(--color-navy);
+  color: var(--focus);
   margin: 0 0 16px;
   text-transform: capitalize;
 }
@@ -165,23 +165,23 @@ async function save() {
   align-items: center;
   margin-bottom: 12px;
 }
-.edit-label { font-size: 12px; font-weight: 600; color: var(--color-text); }
+.edit-label { font-size: 12px; font-weight: 600; color: var(--ink); }
 .edit-input {
   width: 100%;
   padding: 8px 10px;
   font-size: 14px;
-  color: var(--color-text);
-  background: var(--color-bg);
-  border: 1px solid var(--color-border);
+  color: var(--ink);
+  background: var(--paper);
+  border: 1px solid var(--rule);
   border-radius: 4px;
   box-sizing: border-box;
   font-family: inherit;
 }
-.edit-input:focus { outline: 2px solid var(--color-navy); outline-offset: -1px; border-color: var(--color-navy); }
+.edit-input:focus { outline: 2px solid var(--focus); outline-offset: -1px; border-color: var(--focus); }
 .edit-input-date { font-family: monospace; font-size: 12px; max-width: 160px; }
 .type-seg {
   display: inline-flex;
-  border: 1px solid var(--color-border);
+  border: 1px solid var(--rule);
   border-radius: 4px;
   overflow: hidden;
 }
@@ -190,15 +190,15 @@ async function save() {
   align-items: center;
   padding: 6px 14px;
   font-size: 13px;
-  color: var(--color-muted);
+  color: var(--muted);
   cursor: pointer;
 }
-.type-seg-opt + .type-seg-opt { border-left: 1px solid var(--color-border); }
+.type-seg-opt + .type-seg-opt { border-left: 1px solid var(--rule); }
 .type-seg-opt input[type="radio"] {
   position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none;
 }
-.type-seg-opt.active { background: var(--color-navy); color: #fff; font-weight: 600; }
-.for-person { font-size: 13px; color: var(--color-muted); font-family: monospace; }
+.type-seg-opt.active { background: var(--focus); color: #fff; font-weight: 600; }
+.for-person { font-size: 13px; color: var(--muted); font-family: monospace; }
 .edit-save-bar {
   margin-top: 16px;
   padding: 10px 14px;
@@ -214,7 +214,7 @@ async function save() {
   padding: 8px 14px;
   font-size: 12px;
   font-weight: 600;
-  background: var(--color-navy);
+  background: var(--focus);
   color: #fff;
   border: none;
   border-radius: 4px;

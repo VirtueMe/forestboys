@@ -34,7 +34,7 @@ onUnmounted(() => document.removeEventListener('keydown', onKeydown))
   position: fixed;
   inset: 0;
   z-index: 1000;
-  background: rgba(0, 0, 0, 0.55);
+  background: rgba(26, 26, 26, 0.55);
   display: flex;
   align-items: flex-end;        /* mobile: slide up from bottom */
   justify-content: center;
@@ -44,13 +44,16 @@ onUnmounted(() => document.removeEventListener('keydown', onKeydown))
 @media (min-width: 600px) {
   .modal-backdrop {
     align-items: center;        /* desktop: centered */
-    padding: 24px;
+    padding: var(--space-lg);
   }
 }
 
 .modal-card {
-  background: var(--color-surface);
-  border-radius: 12px 12px 0 0;
+  background: var(--paper-raised);
+  border: 1px solid var(--rule);
+  border-bottom: none;
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+  box-shadow: var(--shadow-md);
   width: 100%;
   max-height: 85dvh;
   display: flex;
@@ -60,7 +63,8 @@ onUnmounted(() => document.removeEventListener('keydown', onKeydown))
 
 @media (min-width: 600px) {
   .modal-card {
-    border-radius: 12px;
+    border-bottom: 1px solid var(--rule);
+    border-radius: var(--radius-md);
     width: 100%;
     max-width: 560px;
     max-height: 80dvh;
@@ -71,40 +75,41 @@ onUnmounted(() => document.removeEventListener('keydown', onKeydown))
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 14px 16px 12px;
-  border-bottom: 1px solid var(--color-border);
+  padding: var(--space-md);
+  border-bottom: 1px solid var(--rule);
   flex-shrink: 0;
 }
 
 .modal-title {
-  font-size: 14px;
-  font-weight: 700;
-  color: var(--color-text);
+  font-family: var(--font-sans);
+  font-size: var(--size-h3);
+  font-weight: 600;
+  color: var(--ink);
 }
 
 .modal-close {
   background: none;
   border: none;
-  font-size: 14px;
-  color: var(--color-muted);
+  font-size: var(--size-body-ui);
+  color: var(--muted);
   cursor: pointer;
-  padding: 4px 6px;
-  border-radius: 4px;
+  padding: var(--space-xs) var(--space-sm);
+  border-radius: var(--radius-md);
   line-height: 1;
 }
-.modal-close:hover { background: var(--color-border); color: var(--color-text); }
+.modal-close:hover { background: var(--paper-sunken); color: var(--faded-red); }
 
 .modal-body {
   overflow-y: auto;
   flex: 1;
-  padding-bottom: 24px;
+  padding-bottom: var(--space-lg);
 }
 
 /* ── Transitions ──────────────────────────────────────────────── */
 .modal-enter-active,
-.modal-leave-active { transition: opacity 0.18s ease; }
+.modal-leave-active { transition: opacity 180ms ease; }
 .modal-enter-active .modal-card,
-.modal-leave-active .modal-card { transition: transform 0.18s ease; }
+.modal-leave-active .modal-card { transition: transform 180ms ease; }
 
 .modal-enter-from,
 .modal-leave-to { opacity: 0; }

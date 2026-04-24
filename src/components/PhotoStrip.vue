@@ -54,16 +54,16 @@ function imgUrl(img: IdbGalleryImage, size: number): string {
   border-radius: 4px;
   flex-shrink: 0;
   cursor: pointer;
-  border: 1px solid var(--color-border);
+  border: 1px solid var(--rule);
 }
 .more {
   width: 90px;
   height: 90px;
   flex-shrink: 0;
-  border: 1px solid var(--color-border);
+  border: 1px solid var(--rule);
   border-radius: 4px;
-  background: var(--color-bg);
-  color: var(--color-muted);
+  background: var(--paper);
+  color: var(--muted);
   font-size: 12px;
   font-weight: 600;
   cursor: pointer;

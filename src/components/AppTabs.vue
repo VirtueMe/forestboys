@@ -37,8 +37,8 @@ const emit = defineEmits<{ 'update:modelValue': [id: string] }>()
 
 .tab-bar {
   display: flex;
-  border-bottom: 1px solid var(--color-border, #333);
-  background: var(--color-surface, #1a1a1a);
+  border-bottom: 1px solid var(--rule);
+  background: var(--paper-raised);
   position: sticky;
   top: 0;
   z-index: 10;
@@ -46,30 +46,31 @@ const emit = defineEmits<{ 'update:modelValue': [id: string] }>()
 
 .tab-btn {
   flex: 1;
-  padding: 12px 16px;
+  padding: var(--space-sm) var(--space-md);
   background: none;
   border: none;
   border-bottom: 2px solid transparent;
-  color: var(--color-text-muted, #888);
-  font-size: 0.85rem;
-  font-weight: 500;
-  letter-spacing: 0.04em;
+  color: var(--muted);
+  font-family: var(--font-sans);
+  font-size: var(--size-caps);
+  font-weight: 600;
+  letter-spacing: var(--tracking-caps);
   text-transform: uppercase;
   cursor: pointer;
-  transition: color 0.15s, border-color 0.15s;
+  transition: color 150ms ease, border-color 150ms ease;
 }
 
 .tab-btn.active {
-  color: var(--color-text, #fff);
-  border-bottom-color: var(--color-accent, #e8a020);
+  color: var(--ink);
+  border-bottom-color: var(--faded-red);
 }
 
 .tab-btn:not(.active):not(.disabled):hover {
-  color: var(--color-text, #fff);
+  color: var(--ink);
 }
 
 .tab-btn.disabled {
-  color: var(--color-border, #444);
+  color: var(--rule);
   cursor: not-allowed;
   opacity: 0.5;
 }

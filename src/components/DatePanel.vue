@@ -142,8 +142,8 @@ watch(() => props.date, d => { void load(d) }, { immediate: true })
 
 <style scoped>
 .date-panel {
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
+  background: var(--paper-raised);
+  border: 1px solid var(--rule);
   border-radius: 8px;
   overflow: hidden;
   padding-bottom: 24px;
@@ -155,23 +155,23 @@ watch(() => props.date, d => { void load(d) }, { immediate: true })
   align-items: center;
   justify-content: space-between;
   padding: 10px 12px;
-  border-bottom: 1px solid var(--color-border);
+  border-bottom: 1px solid var(--rule);
   gap: 8px;
 }
 
 .date-current {
   font-size: 14px;
   font-weight: 700;
-  color: var(--color-text);
+  color: var(--ink);
   text-align: center;
   flex: 1;
 }
 
 .nav-btn {
   font-size: 12px;
-  color: var(--color-navy);
+  color: var(--focus);
   background: none;
-  border: 1px solid var(--color-border);
+  border: 1px solid var(--rule);
   border-radius: 4px;
   padding: 3px 8px;
   cursor: pointer;
@@ -182,15 +182,15 @@ watch(() => props.date, d => { void load(d) }, { immediate: true })
 .nav-btn--right { text-align: right; }
 .nav-btn:disabled { opacity: 0.3; cursor: default; }
 .nav-btn:not(:disabled):hover {
-  border-color: var(--color-navy);
-  background: color-mix(in srgb, var(--color-navy) 6%, var(--color-surface));
+  border-color: var(--focus);
+  background: color-mix(in srgb, var(--focus) 6%, var(--paper-raised));
 }
 
 /* ── Rows ─────────────────────────────────────────────────────── */
 .loading, .error, .empty {
   padding: 20px;
   font-size: 13px;
-  color: var(--color-muted);
+  color: var(--muted);
   text-align: center;
 }
 .error { color: #f07070; }
@@ -200,7 +200,7 @@ watch(() => props.date, d => { void load(d) }, { immediate: true })
   align-items: flex-start;
   gap: 8px;
   padding: 8px 12px;
-  border-top: 0.5px solid var(--color-border);
+  border-top: 0.5px solid var(--rule);
   cursor: pointer;
 }
 .day-row:hover .day-title { text-decoration: underline; }
@@ -212,8 +212,8 @@ watch(() => props.date, d => { void load(d) }, { immediate: true })
   text-transform: uppercase;
   padding: 2px 6px;
   border-radius: 8px;
-  background: var(--color-border);
-  color: var(--color-muted);
+  background: var(--rule);
+  color: var(--muted);
   white-space: nowrap;
   flex-shrink: 0;
   margin-top: 2px;
@@ -236,7 +236,7 @@ watch(() => props.date, d => { void load(d) }, { immediate: true })
 
 .day-title {
   font-size: 13px;
-  color: var(--color-text);
+  color: var(--ink);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -244,7 +244,7 @@ watch(() => props.date, d => { void load(d) }, { immediate: true })
 
 .day-log {
   font-size: 11px;
-  color: var(--color-muted);
+  color: var(--muted);
   line-height: 1.5;
   display: -webkit-box;
   -webkit-line-clamp: 2;

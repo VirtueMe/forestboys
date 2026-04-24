@@ -127,7 +127,7 @@ function fmt(n: number): string {
   display: flex;
   flex-direction: column;
   align-items: center;
-  background: var(--color-bg);
+  background: var(--paper);
 }
 
 .transport-page > * {
@@ -139,25 +139,25 @@ function fmt(n: number): string {
 .search-wrap {
   flex-shrink: 0;
   padding: 10px 12px;
-  border-bottom: 1px solid var(--color-border);
-  background: var(--color-surface);
+  border-bottom: 1px solid var(--rule);
+  background: var(--paper-raised);
 }
 
 .search-input {
   width: 100%;
   height: 32px;
   padding: 0 10px;
-  background: var(--color-bg);
-  border: 1px solid var(--color-border-mid);
+  background: var(--paper);
+  border: 1px solid var(--rule);
   border-radius: 6px;
   font-size: 13px;
-  color: var(--color-text);
+  color: var(--ink);
   outline: none;
   box-sizing: border-box;
   -webkit-appearance: none;
 }
-.search-input::placeholder { color: var(--color-muted); }
-.search-input:focus { border-color: var(--color-navy); }
+.search-input::placeholder { color: var(--muted); }
+.search-input:focus { border-color: var(--focus); }
 
 /* ── Scroll container ───────────────────────────────────────── */
 .scroll-container {
@@ -165,7 +165,7 @@ function fmt(n: number): string {
   min-height: 0;
   overflow-y: auto;
   overflow-x: hidden;
-  background: var(--color-surface);
+  background: var(--paper-raised);
 }
 
 /* ── Status ─────────────────────────────────────────────────── */
@@ -173,7 +173,7 @@ function fmt(n: number): string {
   padding: 32px 20px;
   text-align: center;
   font-size: 13px;
-  color: var(--color-muted);
+  color: var(--muted);
 }
 
 /* ── Transport row ──────────────────────────────────────────── */
@@ -184,12 +184,12 @@ function fmt(n: number): string {
   padding: 0 14px;
   gap: 10px;
   text-decoration: none;
-  color: var(--color-text);
-  border-bottom: 1px solid var(--color-border);
+  color: var(--ink);
+  border-bottom: 1px solid var(--rule);
   box-sizing: border-box;
   transition: background 0.1s;
 }
-.transport-row:hover { background: var(--color-bg); }
+.transport-row:hover { background: var(--paper); }
 
 .transport-thumb {
   width: 44px;
@@ -209,7 +209,7 @@ function fmt(n: number): string {
   flex: 1;
   font-size: 13px;
   font-weight: 600;
-  color: var(--color-navy);
+  color: var(--focus);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -218,7 +218,7 @@ function fmt(n: number): string {
 
 .transport-type {
   font-size: 11px;
-  color: var(--color-muted);
+  color: var(--muted);
   white-space: nowrap;
   flex-shrink: 0;
 }
@@ -227,12 +227,12 @@ function fmt(n: number): string {
 .count-bar {
   flex-shrink: 0;
   padding: 6px 14px;
-  background: var(--color-surface);
-  border-top: 1px solid var(--color-border);
+  background: var(--paper-raised);
+  border-top: 1px solid var(--rule);
   font-size: 11px;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.07em;
-  color: var(--color-muted);
+  color: var(--muted);
 }
 </style>

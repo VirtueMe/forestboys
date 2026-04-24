@@ -217,40 +217,40 @@ function handleInternalLinks(e: MouseEvent) {
 
 <style scoped>
 .event-panel {
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
+  background: var(--paper-raised);
+  border: 1px solid var(--rule);
   border-radius: 8px;
   overflow: hidden;
 }
 
 .panel-header {
   padding: 16px 20px 12px;
-  border-bottom: 1px solid var(--color-border);
+  border-bottom: 1px solid var(--rule);
 }
 
 .event-date {
   font-size: 12px;
-  color: var(--color-muted);
+  color: var(--muted);
   margin: 0 0 4px;
 }
 
 .event-title {
   font-size: 18px;
   font-weight: 700;
-  color: var(--color-text);
+  color: var(--ink);
   margin: 0 0 4px;
   line-height: 1.3;
 }
 
 .event-meta {
   font-size: 12px;
-  color: var(--color-muted);
+  color: var(--muted);
   margin: 0;
 }
 
 /* ── Section ──────────────────────────────────────────────── */
 .section {
-  border-top: 0.5px solid var(--color-border);
+  border-top: 0.5px solid var(--rule);
   padding: 12px 20px;
 }
 
@@ -259,7 +259,7 @@ function handleInternalLinks(e: MouseEvent) {
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.07em;
-  color: var(--color-muted);
+  color: var(--muted);
   margin: 0 0 8px;
 }
 
@@ -268,28 +268,28 @@ function handleInternalLinks(e: MouseEvent) {
   margin: 0 0 0.75em;
   font-size: 14px;
   line-height: 1.75;
-  color: var(--color-text);
+  color: var(--ink);
   white-space: pre-wrap;
 }
 .portable-text :deep(p:last-child) { margin-bottom: 0; }
-.portable-text :deep(h1) { font-size: 20px; font-weight: 700; margin: 0.75em 0 0.4em; color: var(--color-text); }
-.portable-text :deep(h2) { font-size: 17px; font-weight: 700; margin: 0.75em 0 0.4em; color: var(--color-text); }
-.portable-text :deep(h3) { font-size: 15px; font-weight: 700; margin: 0.75em 0 0.4em; color: var(--color-text); }
-.portable-text :deep(h4) { font-size: 14px; font-weight: 700; margin: 0.75em 0 0.4em; color: var(--color-text); }
-.portable-text :deep(h5) { font-size: 13px; font-weight: 700; margin: 0.75em 0 0.4em; color: var(--color-text); }
+.portable-text :deep(h1) { font-size: 20px; font-weight: 700; margin: 0.75em 0 0.4em; color: var(--ink); }
+.portable-text :deep(h2) { font-size: 17px; font-weight: 700; margin: 0.75em 0 0.4em; color: var(--ink); }
+.portable-text :deep(h3) { font-size: 15px; font-weight: 700; margin: 0.75em 0 0.4em; color: var(--ink); }
+.portable-text :deep(h4) { font-size: 14px; font-weight: 700; margin: 0.75em 0 0.4em; color: var(--ink); }
+.portable-text :deep(h5) { font-size: 13px; font-weight: 700; margin: 0.75em 0 0.4em; color: var(--ink); }
 .portable-text :deep(blockquote) {
-  border-left: 3px solid var(--color-border-mid);
+  border-left: 3px solid var(--rule);
   margin: 0.75em 0;
   padding: 0.25em 0 0.25em 1em;
-  color: var(--color-muted);
+  color: var(--muted);
   font-style: italic;
 }
-.portable-text :deep(strong) { font-weight: 600; color: var(--color-text); }
+.portable-text :deep(strong) { font-weight: 600; color: var(--ink); }
 .portable-text :deep(u) { text-decoration: underline; }
 .portable-text :deep(em) { font-style: italic; }
 .portable-text :deep(a.internal-link),
 .portable-text :deep(a.external-link) {
-  color: var(--color-navy);
+  color: var(--focus);
   text-decoration: underline;
   cursor: pointer;
 }
@@ -304,11 +304,11 @@ function handleInternalLinks(e: MouseEvent) {
   tab-size: 4;
   white-space: pre-wrap;
   overflow-x: auto;
-  background: color-mix(in srgb, var(--color-border) 50%, var(--color-surface));
+  background: color-mix(in srgb, var(--rule) 50%, var(--paper-raised));
   border-radius: 3px;
   padding: 8px 10px;
   line-height: 1.65;
-  color: var(--color-text);
+  color: var(--ink);
   margin: 0 0 0.75em;
 }
 
@@ -320,7 +320,7 @@ function handleInternalLinks(e: MouseEvent) {
 .portable-text :deep(li) {
   font-size: 14px;
   line-height: 1.75;
-  color: var(--color-text);
+  color: var(--ink);
   white-space: pre-wrap;
 }
 
@@ -330,7 +330,7 @@ function handleInternalLinks(e: MouseEvent) {
 .section-link {
   display: block;
   font-size: 13px;
-  color: var(--color-navy);
+  color: var(--focus);
   text-decoration: none;
   padding: 2px 0;
 }
@@ -339,7 +339,7 @@ function handleInternalLinks(e: MouseEvent) {
 .ext-link {
   display: block;
   font-size: 13px;
-  color: var(--color-navy);
+  color: var(--focus);
   text-decoration: none;
   padding: 2px 0;
   word-break: break-all;
@@ -361,17 +361,17 @@ function handleInternalLinks(e: MouseEvent) {
   object-fit: contain;
   display: block;
   border-radius: 4px;
-  background: var(--color-border);
+  background: var(--rule);
 }
 
 .carousel-btn {
   background: none;
-  border: 1px solid var(--color-border);
+  border: 1px solid var(--rule);
   border-radius: 50%;
   width: 32px;
   height: 32px;
   font-size: 20px;
-  color: var(--color-navy);
+  color: var(--focus);
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -379,11 +379,11 @@ function handleInternalLinks(e: MouseEvent) {
   flex-shrink: 0;
   line-height: 1;
 }
-.carousel-btn:hover { border-color: var(--color-border-mid); }
+.carousel-btn:hover { border-color: var(--rule); }
 
 .carousel-count {
   font-size: 11px;
-  color: var(--color-muted);
+  color: var(--muted);
   text-align: center;
   margin: 6px 0 0;
 }

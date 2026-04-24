@@ -1169,8 +1169,8 @@ const personInitials = computed<string>(() => {
 
 <style scoped>
 .edit-pane {
-  background: var(--color-surface);
-  border-bottom: 1px solid var(--color-border);
+  background: var(--paper-raised);
+  border-bottom: 1px solid var(--rule);
   padding: 20px 24px;
 }
 
@@ -1181,7 +1181,7 @@ const personInitials = computed<string>(() => {
   font-weight: 700;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: var(--color-muted);
+  color: var(--muted);
   margin: 0 0 12px;
 }
 
@@ -1196,55 +1196,57 @@ const personInitials = computed<string>(() => {
 .edit-label {
   font-size: 12px;
   font-weight: 600;
-  color: var(--color-text);
+  color: var(--ink);
 }
 
 .edit-input {
   width: 100%;
   padding: 8px 10px;
   font-size: 14px;
-  color: var(--color-text);
-  background: var(--color-bg);
-  border: 1px solid var(--color-border);
+  color: var(--ink);
+  background: var(--paper);
+  border: 1px solid var(--rule);
   border-radius: 4px;
   box-sizing: border-box;
-  font-family: inherit;
+  font-family: var(--font-sans);
 }
 .edit-input:focus {
-  outline: 2px solid var(--color-navy);
+  outline: 2px solid var(--focus);
   outline-offset: -1px;
-  border-color: var(--color-navy);
+  border-color: var(--focus);
 }
 .edit-input-narrow { max-width: 140px; }
 
 .edit-save-bar {
   margin-top: 20px;
   padding: 10px 14px;
-  background: #fef3c7;
-  border: 1px solid #fcd34d;
+  background: var(--paper-sunken);
+  border: 1px solid var(--rule);
   border-radius: 6px;
   display: flex;
   align-items: center;
   gap: 10px;
 }
-.edit-save-prompt { flex: 1; font-size: 13px; color: #92400e; font-weight: 600; }
+.edit-save-prompt { flex: 1; font-size: 13px; color: var(--ink-soft); font-weight: 600; }
 .edit-btn-primary {
-  padding: 8px 14px;
-  font-size: 12px;
-  font-weight: 600;
-  background: var(--color-navy);
-  color: #fff;
+  padding: var(--space-sm) var(--space-lg);
+  font-family: var(--font-sans);
+  font-size: var(--size-body-ui);
+  font-weight: 500;
+  background: var(--faded-red);
+  color: var(--paper);
   border: none;
-  border-radius: 4px;
+  border-radius: var(--radius-md);
   cursor: pointer;
 }
-.edit-btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+.edit-btn-primary:hover:not(:disabled) { background: var(--faded-red-soft); }
+.edit-btn-primary:disabled { background: var(--paper); color: var(--muted); cursor: not-allowed; }
 .edit-link-revert {
   background: transparent;
   border: none;
   padding: 0;
   font-size: 12px;
-  color: #92400e;
+  color: var(--ink-soft);
   text-decoration: underline;
   cursor: pointer;
 }
@@ -1253,11 +1255,11 @@ const personInitials = computed<string>(() => {
 .edit-save-error {
   margin-top: 8px;
   padding: 8px 10px;
-  background: #fef2f2;
-  border: 1px solid #fecaca;
+  background: var(--paper-sunken);
+  border: 1px solid var(--danger);
   border-radius: 6px;
   font-size: 12px;
-  color: #b91c1c;
+  color: var(--danger);
 }
 
 @media (max-width: 520px) {
@@ -1268,7 +1270,7 @@ const personInitials = computed<string>(() => {
 .type-seg {
   display: inline-flex;
   gap: 0;
-  border: 1px solid var(--color-border);
+  border: 1px solid var(--rule);
   border-radius: 4px;
   overflow: hidden;
 }
@@ -1278,12 +1280,12 @@ const personInitials = computed<string>(() => {
   align-items: center;
   padding: 6px 14px;
   font-size: 13px;
-  color: var(--color-muted);
+  color: var(--muted);
   cursor: pointer;
   user-select: none;
 }
 
-.type-seg-opt + .type-seg-opt { border-left: 1px solid var(--color-border); }
+.type-seg-opt + .type-seg-opt { border-left: 1px solid var(--rule); }
 
 .type-seg-opt input[type="radio"] {
   position: absolute;
@@ -1294,9 +1296,9 @@ const personInitials = computed<string>(() => {
 }
 
 .type-seg-opt.active {
-  background: var(--color-navy);
-  color: #fff;
-  font-weight: 600;
+  background: var(--ink);
+  color: var(--paper);
+  font-weight: 500;
 }
 
 /* ── Rangering (preview) ─────────────────────────────────────── */
@@ -1315,14 +1317,14 @@ const personInitials = computed<string>(() => {
   gap: 6px;
   padding: 2px 10px;
   font-size: 12px;
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
+  background: var(--paper-raised);
+  border: 1px solid var(--rule);
   border-radius: 12px;
-  color: var(--color-text);
+  color: var(--ink);
 }
 
 .rank-name   { font-weight: 600; }
-.rank-period { font-size: 11px; color: var(--color-muted); font-family: monospace; }
+.rank-period { font-size: 11px; color: var(--muted); font-family: var(--font-mono); }
 
 /* ── Rangering (edit) ────────────────────────────────────────── */
 .edit-section-head {
@@ -1338,20 +1340,20 @@ const personInitials = computed<string>(() => {
   font-size: 12px;
   font-weight: 600;
   background: transparent;
-  color: var(--color-navy);
-  border: 1px solid var(--color-border);
+  color: var(--focus);
+  border: 1px solid var(--rule);
   border-radius: 4px;
   cursor: pointer;
 }
-.edit-btn-outline:hover { border-color: var(--color-navy); }
+.edit-btn-outline:hover { border-color: var(--focus); }
 
 .edit-empty {
   padding: 12px;
   text-align: center;
   font-size: 12px;
   font-style: italic;
-  color: var(--color-muted);
-  border: 1px dashed var(--color-border);
+  color: var(--muted);
+  border: 1px dashed var(--rule);
   border-radius: 6px;
 }
 
@@ -1367,23 +1369,23 @@ const personInitials = computed<string>(() => {
 
 .edit-input-year {
   text-align: center;
-  font-family: monospace;
+  font-family: var(--font-mono);
 }
 
-.rank-dash { text-align: center; color: var(--color-muted); }
+.rank-dash { text-align: center; color: var(--muted); }
 
 .rank-remove-btn {
   width: 28px;
   height: 28px;
   padding: 0;
   font-size: 12px;
-  color: #b91c1c;
+  color: var(--danger);
   background: transparent;
-  border: 1px solid var(--color-border);
+  border: 1px solid var(--rule);
   border-radius: 4px;
   cursor: pointer;
 }
-.rank-remove-btn:hover { background: #fef2f2; border-color: #fecaca; }
+.rank-remove-btn:hover { background: var(--paper-sunken); border-color: var(--danger); }
 
 /* ── Medlemskap (edit) ────────────────────────────────────────── */
 .membership-list {
@@ -1396,12 +1398,12 @@ const personInitials = computed<string>(() => {
 }
 
 .membership-item {
-  background: var(--color-bg);
-  border: 1px solid var(--color-border);
+  background: var(--paper);
+  border: 1px solid var(--rule);
   border-radius: 6px;
 }
 
-.membership-item.expanded { border-color: var(--color-navy); }
+.membership-item.expanded { border-color: var(--focus); }
 
 .membership-summary {
   display: flex;
@@ -1413,15 +1415,15 @@ const personInitials = computed<string>(() => {
   border: none;
   cursor: pointer;
   text-align: left;
-  font-family: inherit;
+  font-family: var(--font-sans);
 }
 
-.membership-unit-name { font-weight: 600; color: var(--color-text); }
+.membership-unit-name { font-weight: 600; color: var(--ink); }
 
 .membership-meta {
   flex: 1;
   font-size: 12px;
-  color: var(--color-muted);
+  color: var(--muted);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -1429,13 +1431,13 @@ const personInitials = computed<string>(() => {
 
 .membership-chevron {
   font-size: 12px;
-  color: var(--color-muted);
+  color: var(--muted);
   flex-shrink: 0;
 }
 
 .membership-body {
   padding: 0 12px 12px;
-  border-top: 1px dashed var(--color-border);
+  border-top: 1px dashed var(--rule);
 }
 
 .membership-body > * + * { margin-top: 8px; }
@@ -1446,7 +1448,7 @@ const personInitials = computed<string>(() => {
   font-weight: 700;
   letter-spacing: 0.06em;
   text-transform: uppercase;
-  color: var(--color-muted);
+  color: var(--muted);
 }
 
 /* ── Membership info popup ──────────────────────────────────── */
@@ -1466,7 +1468,7 @@ const personInitials = computed<string>(() => {
   width: 100%;
   max-height: 85vh;
   overflow-y: auto;
-  background: var(--color-surface);
+  background: var(--paper-raised);
   border-radius: 8px;
   box-shadow: 0 20px 48px rgba(0, 0, 0, 0.3);
   padding: 20px 24px;
@@ -1483,7 +1485,7 @@ const personInitials = computed<string>(() => {
 .popup-title {
   font-size: 18px;
   font-weight: 700;
-  color: var(--color-navy);
+  color: var(--focus);
   margin: 0;
 }
 
@@ -1493,33 +1495,33 @@ const personInitials = computed<string>(() => {
   padding: 0;
   font-size: 14px;
   background: transparent;
-  border: 1px solid var(--color-border);
+  border: 1px solid var(--rule);
   border-radius: 50%;
   cursor: pointer;
-  color: var(--color-muted);
+  color: var(--muted);
 }
-.popup-close:hover { border-color: var(--color-navy); color: var(--color-navy); }
+.popup-close:hover { border-color: var(--focus); color: var(--focus); }
 
 .popup-sub {
   display: flex;
   gap: 8px;
   margin-bottom: 14px;
   font-size: 12px;
-  color: var(--color-muted);
+  color: var(--muted);
 }
 
 .popup-body {
   font-size: 14px;
   line-height: 1.6;
-  color: var(--color-text);
+  color: var(--ink);
 }
 .popup-body :deep(p) { margin: 0 0 0.75em; }
 .popup-body :deep(p:last-child) { margin-bottom: 0; }
-.popup-body :deep(a) { color: var(--color-navy); text-decoration: underline; }
+.popup-body :deep(a) { color: var(--focus); text-decoration: underline; }
 
 .edit-input-invalid {
-  border-color: #b91c1c;
-  background: #fef2f2;
+  border-color: var(--danger);
+  background: var(--paper-sunken);
 }
 
 .unit-picker {
@@ -1532,11 +1534,11 @@ const personInitials = computed<string>(() => {
   align-items: center;
   gap: 6px;
   padding: 6px 6px 6px 12px;
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
+  background: var(--paper-raised);
+  border: 1px solid var(--rule);
   border-radius: 14px;
   font-size: 13px;
-  color: var(--color-navy);
+  color: var(--focus);
 }
 .unit-chip-name { font-weight: 600; }
 .unit-chip-clear {
@@ -1544,13 +1546,13 @@ const personInitials = computed<string>(() => {
   height: 20px;
   padding: 0;
   font-size: 10px;
-  color: var(--color-muted);
+  color: var(--muted);
   background: transparent;
   border: none;
   border-radius: 50%;
   cursor: pointer;
 }
-.unit-chip-clear:hover { background: var(--color-bg); color: #b91c1c; }
+.unit-chip-clear:hover { background: var(--paper); color: var(--danger); }
 
 .unit-results {
   position: absolute;
@@ -1559,8 +1561,8 @@ const personInitials = computed<string>(() => {
   right: 0;
   max-height: 240px;
   overflow-y: auto;
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
+  background: var(--paper-raised);
+  border: 1px solid var(--rule);
   border-radius: 4px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
   z-index: 10;
@@ -1571,16 +1573,16 @@ const personInitials = computed<string>(() => {
   width: 100%;
   padding: 7px 10px;
   font-size: 13px;
-  color: var(--color-text);
+  color: var(--ink);
   background: transparent;
   border: none;
-  border-bottom: 1px solid var(--color-border);
+  border-bottom: 1px solid var(--rule);
   cursor: pointer;
   text-align: left;
-  font-family: inherit;
+  font-family: var(--font-sans);
 }
 .unit-result:last-child { border-bottom: none; }
-.unit-result:hover      { background: var(--color-bg); }
+.unit-result:hover      { background: var(--paper); }
 
 .membership-edit-top {
   display: grid;
@@ -1607,24 +1609,24 @@ const personInitials = computed<string>(() => {
 }
 
 .edit-input-date {
-  font-family: monospace;
+  font-family: var(--font-mono);
   font-size: 12px;
 }
 
 .membership-desc {
   resize: vertical;
-  font-family: inherit;
+  font-family: var(--font-sans);
 }
 
 /* ── Beskrivelse (preview) ───────────────────────────────────── */
 .section-wrap { position: relative; }
 
 .is-quote {
-  border-left: 3px solid var(--color-border);
+  border-left: 3px solid var(--rule);
   padding: 2px 14px;
   margin: 12px 0 12px 2px;
   font-style: italic;
-  color: var(--color-text);
+  color: var(--ink);
 }
 
 .sourced-from {
@@ -1634,18 +1636,18 @@ const personInitials = computed<string>(() => {
   gap: 6px;
   margin: -6px 0 12px 18px;
   font-size: 11px;
-  color: var(--color-muted);
+  color: var(--muted);
 }
 .sourced-label  { font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; font-size: 10px; }
-.sourced-link   { color: var(--color-navy); text-decoration: underline; }
+.sourced-link   { color: var(--focus); text-decoration: underline; }
 .sourced-license {
-  font-family: monospace;
+  font-family: var(--font-mono);
   font-size: 10px;
   padding: 1px 6px;
-  background: var(--color-bg);
-  border: 1px solid var(--color-border);
+  background: var(--paper);
+  border: 1px solid var(--rule);
   border-radius: 8px;
-  color: var(--color-muted);
+  color: var(--muted);
 }
 
 .inline-cites {
@@ -1660,14 +1662,14 @@ const personInitials = computed<string>(() => {
   gap: 4px;
   padding: 3px 8px;
   font-size: 11px;
-  color: var(--color-navy);
-  background: var(--color-bg);
-  border: 1px solid var(--color-border);
+  color: var(--focus);
+  background: var(--paper);
+  border: 1px solid var(--rule);
   border-radius: 12px;
   text-decoration: none;
 }
-.cite-chip:hover       { border-color: var(--color-navy); }
-.cite-chip-author      { color: var(--color-muted); }
+.cite-chip:hover       { border-color: var(--focus); }
+.cite-chip-author      { color: var(--muted); }
 .cite-chip-arrow       { font-size: 10px; opacity: 0.6; }
 
 .section-footnotes {
@@ -1677,11 +1679,11 @@ const personInitials = computed<string>(() => {
   display: flex;
   gap: 2px;
   font-size: 11px;
-  color: var(--color-muted);
+  color: var(--muted);
 }
 
 .card-kilder {
-  border-top: 1px solid var(--color-border);
+  border-top: 1px solid var(--rule);
   margin-top: 12px;
   padding-top: 10px;
 }
@@ -1690,21 +1692,21 @@ const personInitials = computed<string>(() => {
   font-weight: 700;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: var(--color-muted);
+  color: var(--muted);
   margin-bottom: 6px;
 }
 .kilder-list {
   margin: 0;
   padding-left: 22px;
   font-size: 11px;
-  color: var(--color-muted);
+  color: var(--muted);
   line-height: 1.5;
 }
 .kilder-list li        { margin-bottom: 3px; }
 .kilder-ref            { color: inherit; text-decoration: none; }
-.kilder-list a.kilder-ref { color: var(--color-navy); text-decoration: underline; }
-.kilder-list a.kilder-ref .kilder-author { color: var(--color-muted); }
-.kilder-arrow { font-size: 10px; opacity: 0.6; color: var(--color-navy); }
+.kilder-list a.kilder-ref { color: var(--focus); text-decoration: underline; }
+.kilder-list a.kilder-ref .kilder-author { color: var(--muted); }
+.kilder-arrow { font-size: 10px; opacity: 0.6; color: var(--focus); }
 
 /* ── Hero ───────────────────────────────────────────────────── */
 .hero {
@@ -1725,15 +1727,15 @@ const personInitials = computed<string>(() => {
 }
 
 .hero--empty {
-  background: linear-gradient(135deg, var(--color-surface) 0%, var(--color-bg) 100%);
-  border-bottom: 1px solid var(--color-border);
+  background: linear-gradient(135deg, var(--paper-raised) 0%, var(--paper) 100%);
+  border-bottom: 1px solid var(--rule);
 }
 
 .hero-placeholder {
   font-size: 72px;
   font-weight: 700;
   letter-spacing: 0.04em;
-  color: var(--color-border-mid);
+  color: var(--rule);
   font-variant: all-small-caps;
   user-select: none;
 }
@@ -1746,8 +1748,8 @@ const personInitials = computed<string>(() => {
 /* ── Page header ────────────────────────────────────────────── */
 .page-header {
   padding: 14px 16px 12px;
-  background: var(--color-surface);
-  border-bottom: 1px solid var(--color-border);
+  background: var(--paper-raised);
+  border-bottom: 1px solid var(--rule);
 }
 
 .back-link {
@@ -1756,32 +1758,34 @@ const personInitials = computed<string>(() => {
   min-height: 36px;
   font-size: 13px;
   font-weight: 600;
-  color: var(--color-navy);
+  color: var(--focus);
   text-decoration: none;
   margin-bottom: 6px;
 }
 .back-link:hover { text-decoration: underline; }
 
 .person-name {
-  font-size: 22px;
-  font-weight: 700;
-  color: var(--color-text);
-  margin: 0 0 4px;
-  line-height: 1.25;
+  font-family: var(--font-serif);
+  font-size: var(--size-display);
+  font-weight: 600;
+  color: var(--ink);
+  margin: 0 0 var(--space-xs);
+  line-height: var(--leading-tight);
+  letter-spacing: var(--tracking-tight);
   overflow-wrap: break-word;
 }
 
 .person-meta {
   font-size: 12px;
-  color: var(--color-muted);
+  color: var(--muted);
   margin: 0;
 }
 
 /* ── Sections ───────────────────────────────────────────────── */
 .section {
   padding: 12px 16px;
-  border-bottom: 1px solid var(--color-border);
-  background: var(--color-surface);
+  border-bottom: 1px solid var(--rule);
+  background: var(--paper-raised);
 }
 
 .section + .section {
@@ -1804,29 +1808,29 @@ const personInitials = computed<string>(() => {
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.07em;
-  color: var(--color-muted);
+  color: var(--muted);
   margin: 0;
 }
 
 .sort-btn {
   background: none;
-  border: 1px solid var(--color-border-mid);
+  border: 1px solid var(--rule);
   border-radius: 4px;
   font-size: 11px;
   font-weight: 600;
-  color: var(--color-muted);
+  color: var(--muted);
   padding: 6px 10px;
   cursor: pointer;
   white-space: nowrap;
   touch-action: manipulation;
 }
-.sort-btn:hover { border-color: var(--color-navy); color: var(--color-navy); }
+.sort-btn:hover { border-color: var(--focus); color: var(--focus); }
 
 /* ── Description ────────────────────────────────────────────── */
 .plain-text {
   font-size: 14px;
   line-height: 1.75;
-  color: var(--color-text);
+  color: var(--ink);
   margin: 0;
   white-space: pre-line;
 }
@@ -1834,14 +1838,14 @@ const personInitials = computed<string>(() => {
 .rich-text {
   font-size: 14px;
   line-height: 1.75;
-  color: var(--color-text);
+  color: var(--ink);
 }
 .rich-text :deep(p)          { margin: 0 0 0.75em; }
 .rich-text :deep(p:last-child) { margin-bottom: 0; }
 .rich-text :deep(h1),
 .rich-text :deep(h2),
 .rich-text :deep(h3),
-.rich-text :deep(h4)         { font-weight: 700; margin: 1em 0 0.4em; color: var(--color-text); }
+.rich-text :deep(h4)         { font-weight: 700; margin: 1em 0 0.4em; color: var(--ink); }
 .rich-text :deep(h2)         { font-size: 16px; }
 .rich-text :deep(h3)         { font-size: 14px; }
 .rich-text :deep(ul),
@@ -1849,10 +1853,10 @@ const personInitials = computed<string>(() => {
 .rich-text :deep(li)         { margin: 0.2em 0; }
 .rich-text :deep(strong)     { font-weight: 700; }
 .rich-text :deep(em)         { font-style: italic; }
-.rich-text :deep(blockquote) { border-left: 3px solid var(--color-border-mid); margin: 0.75em 0; padding-left: 12px; color: var(--color-muted); font-style: italic; }
+.rich-text :deep(blockquote) { border-left: 3px solid var(--rule); margin: 0.75em 0; padding-left: 12px; color: var(--muted); font-style: italic; }
 .rich-text :deep(a.internal-link),
-.rich-text :deep(a.external-link) { color: var(--color-navy); text-decoration: underline; }
-.rich-text :deep(code)       { font-family: monospace; font-size: 0.9em; background: var(--color-border); padding: 1px 4px; border-radius: 3px; }
+.rich-text :deep(a.external-link) { color: var(--focus); text-decoration: underline; }
+.rich-text :deep(code)       { font-family: var(--font-mono); font-size: 0.9em; background: var(--rule); padding: 1px 4px; border-radius: 3px; }
 
 /* ── Link list ──────────────────────────────────────────────── */
 .link-list {
@@ -1864,7 +1868,7 @@ const personInitials = computed<string>(() => {
 .section-link {
   display: block;
   font-size: 13px;
-  color: var(--color-navy);
+  color: var(--focus);
   text-decoration: none;
   padding: 2px 0;
 }
@@ -1879,19 +1883,19 @@ const personInitials = computed<string>(() => {
   padding: 8px 8px;
   margin: 0 -8px;
   text-decoration: none;
-  color: var(--color-text);
-  border-bottom: 1px solid var(--color-border);
+  color: var(--ink);
+  border-bottom: 1px solid var(--rule);
   border-radius: 4px;
   transition: background 0.1s;
 }
 .event-item:last-child { border-bottom: none; }
-.event-item:hover { background: var(--color-bg); }
+.event-item:hover { background: var(--paper); }
 .event-item:hover .event-title { text-decoration: underline; }
 
 .event-date {
   font-size: 12px;
   font-weight: 600;
-  color: var(--color-text);
+  color: var(--ink);
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
   flex-shrink: 0;
@@ -1899,7 +1903,7 @@ const personInitials = computed<string>(() => {
 
 .event-title {
   font-size: 13px;
-  color: var(--color-navy);
+  color: var(--focus);
   flex: 1;
   min-width: 0;
 }
@@ -1926,9 +1930,9 @@ const personInitials = computed<string>(() => {
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.04em;
-  color: var(--color-muted);
-  background: var(--color-bg);
-  border: 1px solid var(--color-border);
+  color: var(--muted);
+  background: var(--paper);
+  border: 1px solid var(--rule);
   border-radius: 3px;
   padding: 1px 5px;
   white-space: nowrap;
@@ -1950,7 +1954,7 @@ const personInitials = computed<string>(() => {
 }
 .relation-link {
   font-size: 13px;
-  color: var(--color-navy);
+  color: var(--focus);
   text-decoration: none;
 }
 .relation-link:hover { text-decoration: underline; }
@@ -1960,15 +1964,15 @@ const personInitials = computed<string>(() => {
   font-weight: 700;
   letter-spacing: 0.06em;
   text-transform: uppercase;
-  color: var(--color-muted);
+  color: var(--muted);
   padding: 1px 6px;
-  border: 1px solid var(--color-border-mid);
+  border: 1px solid var(--rule);
   border-radius: 3px;
 }
 
 .member-period {
   font-size: 11px;
-  color: var(--color-muted);
+  color: var(--muted);
   font-variant-numeric: tabular-nums;
 }
 
@@ -1976,9 +1980,9 @@ const personInitials = computed<string>(() => {
   width: 18px;
   height: 18px;
   border-radius: 50%;
-  border: 1px solid var(--color-border-mid);
-  background: var(--color-surface);
-  color: var(--color-muted);
+  border: 1px solid var(--rule);
+  background: var(--paper-raised);
+  color: var(--muted);
   font-size: 11px;
   font-weight: 700;
   font-style: italic;
@@ -1993,24 +1997,24 @@ const personInitials = computed<string>(() => {
 }
 .info-marker:hover,
 .info-marker[aria-expanded="true"] {
-  background: var(--color-navy);
-  border-color: var(--color-navy);
-  color: #fff;
+  background: var(--faded-red);
+  border-color: var(--faded-red);
+  color: var(--paper);
 }
 
 .relation-desc {
   flex-basis: 100%;
   margin: 4px 0 2px;
   padding: 8px 10px;
-  background: var(--color-bg);
-  border-left: 3px solid var(--color-navy);
+  background: var(--paper);
+  border-left: 3px solid var(--focus);
   border-radius: 0 3px 3px 0;
 }
 .relation-desc-text {
   margin: 0 0 4px;
   font-size: 12px;
   line-height: 1.5;
-  color: var(--color-text);
+  color: var(--ink);
 }
 .relation-desc-text:last-child { margin-bottom: 0; }
 
@@ -2022,16 +2026,16 @@ const personInitials = computed<string>(() => {
   padding: 6px 8px;
   margin: 0 -8px;
   text-decoration: none;
-  color: var(--color-text);
+  color: var(--ink);
   border-radius: 4px;
   transition: background 0.1s;
 }
-.ref-item:hover { background: var(--color-bg); }
+.ref-item:hover { background: var(--paper); }
 .ref-item:hover .ref-title { text-decoration: underline; }
 
 .ref-title {
   font-size: 13px;
-  color: var(--color-navy);
+  color: var(--focus);
   flex: 1;
   min-width: 0;
   overflow: hidden;
@@ -2048,18 +2052,20 @@ const personInitials = computed<string>(() => {
 
 .ref-nb {
   display: inline-block;
-  padding: 1px 6px;
-  border-radius: 3px;
-  font-size: 9px;
-  font-weight: 700;
-  letter-spacing: 0.06em;
-  background: var(--color-orange, #e38924);
-  color: #fff;
+  padding: var(--space-xs) var(--space-sm);
+  border-radius: var(--radius-pill);
+  font-family: var(--font-sans);
+  font-size: var(--size-caps);
+  font-weight: 600;
+  letter-spacing: var(--tracking-caps);
+  text-transform: uppercase;
+  background: var(--moss);
+  color: var(--paper);
 }
 
 .ref-domain {
   font-size: 11px;
-  color: var(--color-muted);
+  color: var(--muted);
   font-variant-numeric: tabular-nums;
 }
 
@@ -2067,7 +2073,7 @@ const personInitials = computed<string>(() => {
   margin: 0;
   padding: 4px 0;
   font-size: 12px;
-  color: var(--color-muted);
+  color: var(--muted);
   font-style: italic;
 }
 
@@ -2075,7 +2081,7 @@ const personInitials = computed<string>(() => {
 .ext-link {
   display: block;
   font-size: 13px;
-  color: var(--color-navy);
+  color: var(--focus);
   text-decoration: none;
   padding: 2px 0;
   word-break: break-all;
@@ -2104,17 +2110,17 @@ const personInitials = computed<string>(() => {
   object-fit: contain;
   display: block;
   border-radius: 4px;
-  background: var(--color-border);
+  background: var(--rule);
 }
 
 .carousel-btn {
   background: none;
-  border: 1px solid var(--color-border);
+  border: 1px solid var(--rule);
   border-radius: 50%;
   width: 44px;
   height: 44px;
   font-size: 22px;
-  color: var(--color-navy);
+  color: var(--focus);
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -2123,18 +2129,18 @@ const personInitials = computed<string>(() => {
   line-height: 1;
   touch-action: manipulation;
 }
-.carousel-btn:hover { border-color: var(--color-border-mid); }
+.carousel-btn:hover { border-color: var(--rule); }
 
 .carousel-count {
   font-size: 11px;
-  color: var(--color-muted);
+  color: var(--muted);
   text-align: center;
   margin: 6px 0 0;
 }
 
 .carousel-caption {
   font-size: 12px;
-  color: var(--color-muted);
+  color: var(--muted);
   text-align: center;
   margin: 4px 0 0;
   font-style: italic;

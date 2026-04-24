@@ -50,8 +50,8 @@ onBeforeUnmount(() => {
   display: flex;
   gap: 2px;
   padding: 4px;
-  background: var(--color-bg);
-  border: 1px solid var(--color-border);
+  background: var(--paper);
+  border: 1px solid var(--rule);
   border-bottom: none;
   border-radius: 6px 6px 0 0;
   flex-wrap: wrap;
@@ -63,50 +63,50 @@ onBeforeUnmount(() => {
   padding: 0 8px;
   font-size: 12px;
   font-weight: 600;
-  color: var(--color-text);
+  color: var(--ink);
   background: transparent;
   border: 1px solid transparent;
   border-radius: 3px;
   cursor: pointer;
   font-family: inherit;
 }
-.pt-tb-btn:hover  { background: var(--color-surface); }
-.pt-tb-btn.active { background: var(--color-navy); color: #fff; border-color: var(--color-navy); }
+.pt-tb-btn:hover  { background: var(--paper-raised); }
+.pt-tb-btn.active { background: var(--focus); color: #fff; border-color: var(--focus); }
 
 .pt-tb-sep {
   display: inline-block;
   width: 1px;
-  background: var(--color-border);
+  background: var(--rule);
   margin: 2px 4px;
 }
 
 .pt-editable {
   min-height: 200px;
   padding: 12px;
-  border: 1px solid var(--color-border);
+  border: 1px solid var(--rule);
   border-radius: 0 0 6px 6px;
-  background: var(--color-bg);
+  background: var(--paper);
   font-size: 14px;
   line-height: 1.6;
   outline: none;
 }
-.pt-editable:focus { border-color: var(--color-navy); }
+.pt-editable:focus { border-color: var(--focus); }
 
 .pt-editable p          { margin: 0 0 0.75em; }
 .pt-editable p:last-child { margin-bottom: 0; }
-.pt-editable h1         { font-size: 24px; font-weight: 700; margin: 0 0 0.5em; color: var(--color-navy); }
-.pt-editable h2         { font-size: 20px; font-weight: 700; margin: 0 0 0.5em; color: var(--color-navy); }
-.pt-editable h3         { font-size: 17px; font-weight: 700; margin: 0 0 0.5em; color: var(--color-navy); }
+.pt-editable h1         { font-size: 24px; font-weight: 700; margin: 0 0 0.5em; color: var(--focus); }
+.pt-editable h2         { font-size: 20px; font-weight: 700; margin: 0 0 0.5em; color: var(--focus); }
+.pt-editable h3         { font-size: 17px; font-weight: 700; margin: 0 0 0.5em; color: var(--focus); }
 .pt-editable blockquote {
-  border-left: 3px solid var(--color-border);
+  border-left: 3px solid var(--rule);
   padding-left: 12px;
-  color: var(--color-muted);
+  color: var(--muted);
   font-style: italic;
   margin: 0 0 0.75em;
 }
 
 .pt-person-mark {
-  color: var(--color-navy);
+  color: var(--focus);
   background: rgba(5, 35, 69, 0.08);
   border-radius: 2px;
   padding: 1px 2px;
@@ -127,8 +127,8 @@ onBeforeUnmount(() => {
   min-width: 240px;
   max-height: 280px;
   overflow-y: auto;
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
+  background: var(--paper-raised);
+  border: 1px solid var(--rule);
   border-radius: 4px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
   z-index: 20;
@@ -141,15 +141,15 @@ onBeforeUnmount(() => {
 .pt-person-input {
   padding: 7px 10px;
   font-size: 13px;
-  color: var(--color-text);
-  background: var(--color-bg);
-  border: 1px solid var(--color-border);
+  color: var(--ink);
+  background: var(--paper);
+  border: 1px solid var(--rule);
   border-radius: 3px;
   box-sizing: border-box;
   margin-bottom: 4px;
   outline: none;
 }
-.pt-person-input:focus { border-color: var(--color-navy); }
+.pt-person-input:focus { border-color: var(--focus); }
 
 .pt-person-result {
   display: flex;
@@ -158,7 +158,7 @@ onBeforeUnmount(() => {
   gap: 8px;
   padding: 6px 8px;
   font-size: 13px;
-  color: var(--color-text);
+  color: var(--ink);
   background: transparent;
   border: none;
   border-radius: 3px;
@@ -166,11 +166,11 @@ onBeforeUnmount(() => {
   text-align: left;
   font-family: inherit;
 }
-.pt-person-result:hover { background: var(--color-bg); }
+.pt-person-result:hover { background: var(--paper); }
 
 .pt-person-slug {
   font-size: 10px;
   font-family: monospace;
-  color: var(--color-muted);
+  color: var(--muted);
 }
 </style>

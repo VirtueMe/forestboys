@@ -115,7 +115,7 @@ const hasRoute = computed(() =>
   object-fit: cover;
 }
 .hero-placeholder {
-  background: var(--color-navy);
+  background: var(--focus);
 }
 .back-btn {
   position: absolute;
@@ -143,18 +143,18 @@ const hasRoute = computed(() =>
 .title {
   font-size: 17px;
   font-weight: 700;
-  color: var(--color-text);
+  color: var(--ink);
   line-height: 1.3;
   margin: 0 0 4px;
 }
 .meta {
   font-size: 12px;
-  color: var(--color-muted);
+  color: var(--muted);
   margin: 0 0 8px;
 }
 .description {
   font-size: 13px;
-  color: var(--color-text);
+  color: var(--ink);
   line-height: 1.6;
   margin: 0;
   white-space: pre-line;
@@ -162,7 +162,7 @@ const hasRoute = computed(() =>
 
 .section {
   flex-shrink: 0;
-  border-top: 0.5px solid var(--color-border);
+  border-top: 0.5px solid var(--rule);
   padding: 10px 14px 12px;
   display: flex;
   flex-direction: column;
@@ -174,7 +174,7 @@ const hasRoute = computed(() =>
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.07em;
-  color: var(--color-muted);
+  color: var(--muted);
 }
 
 .route-pills {
@@ -186,9 +186,9 @@ const hasRoute = computed(() =>
 
 .pill {
   font-size: 12px;
-  color: var(--color-text);
-  background: var(--color-bg);
-  border: 0.5px solid var(--color-border-mid);
+  color: var(--ink);
+  background: var(--paper);
+  border: 0.5px solid var(--rule);
   border-radius: 4px;
   padding: 2px 7px;
   white-space: nowrap;
@@ -196,7 +196,7 @@ const hasRoute = computed(() =>
 
 .arrow {
   font-size: 12px;
-  color: var(--color-muted);
+  color: var(--muted);
 }
 
 .plain-list {
@@ -210,25 +210,25 @@ const hasRoute = computed(() =>
 
 .plain-item {
   font-size: 13px;
-  color: var(--color-text);
+  color: var(--ink);
   line-height: 1.4;
 }
 
 .people-line {
   font-size: 13px;
-  color: var(--color-text);
+  color: var(--ink);
   line-height: 1.5;
   margin: 0;
 }
 
 .link {
-  color: var(--color-navy);
+  color: var(--focus);
   text-decoration: underline;
-  text-decoration-color: var(--color-border-mid);
+  text-decoration-color: var(--rule);
   font-size: 13px;
   word-break: break-all;
 }
 .link:hover {
-  text-decoration-color: var(--color-navy);
+  text-decoration-color: var(--focus);
 }
 </style>

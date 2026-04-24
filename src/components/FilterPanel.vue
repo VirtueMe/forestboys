@@ -225,8 +225,8 @@ function toggleDistrict(d: string) {
   left: 0;
   right: 0;
   height: 72vh;
-  background: var(--color-surface);
-  border-top: 2px solid var(--color-border);
+  background: var(--paper-raised);
+  border-top: 2px solid var(--rule);
   border-radius: 12px 12px 0 0;
   z-index: 20;
   display: flex;
@@ -247,7 +247,7 @@ function toggleDistrict(d: string) {
     width: var(--sidebar-width);
     height: calc(100vh - var(--nav-height));
     border-top: none;
-    border-right: 2px solid var(--color-border);
+    border-right: 2px solid var(--rule);
     border-radius: 0;
     transform: translateX(-100%);
   }
@@ -259,14 +259,14 @@ function toggleDistrict(d: string) {
   align-items: center;
   justify-content: space-between;
   padding: 14px 16px 12px;
-  border-bottom: 1px solid var(--color-border);
+  border-bottom: 1px solid var(--rule);
   flex-shrink: 0;
 }
 
 .panel-title {
   font-size: 13px;
   font-weight: 700;
-  color: var(--color-text);
+  color: var(--ink);
   text-transform: uppercase;
   letter-spacing: 0.06em;
 }
@@ -275,14 +275,14 @@ function toggleDistrict(d: string) {
   background: none;
   border: none;
   cursor: pointer;
-  color: var(--color-muted);
+  color: var(--muted);
   display: flex;
   align-items: center;
   padding: 4px;
   border-radius: 4px;
   transition: background 0.1s, color 0.1s;
 }
-.close-btn:hover { background: var(--color-bg); color: var(--color-text); }
+.close-btn:hover { background: var(--paper); color: var(--ink); }
 
 .panel-body {
   flex: 1;
@@ -300,7 +300,7 @@ function toggleDistrict(d: string) {
 .section-label {
   font-size: 11px;
   font-weight: 700;
-  color: var(--color-muted);
+  color: var(--muted);
   text-transform: uppercase;
   letter-spacing: 0.06em;
 }
@@ -318,7 +318,7 @@ function toggleDistrict(d: string) {
   padding: 4px 10px;
   border-radius: 14px;
   border: 1.5px solid;
-  background: var(--color-surface);
+  background: var(--paper-raised);
   cursor: pointer;
   transition: background 0.1s, color 0.1s, border-color 0.1s, opacity 0.1s;
   white-space: nowrap;
@@ -335,36 +335,36 @@ function toggleDistrict(d: string) {
   justify-content: space-between;
   width: 100%;
   padding: 8px 12px;
-  background: var(--color-bg);
-  border: 1px solid var(--color-border-mid);
+  background: var(--paper);
+  border: 1px solid var(--rule);
   border-radius: 6px;
   font-size: 13px;
-  color: var(--color-muted);
+  color: var(--muted);
   cursor: pointer;
   text-align: left;
   transition: border-color 0.1s;
 }
-.select-trigger:hover { border-color: var(--color-navy); }
+.select-trigger:hover { border-color: var(--focus); }
 .select-trigger.active {
-  border-color: var(--color-navy);
-  color: var(--color-navy);
+  border-color: var(--focus);
+  color: var(--focus);
   font-weight: 600;
 }
 
 .chevron {
   flex-shrink: 0;
   transition: transform 0.2s ease;
-  color: var(--color-muted);
+  color: var(--muted);
 }
 .chevron.rotated { transform: rotate(180deg); }
 
 /* Checkbox list */
 .check-list {
-  border: 1px solid var(--color-border);
+  border: 1px solid var(--rule);
   border-radius: 6px;
   overflow-y: auto;
   max-height: 200px;
-  background: var(--color-surface);
+  background: var(--paper-raised);
 }
 
 .check-row {
@@ -373,18 +373,18 @@ function toggleDistrict(d: string) {
   gap: 10px;
   padding: 8px 12px;
   font-size: 13px;
-  color: var(--color-text);
+  color: var(--ink);
   cursor: pointer;
-  border-bottom: 1px solid var(--color-border);
+  border-bottom: 1px solid var(--rule);
   user-select: none;
   transition: background 0.1s;
 }
 .check-row:last-child { border-bottom: none; }
-.check-row:hover { background: var(--color-bg); }
+.check-row:hover { background: var(--paper); }
 .check-row input[type='checkbox'] {
   width: 15px;
   height: 15px;
-  accent-color: var(--color-navy);
+  accent-color: var(--focus);
   cursor: pointer;
   flex-shrink: 0;
 }
@@ -393,34 +393,34 @@ function toggleDistrict(d: string) {
 .search-input {
   width: 100%;
   padding: 8px 10px;
-  border: 1px solid var(--color-border-mid);
+  border: 1px solid var(--rule);
   border-radius: 6px;
   font-size: 13px;
-  color: var(--color-text);
-  background: var(--color-bg);
+  color: var(--ink);
+  background: var(--paper);
   outline: none;
   transition: border-color 0.1s;
 }
-.search-input:focus { border-color: var(--color-navy); }
+.search-input:focus { border-color: var(--focus); }
 
 .search-btn {
   width: 100%;
   margin-top: 8px;
   padding: 10px;
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
+  background: var(--paper-raised);
+  border: 1px solid var(--rule);
   border-radius: 6px;
   font-size: 13px;
   font-weight: 500;
-  color: var(--color-text);
+  color: var(--ink);
   cursor: pointer;
   transition: background 0.1s, border-color 0.1s;
 }
-.search-btn:hover { background: var(--color-bg); border-color: var(--color-border-mid); }
+.search-btn:hover { background: var(--paper); border-color: var(--rule); }
 
 .no-results {
   font-size: 12px;
-  color: var(--color-red);
+  color: var(--faded-red);
   text-align: center;
   padding-top: 4px;
 }
@@ -433,7 +433,7 @@ function toggleDistrict(d: string) {
 
 .divider {
   border: none;
-  border-top: 1px solid var(--color-border);
+  border-top: 1px solid var(--rule);
   margin: 14px 0 0;
 }
 
@@ -442,14 +442,14 @@ function toggleDistrict(d: string) {
   align-items: center;
   gap: 10px;
   font-size: 13px;
-  color: var(--color-text);
+  color: var(--ink);
   cursor: pointer;
   user-select: none;
 }
 .toggle-row input[type='checkbox'] {
   width: 16px;
   height: 16px;
-  accent-color: var(--color-navy);
+  accent-color: var(--focus);
   cursor: pointer;
   flex-shrink: 0;
 }
@@ -457,14 +457,14 @@ function toggleDistrict(d: string) {
 .reset-btn {
   width: 100%;
   padding: 10px;
-  background: var(--color-bg);
-  border: 1px solid var(--color-border-mid);
+  background: var(--paper);
+  border: 1px solid var(--rule);
   border-radius: 6px;
   font-size: 13px;
   font-weight: 600;
-  color: var(--color-muted);
+  color: var(--muted);
   cursor: pointer;
   transition: background 0.1s, border-color 0.1s;
 }
-.reset-btn:hover { background: var(--color-border); border-color: var(--color-navy); }
+.reset-btn:hover { background: var(--rule); border-color: var(--focus); }
 </style>

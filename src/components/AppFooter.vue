@@ -17,28 +17,29 @@ const year = new Date().getFullYear()
 <style scoped>
 .footer {
   flex-shrink: 0;
-  background: var(--color-surface);
-  border-top: 1px solid var(--color-border);
-  padding: 0 16px;
+  background: var(--paper-raised);
+  border-top: 1px solid var(--rule);
+  padding: 0 var(--space-md);
   height: 36px;
   display: flex;
   align-items: center;
 }
 
 .footer-inner {
-  max-width: 1320px;
+  max-width: var(--content-max-width);
   width: 100%;
   margin: 0 auto;
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-sm);
   overflow: hidden;
 }
 
 .org {
-  font-size: 11px;
+  font-family: var(--font-sans);
+  font-size: var(--size-caps);
   font-weight: 600;
-  color: var(--color-navy);
+  color: var(--ink-soft);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -46,14 +47,16 @@ const year = new Date().getFullYear()
 }
 
 .sep {
-  font-size: 11px;
-  color: var(--color-border-mid);
+  font-family: var(--font-sans);
+  font-size: var(--size-caps);
+  color: var(--rule);
   flex-shrink: 0;
 }
 
 .credit {
-  font-size: 11px;
-  color: var(--color-muted);
+  font-family: var(--font-sans);
+  font-size: var(--size-caps);
+  color: var(--muted);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -61,8 +64,9 @@ const year = new Date().getFullYear()
 }
 
 .copy {
-  font-size: 11px;
-  color: var(--color-muted);
+  font-family: var(--font-sans);
+  font-size: var(--size-caps);
+  color: var(--muted);
   flex-shrink: 0;
   margin-left: auto;
 }

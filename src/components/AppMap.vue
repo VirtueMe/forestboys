@@ -264,7 +264,7 @@ defineExpose({ fitLocations, flyTo, restoreBounds })
 .user-dot {
   width: 14px;
   height: 14px;
-  background: var(--color-you);
+  background: var(--focus);
   border: 2px solid #fff;
   border-radius: 50%;
   box-shadow: 0 0 0 3px rgba(26,115,232,0.3);

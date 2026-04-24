@@ -363,16 +363,16 @@ onMounted(async () => {
   flex: 1;
   min-height: 0;
   overflow-y: auto;
-  background: var(--color-bg);
+  background: var(--paper);
 }
 
 .status {
   padding: 48px 24px;
   text-align: center;
   font-size: 13px;
-  color: var(--color-muted);
+  color: var(--muted);
 }
-.error { color: var(--color-red); }
+.error { color: var(--faded-red); }
 
 /* ── Page flow: flex-wrap with blocks sizing per layout ──────── */
 .page-flow {
@@ -424,7 +424,7 @@ onMounted(async () => {
 
 .block-heading {
   font-weight: 700;
-  color: var(--color-navy);
+  color: var(--focus);
   margin: 0 0 8px;
   line-height: 1.2;
 }
@@ -436,7 +436,7 @@ onMounted(async () => {
 .block-body {
   font-size: 15px;
   line-height: 1.75;
-  color: var(--color-text);
+  color: var(--ink);
   max-width: 720px;
   margin: 0 auto;
   text-align: left;
@@ -444,8 +444,8 @@ onMounted(async () => {
 
 /* ── Card blocks ────────────────────────────────────────────── */
 .block-card {
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
+  background: var(--paper-raised);
+  border: 1px solid var(--rule);
   border-radius: 8px;
   overflow: hidden;
   display: flex;
@@ -454,7 +454,7 @@ onMounted(async () => {
 
 .card-img-wrap {
   overflow: hidden;
-  background: var(--color-bg);
+  background: var(--paper);
   flex-shrink: 0;
 }
 
@@ -467,7 +467,7 @@ onMounted(async () => {
 .card-img-placeholder {
   width: 100%;
   aspect-ratio: 16 / 9;
-  background: var(--color-navy);
+  background: var(--focus);
   opacity: 0.12;
 }
 
@@ -482,7 +482,7 @@ onMounted(async () => {
 .card-title {
   font-size: 15px;
   font-weight: 700;
-  color: var(--color-navy);
+  color: var(--focus);
   margin: 0;
   line-height: 1.3;
 }
@@ -493,17 +493,17 @@ onMounted(async () => {
   margin: 0 0 0.75em;
   line-height: 1.7;
   font-size: 13px;
-  color: var(--color-muted);
+  color: var(--muted);
 }
 
 .card-desc :deep(p:last-child) { margin-bottom: 0; }
-.card-desc :deep(strong) { font-weight: 500; color: var(--color-text); }
+.card-desc :deep(strong) { font-weight: 500; color: var(--ink); }
 .card-desc :deep(u) { text-decoration: underline; }
 .card-desc :deep(em) { font-style: italic; }
 
 .card-desc :deep(a.internal-link),
 .card-desc :deep(a.external-link) {
-  color: var(--color-navy);
+  color: var(--focus);
   text-decoration: underline;
   cursor: pointer;
 }
@@ -515,9 +515,9 @@ onMounted(async () => {
 }
 
 .card-desc :deep(blockquote) {
-  border-left: 3px solid var(--color-border-mid);
+  border-left: 3px solid var(--rule);
   padding-left: 12px;
-  color: var(--color-muted);
+  color: var(--muted);
   font-style: italic;
   margin: 0.5em 0;
 }
@@ -525,7 +525,7 @@ onMounted(async () => {
 .card-desc :deep(code) {
   font-family: monospace;
   font-size: 12px;
-  background: var(--color-bg);
+  background: var(--paper);
   padding: 1px 4px;
   border-radius: 3px;
 }
@@ -534,11 +534,11 @@ onMounted(async () => {
 .section-wrap { position: relative; }
 
 .is-quote {
-  border-left: 3px solid var(--color-border-mid, var(--color-border));
+  border-left: 3px solid var(--rule, var(--rule));
   padding: 2px 14px;
   margin: 12px 0 12px 2px;
   font-style: italic;
-  color: var(--color-text);
+  color: var(--ink);
 }
 
 .sourced-from {
@@ -548,7 +548,7 @@ onMounted(async () => {
   gap: 6px;
   margin: -6px 0 12px 18px;
   font-size: 11px;
-  color: var(--color-muted);
+  color: var(--muted);
 }
 
 .sourced-label {
@@ -559,7 +559,7 @@ onMounted(async () => {
 }
 
 .sourced-link {
-  color: var(--color-navy);
+  color: var(--focus);
   text-decoration: underline;
 }
 
@@ -567,10 +567,10 @@ onMounted(async () => {
   font-family: monospace;
   font-size: 10px;
   padding: 1px 6px;
-  background: var(--color-bg);
-  border: 1px solid var(--color-border);
+  background: var(--paper);
+  border: 1px solid var(--rule);
   border-radius: 8px;
-  color: var(--color-muted);
+  color: var(--muted);
 }
 
 .inline-cites {
@@ -586,16 +586,16 @@ onMounted(async () => {
   gap: 4px;
   padding: 3px 8px;
   font-size: 11px;
-  color: var(--color-navy);
-  background: var(--color-bg);
-  border: 1px solid var(--color-border);
+  color: var(--focus);
+  background: var(--paper);
+  border: 1px solid var(--rule);
   border-radius: 12px;
   text-decoration: none;
   max-width: 100%;
 }
-.cite-chip:hover { border-color: var(--color-navy); }
+.cite-chip:hover { border-color: var(--focus); }
 
-.cite-chip-author { color: var(--color-muted); }
+.cite-chip-author { color: var(--muted); }
 .cite-chip-arrow  { font-size: 10px; opacity: 0.6; }
 
 .section-footnotes {
@@ -605,11 +605,11 @@ onMounted(async () => {
   display: flex;
   gap: 2px;
   font-size: 11px;
-  color: var(--color-muted);
+  color: var(--muted);
 }
 
 .card-kilder {
-  border-top: 1px solid var(--color-border);
+  border-top: 1px solid var(--rule);
   margin-top: 12px;
   padding-top: 10px;
 }
@@ -619,7 +619,7 @@ onMounted(async () => {
   font-weight: 700;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: var(--color-muted);
+  color: var(--muted);
   margin-bottom: 6px;
 }
 
@@ -627,7 +627,7 @@ onMounted(async () => {
   margin: 0;
   padding-left: 22px;
   font-size: 11px;
-  color: var(--color-muted);
+  color: var(--muted);
   line-height: 1.5;
 }
 
@@ -639,22 +639,22 @@ onMounted(async () => {
   text-decoration: none;
 }
 .kilder-list a.kilder-ref {
-  color: var(--color-navy);
+  color: var(--focus);
   text-decoration: underline;
 }
-.kilder-list a.kilder-ref .kilder-author { color: var(--color-muted); }
-.kilder-arrow { font-size: 10px; opacity: 0.6; color: var(--color-navy); }
+.kilder-list a.kilder-ref .kilder-author { color: var(--muted); }
+.kilder-arrow { font-size: 10px; opacity: 0.6; color: var(--focus); }
 
 /* ── Byline (section author attribution) ────────────────────── */
 .byline {
   display: block;
   font-size: 12px;
-  color: var(--color-muted);
+  color: var(--muted);
   font-style: normal;
   margin: 4px 0 12px;
 }
 .byline a {
-  color: var(--color-navy);
+  color: var(--focus);
   text-decoration: underline;
 }
 </style>

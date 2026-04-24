@@ -70,49 +70,53 @@ function isSentinel(id: string): boolean {
 
 .picker-input {
   width: 100%;
-  padding: 7px 10px;
-  font-size: 13px;
-  color: var(--color-text);
-  background: var(--color-bg);
-  border: 1px solid var(--color-border);
-  border-radius: 4px;
+  padding: var(--space-sm) var(--space-md);
+  font-family: var(--font-sans);
+  font-size: var(--size-body-ui);
+  color: var(--ink);
+  background: var(--paper);
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-md);
   box-sizing: border-box;
-  font-family: inherit;
 }
 .picker-input:focus {
-  outline: 2px solid var(--color-navy);
-  outline-offset: -1px;
-  border-color: var(--color-navy);
+  outline: 1px solid var(--focus);
+  outline-offset: 0;
+  border-color: var(--focus);
 }
 
 .picker-results {
   position: absolute;
-  top: calc(100% + 4px);
+  top: calc(100% + var(--space-xs));
   left: 0;
   right: 0;
   max-height: 220px;
   overflow-y: auto;
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-radius: 4px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  background: var(--paper-raised);
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-md);
   z-index: 30;
 }
 
 .picker-result {
   display: block;
   width: 100%;
-  padding: 6px 10px;
-  font-size: 12px;
-  font-family: monospace;
-  color: var(--color-text);
+  padding: var(--space-sm) var(--space-md);
+  font-family: var(--font-mono);
+  font-size: var(--size-mono);
+  color: var(--ink);
   background: transparent;
   border: none;
-  border-bottom: 1px solid var(--color-border);
+  border-bottom: 1px solid var(--rule);
   cursor: pointer;
   text-align: left;
 }
 .picker-result:last-child { border-bottom: none; }
-.picker-result:hover      { background: var(--color-bg); }
-.picker-result.is-sentinel { color: var(--color-navy); font-weight: 600; }
+.picker-result:hover      { background: var(--paper-sunken); }
+.picker-result.is-sentinel {
+  color: var(--faded-red);
+  font-family: var(--font-sans);
+  font-weight: 500;
+}
 </style>

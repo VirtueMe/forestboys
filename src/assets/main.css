@@ -8,10 +8,6 @@
  * off-spec values at the component level — extend the spec and the tokens
  * first.
  *
- * Legacy aliases (--color-bg, --color-surface, …) keep existing components
- * rendering during the Phase-2/3 retrofit. New code should reference the
- * canonical tokens (--paper, --ink, --rule, …). The alias layer is
- * scheduled for deletion once the sweep is done.
  */
 
 :root {
@@ -78,19 +74,6 @@
   --prose-max-width:   68ch;
   --drawer-height:     420px;
   --sidebar-width:     360px;
-
-  /* ── Legacy aliases (Phase 1 compatibility) ──────────────── */
-  --color-bg:         var(--paper);
-  --color-surface:    var(--paper-raised);
-  --color-border:     var(--rule);
-  --color-border-mid: var(--rule);
-  --color-handle:     var(--rule);
-  --color-text:       var(--ink);
-  --color-muted:      var(--muted);
-  --color-navy:       var(--focus);
-  --color-red:        var(--faded-red);
-  --color-green:      var(--moss);
-  --color-you:        var(--focus);
 }
 
 @media (prefers-color-scheme: dark) {

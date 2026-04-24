@@ -53,20 +53,21 @@ watch(() => route.params.slug as string, run, { immediate: true })
   flex: 1;
   min-height: 0;
   overflow-y: auto;
-  background: var(--color-bg);
+  background: var(--paper);
   display: flex;
   flex-direction: column;
   align-items: center;
 }
 .detail-page > * {
   width: 100%;
-  max-width: 1320px;
+  max-width: var(--content-max-width);
 }
 
 .status {
-  padding: 48px 20px;
+  padding: var(--space-xl) var(--space-lg);
   text-align: center;
-  font-size: 13px;
-  color: var(--color-muted);
+  font-family: var(--font-sans);
+  font-size: var(--size-label);
+  color: var(--muted);
 }
 </style>

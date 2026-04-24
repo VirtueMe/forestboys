@@ -180,14 +180,14 @@ async function submitLogin() {
   align-items: center;
   justify-content: center;
   padding: 24px 16px;
-  background: var(--color-bg);
+  background: var(--paper);
 }
 
 .access-card {
   width: 100%;
   max-width: 420px;
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
+  background: var(--paper-raised);
+  border: 1px solid var(--rule);
   border-radius: 12px;
   padding: 32px 28px;
   display: flex;
@@ -211,7 +211,7 @@ async function submitLogin() {
 .access-title {
   font-size: 20px;
   font-weight: 700;
-  color: var(--color-text);
+  color: var(--ink);
   margin: 0;
 }
 
@@ -224,10 +224,10 @@ async function submitLogin() {
 .state-text {
   font-size: 14px;
   line-height: 1.6;
-  color: var(--color-text);
+  color: var(--ink);
   margin: 0;
 }
-.state-text.muted { color: var(--color-muted); }
+.state-text.muted { color: var(--muted); }
 
 .status-badge {
   display: inline-flex;
@@ -258,7 +258,7 @@ async function submitLogin() {
 .section-label {
   font-size: 12px;
   font-weight: 700;
-  color: var(--color-muted);
+  color: var(--muted);
   text-transform: uppercase;
   letter-spacing: 0.05em;
   margin: 0;
@@ -267,7 +267,7 @@ async function submitLogin() {
 .section-divider {
   text-align: center;
   font-size: 12px;
-  color: var(--color-muted);
+  color: var(--muted);
   position: relative;
 }
 
@@ -278,7 +278,7 @@ async function submitLogin() {
   top: 50%;
   width: calc(50% - 20px);
   height: 1px;
-  background: var(--color-border);
+  background: var(--rule);
 }
 
 .section-divider::before { left: 0; }
@@ -300,22 +300,22 @@ async function submitLogin() {
 .btn:hover { opacity: 0.85; }
 
 .btn-google {
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
-  color: var(--color-text);
+  background: var(--paper-raised);
+  border: 1px solid var(--rule);
+  color: var(--ink);
   width: 100%;
   justify-content: center;
   padding: 11px 16px;
 }
 
 .btn-primary {
-  background: var(--color-navy);
+  background: var(--focus);
   color: #fff;
 }
 
 .btn-secondary {
-  background: var(--color-border);
-  color: var(--color-text);
+  background: var(--rule);
+  color: var(--ink);
 }
 
 .google-icon {
@@ -334,21 +334,21 @@ async function submitLogin() {
   width: 100%;
   padding: 10px 12px;
   font-size: 14px;
-  border: 1px solid var(--color-border);
+  border: 1px solid var(--rule);
   border-radius: 6px;
-  background: var(--color-bg);
-  color: var(--color-text);
+  background: var(--paper);
+  color: var(--ink);
   box-sizing: border-box;
 }
 .direct-input:focus {
-  outline: 2px solid var(--color-navy);
+  outline: 2px solid var(--focus);
   outline-offset: -1px;
-  border-color: var(--color-navy);
+  border-color: var(--focus);
 }
 .direct-input:disabled { opacity: 0.6; }
 
 .btn-direct {
-  background: var(--color-navy);
+  background: var(--focus);
   color: #fff;
   width: 100%;
   justify-content: center;

@@ -108,76 +108,80 @@ async function submit() {
 .edit-form {
   display: flex;
   flex-direction: column;
-  gap: 6px;
-  padding: 10px;
-  margin: 4px 0;
-  background: var(--color-surface);
-  border: 1px solid var(--color-navy);
-  border-radius: 4px;
+  gap: var(--space-sm);
+  padding: var(--space-md);
+  margin: var(--space-xs) 0;
+  background: var(--paper-raised);
+  border: 1px solid var(--focus);
+  border-radius: var(--radius-md);
 }
 
 .edit-title {
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.06em;
+  font-family: var(--font-sans);
+  font-size: var(--size-caps);
+  font-weight: 600;
+  letter-spacing: var(--tracking-caps);
   text-transform: uppercase;
-  color: var(--color-navy);
-  margin-bottom: 2px;
+  color: var(--ink-soft);
+  margin-bottom: var(--space-xs);
 }
 
 .form-row {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 6px;
+  gap: var(--space-sm);
 }
 
 .picker-input {
   width: 100%;
-  padding: 7px 10px;
-  font-size: 13px;
-  color: var(--color-text);
-  background: var(--color-bg);
-  border: 1px solid var(--color-border);
-  border-radius: 4px;
+  padding: var(--space-sm) var(--space-md);
+  font-family: var(--font-sans);
+  font-size: var(--size-body-ui);
+  color: var(--ink);
+  background: var(--paper);
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-md);
   box-sizing: border-box;
-  font-family: inherit;
 }
 .picker-input:focus {
-  outline: 2px solid var(--color-navy);
-  outline-offset: -1px;
-  border-color: var(--color-navy);
+  outline: 1px solid var(--focus);
+  outline-offset: 0;
+  border-color: var(--focus);
 }
 
 .edit-error {
-  font-size: 11px;
-  color: #b91c1c;
+  font-family: var(--font-sans);
+  font-size: var(--size-label);
+  color: var(--danger);
 }
 
 .edit-actions {
   display: flex;
   justify-content: flex-end;
-  gap: 6px;
-  margin-top: 4px;
+  gap: var(--space-sm);
+  margin-top: var(--space-xs);
 }
 
 .edit-btn-cancel,
 .edit-btn-save {
-  padding: 6px 12px;
-  font-size: 12px;
-  font-weight: 600;
-  border-radius: 4px;
+  padding: var(--space-sm) var(--space-md);
+  font-family: var(--font-sans);
+  font-size: var(--size-body-ui);
+  font-weight: 500;
+  border-radius: var(--radius-md);
   cursor: pointer;
   border: none;
-  font-family: inherit;
 }
 .edit-btn-cancel {
   background: transparent;
-  color: var(--color-muted);
-  border: 1px solid var(--color-border);
+  color: var(--ink);
+  border: 1px solid var(--rule);
 }
+.edit-btn-cancel:hover { background: var(--paper-sunken); }
 .edit-btn-save {
-  background: var(--color-navy);
-  color: #fff;
+  background: var(--faded-red);
+  color: var(--paper);
 }
-.edit-btn-save:disabled { opacity: 0.5; cursor: not-allowed; }
+.edit-btn-save:hover:not(:disabled) { background: var(--faded-red-soft); }
+.edit-btn-save:disabled { background: var(--paper-sunken); color: var(--muted); cursor: not-allowed; }
 </style>

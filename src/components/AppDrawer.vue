@@ -157,8 +157,8 @@ defineExpose({
   left: 0;
   right: 0;
   height: var(--drawer-height);
-  background: var(--color-surface);
-  border-top: 2px solid var(--color-border);
+  background: var(--paper-raised);
+  border-top: 2px solid var(--rule);
   display: flex;
   flex-direction: column;
   z-index: 10;
@@ -174,7 +174,7 @@ defineExpose({
     max-width: 360px;
     height: calc(100vh - var(--nav-height));
     border-top: none;
-    border-right: 2px solid var(--color-border);
+    border-right: 2px solid var(--rule);
   }
 }
 
@@ -183,15 +183,16 @@ defineExpose({
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 5px 14px;
-  background: var(--color-bg);
-  border-bottom: 1px solid var(--color-border);
+  padding: var(--space-xs) var(--space-md);
+  background: var(--paper-sunken);
+  border-bottom: 1px solid var(--rule);
   flex-shrink: 0;
-  gap: 8px;
+  gap: var(--space-sm);
 }
 .search-bar-label {
-  font-size: 12px;
-  color: var(--color-muted);
+  font-family: var(--font-sans);
+  font-size: var(--size-label);
+  color: var(--muted);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -200,37 +201,38 @@ defineExpose({
 .search-bar-clear {
   background: none;
   border: none;
-  font-size: 11px;
-  color: var(--color-muted);
+  font-size: var(--size-caps);
+  color: var(--muted);
   cursor: pointer;
   flex-shrink: 0;
-  padding: 2px 4px;
-  border-radius: 3px;
-  transition: background 0.1s;
+  padding: var(--space-xs);
+  border-radius: var(--radius-md);
+  transition: background 120ms ease-out;
 }
-.search-bar-clear:hover { background: var(--color-border); color: var(--color-text); }
+.search-bar-clear:hover { background: var(--paper); color: var(--faded-red); }
 
 /* Back bar */
 .back-bar {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: var(--space-xs);
   width: 100%;
-  padding: 9px 14px 8px;
-  background: var(--color-bg);
+  padding: var(--space-sm) var(--space-md);
+  background: var(--paper-sunken);
   border: none;
-  border-bottom: 1px solid var(--color-border);
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--color-navy);
+  border-bottom: 1px solid var(--rule);
+  font-family: var(--font-sans);
+  font-size: var(--size-label);
+  font-weight: 500;
+  color: var(--ink);
   cursor: pointer;
   text-align: left;
   flex-shrink: 0;
-  transition: background 0.1s;
+  transition: background 120ms ease-out;
 }
-.back-bar:hover { background: var(--color-border); }
+.back-bar:hover { background: var(--paper); color: var(--faded-red); }
 .back-arrow {
-  font-size: 17px;
+  font-size: var(--size-h3);
   line-height: 1;
   margin-top: -1px;
 }
@@ -239,39 +241,41 @@ defineExpose({
 .header-identity {
   display: flex;
   align-items: center;
-  padding: 12px 14px 6px;
-  gap: 8px;
+  padding: var(--space-sm) var(--space-md) var(--space-xs);
+  gap: var(--space-sm);
   flex-shrink: 0;
 }
 
 .handle {
   width: 36px;
   height: 4px;
-  border-radius: 2px;
-  background: var(--color-handle);
+  border-radius: var(--radius-pill);
+  background: var(--rule);
   flex-shrink: 0;
-  margin-right: 2px;
+  margin-right: var(--space-xs);
 }
 @media (min-width: 768px) { .handle { display: none; } }
 
 .title-badge {
-  font-size: 11px;
-  font-weight: 700;
-  color: var(--color-text);
-  background: var(--color-bg);
-  border: 1px solid var(--color-border);
-  border-radius: 3px;
-  padding: 1px 5px;
+  font-family: var(--font-sans);
+  font-size: var(--size-caps);
+  font-weight: 600;
+  letter-spacing: var(--tracking-caps);
+  color: var(--ink-soft);
+  background: var(--paper-sunken);
+  border-radius: var(--radius-pill);
+  padding: var(--space-xs) var(--space-sm);
   flex-shrink: 0;
 }
 
 .drawer-title {
   flex: 1;
-  font-size: 11px;
+  font-family: var(--font-sans);
+  font-size: var(--size-caps);
   font-weight: 600;
-  color: var(--color-muted);
+  color: var(--muted);
   text-transform: uppercase;
-  letter-spacing: 0.05em;
+  letter-spacing: var(--tracking-caps);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -283,8 +287,8 @@ defineExpose({
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 4px 14px 8px;
-  border-bottom: 0.5px solid var(--color-border);
+  padding: var(--space-xs) var(--space-md) var(--space-sm);
+  border-bottom: 1px solid var(--rule);
   flex-shrink: 0;
 }
 
@@ -298,28 +302,28 @@ defineExpose({
   .overview-btn-header {
     display: flex;
     align-items: center;
-    gap: 5px;
+    gap: var(--space-xs);
     flex-shrink: 0;
-    background: none;
-    border: 1px solid var(--color-border-mid);
-    border-radius: 4px;
-    padding: 3px 8px;
-    font-size: 12px;
-    font-weight: 600;
-    color: var(--color-navy);
+    background: transparent;
+    border: 1px solid var(--rule);
+    border-radius: var(--radius-md);
+    padding: var(--space-xs) var(--space-sm);
+    font-family: var(--font-sans);
+    font-size: var(--size-label);
+    font-weight: 500;
+    color: var(--ink);
     cursor: pointer;
-    transition: background 0.1s, border-color 0.1s;
+    transition: background 120ms ease-out, border-color 120ms ease-out;
   }
   .overview-btn-header:hover {
-    background: var(--color-bg);
-    border-color: var(--color-navy);
+    background: var(--paper-sunken);
   }
 }
 
 .filter-btn.filter-active {
-  background: var(--color-navy);
-  color: #fff;
-  border-color: var(--color-navy);
+  background: var(--ink);
+  color: var(--paper);
+  border-color: var(--ink);
 }
 
 /* Mobile floating version — hidden on desktop */
@@ -328,28 +332,28 @@ defineExpose({
   align-items: center;
   justify-content: center;
   position: fixed;
-  bottom: calc(var(--drawer-height) + 12px);
-  left: 12px;
+  bottom: calc(var(--drawer-height) + var(--space-md));
+  left: var(--space-md);
   width: 40px;
   height: 40px;
-  background: var(--color-surface);
-  border: 1px solid var(--color-border-mid);
-  border-radius: 8px;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.12);
+  background: var(--paper-raised);
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-sm);
   cursor: pointer;
   z-index: 11;
-  color: var(--color-navy);
-  transition: background 0.1s;
+  color: var(--ink);
+  transition: background 120ms ease-out;
 }
-.overview-btn-float:hover { background: var(--color-bg); }
+.overview-btn-float:hover { background: var(--paper-sunken); }
 .filter-btn-float {
   left: auto;
-  right: 12px;
+  right: var(--space-md);
 }
 .filter-btn-float.filter-active {
-  background: var(--color-navy);
-  color: #fff;
-  border-color: var(--color-navy);
+  background: var(--ink);
+  color: var(--paper);
+  border-color: var(--ink);
 }
 
 @media (min-width: 768px) {
@@ -365,30 +369,32 @@ defineExpose({
   .desktop-pager {
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: var(--space-sm);
   }
 }
 
 .pager-btn {
   background: none;
   border: none;
-  padding: 2px 4px;
-  font-size: 11px;
-  font-weight: 600;
-  color: var(--color-muted);
+  padding: var(--space-xs) var(--space-sm);
+  font-family: var(--font-sans);
+  font-size: var(--size-label);
+  font-weight: 500;
+  color: var(--ink-soft);
   cursor: pointer;
-  border-radius: 3px;
-  transition: background 0.1s;
+  border-radius: var(--radius-md);
+  transition: background 120ms ease-out;
 }
-.pager-btn:hover:not(:disabled) { background: var(--color-bg); }
+.pager-btn:hover:not(:disabled) { background: var(--paper-sunken); color: var(--faded-red); }
 .pager-btn:disabled {
-  color: var(--color-handle);
+  color: var(--rule);
   cursor: default;
 }
 
 .pager-counter {
-  font-size: 11px;
-  color: var(--color-muted);
+  font-family: var(--font-sans);
+  font-size: var(--size-label);
+  color: var(--muted);
   white-space: nowrap;
 }
 
@@ -397,8 +403,8 @@ defineExpose({
   overflow: hidden;
   display: flex;
   flex-direction: column;
-  padding: 10px 10px 0;
-  gap: 6px;
+  padding: var(--space-sm) var(--space-sm) 0;
+  gap: var(--space-sm);
 }
 
 /* When showing detail view, strip the padding so DetailView owns its own layout */

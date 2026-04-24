@@ -130,10 +130,10 @@ onUnmounted(() => document.removeEventListener('click', onDocClick, true))
   justify-content: space-between;
   gap: 6px;
   padding: 5px 10px;
-  border: 1px solid var(--color-border-mid);
+  border: 1px solid var(--rule);
   border-radius: 6px;
-  background: var(--color-bg);
-  color: var(--color-text);
+  background: var(--paper);
+  color: var(--ink);
   cursor: pointer;
   min-height: 30px;
   box-sizing: border-box;
@@ -145,7 +145,7 @@ onUnmounted(() => document.removeEventListener('click', onDocClick, true))
 }
 
 .custom-select.open .custom-select-trigger {
-  border-color: var(--color-navy);
+  border-color: var(--focus);
 }
 
 .trigger-label {
@@ -161,7 +161,7 @@ onUnmounted(() => document.removeEventListener('click', onDocClick, true))
 
 .chevron {
   flex-shrink: 0;
-  color: var(--color-muted);
+  color: var(--muted);
   font-size: 11px;
 }
 
@@ -170,8 +170,8 @@ onUnmounted(() => document.removeEventListener('click', onDocClick, true))
   top: calc(100% + 4px);
   left: 0;
   right: 0;
-  background: var(--color-surface);
-  border: 1px solid var(--color-border-mid);
+  background: var(--paper-raised);
+  border: 1px solid var(--rule);
   border-radius: 6px;
   box-shadow: 0 4px 16px rgba(0,0,0,0.12);
   z-index: 200;
@@ -185,20 +185,20 @@ onUnmounted(() => document.removeEventListener('click', onDocClick, true))
   gap: 7px;
   padding: 7px 10px;
   cursor: pointer;
-  border-bottom: 1px solid var(--color-border);
+  border-bottom: 1px solid var(--rule);
 }
 
 .custom-option:last-child { border-bottom: none; }
 
-.custom-option:hover { background: var(--color-bg); }
+.custom-option:hover { background: var(--paper); }
 
-.custom-option.selected { background: color-mix(in srgb, var(--color-navy) 6%, transparent); }
+.custom-option.selected { background: color-mix(in srgb, var(--focus) 6%, transparent); }
 
 .check {
   width: 14px;
   flex-shrink: 0;
   font-size: 11px;
-  color: var(--color-navy);
+  color: var(--focus);
   font-weight: 700;
 }
 
@@ -217,12 +217,12 @@ onUnmounted(() => document.removeEventListener('click', onDocClick, true))
 }
 
 .placeholder {
-  color: var(--color-muted);
+  color: var(--muted);
 }
 
 .label-mobile  { display: none; }
 .label-desktop { display: inline; }
-.sep { color: var(--color-handle); }
+.sep { color: var(--rule); }
 
 .type-pill {
   display: inline-block;

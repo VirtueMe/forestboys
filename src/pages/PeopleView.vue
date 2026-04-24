@@ -156,7 +156,7 @@ onUnmounted(() => ro?.disconnect())
   display: flex;
   flex-direction: column;
   align-items: center;
-  background: var(--color-bg);
+  background: var(--paper);
 }
 
 .people-page > * {
@@ -168,25 +168,25 @@ onUnmounted(() => ro?.disconnect())
 .search-wrap {
   flex-shrink: 0;
   padding: 10px 12px;
-  border-bottom: 1px solid var(--color-border);
-  background: var(--color-surface);
+  border-bottom: 1px solid var(--rule);
+  background: var(--paper-raised);
 }
 
 .search-input {
   width: 100%;
   height: 36px;
   padding: 0 12px;
-  background: var(--color-bg);
-  border: 1px solid var(--color-border-mid);
+  background: var(--paper);
+  border: 1px solid var(--rule);
   border-radius: 6px;
   font-size: 14px;
-  color: var(--color-text);
+  color: var(--ink);
   outline: none;
   -webkit-appearance: none;
 }
 
-.search-input::placeholder { color: var(--color-muted); }
-.search-input:focus { border-color: var(--color-navy); }
+.search-input::placeholder { color: var(--muted); }
+.search-input:focus { border-color: var(--focus); }
 
 /* ── Scroll container ───────────────────────────────────────── */
 .scroll-container {
@@ -194,7 +194,7 @@ onUnmounted(() => ro?.disconnect())
   min-height: 0;
   overflow-y: auto;
   overflow-x: hidden;
-  background: var(--color-surface);
+  background: var(--paper-raised);
 }
 
 /* ── Status messages ────────────────────────────────────────── */
@@ -202,7 +202,7 @@ onUnmounted(() => ro?.disconnect())
   padding: 32px 20px;
   text-align: center;
   font-size: 13px;
-  color: var(--color-muted);
+  color: var(--muted);
 }
 
 /* ── Person row ─────────────────────────────────────────────── */
@@ -213,14 +213,14 @@ onUnmounted(() => ro?.disconnect())
   padding: 0 14px;
   gap: 12px;
   text-decoration: none;
-  color: var(--color-text);
-  border-bottom: 1px solid var(--color-border);
+  color: var(--ink);
+  border-bottom: 1px solid var(--rule);
   box-sizing: border-box;
   transition: background 0.1s;
 }
 
 .person-row:hover {
-  background: var(--color-bg);
+  background: var(--paper);
 }
 
 /* ── Thumbnail ──────────────────────────────────────────────── */
@@ -230,7 +230,7 @@ onUnmounted(() => ro?.disconnect())
   flex-shrink: 0;
   border-radius: 50%;
   overflow: hidden;
-  background: var(--color-border);
+  background: var(--rule);
 }
 
 .thumb img {
@@ -246,7 +246,7 @@ onUnmounted(() => ro?.disconnect())
   display: flex;
   align-items: center;
   justify-content: center;
-  background: var(--color-navy);
+  background: var(--focus);
   color: #fff;
   font-size: 12px;
   font-weight: 700;
@@ -274,7 +274,7 @@ onUnmounted(() => ro?.disconnect())
 .name {
   font-size: 13px;
   font-weight: 600;
-  color: var(--color-text);
+  color: var(--ink);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -284,7 +284,7 @@ onUnmounted(() => ro?.disconnect())
 
 .home {
   font-size: 11px;
-  color: var(--color-muted);
+  color: var(--muted);
   white-space: nowrap;
   flex-shrink: 0;
 }
@@ -297,7 +297,7 @@ onUnmounted(() => ro?.disconnect())
 
 .meta {
   font-size: 11px;
-  color: var(--color-muted);
+  color: var(--muted);
 }
 
 .secret {
@@ -306,16 +306,16 @@ onUnmounted(() => ro?.disconnect())
 
 .sep {
   font-size: 11px;
-  color: var(--color-handle);
+  color: var(--rule);
 }
 
 /* ── Count bar ──────────────────────────────────────────────── */
 .count-bar {
   flex-shrink: 0;
   padding: 8px 14px;
-  border-top: 1px solid var(--color-border);
-  background: var(--color-surface);
+  border-top: 1px solid var(--rule);
+  background: var(--paper-raised);
   font-size: 11px;
-  color: var(--color-muted);
+  color: var(--muted);
 }
 </style>

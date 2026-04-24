@@ -192,7 +192,7 @@ async function confirmDelete(row: Row) {
   flex: 1;
   min-height: 0;
   overflow-y: auto;
-  background: var(--color-bg);
+  background: var(--paper);
   padding: 24px;
   max-width: 1000px;
   margin: 0 auto;
@@ -211,7 +211,7 @@ async function confirmDelete(row: Row) {
 .title {
   font-size: 24px;
   font-weight: 700;
-  color: var(--color-navy);
+  color: var(--focus);
   margin: 0;
 }
 
@@ -220,21 +220,21 @@ async function confirmDelete(row: Row) {
   max-width: 320px;
   padding: 9px 12px;
   font-size: 14px;
-  color: var(--color-text);
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
+  color: var(--ink);
+  background: var(--paper-raised);
+  border: 1px solid var(--rule);
   border-radius: 6px;
   font-family: inherit;
   box-sizing: border-box;
 }
-.search:focus { outline: 2px solid var(--color-navy); outline-offset: -1px; border-color: var(--color-navy); }
+.search:focus { outline: 2px solid var(--focus); outline-offset: -1px; border-color: var(--focus); }
 
-.status { padding: 24px; font-size: 13px; color: var(--color-muted); text-align: center; }
-.error  { color: var(--color-red, #b91c1c); }
+.status { padding: 24px; font-size: 13px; color: var(--muted); text-align: center; }
+.error  { color: var(--faded-red, #b91c1c); }
 
 .meta {
   font-size: 11px;
-  color: var(--color-muted);
+  color: var(--muted);
   margin-bottom: 10px;
   text-transform: uppercase;
   letter-spacing: 0.06em;
@@ -255,8 +255,8 @@ async function confirmDelete(row: Row) {
   grid-template-columns: 1fr auto;
   gap: 12px;
   padding: 12px 14px;
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
+  background: var(--paper-raised);
+  border: 1px solid var(--rule);
   border-radius: 6px;
 }
 
@@ -270,22 +270,22 @@ async function confirmDelete(row: Row) {
 .row-title {
   font-size: 14px;
   font-weight: 600;
-  color: var(--color-text);
+  color: var(--ink);
 }
 
 .row-type {
   font-size: 10px;
   font-family: monospace;
-  color: var(--color-muted);
+  color: var(--muted);
   text-transform: uppercase;
   letter-spacing: 0.06em;
 }
 
 .row-usage {
   font-size: 11px;
-  color: var(--color-muted);
+  color: var(--muted);
   padding: 1px 6px;
-  background: var(--color-bg);
+  background: var(--paper);
   border-radius: 8px;
 }
 .row-usage.usage-zero { color: #b45309; background: #fef3c7; }
@@ -299,10 +299,10 @@ async function confirmDelete(row: Row) {
 }
 .row-license.license-cc        { color: #065f46; background: #d1fae5; border-color: #a7f3d0; }
 .row-license.license-copyright { color: #9a3412; background: #ffedd5; border-color: #fed7aa; }
-.row-license.license-unknown   { color: var(--color-muted); background: var(--color-bg); border-color: var(--color-border); }
+.row-license.license-unknown   { color: var(--muted); background: var(--paper); border-color: var(--rule); }
 .row-license.license-other     { color: #92400e; background: #fef3c7; border-color: #fcd34d; }
 
-.row-attr { font-size: 11px; color: var(--color-muted); font-style: italic; }
+.row-attr { font-size: 11px; color: var(--muted); font-style: italic; }
 
 .row-meta {
   display: flex;
@@ -310,12 +310,12 @@ async function confirmDelete(row: Row) {
   gap: 10px;
   margin-top: 4px;
   font-size: 12px;
-  color: var(--color-muted);
+  color: var(--muted);
 }
 
 .row-author { }
 .row-url {
-  color: var(--color-navy);
+  color: var(--focus);
   text-decoration: underline;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -336,12 +336,12 @@ async function confirmDelete(row: Row) {
   font-weight: 600;
   border-radius: 4px;
   cursor: pointer;
-  border: 1px solid var(--color-border);
+  border: 1px solid var(--rule);
   background: transparent;
-  color: var(--color-text);
+  color: var(--ink);
   font-family: inherit;
 }
-.btn-ghost:hover  { border-color: var(--color-navy); color: var(--color-navy); }
+.btn-ghost:hover  { border-color: var(--focus); color: var(--focus); }
 
 .btn-delete { color: #b91c1c; }
 .btn-delete:hover:not(:disabled) { background: #fef2f2; border-color: #fecaca; }
@@ -361,18 +361,18 @@ async function confirmDelete(row: Row) {
   padding: 6px 12px;
   font-size: 12px;
   font-weight: 600;
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
+  background: var(--paper-raised);
+  border: 1px solid var(--rule);
   border-radius: 4px;
   cursor: pointer;
-  color: var(--color-text);
+  color: var(--ink);
 }
-.pager-btn:hover:not(:disabled) { border-color: var(--color-navy); }
+.pager-btn:hover:not(:disabled) { border-color: var(--focus); }
 .pager-btn:disabled { opacity: 0.4; cursor: not-allowed; }
 
 .pager-range {
   font-size: 11px;
-  color: var(--color-muted);
+  color: var(--muted);
   font-family: monospace;
 }
 </style>

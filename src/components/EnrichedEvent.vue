@@ -580,7 +580,7 @@ watch(() => props.slug, slug => { void load(slug) }, { immediate: true })
 
 .date-range {
   font-size: 11px;
-  color: var(--color-muted);
+  color: var(--muted);
 }
 
 .group-badge {
@@ -591,8 +591,8 @@ watch(() => props.slug, slug => { void load(slug) }, { immediate: true })
   text-transform: uppercase;
   padding: 3px 10px;
   border-radius: 12px;
-  background: var(--color-border);
-  color: var(--color-muted);
+  background: var(--rule);
+  color: var(--muted);
 }
 
 /* Group colour tints */
@@ -610,13 +610,13 @@ watch(() => props.slug, slug => { void load(slug) }, { immediate: true })
 .loading, .error, .empty {
   padding: 24px 20px;
   font-size: 13px;
-  color: var(--color-muted);
+  color: var(--muted);
 }
 .error { color: #f07070; }
 
 /* ── Sections ─────────────────────────────────────────────────── */
 .section {
-  border-top: 0.5px solid var(--color-border);
+  border-top: 0.5px solid var(--rule);
   padding: 12px 20px;
   margin-top: 8px;
 }
@@ -626,14 +626,14 @@ watch(() => props.slug, slug => { void load(slug) }, { immediate: true })
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.07em;
-  color: var(--color-muted);
+  color: var(--muted);
   margin: 0 0 8px;
 }
 
 .section-text {
   font-size: 13px;
   line-height: 1.7;
-  color: var(--color-text);
+  color: var(--ink);
   margin: 0;
   white-space: pre-wrap;
 }
@@ -643,24 +643,24 @@ watch(() => props.slug, slug => { void load(slug) }, { immediate: true })
   font-size: 11px;
   white-space: pre-wrap;
   overflow-x: auto;
-  background: color-mix(in srgb, var(--color-border) 50%, var(--color-surface));
+  background: color-mix(in srgb, var(--rule) 50%, var(--paper-raised));
   border-radius: 3px;
   padding: 8px 10px;
   line-height: 1.65;
-  color: var(--color-text);
+  color: var(--ink);
   margin: 0;
 }
 
 /* ── Mission brief ────────────────────────────────────────────── */
 .mission-brief {
-  background: color-mix(in srgb, var(--color-navy) 6%, var(--color-surface));
-  border-left: 3px solid var(--color-navy);
+  background: color-mix(in srgb, var(--focus) 6%, var(--paper-raised));
+  border-left: 3px solid var(--focus);
   border-top: none;
   padding-left: 16px;
 }
 /* ── Content section ──────────────────────────────────────────── */
 .content-section .section-text {
-  color: var(--color-muted);
+  color: var(--muted);
   font-size: 12px;
 }
 
@@ -681,9 +681,9 @@ watch(() => props.slug, slug => { void load(slug) }, { immediate: true })
 .log-date {
   font-size: 11px;
   font-weight: 600;
-  color: var(--color-navy);
+  color: var(--focus);
   background: none;
-  border: 1px solid var(--color-border);
+  border: 1px solid var(--rule);
   border-radius: 4px;
   padding: 2px 6px;
   cursor: pointer;
@@ -692,14 +692,14 @@ watch(() => props.slug, slug => { void load(slug) }, { immediate: true })
   line-height: 1.4;
 }
 .log-date:hover {
-  background: color-mix(in srgb, var(--color-navy) 8%, var(--color-surface));
-  border-color: var(--color-navy);
+  background: color-mix(in srgb, var(--focus) 8%, var(--paper-raised));
+  border-color: var(--focus);
 }
 
 .log-text {
   font-size: 12px;
   line-height: 1.6;
-  color: var(--color-text);
+  color: var(--ink);
 }
 
 .log-entry--arrest     .log-date { border-color: #7a4020; color: #f09050; }
@@ -712,7 +712,7 @@ watch(() => props.slug, slug => { void load(slug) }, { immediate: true })
 .log-entry--executed   .log-text,
 .log-entry--combat     .log-text,
 .log-entry--flight     .log-text,
-.log-entry--checkpoint .log-text { color: var(--color-muted); }
+.log-entry--checkpoint .log-text { color: var(--muted); }
 
 .entry-label {
   display: inline-block;
@@ -749,15 +749,15 @@ watch(() => props.slug, slug => { void load(slug) }, { immediate: true })
   text-transform: uppercase;
   padding: 2px 6px;
   border-radius: 8px;
-  background: var(--color-border);
-  color: var(--color-muted);
+  background: var(--rule);
+  color: var(--muted);
   white-space: nowrap;
   flex-shrink: 0;
 }
 
 .rel-title {
   font-size: 13px;
-  color: var(--color-text);
+  color: var(--ink);
   flex: 1;
   min-width: 0;
   overflow: hidden;
@@ -767,7 +767,7 @@ watch(() => props.slug, slug => { void load(slug) }, { immediate: true })
 
 .rel-meta {
   font-size: 11px;
-  color: var(--color-muted);
+  color: var(--muted);
   white-space: nowrap;
   flex-shrink: 0;
 }
@@ -775,7 +775,7 @@ watch(() => props.slug, slug => { void load(slug) }, { immediate: true })
 /* ── People network ───────────────────────────────────────────── */
 .network-hint {
   font-size: 11px;
-  color: var(--color-muted);
+  color: var(--muted);
   margin: 0 0 8px;
 }
 
@@ -790,18 +790,18 @@ watch(() => props.slug, slug => { void load(slug) }, { immediate: true })
   align-items: center;
   gap: 5px;
   font-size: 12px;
-  color: var(--color-navy);
-  background: var(--color-border);
+  color: var(--focus);
+  background: var(--rule);
   padding: 4px 10px;
   border-radius: 12px;
   text-decoration: none;
 }
-.person-chip:hover { background: var(--color-border-mid); }
+.person-chip:hover { background: var(--rule); }
 
 .chip-count {
   font-size: 10px;
-  color: var(--color-muted);
-  background: var(--color-surface);
+  color: var(--muted);
+  background: var(--paper-raised);
   padding: 1px 5px;
   border-radius: 8px;
 }
@@ -819,17 +819,17 @@ watch(() => props.slug, slug => { void load(slug) }, { immediate: true })
   line-height: 1.6;
 }
 .people-name--linked {
-  color: var(--color-navy);
+  color: var(--focus);
   text-decoration: none;
 }
 .people-name--linked:hover { text-decoration: underline; }
 .people-name--plain {
-  color: var(--color-text);
+  color: var(--ink);
 }
 
 .people-note {
   font-size: 12px;
-  color: var(--color-muted);
+  color: var(--muted);
   font-style: italic;
   margin: 6px 0 2px;
   line-height: 1.6;
@@ -837,7 +837,7 @@ watch(() => props.slug, slug => { void load(slug) }, { immediate: true })
 
 .people-prose {
   font-size: 13px;
-  color: var(--color-text);
+  color: var(--ink);
   line-height: 1.75;
   margin: 6px 0 0;
   white-space: pre-wrap;
@@ -845,7 +845,7 @@ watch(() => props.slug, slug => { void load(slug) }, { immediate: true })
 
 /* ── Sources (kilde) ──────────────────────────────────────────── */
 .kilde-section {
-  background: color-mix(in srgb, var(--color-border) 30%, var(--color-surface));
+  background: color-mix(in srgb, var(--rule) 30%, var(--paper-raised));
 }
 
 .kilde-list {
@@ -856,7 +856,7 @@ watch(() => props.slug, slug => { void load(slug) }, { immediate: true })
 
 .kilde-link {
   font-size: 12px;
-  color: var(--color-navy);
+  color: var(--focus);
   text-decoration: none;
   line-height: 1.5;
   word-break: break-word;
@@ -892,7 +892,7 @@ watch(() => props.slug, slug => { void load(slug) }, { immediate: true })
 .gallery-item--active,
 .gallery-item:hover {
   opacity: 1;
-  border-color: var(--color-navy);
+  border-color: var(--focus);
 }
 
 .gallery-thumb {
@@ -908,12 +908,12 @@ watch(() => props.slug, slug => { void load(slug) }, { immediate: true })
   object-fit: contain;
   display: block;
   border-radius: 4px;
-  background: var(--color-border);
+  background: var(--rule);
 }
 
 .gallery-caption {
   font-size: 11px;
-  color: var(--color-muted);
+  color: var(--muted);
   text-align: center;
   margin: 6px 0 0;
 }
@@ -925,13 +925,13 @@ watch(() => props.slug, slug => { void load(slug) }, { immediate: true })
   flex-wrap: wrap;
   gap: 8px;
   padding: 14px 20px 10px;
-  border-bottom: 0.5px solid var(--color-border);
+  border-bottom: 0.5px solid var(--rule);
 }
 
 .planet-name {
   font-size: 15px;
   font-weight: 700;
-  color: var(--color-text);
+  color: var(--ink);
 }
 
 .planet-region-badge {
@@ -946,7 +946,7 @@ watch(() => props.slug, slug => { void load(slug) }, { immediate: true })
 
 .planet-system {
   font-size: 11px;
-  color: var(--color-muted);
+  color: var(--muted);
   margin-left: auto;
 }
 
@@ -976,22 +976,22 @@ watch(() => props.slug, slug => { void load(slug) }, { immediate: true })
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  color: var(--color-muted);
+  color: var(--muted);
 }
 
 .planet-loc-name {
-  color: var(--color-text);
+  color: var(--ink);
   font-weight: 500;
 }
 
 .planet-loc-coords {
   font-size: 10px;
-  color: var(--color-muted);
+  color: var(--muted);
   font-family: 'Courier New', monospace;
 }
 
 .status--aktiv    { font-size: 10px; color: #5af0a0; }
-.status--planlagt { font-size: 10px; color: var(--color-muted); }
+.status--planlagt { font-size: 10px; color: var(--muted); }
 
 /* Roster */
 .planet-roster {
@@ -1010,20 +1010,20 @@ watch(() => props.slug, slug => { void load(slug) }, { immediate: true })
 .planet-roster-name {
   font-size: 13px;
   font-weight: 500;
-  color: var(--color-navy);
+  color: var(--focus);
   text-decoration: none;
 }
 .planet-roster-name:hover { text-decoration: underline; }
 
 .planet-codename {
   font-size: 12px;
-  color: var(--color-muted);
+  color: var(--muted);
   font-style: italic;
 }
 
 .planet-date {
   font-size: 11px;
-  color: var(--color-muted);
+  color: var(--muted);
   margin-left: auto;
 }
 
@@ -1044,8 +1044,8 @@ watch(() => props.slug, slug => { void load(slug) }, { immediate: true })
 .planet-batch-date {
   font-size: 11px;
   font-weight: 600;
-  color: var(--color-navy);
-  border: 1px solid var(--color-border);
+  color: var(--focus);
+  border: 1px solid var(--rule);
   border-radius: 4px;
   padding: 2px 6px;
   white-space: nowrap;
@@ -1053,15 +1053,15 @@ watch(() => props.slug, slug => { void load(slug) }, { immediate: true })
 
 .planet-batch-members {
   font-size: 12px;
-  color: var(--color-text);
+  color: var(--ink);
   line-height: 1.6;
 }
 
 .planet-batch-member {
-  color: var(--color-navy);
+  color: var(--focus);
   text-decoration: none;
 }
 .planet-batch-member:hover { text-decoration: underline; }
 
-.planet-batch-sep { color: var(--color-muted); }
+.planet-batch-sep { color: var(--muted); }
 </style>

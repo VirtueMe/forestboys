@@ -24,7 +24,7 @@ const { user } = useAuth()
   bottom: 16px;
   z-index: 100;
   padding: 10px 16px;
-  background: var(--color-navy);
+  background: var(--focus);
   color: #fff;
   border-radius: 20px;
   font-size: 13px;

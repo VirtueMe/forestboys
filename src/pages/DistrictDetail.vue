@@ -630,8 +630,8 @@ const courseTotals = computed(() => ({
 /* ── Page header ────────────────────────────────────────────── */
 .page-header {
   padding: 14px 16px 12px;
-  background: var(--color-surface);
-  border-bottom: 1px solid var(--color-border);
+  background: var(--paper-raised);
+  border-bottom: 1px solid var(--rule);
 }
 
 .back-link {
@@ -640,7 +640,7 @@ const courseTotals = computed(() => ({
   min-height: 36px;
   font-size: 13px;
   font-weight: 600;
-  color: var(--color-navy);
+  color: var(--focus);
   text-decoration: none;
   margin-bottom: 6px;
 }
@@ -649,7 +649,7 @@ const courseTotals = computed(() => ({
 .unit-name {
   font-size: 22px;
   font-weight: 700;
-  color: var(--color-text);
+  color: var(--ink);
   margin: 0 0 4px;
   line-height: 1.25;
   overflow-wrap: break-word;
@@ -657,14 +657,14 @@ const courseTotals = computed(() => ({
 
 .unit-meta {
   font-size: 13px;
-  color: var(--color-muted);
+  color: var(--muted);
   margin: 0 0 6px;
   font-style: italic;
 }
 
 .unit-period {
   font-size: 12px;
-  color: var(--color-muted);
+  color: var(--muted);
   margin: 0 0 6px;
   display: flex;
   flex-wrap: wrap;
@@ -675,7 +675,7 @@ const courseTotals = computed(() => ({
 .unit-country {
   display: inline-block;
   padding: 1px 6px;
-  border: 1px solid var(--color-border-mid);
+  border: 1px solid var(--rule);
   border-radius: 3px;
   font-size: 10px;
   font-weight: 700;
@@ -702,7 +702,7 @@ const courseTotals = computed(() => ({
   gap: 6px;
   font-size: 12px;
   font-weight: 600;
-  color: var(--color-navy);
+  color: var(--focus);
   text-decoration: none;
 }
 .parent-link:hover { text-decoration: underline; }
@@ -712,9 +712,9 @@ const courseTotals = computed(() => ({
   font-weight: 700;
   letter-spacing: 0.06em;
   text-transform: uppercase;
-  color: var(--color-muted);
+  color: var(--muted);
   padding: 1px 6px;
-  border: 1px solid var(--color-border-mid);
+  border: 1px solid var(--rule);
   border-radius: 3px;
 }
 
@@ -722,9 +722,9 @@ const courseTotals = computed(() => ({
   width: 18px;
   height: 18px;
   border-radius: 50%;
-  border: 1px solid var(--color-border-mid);
-  background: var(--color-surface);
-  color: var(--color-muted);
+  border: 1px solid var(--rule);
+  background: var(--paper-raised);
+  color: var(--muted);
   font-size: 11px;
   font-weight: 700;
   font-style: italic;
@@ -739,8 +739,8 @@ const courseTotals = computed(() => ({
 }
 .info-marker:hover,
 .info-marker[aria-expanded="true"] {
-  background: var(--color-navy);
-  border-color: var(--color-navy);
+  background: var(--focus);
+  border-color: var(--focus);
   color: #fff;
 }
 
@@ -748,15 +748,15 @@ const courseTotals = computed(() => ({
   flex-basis: 100%;
   margin: 4px 0 2px;
   padding: 8px 10px;
-  background: var(--color-bg);
-  border-left: 3px solid var(--color-navy);
+  background: var(--paper);
+  border-left: 3px solid var(--focus);
   border-radius: 0 3px 3px 0;
 }
 .parent-desc-text {
   margin: 0 0 4px;
   font-size: 12px;
   line-height: 1.5;
-  color: var(--color-text);
+  color: var(--ink);
 }
 .parent-desc-text:last-child { margin-bottom: 0; }
 
@@ -769,8 +769,8 @@ const courseTotals = computed(() => ({
 
 /* ── Sections (collapsible via native <details>) ────────────── */
 .section {
-  border-bottom: 1px solid var(--color-border);
-  background: var(--color-surface);
+  border-bottom: 1px solid var(--rule);
+  background: var(--paper-raised);
 }
 
 .section + .section { border-top: none; }
@@ -791,14 +791,14 @@ const courseTotals = computed(() => ({
 .section-summary::after {
   content: '▾';
   font-size: 11px;
-  color: var(--color-muted);
+  color: var(--muted);
   transition: transform 0.15s ease;
   flex-shrink: 0;
 }
 .section:not([open]) > .section-summary::after {
   transform: rotate(-90deg);
 }
-.section-summary:hover { background: var(--color-bg); }
+.section-summary:hover { background: var(--paper); }
 
 .section-body {
   padding: 0 16px 12px;
@@ -808,7 +808,7 @@ const courseTotals = computed(() => ({
   margin: 0;
   padding: 4px 0;
   font-size: 12px;
-  color: var(--color-muted);
+  color: var(--muted);
   font-style: italic;
 }
 
@@ -823,35 +823,35 @@ const courseTotals = computed(() => ({
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.07em;
-  color: var(--color-muted);
+  color: var(--muted);
   margin: 0;
 }
 
 .sort-btn {
   background: none;
-  border: 1px solid var(--color-border-mid);
+  border: 1px solid var(--rule);
   border-radius: 4px;
   font-size: 11px;
   font-weight: 600;
-  color: var(--color-muted);
+  color: var(--muted);
   padding: 6px 10px;
   cursor: pointer;
   white-space: nowrap;
   touch-action: manipulation;
 }
-.sort-btn:hover { border-color: var(--color-navy); color: var(--color-navy); }
+.sort-btn:hover { border-color: var(--focus); color: var(--focus); }
 
 /* ── Description ────────────────────────────────────────────── */
 .plain-text {
   font-size: 14px;
   line-height: 1.75;
-  color: var(--color-text);
+  color: var(--ink);
   margin: 0;
   white-space: pre-line;
 }
 
 .quote-block {
-  border-left: 3px solid var(--color-border-mid);
+  border-left: 3px solid var(--rule);
   margin: 0;
   padding: 8px 0 8px 14px;
 }
@@ -859,13 +859,13 @@ const courseTotals = computed(() => ({
 .quote-source {
   display: block;
   font-size: 11px;
-  color: var(--color-muted);
+  color: var(--muted);
   margin-top: 6px;
   font-style: normal;
 }
 
 .quote-source a {
-  color: var(--color-navy);
+  color: var(--focus);
   text-decoration: none;
 }
 .quote-source a:hover { text-decoration: underline; }
@@ -881,19 +881,19 @@ const courseTotals = computed(() => ({
   padding: 6px 8px;
   margin: 0 -8px;
   text-decoration: none;
-  color: var(--color-text);
-  border-bottom: 1px solid var(--color-border);
+  color: var(--ink);
+  border-bottom: 1px solid var(--rule);
   border-radius: 4px;
   transition: background 0.1s;
 }
 .event-item:last-child { border-bottom: none; }
-.event-item:hover { background: var(--color-bg); }
+.event-item:hover { background: var(--paper); }
 .event-item:hover .event-title { text-decoration: underline; }
 
 .event-date {
   font-size: 12px;
   font-weight: 600;
-  color: var(--color-text);
+  color: var(--ink);
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
   flex-shrink: 0;
@@ -901,7 +901,7 @@ const courseTotals = computed(() => ({
 
 .event-title {
   font-size: 13px;
-  color: var(--color-navy);
+  color: var(--focus);
   flex: 1;
   min-width: 0;
 }
@@ -912,14 +912,14 @@ const courseTotals = computed(() => ({
 }
 .person-name-link {
   font-size: 13px;
-  color: var(--color-navy);
+  color: var(--focus);
   text-decoration: none;
 }
 .person-name-link:hover { text-decoration: underline; }
 
 .member-period {
   font-size: 11px;
-  color: var(--color-muted);
+  color: var(--muted);
   font-variant-numeric: tabular-nums;
 }
 
@@ -933,12 +933,12 @@ const courseTotals = computed(() => ({
   border-radius: 4px;
   transition: background 0.1s;
 }
-.person-item:hover { background: var(--color-bg); }
+.person-item:hover { background: var(--paper); }
 .person-item:hover .person-name { text-decoration: underline; }
 
 .person-name {
   font-size: 13px;
-  color: var(--color-navy);
+  color: var(--focus);
   /* natural width — no flex-grow — so status marker sits right after the name */
 }
 
@@ -948,9 +948,9 @@ const courseTotals = computed(() => ({
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.04em;
-  color: var(--color-navy);
-  background: var(--color-bg);
-  border: 1px solid var(--color-border-mid);
+  color: var(--focus);
+  background: var(--paper);
+  border: 1px solid var(--rule);
   border-radius: 3px;
   padding: 2px 6px;
   white-space: nowrap;
@@ -964,8 +964,8 @@ const courseTotals = computed(() => ({
   line-height: 1;
 }
 
-.status-marker--kia   { color: var(--color-red); }
-.status-marker--ambig { color: var(--color-muted); }
+.status-marker--kia   { color: var(--faded-red); }
+.status-marker--ambig { color: var(--muted); }
 
 /* ── External reference rows ─────────────────────────────────── */
 .ref-item {
@@ -975,16 +975,16 @@ const courseTotals = computed(() => ({
   padding: 6px 8px;
   margin: 0 -8px;
   text-decoration: none;
-  color: var(--color-text);
+  color: var(--ink);
   border-radius: 4px;
   transition: background 0.1s;
 }
-.ref-item:hover { background: var(--color-bg); }
+.ref-item:hover { background: var(--paper); }
 .ref-item:hover .ref-title { text-decoration: underline; }
 
 .ref-title {
   font-size: 13px;
-  color: var(--color-navy);
+  color: var(--focus);
   flex: 1;
   min-width: 0;
   overflow: hidden;
@@ -1012,13 +1012,13 @@ const courseTotals = computed(() => ({
 
 .ref-domain {
   font-size: 11px;
-  color: var(--color-muted);
+  color: var(--muted);
   font-variant-numeric: tabular-nums;
 }
 
 .person-count {
   font-size: 11px;
-  color: var(--color-muted);
+  color: var(--muted);
   white-space: nowrap;
   flex-shrink: 0;
 }
@@ -1034,7 +1034,7 @@ const courseTotals = computed(() => ({
 .description-entry + .description-entry {
   margin-top: 16px;
   padding-top: 16px;
-  border-top: 1px solid var(--color-border);
+  border-top: 1px solid var(--rule);
 }
 
 .description-attribution {
@@ -1044,14 +1044,14 @@ const courseTotals = computed(() => ({
   gap: 8px;
   margin-top: 8px;
   padding-top: 6px;
-  border-top: 1px dashed var(--color-border);
+  border-top: 1px dashed var(--rule);
   font-size: 11px;
-  color: var(--color-muted);
+  color: var(--muted);
 }
 
 .description-author {
   font-weight: 600;
-  color: var(--color-text);
+  color: var(--ink);
 }
 
 .description-date {
@@ -1062,7 +1062,7 @@ const courseTotals = computed(() => ({
   margin: 0 0 0.75em;
   font-size: 14px;
   line-height: 1.65;
-  color: var(--color-text);
+  color: var(--ink);
 }
 .portable-text :deep(p:last-child) { margin-bottom: 0; }
 
@@ -1075,7 +1075,7 @@ const courseTotals = computed(() => ({
   margin: 0.25em 0;
   font-size: 14px;
   line-height: 1.65;
-  color: var(--color-text);
+  color: var(--ink);
 }
 
 .portable-text :deep(h1),
@@ -1085,13 +1085,13 @@ const courseTotals = computed(() => ({
   font-size: 14px;
   font-weight: 700;
   margin: 1em 0 0.4em;
-  color: var(--color-navy);
+  color: var(--focus);
 }
 
 .portable-text :deep(strong) { font-weight: 600; }
 .portable-text :deep(em)     { font-style: italic; }
 .portable-text :deep(a) {
-  color: var(--color-navy);
+  color: var(--focus);
   text-decoration: underline;
   cursor: pointer;
 }
@@ -1112,7 +1112,7 @@ const courseTotals = computed(() => ({
 .course-table td {
   padding: 6px 10px;
   text-align: left;
-  border-bottom: 1px solid var(--color-border);
+  border-bottom: 1px solid var(--rule);
   white-space: nowrap;
 }
 
@@ -1121,8 +1121,8 @@ const courseTotals = computed(() => ({
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.06em;
-  color: var(--color-muted);
-  background: var(--color-bg);
+  color: var(--muted);
+  background: var(--paper);
 }
 
 .course-table td.num,
@@ -1134,14 +1134,14 @@ const courseTotals = computed(() => ({
 .course-link {
   display: inline-block;
   font-weight: 700;
-  color: var(--color-navy);
+  color: var(--focus);
   text-decoration: none;
   min-width: 26px;
 }
 .course-link:hover { text-decoration: underline; }
 
 .course-date {
-  color: var(--color-muted);
+  color: var(--muted);
   font-variant-numeric: tabular-nums;
 }
 
@@ -1149,14 +1149,14 @@ const courseTotals = computed(() => ({
   font-size: 11px;
   text-transform: uppercase;
   letter-spacing: 0.04em;
-  color: var(--color-muted);
+  color: var(--muted);
 }
 
 .course-total td {
   font-weight: 700;
-  border-top: 2px solid var(--color-border-mid);
+  border-top: 2px solid var(--rule);
   border-bottom: none;
-  color: var(--color-text);
-  background: var(--color-bg);
+  color: var(--ink);
+  background: var(--paper);
 }
 </style>

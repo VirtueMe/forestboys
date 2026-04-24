@@ -90,12 +90,12 @@ const crumb = computed(() => {
   min-height: 0;
   display: grid;
   grid-template-columns: 220px 1fr;
-  background: var(--color-bg);
+  background: var(--paper);
 }
 
 .admin-nav {
-  background: var(--color-surface);
-  border-right: 1px solid var(--color-border);
+  background: var(--paper-raised);
+  border-right: 1px solid var(--rule);
   display: flex;
   flex-direction: column;
   padding: 16px 0;
@@ -114,7 +114,7 @@ const crumb = computed(() => {
   font-weight: 700;
   letter-spacing: 0.12em;
   text-transform: uppercase;
-  color: var(--color-muted);
+  color: var(--muted);
   margin: 0;
 }
 
@@ -124,7 +124,7 @@ const crumb = computed(() => {
   height: 24px;
   padding: 0;
   font-size: 14px;
-  color: var(--color-muted);
+  color: var(--muted);
   background: transparent;
   border: none;
   cursor: pointer;
@@ -137,7 +137,7 @@ const crumb = computed(() => {
   font-weight: 700;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: var(--color-muted);
+  color: var(--muted);
   padding: 4px 16px;
 }
 
@@ -151,15 +151,15 @@ const crumb = computed(() => {
   display: block;
   padding: 7px 16px;
   font-size: 13px;
-  color: var(--color-text);
+  color: var(--ink);
   text-decoration: none;
 }
 .nav-link-nested { padding-left: 28px; }
 
-.nav-link:hover { background: var(--color-bg); }
+.nav-link:hover { background: var(--paper); }
 
 .nav-link.active {
-  background: var(--color-navy);
+  background: var(--focus);
   color: #fff;
   font-weight: 600;
 }
@@ -167,15 +167,15 @@ const crumb = computed(() => {
 .nav-footer {
   margin-top: auto;
   padding: 12px 16px;
-  border-top: 1px solid var(--color-border);
+  border-top: 1px solid var(--rule);
 }
 
 .nav-exit {
   font-size: 12px;
-  color: var(--color-muted);
+  color: var(--muted);
   text-decoration: none;
 }
-.nav-exit:hover { color: var(--color-navy); }
+.nav-exit:hover { color: var(--focus); }
 
 .nav-scrim {
   display: none;
@@ -196,8 +196,8 @@ const crumb = computed(() => {
   align-items: center;
   gap: 12px;
   padding: 10px 16px;
-  background: var(--color-surface);
-  border-bottom: 1px solid var(--color-border);
+  background: var(--paper-raised);
+  border-bottom: 1px solid var(--rule);
 }
 
 .burger {
@@ -206,16 +206,16 @@ const crumb = computed(() => {
   padding: 0;
   font-size: 18px;
   background: transparent;
-  border: 1px solid var(--color-border);
+  border: 1px solid var(--rule);
   border-radius: 4px;
   cursor: pointer;
-  color: var(--color-text);
+  color: var(--ink);
 }
 
 .crumb {
   font-size: 13px;
   font-weight: 600;
-  color: var(--color-navy);
+  color: var(--focus);
 }
 
 .admin-content {

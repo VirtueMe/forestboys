@@ -132,7 +132,7 @@ function nextImage() {
   flex: 1;
   min-height: 0;
   overflow-y: auto;
-  background: var(--color-bg);
+  background: var(--paper);
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -147,7 +147,7 @@ function nextImage() {
   padding: 48px 20px;
   text-align: center;
   font-size: 13px;
-  color: var(--color-muted);
+  color: var(--muted);
 }
 
 .hero { width: 100%; overflow: hidden; }
@@ -162,15 +162,15 @@ function nextImage() {
 
 .page-header {
   padding: 14px 16px 12px;
-  background: var(--color-surface);
-  border-bottom: 1px solid var(--color-border);
+  background: var(--paper-raised);
+  border-bottom: 1px solid var(--rule);
 }
 
 .back-link {
   display: inline-block;
   font-size: 13px;
   font-weight: 600;
-  color: var(--color-navy);
+  color: var(--focus);
   text-decoration: none;
   margin-bottom: 10px;
 }
@@ -179,15 +179,15 @@ function nextImage() {
 .item-title {
   font-size: 22px;
   font-weight: 700;
-  color: var(--color-text);
+  color: var(--ink);
   margin: 0;
   line-height: 1.25;
 }
 
 .section {
   padding: 12px 16px;
-  border-bottom: 1px solid var(--color-border);
-  background: var(--color-surface);
+  border-bottom: 1px solid var(--rule);
+  background: var(--paper-raised);
 }
 
 .section-heading {
@@ -195,14 +195,14 @@ function nextImage() {
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.07em;
-  color: var(--color-muted);
+  color: var(--muted);
   margin: 0 0 8px;
 }
 
 .plain-text {
   font-size: 14px;
   line-height: 1.75;
-  color: var(--color-text);
+  color: var(--ink);
   margin: 0;
   white-space: pre-line;
 }
@@ -212,7 +212,7 @@ function nextImage() {
 .section-link {
   display: block;
   font-size: 13px;
-  color: var(--color-navy);
+  color: var(--focus);
   text-decoration: none;
   padding: 2px 0;
 }
@@ -221,7 +221,7 @@ function nextImage() {
 .ext-link {
   display: block;
   font-size: 13px;
-  color: var(--color-navy);
+  color: var(--focus);
   text-decoration: none;
   padding: 2px 0;
   word-break: break-all;
@@ -238,17 +238,17 @@ function nextImage() {
   object-fit: contain;
   display: block;
   border-radius: 4px;
-  background: var(--color-border);
+  background: var(--rule);
 }
 
 .carousel-btn {
   background: none;
-  border: 1px solid var(--color-border);
+  border: 1px solid var(--rule);
   border-radius: 50%;
   width: 32px;
   height: 32px;
   font-size: 20px;
-  color: var(--color-navy);
+  color: var(--focus);
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -256,18 +256,18 @@ function nextImage() {
   flex-shrink: 0;
   line-height: 1;
 }
-.carousel-btn:hover { border-color: var(--color-border-mid); }
+.carousel-btn:hover { border-color: var(--rule); }
 
 .carousel-count {
   font-size: 11px;
-  color: var(--color-muted);
+  color: var(--muted);
   text-align: center;
   margin: 6px 0 0;
 }
 
 .carousel-caption {
   font-size: 12px;
-  color: var(--color-muted);
+  color: var(--muted);
   text-align: center;
   margin: 4px 0 0;
   font-style: italic;

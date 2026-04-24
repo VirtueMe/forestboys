@@ -216,8 +216,8 @@ function subjectRoute(img: SlideImage): string {
 <style scoped>
 .image-slider {
   width: 100%;
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
+  background: var(--paper-raised);
+  border: 1px solid var(--rule);
   border-radius: 6px;
   overflow: hidden;
 }
@@ -236,7 +236,7 @@ function subjectRoute(img: SlideImage): string {
   outline: none;
 }
 .slider-stage:focus-visible {
-  outline: 2px solid var(--color-navy);
+  outline: 2px solid var(--focus);
   outline-offset: -2px;
 }
 
@@ -275,12 +275,12 @@ function subjectRoute(img: SlideImage): string {
   align-items: baseline;
   gap: 12px;
   padding: 8px 12px;
-  border-top: 1px solid var(--color-border);
+  border-top: 1px solid var(--rule);
 }
 
 .slider-counter {
   font-size: 11px;
-  color: var(--color-muted);
+  color: var(--muted);
   font-variant-numeric: tabular-nums;
   flex-shrink: 0;
   display: inline-flex;
@@ -291,10 +291,10 @@ function subjectRoute(img: SlideImage): string {
 .slider-counter-input {
   width: 3.5ch;
   padding: 1px 3px;
-  border: 1px solid var(--color-border);
+  border: 1px solid var(--rule);
   border-radius: 3px;
-  background: var(--color-surface);
-  color: var(--color-text);
+  background: var(--paper-raised);
+  color: var(--ink);
   font: inherit;
   font-variant-numeric: tabular-nums;
   text-align: right;
@@ -307,13 +307,13 @@ function subjectRoute(img: SlideImage): string {
 }
 .slider-counter-input:focus {
   outline: none;
-  border-color: var(--color-navy);
+  border-color: var(--focus);
 }
 
 .slider-caption {
   margin: 0;
   font-size: 12px;
-  color: var(--color-text);
+  color: var(--ink);
   flex: 1;
   min-width: 0;
   overflow: hidden;
@@ -322,13 +322,13 @@ function subjectRoute(img: SlideImage): string {
 }
 
 .slider-subject {
-  color: var(--color-navy);
+  color: var(--focus);
   font-weight: 600;
   text-decoration: none;
 }
 .slider-subject:hover { text-decoration: underline; }
 
-.slider-text { color: var(--color-muted); font-style: italic; }
+.slider-text { color: var(--muted); font-style: italic; }
 
 .slider-thumbs {
   display: flex;
@@ -337,8 +337,8 @@ function subjectRoute(img: SlideImage): string {
   overflow-x: auto;
   overflow-y: hidden;
   scroll-behavior: smooth;
-  border-top: 1px solid var(--color-border);
-  background: var(--color-surface);
+  border-top: 1px solid var(--rule);
+  background: var(--paper-raised);
   scrollbar-width: thin;
   -webkit-overflow-scrolling: touch;
 }
@@ -358,7 +358,7 @@ function subjectRoute(img: SlideImage): string {
 }
 .slider-thumb:hover { opacity: 1; }
 .slider-thumb.active {
-  border-color: var(--color-navy);
+  border-color: var(--focus);
   opacity: 1;
 }
 .slider-thumb img {

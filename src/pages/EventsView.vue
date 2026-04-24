@@ -301,7 +301,7 @@ onUnmounted(() => {
 .events-page {
   display: flex;
   flex-direction: column;
-  background: var(--color-bg);
+  background: var(--paper);
   max-width: 1320px;
   margin: 0 auto;
   width: 100%;
@@ -314,8 +314,8 @@ onUnmounted(() => {
   flex-direction: column;
   gap: 6px;
   padding: 10px 12px;
-  background: var(--color-surface);
-  border-bottom: 1px solid var(--color-border);
+  background: var(--paper-raised);
+  border-bottom: 1px solid var(--rule);
 }
 
 .search-row {
@@ -327,10 +327,10 @@ onUnmounted(() => {
 .filter-select {
   font-size: 13px;
   padding: 5px 10px;
-  border: 1px solid var(--color-border-mid);
+  border: 1px solid var(--rule);
   border-radius: 6px;
-  background: var(--color-bg);
-  color: var(--color-text);
+  background: var(--paper);
+  color: var(--ink);
   cursor: pointer;
   width: 100%;
 }
@@ -339,7 +339,7 @@ onUnmounted(() => {
 .back-link {
   font-size: 13px;
   font-weight: 600;
-  color: var(--color-navy);
+  color: var(--focus);
   text-decoration: none;
 }
 .back-link:hover { text-decoration: underline; }
@@ -347,7 +347,7 @@ onUnmounted(() => {
 /* ── Timeline ───────────────────────────────────────────────── */
 .timeline-wrap {
   flex-shrink: 0;
-  border-bottom: 1px solid var(--color-border);
+  border-bottom: 1px solid var(--rule);
   width: 100vw;
   margin-left: calc(-50vw + 50%);
 }
@@ -373,8 +373,8 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   padding: 8px 14px;
-  background: var(--color-surface);
-  border-bottom: 1px solid var(--color-border);
+  background: var(--paper-raised);
+  border-bottom: 1px solid var(--rule);
 }
 
 .list-label {
@@ -382,7 +382,7 @@ onUnmounted(() => {
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.07em;
-  color: var(--color-muted);
+  color: var(--muted);
   white-space: nowrap;
 }
 
@@ -390,35 +390,35 @@ onUnmounted(() => {
   flex: 1;
   height: 28px;
   padding: 0 8px;
-  background: var(--color-bg);
-  border: 1px solid var(--color-border-mid);
+  background: var(--paper);
+  border: 1px solid var(--rule);
   border-radius: 4px;
   font-size: 12px;
-  color: var(--color-text);
+  color: var(--ink);
   outline: none;
   -webkit-appearance: none;
 }
-.search-input::placeholder { color: var(--color-muted); }
-.search-input:focus { border-color: var(--color-navy); }
+.search-input::placeholder { color: var(--muted); }
+.search-input:focus { border-color: var(--focus); }
 
 .reset-btn {
   flex-shrink: 0;
   height: 28px;
   padding: 0 10px;
   background: none;
-  border: 1px solid var(--color-border-mid);
+  border: 1px solid var(--rule);
   border-radius: 4px;
   font-size: 11px;
   font-weight: 600;
-  color: var(--color-muted);
+  color: var(--muted);
   cursor: pointer;
   white-space: nowrap;
 }
-.reset-btn:hover { border-color: var(--color-navy); color: var(--color-navy); }
+.reset-btn:hover { border-color: var(--focus); color: var(--focus); }
 
 /* ── Scroll container ───────────────────────────────────────── */
 .scroll-container {
-  background: var(--color-surface);
+  background: var(--paper-raised);
 }
 
 /* ── Status ─────────────────────────────────────────────────── */
@@ -426,9 +426,9 @@ onUnmounted(() => {
   padding: 32px 20px;
   text-align: center;
   font-size: 13px;
-  color: var(--color-muted);
+  color: var(--muted);
 }
-.error { color: var(--color-red); }
+.error { color: var(--faded-red); }
 
 /* ── Event row ──────────────────────────────────────────────── */
 .event-row {
@@ -438,12 +438,12 @@ onUnmounted(() => {
   padding: 0 14px;
   gap: 10px;
   text-decoration: none;
-  color: var(--color-text);
-  border-bottom: 1px solid var(--color-border);
+  color: var(--ink);
+  border-bottom: 1px solid var(--rule);
   box-sizing: border-box;
   transition: background 0.1s;
 }
-.event-row:hover { background: var(--color-bg); }
+.event-row:hover { background: var(--paper); }
 
 .event-thumb {
   width: 40px;
@@ -461,7 +461,7 @@ onUnmounted(() => {
 
 .event-date {
   font-size: 11px;
-  color: var(--color-muted);
+  color: var(--muted);
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
   flex-shrink: 0;
@@ -472,7 +472,7 @@ onUnmounted(() => {
   flex: 1;
   font-size: 13px;
   font-weight: 600;
-  color: var(--color-text);
+  color: var(--ink);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -497,7 +497,7 @@ onUnmounted(() => {
 
 .event-meta {
   font-size: 10px;
-  color: var(--color-muted);
+  color: var(--muted);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
