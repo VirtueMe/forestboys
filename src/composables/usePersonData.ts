@@ -130,6 +130,17 @@ export function usePersonData() {
   }
 
   async function loadPerson(slug: string) {
+    // Create mode — `/person/new` lands here before the node exists.
+    // Populate with a blank skeleton so the page renders the edit form
+    // instead of the "ikke funnet" state; skip all relation/gallery fetches.
+    if (slug === 'new') {
+      neo4jPerson.value = {
+        slug: 'new', name: '', secretName: null, home: null,
+        birthYear: null, status: null, serviceClass: null, type: 'civilian',
+      }
+      return
+    }
+
     // IDB cache gives us optional rich extras (description, locations, stations,
     // movie, outlines) when a person was in the Sanity dump. Neo4j is the
     // source of existence — a person found in Neo4j but missing from IDB just

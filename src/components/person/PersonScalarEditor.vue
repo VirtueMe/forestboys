@@ -1,6 +1,6 @@
 <template>
   <section class="edit-section">
-    <h3 class="edit-section-heading">Grunnleggende</h3>
+    <h3 class="edit-section-heading">{{ createMode ? 'Ny person' : 'Grunnleggende' }}</h3>
     <div class="edit-row">
       <label class="edit-label">Type</label>
       <div class="type-seg">
@@ -18,6 +18,31 @@
       <label class="edit-label" for="edit-canonicalName">Navn</label>
       <input id="edit-canonicalName" v-model="draft.canonicalName" class="edit-input" type="text" required />
     </div>
+
+    <div v-if="createMode" class="edit-row">
+      <label class="edit-label" for="edit-slug">Slug</label>
+      <div class="slug-stack">
+        <div class="slug-field">
+          <input
+            id="edit-slug"
+            v-model="draft.slug"
+            class="edit-input"
+            :class="{ locked: !slugEditable, [`slug-${slugState}`]: true }"
+            :readonly="!slugEditable"
+            type="text"
+            placeholder="kebab-case"
+          />
+          <button
+            type="button"
+            class="slug-toggle"
+            :aria-label="slugEditable ? 'Lås slug' : 'Rediger slug'"
+            @click="toggleSlugEdit"
+          >{{ slugEditable ? '✓' : '✎' }}</button>
+        </div>
+        <span v-if="slugTaken" class="slug-hint">Slug finnes allerede for en person.</span>
+      </div>
+    </div>
+
     <div class="edit-row">
       <label class="edit-label" for="edit-secretName">Dekknavn</label>
       <input id="edit-secretName" v-model="draft.secretName" class="edit-input" type="text" />
@@ -39,12 +64,12 @@
     </div>
   </section>
 
-  <footer v-if="dirty" class="edit-save-bar">
-    <span class="edit-save-prompt">Ser det bra ut?</span>
-    <button type="button" class="edit-btn-primary" :disabled="saving" @click="save">
-      {{ saving ? 'Lagrer…' : 'Lagre' }}
+  <footer v-if="createMode || dirty" class="edit-save-bar">
+    <span class="edit-save-prompt">{{ createMode ? 'Opprett person?' : 'Ser det bra ut?' }}</span>
+    <button type="button" class="edit-btn-primary" :disabled="saving || !canSave" @click="save">
+      {{ saving ? (createMode ? 'Oppretter…' : 'Lagrer…') : (createMode ? 'Opprett' : 'Lagre') }}
     </button>
-    <button type="button" class="edit-link-revert" :disabled="saving" @click="revert">Angre</button>
+    <button v-if="!createMode" type="button" class="edit-link-revert" :disabled="saving" @click="revert">Angre</button>
   </footer>
   <div v-if="error" class="edit-save-error">{{ error }}</div>
 </template>
@@ -61,6 +86,8 @@
  */
 import { ref, computed, watch } from 'vue'
 import { authFetch } from '@/composables/useAuth.ts'
+import { neo4jQuery } from '@/composables/useNeo4j.ts'
+import { slugify, SLUG_RE } from '@/utils/slug.ts'
 import type { PersonType } from './types.ts'
 
 interface Saved {
@@ -86,20 +113,68 @@ export interface ScalarDraft {
   birthYear:     string
   home:          string
   type:          PersonType
+  /** Only consumed in createMode. */
+  slug:          string
 }
 
 const props = defineProps<{
-  slug:  string
-  saved: Saved
+  slug:        string
+  saved:       Saved
+  createMode?: boolean
 }>()
 
-const emit = defineEmits<{ saved: [updates: SaveResponse] }>()
+const emit = defineEmits<{
+  saved:   [updates: SaveResponse]
+  created: [slug: string]
+}>()
 
-const empty: ScalarDraft = { canonicalName: '', secretName: '', birthYear: '', home: '', type: 'civilian' }
+const empty: ScalarDraft = { canonicalName: '', secretName: '', birthYear: '', home: '', type: 'civilian', slug: '' }
 const draft    = ref<ScalarDraft>({ ...empty })
 const baseline = ref<ScalarDraft>({ ...empty })
 const saving   = ref(false)
 const error    = ref<string | null>(null)
+
+const slugEdited   = ref(false)
+const slugEditable = ref(false)
+const slugTaken    = ref(false)
+const slugChecking = ref(false)
+let slugCheckTimer: ReturnType<typeof setTimeout> | null = null
+
+watch(() => draft.value.canonicalName, (v) => {
+  if (!props.createMode || slugEdited.value) return
+  draft.value.slug = slugify(v)
+})
+
+watch(() => draft.value.slug, (s) => {
+  if (!props.createMode) return
+  slugTaken.value    = false
+  slugChecking.value = false
+  if (slugCheckTimer) clearTimeout(slugCheckTimer)
+  if (!SLUG_RE.test(s) || s === 'new') return
+  slugChecking.value = true
+  slugCheckTimer = setTimeout(async () => {
+    try {
+      const rows = await neo4jQuery<{ slug: string }>(
+        `MATCH (p:Person {slug: $slug}) RETURN p.slug AS slug LIMIT 1`,
+        { slug: s },
+      )
+      if (draft.value.slug === s) slugTaken.value = rows.length > 0
+    } catch { /* silent — server still validates on POST */ }
+    finally {
+      if (draft.value.slug === s) slugChecking.value = false
+    }
+  }, 250)
+})
+
+const slugState = computed<'neutral' | 'invalid' | 'valid'>(() => {
+  if (!props.createMode) return 'neutral'
+  const s = draft.value.slug.trim()
+  if (!s || s === 'new') return 'neutral'
+  if (!SLUG_RE.test(s)) return 'invalid'
+  if (slugChecking.value) return 'neutral'
+  if (slugTaken.value)    return 'invalid'
+  return 'valid'
+})
 
 function snapshot() {
   const snap: ScalarDraft = {
@@ -108,10 +183,13 @@ function snapshot() {
     birthYear:     props.saved.birthYear != null ? String(props.saved.birthYear) : '',
     home:          props.saved.home ?? '',
     type:          props.saved.type ?? 'civilian',
+    slug:          props.createMode ? 'new' : '',
   }
   draft.value    = { ...snap }
   baseline.value = { ...snap }
   error.value    = null
+  slugEdited.value   = false
+  slugEditable.value = false
 }
 watch(() => props.saved, snapshot, { immediate: true, deep: true })
 
@@ -119,29 +197,75 @@ const dirty = computed(() =>
   (Object.keys(draft.value) as (keyof ScalarDraft)[]).some(k => draft.value[k] !== baseline.value[k]),
 )
 
+const canSave = computed(() => {
+  if (!props.createMode) return dirty.value
+  const s = draft.value.slug.trim()
+  return draft.value.canonicalName.trim().length > 0 && SLUG_RE.test(s) && s !== 'new' && !slugTaken.value
+})
+
+function toggleSlugEdit() {
+  if (!slugEditable.value) {
+    slugEditable.value = true
+    slugEdited.value = true
+  } else {
+    draft.value.slug = slugify(draft.value.slug)
+    slugEditable.value = false
+  }
+}
+
 function revert() {
   draft.value = { ...baseline.value }
   error.value = null
 }
 
+function parseBirthYear(trimmed: string): number | null | 'invalid' {
+  if (!trimmed) return null
+  const n = Number(trimmed)
+  return Number.isInteger(n) ? n : 'invalid'
+}
+
 async function save() {
+  if (!canSave.value) return
   saving.value = true
   error.value  = null
   try {
+    const f = draft.value
+
+    if (props.createMode) {
+      const year = parseBirthYear(f.birthYear.trim())
+      if (year === 'invalid') { error.value = 'Fødselsår må være et heltall'; saving.value = false; return }
+      const res = await authFetch(`/api/admin/person/new`, {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          slug:          f.slug.trim(),
+          canonicalName: f.canonicalName.trim(),
+          secretName:    f.secretName.trim() || null,
+          home:          f.home.trim()       || null,
+          birthYear:     year,
+          type:          f.type,
+        }),
+      })
+      const out = await res.json().catch(() => ({})) as { slug?: string; error?: string }
+      if (!res.ok) {
+        error.value = out.error ?? `HTTP ${res.status}`
+        if (res.status === 409) slugEditable.value = true
+        return
+      }
+      emit('created', out.slug ?? f.slug.trim())
+      return
+    }
+
     const body: Record<string, unknown> = {}
-    const f = draft.value, b = baseline.value
+    const b = baseline.value
     if (f.canonicalName !== b.canonicalName) body.canonicalName = f.canonicalName.trim()
     if (f.secretName    !== b.secretName)    body.secretName    = f.secretName.trim() || null
     if (f.home          !== b.home)          body.home          = f.home.trim() || null
     if (f.type          !== b.type)          body.type          = f.type
     if (f.birthYear     !== b.birthYear) {
-      const trimmed = f.birthYear.trim()
-      if (!trimmed) body.birthYear = null
-      else {
-        const n = Number(trimmed)
-        if (!Number.isInteger(n)) { error.value = 'Fødselsår må være et heltall'; saving.value = false; return }
-        body.birthYear = n
-      }
+      const year = parseBirthYear(f.birthYear.trim())
+      if (year === 'invalid') { error.value = 'Fødselsår må være et heltall'; saving.value = false; return }
+      body.birthYear = year
     }
     if (!Object.keys(body).length) { saving.value = false; return }
 
@@ -212,6 +336,29 @@ defineExpose({ draft, dirty })
   border-color: var(--focus);
 }
 .edit-input-narrow { max-width: 140px; }
+.edit-input.locked { background: var(--paper-sunken); color: var(--muted); font-family: var(--font-mono); font-size: var(--size-mono); }
+.edit-input.slug-valid   { color: var(--moss);   border-color: var(--moss); }
+.edit-input.slug-invalid { color: var(--danger); border-color: var(--danger); }
+
+.slug-stack { display: flex; flex-direction: column; gap: var(--space-xs); }
+.slug-field { display: flex; gap: var(--space-xs); }
+.slug-toggle {
+  flex-shrink: 0;
+  width: 36px;
+  background: var(--paper);
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-md);
+  font-size: var(--size-body-ui);
+  color: var(--ink-soft);
+  cursor: pointer;
+  transition: background 120ms ease-out, color 120ms ease-out;
+}
+.slug-toggle:hover { background: var(--paper-sunken); color: var(--faded-red); }
+.slug-hint {
+  font-family: var(--font-sans);
+  font-size: var(--size-label);
+  color: var(--danger);
+}
 
 .type-seg {
   display: inline-flex;

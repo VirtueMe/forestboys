@@ -7,17 +7,19 @@
     page-class="person-page"
   >
     <div v-if="person && neo4jPerson" itemscope itemtype="https://schema.org/Person">
-      <!-- Identity strip — always visible above the tabs -->
-      <DetailHero :image-url="heroUrl" :alt="person.name" :placeholder="personInitials" itemprop="image" />
-      <PersonHeader
-        :title="personTitle"
-        :secret-name="person.secretName"
-        :birth-year="person.birthYear ?? null"
-        :home="person.home"
-      />
-      <PersonRanksPreview v-if="person.type === 'soldier'" :ranks="heldRanks" />
+      <!-- Identity strip — always visible above the tabs, hidden in create mode. -->
+      <template v-if="!isCreate">
+        <DetailHero :image-url="heroUrl" :alt="person.name" :placeholder="personInitials" itemprop="image" />
+        <PersonHeader
+          :title="personTitle"
+          :secret-name="person.secretName"
+          :birth-year="person.birthYear ?? null"
+          :home="person.home"
+        />
+        <PersonRanksPreview v-if="person.type === 'soldier'" :ranks="heldRanks" />
+      </template>
 
-      <AdminViewTabs v-model="mode" />
+      <AdminViewTabs v-if="!isCreate" v-model="mode" />
 
       <PersonEditPane
         v-if="mode === 'edit'"
@@ -28,14 +30,16 @@
         :saved-sections="savedSections"
         :data="relationsData"
         :pending-expand-event="pendingExpandEvent"
+        :create-mode="isCreate"
         :create-event-href="createEventHref"
         @saved-scalar="onScalarSaved"
         @saved-ranks="ranks => heldRanks = ranks"
         @saved-sections="sections => savedSections = sections"
+        @created="onCreated"
       />
 
       <PersonViewPane
-        v-else
+        v-else-if="!isCreate"
         :person="person"
         :preview-sections="previewSections"
         :relations="relationsData"
@@ -79,6 +83,16 @@ const {
 } = usePersonData()
 
 const mode = ref<AdminViewMode>('preview')
+const isCreate = computed(() => String(route.params.slug) === 'new')
+
+// Force edit mode whenever we're on /person/new — the preview pane
+// has nothing to show yet.
+watch(isCreate, v => { if (v) mode.value = 'edit' }, { immediate: true })
+
+function onCreated(newSlug: string) {
+  void router.replace(`/person/${newSlug}`)
+}
+
 /** Captures ?expandEvent=... from the router once so the editor can latch
  *  onto it even after we strip the query param. */
 const pendingExpandEvent = ref<string | null>(null)

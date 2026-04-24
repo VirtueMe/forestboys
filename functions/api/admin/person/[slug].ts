@@ -31,6 +31,77 @@ interface PersonRow {
 
 const PERSON_TYPES = new Set(['civilian', 'soldier'])
 
+/**
+ * POST /api/admin/person/new — create a new Person with all scalar fields
+ * in one shot. Body must include { slug, canonicalName } plus any optional
+ * fields. Returns { ok, slug } so the client can navigate to /person/:slug.
+ *
+ * The URL slug is always the sentinel `new`; the real slug comes from
+ * the body. Collision is scoped to :Person.
+ */
+interface CreateBody {
+  slug?:          unknown
+  canonicalName?: unknown
+  secretName?:    unknown
+  birthYear?:     unknown
+  home?:          unknown
+  type?:          unknown
+}
+
+export const onRequestPost: PagesFunction<Env> = async ({ request, env, params }) => {
+  const guard = await requireAdmin(request, env)
+  if (guard instanceof Response) return guard
+
+  if (String(params.slug) !== 'new') return json({ error: 'POST requires URL slug "new"' }, 400)
+
+  const body = await request.json<CreateBody>().catch(() => null)
+  if (!body) return json({ error: 'Invalid JSON' }, 400)
+
+  const slug = body.slug
+  if (typeof slug !== 'string' || !/^[a-z0-9-]+$/.test(slug)) return json({ error: 'slug må være små bokstaver, tall og bindestrek' }, 400)
+  if (slug === 'new') return json({ error: 'slug "new" er reservert' }, 400)
+  if (typeof body.canonicalName !== 'string' || !body.canonicalName.trim()) return json({ error: 'canonicalName må være en tekst' }, 400)
+
+  const type = typeof body.type === 'string' && PERSON_TYPES.has(body.type) ? body.type : 'civilian'
+
+  let birthYear: number | null = null
+  if (body.birthYear !== null && body.birthYear !== undefined) {
+    if (typeof body.birthYear !== 'number' || !Number.isInteger(body.birthYear)) {
+      return json({ error: 'birthYear must be an integer or null' }, 400)
+    }
+    birthYear = body.birthYear
+  }
+
+  const secretName = typeof body.secretName === 'string' && body.secretName.trim() ? body.secretName.trim() : null
+  const home       = typeof body.home       === 'string' && body.home.trim()       ? body.home.trim()       : null
+
+  try {
+    const [hit] = await runCypher<{ exists: boolean }>(env,
+      `OPTIONAL MATCH (n:Person {slug: $slug}) RETURN n IS NOT NULL AS exists`,
+      { slug })
+    if (hit?.exists) return json({ error: `Slug finnes allerede for en person: ${slug}` }, 409)
+
+    await runCypher(env, `
+      CREATE (p:Person {
+        slug:          $slug,
+        canonicalName: $canonicalName,
+        secretName:    $secretName,
+        home:          $home,
+        birthYear:     $birthYear,
+        type:          $type
+      })
+    `, {
+      slug,
+      canonicalName: body.canonicalName.trim(),
+      secretName, home, birthYear, type,
+    })
+
+    return json({ ok: true, slug })
+  } catch (e) {
+    return json({ error: (e as Error).message }, 502)
+  }
+}
+
 export const onRequestPatch: PagesFunction<Env> = async ({ request, env, params }) => {
   const guard = await requireAdmin(request, env)
   if (guard instanceof Response) return guard

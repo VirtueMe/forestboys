@@ -4,31 +4,35 @@
       ref="scalarEditor"
       :slug="person.slug"
       :saved="person"
+      :create-mode="createMode"
       @saved="out => emit('savedScalar', out)"
+      @created="slug => emit('created', slug)"
     />
 
-    <PersonRanksEditor
-      v-if="person.type === 'soldier'"
-      :slug="person.slug"
-      :saved="heldRanks"
-      :options="rankOptions"
-      @saved="ranks => emit('savedRanks', ranks)"
-    />
+    <template v-if="!createMode">
+      <PersonRanksEditor
+        v-if="person.type === 'soldier'"
+        :slug="person.slug"
+        :saved="heldRanks"
+        :options="rankOptions"
+        @saved="ranks => emit('savedRanks', ranks)"
+      />
 
-    <DescriptionEditor
-      ref="descEditor"
-      :saved="savedSections"
-      :endpoint="`/api/admin/person/${encodeURIComponent(person.slug)}/sections`"
-      @saved="sections => emit('savedSections', sections)"
-    />
+      <DescriptionEditor
+        ref="descEditor"
+        :saved="savedSections"
+        :endpoint="`/api/admin/person/${encodeURIComponent(person.slug)}/sections`"
+        @saved="sections => emit('savedSections', sections)"
+      />
 
-    <PersonRelations
-      mode="edit"
-      :slug="person.slug"
-      :data="data"
-      :pending-expand-event="pendingExpandEvent"
-      :create-event-href="createEventHref"
-    />
+      <PersonRelations
+        mode="edit"
+        :slug="person.slug"
+        :data="data"
+        :pending-expand-event="pendingExpandEvent"
+        :create-event-href="createEventHref"
+      />
+    </template>
   </div>
 </template>
 
@@ -69,6 +73,10 @@ defineProps<{
   savedSections:        Section[]
   data:                 PersonRelationsData
   pendingExpandEvent?:  string | null
+  /** When true, `person.slug === 'new'` and only the scalar editor is
+   *  rendered. Ranks, Beskrivelse, and Relations are hidden (nothing to
+   *  attach to yet). */
+  createMode?:          boolean
   createEventHref?:    (kind: 'incident' | 'operation') => string
 }>()
 
@@ -76,6 +84,7 @@ const emit = defineEmits<{
   savedScalar:   [out: ScalarSaved]
   savedRanks:    [ranks: HeldRank[]]
   savedSections: [sections: Section[]]
+  created:       [slug: string]
 }>()
 
 const scalarEditor = useTemplateRef<{ draft: ScalarDraft; dirty: boolean } | null>('scalarEditor')
