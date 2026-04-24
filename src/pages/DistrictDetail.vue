@@ -6,7 +6,11 @@
     not-found-text="Avdeling ikke funnet."
     page-class="district-detail"
   >
-    <template v-if="unit">
+    <template v-if="unit && isCreate">
+      <UnitCreateForm @created="onCreated" />
+    </template>
+
+    <template v-if="unit && !isCreate">
       <!-- Header -->
       <div class="page-header">
         <RouterLink to="/registre" class="back-link">&#x2039; Tilbake</RouterLink>
@@ -238,8 +242,9 @@
 
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue'
-import { RouterLink } from 'vue-router'
+import { RouterLink, useRoute, useRouter } from 'vue-router'
 import DetailPage from '../components/DetailPage.vue'
+import UnitCreateForm from '../components/district/UnitCreateForm.vue'
 import { neo4jQuery } from '../composables/useNeo4j.ts'
 import { blocksToHtml } from '../utils/portableText.ts'
 import ImageSlider, { type SlideImage } from '../components/ImageSlider.vue'
@@ -275,6 +280,14 @@ interface Parent {
   description: string | null
   sourceRefs: string[] | null
   order: number
+}
+
+const route  = useRoute()
+const router = useRouter()
+const isCreate = computed(() => String(route.params.slug) === 'new')
+
+function onCreated(newSlug: string) {
+  void router.replace(`/district/${newSlug}`)
 }
 
 const unit        = ref<UnitNode | null>(null)
@@ -378,6 +391,16 @@ function resetUnit() {
 
 async function loadUnit(slug: string) {
   unitSlug.value = slug
+  // Create mode — `/district/new` lands here before the node exists.
+  // Populate with a blank skeleton so DetailPage doesn't render the
+  // "ikke funnet" state; skip all section fetches.
+  if (slug === 'new') {
+    unit.value = {
+      name: '', formalName: null, type: null,
+      foundedDate: null, dissolvedDate: null, country: null,
+    }
+    return
+  }
   try {
     const [unitRows, descRows, parentRows, subUnitRows, memberRows, eventRows, courseRows, refRows, galleryRows] = await Promise.all([
       neo4jQuery<UnitNode>(

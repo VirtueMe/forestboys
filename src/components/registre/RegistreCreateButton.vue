@@ -112,15 +112,19 @@ watch(name, v => {
 
 function pick(k: Kind) {
   open.value = false
-  // Organization and Person use the in-page create flow on /<type>/new;
-  // the rest still go through the modal until their pages get the same
-  // treatment.
+  // Organization / Person / Avdeling use the in-page create flow on
+  // /<type>/new; the rest still go through the modal until their pages
+  // get the same treatment.
   if (k === 'organization') {
     router.push('/organization/new')
     return
   }
   if (k === 'person') {
     router.push('/person/new')
+    return
+  }
+  if (k === 'unit') {
+    router.push('/district/new')
     return
   }
   kind.value = k
