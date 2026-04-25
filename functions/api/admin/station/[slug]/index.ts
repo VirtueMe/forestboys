@@ -4,8 +4,12 @@
  * optional type and coordinates. Returns { ok, slug } so the client
  * can navigate to /station/:slug.
  *
- * The URL slug is always the sentinel `new`; the real slug comes from
- * the body. Collision is scoped to :Station.
+ * PATCH /api/admin/station/:slug — update scalar fields on an existing
+ * Station. Body fields are all optional; only included fields are
+ * written. Mirror of the Organization PATCH.
+ *
+ * The URL slug is always the sentinel `new` for POST; the real slug
+ * comes from the body. Collision is scoped to :Station.
  */
 
 import { requireAdmin } from '~/_lib/require-admin.ts'
@@ -71,6 +75,85 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env, params }
     })
 
     return json({ ok: true, slug })
+  } catch (e) {
+    return json({ error: (e as Error).message }, 502)
+  }
+}
+
+interface PatchBody {
+  name?:       string
+  type?:       string | null
+  lat?:        number | null
+  lng?:        number | null
+  activeFrom?: string | null
+  activeTo?:   string | null
+}
+
+function isStringOrNull(v: unknown): v is string | null {
+  return v === null || typeof v === 'string'
+}
+
+function isDateOrNull(v: unknown): v is string | null {
+  if (v === null) return true
+  return typeof v === 'string' && /^\d{4}(-\d{2}(-\d{2})?)?$/.test(v)
+}
+
+export const onRequestPatch: PagesFunction<Env> = async ({ request, env, params }) => {
+  const guard = await requireAdmin(request, env)
+  if (guard instanceof Response) return guard
+
+  const slug = String(params.slug)
+  const body = await request.json<PatchBody>().catch(() => null)
+  if (!body) return json({ error: 'Invalid JSON' }, 400)
+
+  if (body.name !== undefined && (typeof body.name !== 'string' || !body.name.trim())) {
+    return json({ error: 'name must be a non-empty string' }, 400)
+  }
+  if (body.type !== undefined && !isStringOrNull(body.type)) {
+    return json({ error: 'type must be a string or null' }, 400)
+  }
+  for (const f of ['lat', 'lng'] as const) {
+    const v = body[f]
+    if (v !== undefined && v !== null && (typeof v !== 'number' || !Number.isFinite(v))) {
+      return json({ error: `${f} must be a number or null` }, 400)
+    }
+  }
+  for (const f of ['activeFrom', 'activeTo'] as const) {
+    if (body[f] !== undefined && !isDateOrNull(body[f])) {
+      return json({ error: `${f} must be YYYY, YYYY-MM, YYYY-MM-DD, or null` }, 400)
+    }
+  }
+
+  const setClauses: string[] = []
+  const params2: Record<string, unknown> = { slug }
+
+  if (body.name       !== undefined) { setClauses.push('s.canonicalName = $canonicalName'); params2.canonicalName = body.name.trim() }
+  if (body.type       !== undefined) { setClauses.push('s.type       = $type');       params2.type       = typeof body.type === 'string' ? (body.type.trim() || null) : body.type }
+  if (body.lat        !== undefined) { setClauses.push('s.lat        = $lat');        params2.lat        = body.lat }
+  if (body.lng        !== undefined) { setClauses.push('s.lng        = $lng');        params2.lng        = body.lng }
+  if (body.activeFrom !== undefined) { setClauses.push('s.activeFrom = $activeFrom'); params2.activeFrom = body.activeFrom }
+  if (body.activeTo   !== undefined) { setClauses.push('s.activeTo   = $activeTo');   params2.activeTo   = body.activeTo }
+
+  if (!setClauses.length) return json({ ok: true, unchanged: true })
+
+  try {
+    const [updated] = await runCypher<{
+      name: string | null; type: string | null;
+      lat: number | null; lng: number | null;
+      activeFrom: string | null; activeTo: string | null;
+    }>(env, `
+      MATCH (s:Station {slug: $slug})
+      SET ${setClauses.join(', ')}
+      RETURN coalesce(s.canonicalName, s.title) AS name,
+             s.type        AS type,
+             s.lat         AS lat,
+             s.lng         AS lng,
+             s.activeFrom  AS activeFrom,
+             s.activeTo    AS activeTo
+    `, params2)
+
+    if (!updated) return json({ error: 'Station not found' }, 404)
+    return json({ ok: true, ...updated })
   } catch (e) {
     return json({ error: (e as Error).message }, 502)
   }

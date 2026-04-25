@@ -1,374 +1,117 @@
 <template>
-  <div class="station-detail">
-    <StationCreateForm v-if="isCreate" @created="onCreated" />
-    <div v-else-if="loading" class="status">Laster…</div>
-    <div v-else-if="!item" class="status">Stasjon ikke funnet.</div>
+  <DetailPage
+    :load="loadStation"
+    :reset="resetStation"
+    :not-found="!station"
+    not-found-text="Stasjon ikke funnet."
+    page-class="station-detail"
+  >
+    <template v-if="station">
+      <StationHeader
+        :name="displayName"
+        :type="displayType"
+        :active-from="displayActiveFrom"
+        :active-to="displayActiveTo"
+        :lat="displayLat"
+        :lng="displayLng"
+      />
 
-    <template v-else>
-      <!-- Hero image -->
-      <div v-if="heroUrl" class="hero">
-        <img :src="heroUrl" :alt="item.title" class="hero-img" />
-      </div>
+      <AdminViewTabs v-model="mode" />
 
-      <!-- Header -->
-      <div class="page-header">
-        <RouterLink to="/registre" class="back-link">&#x2039; Tilbake</RouterLink>
-        <h1 class="item-title">{{ item.title }}</h1>
-        <p v-if="item.type" class="item-meta">{{ item.type }}</p>
-      </div>
+      <StationEditPane
+        v-show="mode === 'edit'"
+        ref="editPane"
+        :slug="stationSlug"
+        :station="station"
+        :saved-sections="savedSections"
+        :create-mode="isCreate"
+        :pending-description="pendingDescription"
+        @saved-scalar="onScalarSaved"
+        @saved-sections="onSectionsSaved"
+        @created="onCreated"
+      />
 
-      <!-- Beskrivelse -->
-      <section v-if="item.description" class="section">
-        <h3 class="section-heading">Beskrivelse</h3>
-        <LegacyDescription :text="item.description" />
-      </section>
-
-      <!-- Hendelser -->
-      <section v-if="item.events?.length" class="section">
-        <div class="section-header-row">
-          <h3 class="section-heading">Hendelser som skjedde her ({{ item.events.length }})</h3>
-          <button class="sort-btn" @click="eventSortAsc = !eventSortAsc">
-            Dato {{ eventSortAsc ? '↑' : '↓' }}
-          </button>
-        </div>
-        <div class="link-list">
-          <RouterLink
-            v-for="event in sortedEvents"
-            :key="event.slug"
-            :to="`/events/${event.slug}`"
-            class="event-item"
-          >
-            <span class="event-date">{{ formatDate(event.date) }}</span>
-            <span class="event-title">{{ event.title }}</span>
-          </RouterLink>
-        </div>
-      </section>
-
-      <!-- Deltakere -->
-      <section v-if="item.people?.length" class="section">
-        <h3 class="section-heading">Deltakere her ({{ item.people.length }})</h3>
-        <div class="link-list">
-          <RouterLink
-            v-for="person in item.people"
-            :key="person.slug"
-            :to="`/person/${person.slug}`"
-            class="section-link"
-          >
-            {{ person.name }}
-          </RouterLink>
-        </div>
-      </section>
-
-      <!-- Galleri -->
-      <section v-if="item.gallery?.length" class="section">
-        <h3 class="section-heading">Galleri</h3>
-        <div class="carousel">
-          <button v-if="item.gallery.length > 1" class="carousel-btn" @click="prevImage">&#x2039;</button>
-          <img
-            :src="currentImageUrl"
-            :alt="`${item.title} bilde ${currentImageIndex + 1}`"
-            class="carousel-img"
-          />
-          <button v-if="item.gallery.length > 1" class="carousel-btn" @click="nextImage">&#x203a;</button>
-        </div>
-        <p v-if="item.gallery.length > 1" class="carousel-count">
-          {{ currentImageIndex + 1 }} / {{ item.gallery.length }}
-        </p>
-        <p v-if="currentCaption" class="carousel-caption">{{ currentCaption }}</p>
-      </section>
-
-      <!-- Video -->
-      <section v-if="item.movie" class="section">
-        <h3 class="section-heading">Video</h3>
-        <video controls class="video-player">
-          <source :src="item.movie" type="video/mp4" />
-        </video>
-      </section>
-
-      <!-- Lenker -->
-      <section v-if="item.links?.length" class="section">
-        <h3 class="section-heading">Nyttige lenker</h3>
-        <div class="link-list">
-          <a
-            v-for="link in item.links"
-            :key="link.url"
-            :href="link.url"
-            target="_blank"
-            rel="noopener noreferrer"
-            class="ext-link"
-          >{{ link.title || link.url }} <span class="ext-icon">↗</span></a>
-        </div>
-      </section>
+      <StationViewPane
+        :preview-sections="previewSections"
+        :legacy-description="station.description"
+        :legacy-links-json="station.links"
+        :people="people"
+        :events="events"
+        :external-refs="externalRefs"
+        :gallery-images="galleryImages"
+        :hide-editable="mode === 'edit'"
+      />
     </template>
-  </div>
+  </DetailPage>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
-import { useRoute, useRouter, RouterLink } from 'vue-router'
-import { useLocationCache } from '../composables/useLocationCache.ts'
-import { SANITY_IMG } from '../config/sanity.ts'
-import LegacyDescription from '../components/LegacyDescription.vue'
-import StationCreateForm from '../components/station/StationCreateForm.vue'
+import { computed, useTemplateRef } from 'vue'
+import { useStationData, type StationNode } from '../composables/useStationData.ts'
+import { useDetailCreateMode } from '../composables/useDetailCreateMode.ts'
+import DetailPage from '../components/DetailPage.vue'
+import AdminViewTabs from '../components/AdminViewTabs.vue'
+import type { Section } from '../components/SectionsEditor.vue'
+import StationHeader   from '../components/station/StationHeader.vue'
+import StationEditPane from '../components/station/StationEditPane.vue'
+import StationViewPane from '../components/station/StationViewPane.vue'
+import type { StationDraft } from '../components/station/StationScalarEditor.vue'
 
-const route  = useRoute()
-const router = useRouter()
-const { stations, loading, init } = useLocationCache()
+const { slug: stationSlug, isCreate, mode, pendingDescription, onCreated, clearPending } =
+  useDetailCreateMode({ kind: 'station', pathPrefix: '/station' })
 
-const isCreate = computed(() => String(route.params.slug) === 'new')
-
-function onCreated(newSlug: string) {
-  void router.replace(`/station/${newSlug}`)
+function onSectionsSaved(sections: Section[]) {
+  savedSections.value = sections
+  clearPending()
 }
 
-onMounted(async () => { if (!isCreate.value) await init() })
+const {
+  station, savedSections,
+  people, events, externalRefs, galleryImages,
+  loadStation, resetStation,
+} = useStationData()
 
-const item = computed(() =>
-  stations.value.find(s => s.slug === (route.params.slug as string)) ?? null,
+const editPane = useTemplateRef<{
+  scalarDraft: StationDraft | null
+  scalarDirty: boolean
+  descDraft:   Section[]
+  descDirty:   boolean
+} | null>('editPane')
+
+function onScalarSaved(out: Partial<StationNode>) {
+  if (!station.value) return
+  if (out.name       !== undefined) station.value.name       = out.name ?? ''
+  if (out.type       !== undefined) station.value.type       = out.type       ?? null
+  if (out.lat        !== undefined) station.value.lat        = out.lat        ?? null
+  if (out.lng        !== undefined) station.value.lng        = out.lng        ?? null
+  if (out.activeFrom !== undefined) station.value.activeFrom = out.activeFrom ?? null
+  if (out.activeTo   !== undefined) station.value.activeTo   = out.activeTo   ?? null
+}
+
+function pickStr(field: keyof StationDraft, fallback: string | null | undefined): string {
+  const ed = editPane.value
+  if (ed?.scalarDirty && ed.scalarDraft) return ed.scalarDraft[field]
+  return fallback ?? ''
+}
+function pickCoord(field: 'lat' | 'lng', fallback: number | null | undefined): number | null {
+  const ed = editPane.value
+  if (ed?.scalarDirty && ed.scalarDraft) {
+    const t = ed.scalarDraft[field].trim()
+    if (!t) return null
+    const n = Number(t)
+    return Number.isFinite(n) ? n : null
+  }
+  return fallback ?? null
+}
+
+const displayName       = computed(() => pickStr('name',       station.value?.name))
+const displayType       = computed(() => pickStr('type',       station.value?.type))
+const displayActiveFrom = computed(() => pickStr('activeFrom', station.value?.activeFrom))
+const displayActiveTo   = computed(() => pickStr('activeTo',   station.value?.activeTo))
+const displayLat        = computed(() => pickCoord('lat', station.value?.lat))
+const displayLng        = computed(() => pickCoord('lng', station.value?.lng))
+
+const previewSections = computed<Section[]>(() =>
+  editPane.value?.descDirty ? editPane.value.descDraft : savedSections.value,
 )
-
-const heroUrl = computed<string | null>(() => {
-  const thumb = item.value?.thumbnailUrl
-  if (!thumb) return null
-  return thumb.replace(/\?.*$/, '') + '?w=900&h=500&fit=crop&auto=format'
-})
-
-const MONTHS = ['januar','februar','mars','april','mai','juni','juli','august','september','oktober','november','desember']
-
-function formatDate(iso?: string): string {
-  if (!iso) return '–'
-  const [y, m, d] = iso.split('-').map(Number)
-  return `${d}. ${MONTHS[m - 1]} ${y}`
-}
-
-const eventSortAsc = ref(true)
-
-const sortedEvents = computed(() => {
-  const evts = [...(item.value?.events ?? [])]
-  return eventSortAsc.value
-    ? evts.sort((a, b) => (a.date ?? '').localeCompare(b.date ?? ''))
-    : evts.sort((a, b) => (b.date ?? '').localeCompare(a.date ?? ''))
-})
-
-const currentImageIndex = ref(0)
-
-const currentImageUrl = computed<string>(() => {
-  const g = item.value?.gallery
-  if (!g?.length) return ''
-  const assetRef = (g[currentImageIndex.value].asset as { _ref: string })._ref
-  const path = assetRef.replace(/^image-/, '').replace(/-([a-z]+)$/, '.$1')
-  return `${SANITY_IMG}/${path}?w=900&auto=format`
-})
-
-const currentCaption = computed<string | null>(() =>
-  item.value?.gallery?.[currentImageIndex.value]?.caption ?? null,
-)
-
-function prevImage() {
-  const len = item.value?.gallery?.length ?? 0
-  currentImageIndex.value = (currentImageIndex.value - 1 + len) % len
-}
-
-function nextImage() {
-  const len = item.value?.gallery?.length ?? 0
-  currentImageIndex.value = (currentImageIndex.value + 1) % len
-}
 </script>
-
-<style scoped>
-.station-detail {
-  flex: 1;
-  min-height: 0;
-  overflow-y: auto;
-  background: var(--paper);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-}
-
-.station-detail > * {
-  width: 100%;
-  max-width: 1320px;
-}
-
-.status {
-  padding: 48px 20px;
-  text-align: center;
-  font-size: 13px;
-  color: var(--muted);
-}
-
-.hero { width: 100%; overflow: hidden; }
-
-.hero-img {
-  width: 100%;
-  height: 340px;
-  object-fit: cover;
-  object-position: center 20%;
-  display: block;
-}
-
-.page-header {
-  padding: 14px 16px 12px;
-  background: var(--paper-raised);
-  border-bottom: 1px solid var(--rule);
-}
-
-.back-link {
-  display: inline-block;
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--focus);
-  text-decoration: none;
-  margin-bottom: 10px;
-}
-.back-link:hover { text-decoration: underline; }
-
-.item-title {
-  font-size: 22px;
-  font-weight: 700;
-  color: var(--ink);
-  margin: 0 0 4px;
-  line-height: 1.25;
-}
-
-.item-meta {
-  font-size: 12px;
-  color: var(--muted);
-  margin: 0;
-}
-
-.section {
-  padding: 12px 16px;
-  border-bottom: 1px solid var(--rule);
-  background: var(--paper-raised);
-}
-
-.section-header-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 8px;
-}
-
-.section-heading {
-  font-size: 10px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.07em;
-  color: var(--muted);
-  margin: 0;
-}
-
-.sort-btn {
-  background: none;
-  border: 1px solid var(--rule);
-  border-radius: 4px;
-  font-size: 11px;
-  font-weight: 600;
-  color: var(--muted);
-  padding: 2px 8px;
-  cursor: pointer;
-}
-.sort-btn:hover { border-color: var(--focus); color: var(--focus); }
-
-.link-list { display: flex; flex-direction: column; gap: 2px; }
-
-.section-link {
-  display: block;
-  font-size: 13px;
-  color: var(--focus);
-  text-decoration: none;
-  padding: 2px 0;
-}
-.section-link:hover { text-decoration: underline; }
-
-.event-item {
-  display: flex;
-  align-items: baseline;
-  gap: 10px;
-  padding: 6px 8px;
-  margin: 0 -8px;
-  text-decoration: none;
-  color: var(--ink);
-  border-bottom: 1px solid var(--rule);
-  border-radius: 4px;
-  transition: background 0.1s;
-}
-.event-item:last-child { border-bottom: none; }
-.event-item:hover { background: var(--paper); }
-.event-item:hover .event-title { text-decoration: underline; }
-
-.event-date {
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--ink);
-  font-variant-numeric: tabular-nums;
-  white-space: nowrap;
-  flex-shrink: 0;
-}
-
-.event-title {
-  font-size: 13px;
-  color: var(--focus);
-  flex: 1;
-  min-width: 0;
-}
-
-.ext-link {
-  display: block;
-  font-size: 13px;
-  color: var(--focus);
-  text-decoration: none;
-  padding: 2px 0;
-  word-break: break-all;
-}
-.ext-link:hover { text-decoration: underline; }
-.ext-icon { font-size: 11px; opacity: 0.6; }
-
-.carousel { display: flex; align-items: center; gap: 8px; }
-
-.carousel-img {
-  flex: 1;
-  width: 100%;
-  max-height: 320px;
-  object-fit: contain;
-  display: block;
-  border-radius: 4px;
-  background: var(--rule);
-}
-
-.carousel-btn {
-  background: none;
-  border: 1px solid var(--rule);
-  border-radius: 50%;
-  width: 32px;
-  height: 32px;
-  font-size: 20px;
-  color: var(--focus);
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  line-height: 1;
-}
-.carousel-btn:hover { border-color: var(--rule); }
-
-.carousel-count {
-  font-size: 11px;
-  color: var(--muted);
-  text-align: center;
-  margin: 6px 0 0;
-}
-
-.carousel-caption {
-  font-size: 12px;
-  color: var(--muted);
-  text-align: center;
-  margin: 4px 0 0;
-  font-style: italic;
-}
-
-.video-player { width: 100%; border-radius: 4px; display: block; }
-</style>
