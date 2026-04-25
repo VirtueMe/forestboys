@@ -19,7 +19,7 @@
 import { ref } from 'vue'
 import type { Section } from '@/components/SectionsEditor.vue'
 
-export type PendingKind = 'organization' | 'person'
+export type PendingKind = 'organization' | 'person' | 'unit' | 'station' | 'transport'
 
 export interface PendingDescription {
   kind:     PendingKind
