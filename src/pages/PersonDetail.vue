@@ -7,22 +7,22 @@
     page-class="person-page"
   >
     <div v-if="person && neo4jPerson" itemscope itemtype="https://schema.org/Person">
-      <!-- Identity strip — always visible above the tabs, hidden in create mode. -->
-      <template v-if="!isCreate">
-        <DetailHero :image-url="heroUrl" :alt="person.name" :placeholder="personInitials" itemprop="image" />
-        <PersonHeader
-          :title="personTitle"
-          :secret-name="person.secretName"
-          :birth-year="person.birthYear ?? null"
-          :home="person.home"
-        />
-        <PersonRanksPreview v-if="person.type === 'soldier'" :ranks="heldRanks" />
-      </template>
+      <!-- Identity strip — header + ranks preview overlay the in-progress
+           scalar draft via PersonScalarEditor.defineExpose, so they
+           render meaningfully even on /person/new. -->
+      <DetailHero :image-url="heroUrl" :alt="person.name" :placeholder="personInitials" itemprop="image" />
+      <PersonHeader
+        :title="personTitle"
+        :secret-name="person.secretName"
+        :birth-year="person.birthYear ?? null"
+        :home="person.home"
+      />
+      <PersonRanksPreview v-if="person.type === 'soldier'" :ranks="heldRanks" />
 
-      <AdminViewTabs v-if="!isCreate" v-model="mode" />
+      <AdminViewTabs v-model="mode" />
 
       <PersonEditPane
-        v-if="mode === 'edit'"
+        v-show="mode === 'edit'"
         ref="editPane"
         :person="neo4jPerson"
         :held-ranks="heldRanks"
@@ -31,15 +31,16 @@
         :data="relationsData"
         :pending-expand-event="pendingExpandEvent"
         :create-mode="isCreate"
+        :pending-description="pendingDescription"
         :create-event-href="createEventHref"
         @saved-scalar="onScalarSaved"
         @saved-ranks="ranks => heldRanks = ranks"
-        @saved-sections="sections => savedSections = sections"
+        @saved-sections="onSectionsSaved"
         @created="onCreated"
       />
 
       <PersonViewPane
-        v-else-if="!isCreate"
+        v-show="mode !== 'edit'"
         :person="person"
         :preview-sections="previewSections"
         :relations="relationsData"
@@ -57,6 +58,7 @@ import { ref, computed, watch, useTemplateRef, onMounted, onBeforeUnmount } from
 import { useRoute, useRouter } from 'vue-router'
 import { useLocationCache } from '../composables/useLocationCache.ts'
 import { usePersonData } from '../composables/usePersonData.ts'
+import { consumePendingDescription, type PendingDescription } from '../composables/usePendingDescription.ts'
 import DetailPage from '../components/DetailPage.vue'
 import AdminViewTabs, { type AdminViewMode } from '../components/AdminViewTabs.vue'
 import type { Section } from '../components/SectionsEditor.vue'
@@ -89,8 +91,26 @@ const isCreate = computed(() => String(route.params.slug) === 'new')
 // has nothing to show yet.
 watch(isCreate, v => { if (v) mode.value = 'edit' }, { immediate: true })
 
+/** A description draft from a previous create attempt that failed to
+ *  PATCH /sections. Consumed once on slug change; if matched, force
+ *  edit mode so the user immediately sees the recovered draft. */
+const pendingDescription = ref<PendingDescription | null>(null)
+watch(() => String(route.params.slug), (slug) => {
+  const p = consumePendingDescription('person', slug)
+  if (p) {
+    pendingDescription.value = p
+    mode.value = 'edit'
+  }
+}, { immediate: true })
+
 function onCreated(newSlug: string) {
   void router.replace(`/person/${newSlug}`)
+}
+
+function onSectionsSaved(sections: Section[]) {
+  savedSections.value = sections
+  // Successful save clears any recovery banner.
+  pendingDescription.value = null
 }
 
 /** Captures ?expandEvent=... from the router once so the editor can latch

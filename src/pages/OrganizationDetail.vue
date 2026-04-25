@@ -8,7 +8,6 @@
   >
     <template v-if="org">
       <OrganizationHeader
-        v-if="!isCreate"
         :name="displayName"
         :abbreviation="displayAbbreviation"
         :formal-name="displayFormalName"
@@ -18,10 +17,10 @@
         :country="displayCountry"
       />
 
-      <AdminViewTabs v-if="!isCreate" v-model="mode" />
+      <AdminViewTabs v-model="mode" />
 
       <OrganizationEditPane
-        v-if="mode === 'edit'"
+        v-show="mode === 'edit'"
         ref="editPane"
         :slug="orgSlug"
         :org="org"
@@ -33,18 +32,20 @@
         :incident-entries="incidentEntries"
         :incident-targets="incidentTargets"
         :create-mode="isCreate"
+        :pending-description="pendingDescription"
         :create-event-href="createEventHref"
         @saved-scalar="onScalarSaved"
-        @saved-sections="sections => savedSections = sections"
+        @saved-sections="onSectionsSaved"
         @created="onCreated"
       />
 
       <!-- Always-visible read-only sections. The editable ones
            (Beskrivelse, Underavdelinger, Operasjoner, Hendelser) hide in
            edit mode; the rest (Galleri, Deltakere, Lenker) stay visible.
-           In create mode there's nothing to show yet. -->
+           In create mode the data refs are mostly empty so most sections
+           naturally collapse via their own v-if; the header + Beskrivelse
+           preview reflect the in-progress draft via the editor overlays. -->
       <OrganizationViewPane
-        v-if="!isCreate"
         :preview-sections="previewSections"
         :unit-entries="unitEntries"
         :operation-entries="operationEntries"
@@ -62,6 +63,7 @@
 import { computed, useTemplateRef, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useOrganizationData, type OrgNode } from '../composables/useOrganizationData.ts'
+import { consumePendingDescription, type PendingDescription } from '../composables/usePendingDescription.ts'
 import DetailPage from '../components/DetailPage.vue'
 import AdminViewTabs, { type AdminViewMode } from '../components/AdminViewTabs.vue'
 import { ref } from 'vue'
@@ -81,8 +83,26 @@ const mode    = ref<AdminViewMode>('preview')
 // has nothing to show yet.
 watch(isCreate, v => { if (v) mode.value = 'edit' }, { immediate: true })
 
+/** A description draft from a previous create attempt that failed to
+ *  PATCH /sections. Consumed once on slug change; if matched, force
+ *  edit mode so the user immediately sees the recovered draft. */
+const pendingDescription = ref<PendingDescription | null>(null)
+watch(orgSlug, (slug) => {
+  const p = consumePendingDescription('organization', slug)
+  if (p) {
+    pendingDescription.value = p
+    mode.value = 'edit'
+  }
+}, { immediate: true })
+
 function onCreated(newSlug: string) {
   void router.replace(`/organization/${newSlug}`)
+}
+
+function onSectionsSaved(sections: Section[]) {
+  savedSections.value = sections
+  // Successful save clears any recovery banner.
+  pendingDescription.value = null
 }
 
 // Neo4j data layer.

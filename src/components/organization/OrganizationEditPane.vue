@@ -6,17 +6,20 @@
       :saved="org"
       :create-mode="createMode"
       @saved="out => emit('savedScalar', out)"
-      @created="slug => emit('created', slug)"
+      @created="onScalarCreated"
+    />
+
+    <DescriptionEditor
+      ref="descEditor"
+      :saved="savedSections"
+      :endpoint="`/api/admin/organization/${encodeURIComponent(slug)}/sections`"
+      :hide-save="createMode"
+      :initial-dirty-draft="pendingDescription?.sections"
+      :external-error="pendingDescription?.error ?? null"
+      @saved="sections => emit('savedSections', sections)"
     />
 
     <template v-if="!createMode">
-      <DescriptionEditor
-        ref="descEditor"
-        :saved="savedSections"
-        :endpoint="`/api/admin/organization/${encodeURIComponent(slug)}/sections`"
-        @saved="sections => emit('savedSections', sections)"
-      />
-
       <OrganizationUnitsEditor
         :slug="slug"
         :entries="unitEntries"
@@ -85,6 +88,8 @@ import { OrgOperationsStrategy, OrgIncidentsStrategy } from '@/components/relati
 import type { Section } from '@/components/SectionsEditor.vue'
 import type { OrgNode } from '@/composables/useOrganizationData.ts'
 import type { RelationEntry, RelationTarget } from '@/components/relation/RelationStrategy.ts'
+import { authFetch } from '@/composables/useAuth.ts'
+import { stashPendingDescription, type PendingDescription } from '@/composables/usePendingDescription.ts'
 
 defineProps<{
   slug:              string
@@ -96,10 +101,16 @@ defineProps<{
   operationTargets:  RelationTarget[]
   incidentEntries:   RelationEntry[]
   incidentTargets:   RelationTarget[]
-  /** When true, `slug` is the sentinel `new` and the scalar editor is
-   *  in create mode. Description + relation editors are hidden (nothing
-   *  to attach to yet). */
+  /** When true, `slug` is the sentinel `new`. The Description editor
+   *  stays visible (with its save bar hidden); the unit/operation/
+   *  incident editors are hidden — they can't attach to a non-existent
+   *  node. The scalar editor's Opprett triggers create + sections PATCH
+   *  in sequence. */
   createMode?:       boolean
+  /** A description draft that failed to save during a previous create
+   *  attempt for this slug. Seeded into the editor as dirty so the user
+   *  can retry without retyping. */
+  pendingDescription?: PendingDescription | null
   /** Returns the `/events/new?...#new` href used by the "+ Opprett ny"
    *  link inside the operation/incident pickers. */
   createEventHref?: (kind: 'incident' | 'operation') => string
@@ -120,6 +131,47 @@ defineExpose({
   get descDraft():   Section[]       { return descEditor.value?.draft ?? [] },
   get descDirty():   boolean         { return descEditor.value?.dirty ?? false },
 })
+
+/** Chained save during entity creation: after the scalar POST returns
+ *  the new slug, persist the description draft (if non-empty) via the
+ *  same /sections endpoint the editor would normally hit. On failure
+ *  we stash the draft so the destination page can recover it — the
+ *  navigation still happens because the entity itself exists. */
+async function onScalarCreated(newSlug: string) {
+  const sections = descEditor.value?.draft ?? []
+  if (sections.length) {
+    try {
+      const res = await authFetch(`/api/admin/organization/${encodeURIComponent(newSlug)}/sections`, {
+        method:  'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify({
+          sections: sections
+            .slice()
+            .sort((a, b) => a.order - b.order)
+            .map(s => ({
+              order:         s.order,
+              content:       s.content,
+              citations:     s.citations.map(c => ({ inline: c.inline, sourceId: c.source.id })),
+              sourcedFromId: s.sourcedFrom?.id ?? null,
+            })),
+        }),
+      })
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({})) as { error?: string }
+        stashPendingDescription({
+          kind: 'organization', slug: newSlug, sections,
+          error: `Kunne ikke lagre beskrivelse: ${body.error ?? `HTTP ${res.status}`}`,
+        })
+      }
+    } catch (e) {
+      stashPendingDescription({
+        kind: 'organization', slug: newSlug, sections,
+        error: `Kunne ikke lagre beskrivelse: ${(e as Error).message}`,
+      })
+    }
+  }
+  emit('created', newSlug)
+}
 </script>
 
 <style scoped>

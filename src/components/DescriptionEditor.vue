@@ -4,14 +4,14 @@
     <SectionsEditor :sections="draft" />
   </section>
 
-  <footer v-if="dirty" class="edit-save-bar">
+  <footer v-if="!hideSave && dirty" class="edit-save-bar">
     <span class="edit-save-prompt">Ser det bra ut?</span>
     <button type="button" class="edit-btn-primary" :disabled="saving" @click="save">
       {{ saving ? 'Lagrer…' : 'Lagre' }}
     </button>
     <button type="button" class="edit-link-revert" :disabled="saving" @click="revert">Angre</button>
   </footer>
-  <div v-if="error" class="edit-save-error">{{ error }}</div>
+  <div v-if="displayError" class="edit-save-error">{{ displayError }}</div>
 </template>
 
 <script setup lang="ts">
@@ -36,6 +36,19 @@ const props = withDefaults(defineProps<{
   endpoint: string
   /** Heading shown above the editor. */
   label?:   string
+  /** Hide the internal save bar — used during entity creation when the
+   *  parent owns the save sequencing (POST entity → PATCH sections). */
+  hideSave?: boolean
+  /** Optional starting draft different from `saved`. When present, the
+   *  editor mounts with `draft = initialDirtyDraft` and `baseline = saved`,
+   *  so it shows up as dirty on first render. Used to seed the editor
+   *  with a draft that failed to save during create — the user then
+   *  retries via the normal save flow. */
+  initialDirtyDraft?: Section[]
+  /** Optional error message rendered alongside any internal error.
+   *  Used to surface a "couldn't save during create" notice from the
+   *  parent so the user knows why the editor opened pre-filled-and-dirty. */
+  externalError?: string | null
 }>(), {
   label: 'Beskrivelse',
 })
@@ -71,9 +84,47 @@ function snapshot() {
   baseline.value = props.saved.map(cloneSection)
   error.value    = null
 }
-watch(() => props.saved, snapshot, { immediate: true, deep: true })
+
+// Mount: if the parent passed an `initialDirtyDraft`, seed the editor
+// with that draft and keep `baseline` synced to `saved` so it shows as
+// dirty (the user explicitly needs to re-Lagre). Otherwise it's the
+// usual saved → draft sync.
+const holdingRecoveredDraft = ref(props.initialDirtyDraft != null)
+if (holdingRecoveredDraft.value) {
+  draft.value    = props.initialDirtyDraft!.map(cloneSection)
+  baseline.value = props.saved.map(cloneSection)
+} else {
+  snapshot()
+}
+
+// While holding a recovered draft, don't let `saved` updates clobber
+// the user's unsaved work — only update baseline so dirty signature
+// compares correctly. After a successful save, the flag flips and the
+// normal saved→draft sync resumes.
+watch(() => props.saved, () => {
+  if (holdingRecoveredDraft.value) {
+    baseline.value = props.saved.map(cloneSection)
+  } else {
+    snapshot()
+  }
+}, { deep: true })
+
+// Late-arriving recovery: the editor stays mounted across the
+// /<kind>/new → /<kind>/<slug> navigation, so `initialDirtyDraft`
+// may flip from null → sections after mount. Seed the draft when that
+// happens (and only then — same prop transitioning back to null after
+// a successful save shouldn't wipe the draft).
+watch(() => props.initialDirtyDraft, (v, prev) => {
+  if (v && !prev) {
+    holdingRecoveredDraft.value = true
+    draft.value    = v.map(cloneSection)
+    baseline.value = props.saved.map(cloneSection)
+  }
+})
 
 const dirty = computed(() => signature(draft.value) !== signature(baseline.value))
+
+const displayError = computed(() => error.value ?? props.externalError ?? null)
 
 function revert() {
   draft.value = baseline.value.map(cloneSection)
@@ -106,6 +157,7 @@ async function save() {
     }
     const saved = draft.value.map(cloneSection)
     baseline.value = saved
+    holdingRecoveredDraft.value = false
     emit('saved', saved)
   } catch (e) {
     error.value = (e as Error).message
