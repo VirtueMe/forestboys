@@ -60,49 +60,23 @@
 </template>
 
 <script setup lang="ts">
-import { computed, useTemplateRef, watch } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
+import { computed, useTemplateRef } from 'vue'
 import { useOrganizationData, type OrgNode } from '../composables/useOrganizationData.ts'
-import { consumePendingDescription, type PendingDescription } from '../composables/usePendingDescription.ts'
+import { useDetailCreateMode } from '../composables/useDetailCreateMode.ts'
 import DetailPage from '../components/DetailPage.vue'
-import AdminViewTabs, { type AdminViewMode } from '../components/AdminViewTabs.vue'
-import { ref } from 'vue'
+import AdminViewTabs from '../components/AdminViewTabs.vue'
 import type { Section } from '../components/SectionsEditor.vue'
 import OrganizationHeader   from '../components/organization/OrganizationHeader.vue'
 import OrganizationEditPane from '../components/organization/OrganizationEditPane.vue'
 import OrganizationViewPane from '../components/organization/OrganizationViewPane.vue'
 import type { OrgDraft }    from '../components/organization/OrganizationScalarEditor.vue'
 
-const route   = useRoute()
-const router  = useRouter()
-const orgSlug = computed(() => String(route.params.slug))
-const isCreate = computed(() => orgSlug.value === 'new')
-const mode    = ref<AdminViewMode>('preview')
-
-// Force edit mode whenever we're on /organization/new — the preview pane
-// has nothing to show yet.
-watch(isCreate, v => { if (v) mode.value = 'edit' }, { immediate: true })
-
-/** A description draft from a previous create attempt that failed to
- *  PATCH /sections. Consumed once on slug change; if matched, force
- *  edit mode so the user immediately sees the recovered draft. */
-const pendingDescription = ref<PendingDescription | null>(null)
-watch(orgSlug, (slug) => {
-  const p = consumePendingDescription('organization', slug)
-  if (p) {
-    pendingDescription.value = p
-    mode.value = 'edit'
-  }
-}, { immediate: true })
-
-function onCreated(newSlug: string) {
-  void router.replace(`/organization/${newSlug}`)
-}
+const { slug: orgSlug, isCreate, mode, pendingDescription, onCreated, clearPending } =
+  useDetailCreateMode({ kind: 'organization', pathPrefix: '/organization' })
 
 function onSectionsSaved(sections: Section[]) {
   savedSections.value = sections
-  // Successful save clears any recovery banner.
-  pendingDescription.value = null
+  clearPending()
 }
 
 // Neo4j data layer.

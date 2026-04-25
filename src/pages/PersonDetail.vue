@@ -58,9 +58,9 @@ import { ref, computed, watch, useTemplateRef, onMounted, onBeforeUnmount } from
 import { useRoute, useRouter } from 'vue-router'
 import { useLocationCache } from '../composables/useLocationCache.ts'
 import { usePersonData } from '../composables/usePersonData.ts'
-import { consumePendingDescription, type PendingDescription } from '../composables/usePendingDescription.ts'
+import { useDetailCreateMode } from '../composables/useDetailCreateMode.ts'
 import DetailPage from '../components/DetailPage.vue'
-import AdminViewTabs, { type AdminViewMode } from '../components/AdminViewTabs.vue'
+import AdminViewTabs from '../components/AdminViewTabs.vue'
 import type { Section } from '../components/SectionsEditor.vue'
 import type { ScalarDraft } from '../components/person/PersonScalarEditor.vue'
 import DetailHero          from '../components/DetailHero.vue'
@@ -84,33 +84,12 @@ const {
   loadPerson, resetPerson,
 } = usePersonData()
 
-const mode = ref<AdminViewMode>('preview')
-const isCreate = computed(() => String(route.params.slug) === 'new')
-
-// Force edit mode whenever we're on /person/new — the preview pane
-// has nothing to show yet.
-watch(isCreate, v => { if (v) mode.value = 'edit' }, { immediate: true })
-
-/** A description draft from a previous create attempt that failed to
- *  PATCH /sections. Consumed once on slug change; if matched, force
- *  edit mode so the user immediately sees the recovered draft. */
-const pendingDescription = ref<PendingDescription | null>(null)
-watch(() => String(route.params.slug), (slug) => {
-  const p = consumePendingDescription('person', slug)
-  if (p) {
-    pendingDescription.value = p
-    mode.value = 'edit'
-  }
-}, { immediate: true })
-
-function onCreated(newSlug: string) {
-  void router.replace(`/person/${newSlug}`)
-}
+const { isCreate, mode, pendingDescription, onCreated, clearPending } =
+  useDetailCreateMode({ kind: 'person', pathPrefix: '/person' })
 
 function onSectionsSaved(sections: Section[]) {
   savedSections.value = sections
-  // Successful save clears any recovery banner.
-  pendingDescription.value = null
+  clearPending()
 }
 
 /** Captures ?expandEvent=... from the router once so the editor can latch
