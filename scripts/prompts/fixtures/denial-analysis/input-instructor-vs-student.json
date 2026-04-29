@@ -1,0 +1,25 @@
+{
+  "vars": {
+    "PROPOSAL_JSON": {
+      "entityId": "person-haukelid-knut",
+      "blockPath": "section.biography.block.k7f3",
+      "newValue": {
+        "_type": "block",
+        "children": [
+          { "_type": "span", "text": "Haukelid attended STS-26 as a student during Pulje 4 (March–May 1942), where he received STEN training before continuing to Ringway." }
+        ]
+      }
+    },
+    "JANS_REASON": "Dette er feil — Haukelid var instruktør på STS-26 i denne perioden, ikke elev. Kilden (Linge-rapporten 1942-04) lister ham eksplisitt under 'Pulje 4 instructors' og ikke under elevlisten. Boten har lest 'Pulje 4' og antatt elev-rolle uten å sjekke rolletaggen.",
+    "PRIOR_DENIALS_JSON": [],
+    "SOURCE_CONTEXT_JSON": {
+      "outlineId": "linge-agent",
+      "sectionPath": "training",
+      "body": [
+        "Pulje 4 instructors: Haukelid, Skinnarland, ...",
+        "Pulje 4 students: Anderssen, Berg, Christensen, ..."
+      ]
+    }
+  },
+  "outputFile": "denial-analysis-instructor-vs-student.json"
+}

@@ -10,7 +10,8 @@
     "preview": "vite preview",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
-    "prepare": "husky"
+    "prepare": "husky",
+    "prompts:test": "tsx scripts/prompts/test.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.89.0",
@@ -38,6 +39,8 @@
     "@types/yargs": "^17.0.35",
     "@vitejs/plugin-vue": "^6.0.5",
     "@vue/tsconfig": "^0.9.1",
+    "ajv": "^8.20.0",
+    "ajv-formats": "^3.0.1",
     "eslint": "^10.2.0",
     "eslint-plugin-vue": "^10.8.0",
     "globals": "^17.4.0",

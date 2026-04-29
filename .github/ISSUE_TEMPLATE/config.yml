@@ -1,0 +1,5 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Bot-task issues are auto-created
+    url: https://github.com/${OWNER}/milorg/blob/main/docs/PROPOSALS.md
+    about: The bot-task and bot-deny-analysis templates exist as documentation of what the Cloudflare Functions create. They are not meant to be filed manually — see docs/PROPOSALS.md for the proposal pipeline.

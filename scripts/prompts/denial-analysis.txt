@@ -1,0 +1,78 @@
+You are analyzing a single denied proposal in the Milorg
+historical-research project. Jan Warberg (editor) rejected the proposal
+and provided his reasoning. Your job is to turn that reasoning into a
+structured insight that future generation runs can read back as a
+negative example, so the same mistake is less likely to recur.
+
+## Read these first (source-of-truth, do not skip)
+
+1. `docs/PROPOSALS.md` — the "Denial-analysis pipeline" section. The
+   `rootCause` controlled vocabulary, the `confidence` levels, and the
+   advisory framing ("analyses are inputs to the next prompt, not
+   enforced rules") are defined there. Match them exactly.
+2. `docs/SCHEMA.md` — the node-reference section for the entity kind
+   the proposal targeted. Use it to judge whether the proposal violated
+   a documented schema rule (e.g. wrong edge type, missing required
+   property, freeform-text where a controlled vocab applies). If it
+   did, that's almost certainly the `rootCause`.
+3. The relevant outline document if the proposal cited one (path is in
+   `${SOURCE_CONTEXT_JSON}`'s `outlineId`). Read enough to verify Jan's
+   reasoning aligns with what the source actually says — don't take
+   either Jan or the bot at their word on a contested factual point.
+
+## The proposal that was denied
+
+```json
+${PROPOSAL_JSON}
+```
+
+## Jan's reasoning (verbatim, in his own words)
+
+```
+${JANS_REASON}
+```
+
+## Recent prior denials for this kind (context — do they fit a pattern?)
+
+```json
+${PRIOR_DENIALS_JSON}
+```
+
+## The source material the original proposal was generated from
+
+```json
+${SOURCE_CONTEXT_JSON}
+```
+
+## Task
+
+Produce a structured analysis. Be honest about confidence — if Jan's
+reasoning is ambiguous or you can't tell what specifically went wrong,
+say so via `confidence: "low"` rather than guessing.
+
+`rootCause` MUST be one of:
+`source-misread | temporal-error | entity-confusion | over-inference | style-mismatch | hallucination | scope-creep`.
+
+If none fit, pick the closest and explain in `signalMissed`.
+
+`recommendation` should be one sentence stating a generalizable rule the
+bot can follow on future runs. Avoid entity-specific phrasing — the rule
+will be applied across all entities of this kind.
+
+## Output
+
+Write a single JSON object to `${OUTPUT_PATH}` matching this shape:
+
+```json
+{
+  "summary":        "<one short sentence — what went wrong>",
+  "rootCause":      "<controlled vocab from above>",
+  "signalMissed":   "<what in the source the bot should have noticed>",
+  "recommendation": "<one-sentence rule for future runs>",
+  "confidence":     "<high|medium|low>",
+  "model":          "<model id you are running as>",
+  "analyzedAt":     "<ISO-8601 timestamp>"
+}
+```
+
+No prose response — only the file write.

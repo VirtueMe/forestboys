@@ -1,0 +1,16 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "denial-analysis output",
+  "type": "object",
+  "required": ["summary", "rootCause", "signalMissed", "recommendation", "confidence", "model", "analyzedAt"],
+  "properties": {
+    "summary":        { "type": "string", "minLength": 1 },
+    "rootCause":      { "enum": ["source-misread", "temporal-error", "entity-confusion", "over-inference", "style-mismatch", "hallucination", "scope-creep"] },
+    "signalMissed":   { "type": "string", "minLength": 1 },
+    "recommendation": { "type": "string", "minLength": 1 },
+    "confidence":     { "enum": ["high", "medium", "low"] },
+    "model":          { "type": "string", "minLength": 1 },
+    "analyzedAt":     { "type": "string", "format": "date-time" }
+  },
+  "additionalProperties": true
+}
