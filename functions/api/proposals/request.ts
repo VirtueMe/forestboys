@@ -1,13 +1,14 @@
 /**
- * POST /api/proposals/request — request a Claude-generated proposal for one
- * Portable Text block. Creates a `bot-task` GitHub issue carrying the JSON
- * contract from .github/ISSUE_TEMPLATE/bot-task.md; the Action picks it up,
- * runs Claude, and POSTs the result to /api/proposals/ingest.
+ * POST /api/proposals/request — request a Claude-generated proposal bundle
+ * absorbing one outline. Creates a `bot-task` GitHub issue carrying the
+ * request payload; the Action runs Claude, which produces a full bundle
+ * (manifest + per-entity payloads with create-entity / modify-block /
+ * add-edge ops). The Action POSTs the bundle to /api/proposals/ingest.
  *
  * Admin-session-gated. The endpoint itself is fast — issue creation is the
  * only side effect — but the resulting bot work is async (minutes).
  *
- * Body: see ProposalRequest below. Returns {issueNumber, issueUrl}.
+ * Body: { outlineId, outlineRev, promptHash }. Returns {issueNumber, issueUrl}.
  */
 
 import { requireAdmin } from '~/_lib/require-admin.ts'
@@ -18,35 +19,19 @@ interface Env {
   GITHUB_REPO:    string  // "<owner>/<repo>", e.g. "motstandsbevegelsen/milorg"
 }
 
-const ENTITY_KINDS = new Set([
-  'Person', 'Unit', 'Station', 'Transport',
-  'Operation', 'Incident', 'Location', 'Outline',
-])
-
 const SLUG_RE        = /^[a-z0-9-]+$/
-const BLOCK_PATH_RE  = /^section\.[a-z0-9-]+\.block\.[A-Za-z0-9_-]+$/
 const PROMPT_HASH_RE = /^[a-f0-9]{12}$/
 
-interface ProposalRequest {
-  entityId:    unknown
-  kind:        unknown
-  slug:        unknown
-  blockPath:   unknown
-  outlineId:   unknown
-  outlineRev:  unknown
-  sectionPath: unknown
-  promptHash:  unknown
+interface BundleRequest {
+  outlineId:  unknown
+  outlineRev: unknown
+  promptHash: unknown
 }
 
 interface ValidatedRequest {
-  entityId:    string
-  kind:        string
-  slug:        string
-  blockPath:   string
-  outlineId:   string
-  outlineRev:  string
-  sectionPath: string
-  promptHash:  string
+  outlineId:  string
+  outlineRev: string
+  promptHash: string
 }
 
 export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
@@ -57,7 +42,7 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
     return json({ error: 'GITHUB_TOKEN / GITHUB_REPO not configured' }, 500)
   }
 
-  const body = await request.json<ProposalRequest>().catch(() => null)
+  const body = await request.json<BundleRequest>().catch(() => null)
   if (!body) return json({ error: 'Invalid JSON' }, 400)
 
   const validated = validate(body)
@@ -71,40 +56,20 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
   }
 }
 
-function validate(b: ProposalRequest): ValidatedRequest | string {
-  if (typeof b.kind !== 'string' || !ENTITY_KINDS.has(b.kind)) {
-    return `kind must be one of: ${[...ENTITY_KINDS].join(', ')}`
-  }
-  if (typeof b.slug !== 'string' || !SLUG_RE.test(b.slug)) {
-    return 'slug must match /^[a-z0-9-]+$/'
-  }
-  if (typeof b.entityId !== 'string' || b.entityId !== `${b.kind}:${b.slug}`) {
-    return 'entityId must equal `<kind>:<slug>` and match the kind/slug fields'
-  }
-  if (typeof b.blockPath !== 'string' || !BLOCK_PATH_RE.test(b.blockPath)) {
-    return 'blockPath must match `section.<slug>.block.<key>`'
-  }
+function validate(b: BundleRequest): ValidatedRequest | string {
   if (typeof b.outlineId !== 'string' || !SLUG_RE.test(b.outlineId)) {
     return 'outlineId must match /^[a-z0-9-]+$/'
   }
   if (typeof b.outlineRev !== 'string' || !b.outlineRev.trim()) {
     return 'outlineRev must be a non-empty string'
   }
-  if (typeof b.sectionPath !== 'string' || !b.sectionPath.trim()) {
-    return 'sectionPath must be a non-empty string'
-  }
   if (typeof b.promptHash !== 'string' || !PROMPT_HASH_RE.test(b.promptHash)) {
     return 'promptHash must be 12 lowercase hex chars'
   }
   return {
-    entityId:    b.entityId,
-    kind:        b.kind,
-    slug:        b.slug,
-    blockPath:   b.blockPath,
-    outlineId:   b.outlineId,
-    outlineRev:  b.outlineRev.trim(),
-    sectionPath: b.sectionPath.trim(),
-    promptHash:  b.promptHash,
+    outlineId:  b.outlineId,
+    outlineRev: b.outlineRev.trim(),
+    promptHash: b.promptHash,
   }
 }
 
@@ -114,9 +79,9 @@ interface GhIssue {
 }
 
 async function createBotTaskIssue(env: Env, req: ValidatedRequest): Promise<GhIssue> {
-  const title = `bot-task: ${req.kind} ${req.entityId} / outline ${req.outlineId} §${req.sectionPath}`
-  const body  = renderIssueBody(req)
-  const labels = ['bot-task', `outline:${req.outlineId}`, `kind:${req.kind}`]
+  const title  = `bot-task: absorb outline ${req.outlineId} (rev ${req.outlineRev.slice(0, 8)})`
+  const body   = renderIssueBody(req)
+  const labels = ['bot-task', `outline:${req.outlineId}`]
 
   const resp = await fetch(`https://api.github.com/repos/${env.GITHUB_REPO}/issues`, {
     method:  'POST',
@@ -141,12 +106,18 @@ function renderIssueBody(req: ValidatedRequest): string {
   // Mirrors .github/ISSUE_TEMPLATE/bot-task.md so a human inspecting the
   // bot-created issue sees the same shape as the template documentation.
   // The Action's parser only requires the first ```json fence to be the
-  // request payload — additional prose is fine.
+  // request payload.
   const payload = JSON.stringify(req, null, 2)
   return [
     '<!-- Auto-created by /api/proposals/request. Do not edit by hand. -->',
     '',
     '## Request',
+    '',
+    'Generate a bundle absorbing the outline below. The bundle should',
+    'contain ops creating any new entities (Operation, Person, Location,',
+    'etc.) the outline calls for, modify-block ops on existing entities',
+    'where the outline updates their descriptions, and an obsolete-outline',
+    'op once the absorption is complete.',
     '',
     '```json',
     payload,
@@ -155,7 +126,8 @@ function renderIssueBody(req: ValidatedRequest): string {
     '## Re-running',
     '',
     'Edit-and-save (or re-add the `bot-task` label) to re-trigger the Action.',
-    'The proposal file in R2 will be overwritten — newest wins.',
+    'A fresh run produces a new bundle with a different bundleId — bundles',
+    'are timestamp-stamped so they don\'t collide.',
   ].join('\n')
 }
 

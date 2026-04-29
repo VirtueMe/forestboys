@@ -1,14 +1,15 @@
 /**
- * GET /api/admin/<kind>/<slug>/proposals          — full pending proposals
- * GET /api/admin/<kind>/<slug>/proposals?count=true — just the marker-badge count
+ * GET /api/admin/<kind>/<slug>/proposals             — open bundles touching this entity
+ * GET /api/admin/<kind>/<slug>/proposals?count=true  — just the marker-badge count
  *
- * Reads R2 PROPOSALS bucket: index.json + per-block files for the entity.
+ * Reads `proposals/by-entity/<entityId>/index.json`, fetches each
+ * referenced bundle's manifest + this entity's payload, returns the list.
  *
- * v1 limitation: NO drift filtering yet. The endpoint returns whatever is
- * stored — drift detection (compare expectedSha vs current Neo4j PT-block
- * sha) lands in a follow-up once the Description+block lookup helpers exist.
+ * Bundle status filter: only bundles where this entity's status is
+ * `pending` are returned. Once Jan accepts/denies the entity, it falls
+ * out of the list (the manifest patch flips the per-entity status).
  *
- * Admin-session-gated. Used by the marker-badge composable + diff panel.
+ * Admin-session-gated.
  */
 
 import { requireAdmin } from '~/_lib/require-admin.ts'
@@ -20,33 +21,39 @@ interface Env {
 
 const ENTITY_KINDS = new Set([
   'Person', 'Unit', 'Station', 'Transport',
-  'Operation', 'Incident', 'Location', 'Outline',
+  'Operation', 'Incident', 'Location', 'Outline', 'Organization',
 ])
 const SLUG_RE = /^[a-z0-9-]+$/
 
-interface IndexEntry {
-  blockPath:   string
-  source:      string
-  generatedAt: string
+interface BundleEntityRef {
+  entityId:  string
+  status:    'pending' | 'accepted' | 'denied' | 'drifted'
+  opSummary: string[]
 }
 
-interface ProposalIndex {
-  entityId: string
-  blocks:   IndexEntry[]
+interface BundleManifest {
+  bundleId:   string
+  outlineId:  string
+  outlineRev: string
+  summary:    string
+  createdAt:  string
+  model:      string
+  promptHash: string
+  entities:   BundleEntityRef[]
 }
 
-interface ProposalBody {
-  entityId:    string
-  blockPath:   string
-  expectedSha: string
-  newValue:    unknown
-  derivedFrom: { outlineId: string; sectionPath: string; outlineRev: string }
-  source:      string
-  model:       string
-  generatedAt: string
-  promptHash:  string
-  aiGenerated: boolean
-  conflict:    boolean
+interface IndexFile {
+  bundleIds: string[]
+}
+
+interface OpenBundleEntry {
+  bundleId:   string
+  outlineId:  string
+  summary:    string
+  createdAt:  string
+  status:     'pending'
+  opSummary:  string[]
+  payloadKey: string  // R2 key of this entity's payload, for lazy fetch by the diff panel
 }
 
 export const onRequestGet: PagesFunction<Env> = async ({ request, env, params }) => {
@@ -57,44 +64,56 @@ export const onRequestGet: PagesFunction<Env> = async ({ request, env, params })
 
   const kind = String(params.kind)
   const slug = String(params.slug)
-  if (!ENTITY_KINDS.has(kind))   return json({ error: `Unknown kind: ${kind}` }, 400)
-  if (!SLUG_RE.test(slug))       return json({ error: 'slug must match /^[a-z0-9-]+$/' }, 400)
+  if (!ENTITY_KINDS.has(kind)) return json({ error: `Unknown kind: ${kind}` }, 400)
+  if (!SLUG_RE.test(slug))     return json({ error: 'slug must match /^[a-z0-9-]+$/' }, 400)
 
   const entityId = `${kind}:${slug}`
   const url      = new URL(request.url)
   const countOnly = url.searchParams.get('count') === 'true'
 
   try {
-    const indexObj = await env.PROPOSALS.get(`proposals/${entityId}/index.json`)
+    const indexObj = await env.PROPOSALS.get(`proposals/by-entity/${entityId}/index.json`)
     if (!indexObj) {
       return countOnly
         ? json({ pendingCount: 0 })
-        : json({ entityId, blocks: [] })
+        : json({ entityId, openBundles: [] })
     }
 
-    const index = await indexObj.json<ProposalIndex>()
+    const index = await indexObj.json<IndexFile>()
 
-    if (countOnly) return json({ pendingCount: index.blocks.length })
-
-    const blocks = await Promise.all(
-      index.blocks.map(async (entry) => {
-        const obj = await env.PROPOSALS.get(`proposals/${entityId}/${encodePathComponent(entry.blockPath)}.json`)
-        if (!obj) return null  // index referenced a missing file — drop silently
-        return await obj.json<ProposalBody>()
-      }),
+    // For each referenced bundle, load its manifest and check whether this
+    // entity's status is still pending. Drop drifted/accepted/denied —
+    // those have either already happened or are recoverable elsewhere.
+    const bundleEntries = await Promise.all(
+      index.bundleIds.map((bundleId) => loadOpenEntry(env, bundleId, entityId)),
     )
+    const open = bundleEntries.filter((b): b is OpenBundleEntry => b !== null)
 
-    return json({
-      entityId,
-      blocks: blocks.filter((b): b is ProposalBody => b !== null),
-    })
+    if (countOnly) return json({ pendingCount: open.length })
+
+    return json({ entityId, openBundles: open })
   } catch (e) {
     return json({ error: (e as Error).message }, 502)
   }
 }
 
-function encodePathComponent(s: string): string {
-  return s.replace(/\//g, '_')
+async function loadOpenEntry(env: Env, bundleId: string, entityId: string): Promise<OpenBundleEntry | null> {
+  const manifestObj = await env.PROPOSALS.get(`proposals/bundles/${bundleId}/manifest.json`)
+  if (!manifestObj) return null
+
+  const manifest = await manifestObj.json<BundleManifest>()
+  const ref = manifest.entities.find((e) => e.entityId === entityId)
+  if (!ref || ref.status !== 'pending') return null
+
+  return {
+    bundleId,
+    outlineId:  manifest.outlineId,
+    summary:    manifest.summary,
+    createdAt:  manifest.createdAt,
+    status:     'pending',
+    opSummary:  ref.opSummary,
+    payloadKey: `proposals/bundles/${bundleId}/entity/${entityId}.json`,
+  }
 }
 
 function json(data: unknown, status = 200): Response {
