@@ -1,0 +1,15 @@
+node_modules
+dist
+dist-ssr
+coverage
+.wrangler
+.vite
+.cache
+.env
+.env.*
+*.lock
+package-lock.json
+pnpm-lock.yaml
+public
+docs
+fixtures
