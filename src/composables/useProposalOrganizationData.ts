@@ -1,7 +1,11 @@
 /**
  * Controller-view preview wrapper for Organization. See useProposalPersonData.
- * Pass A scope: modify-block only. TODO (Pass B follow-up): create-entity +
- * edge merge.
+ *
+ * Implements modify-block + create-entity skeleton. Edge merge for Org's
+ * inbound-only proposal-relevant edges (Unit-PART_OF→Org,
+ * Operation-ORCHESTRATED_BY→Org) needs an inbound mode in
+ * `applyEdgeOps` and is deferred until the controller-view refactor
+ * consumes it.
  */
 import { ref, computed } from 'vue'
 import { useOrganizationData } from './useOrganizationData.ts'
@@ -43,8 +47,29 @@ export function useProposalOrganizationData(bundleId: string, entityId: string) 
 
       if (!slug.value) throw new Error(`useProposalOrganizationData: ${entityId} is not an Organization id`)
 
-      const isCreate = payload.ops.some((o) => o.op === 'create-entity')
-      if (!isCreate) {
+      const createOp = payload.ops.find((o) => o.op === 'create-entity')
+      if (createOp && createOp.op === 'create-entity') {
+        const props = createOp.props as Partial<{
+          canonicalName: string
+          formalName:    string | null
+          abbreviation:  string | null
+          sortingName:   string | null
+          color:         string | null
+          foundedDate:   string | null
+          dissolvedDate: string | null
+          country:       string | null
+        }>
+        live.org.value = {
+          name:          props.canonicalName ?? createOp.slug,
+          formalName:    props.formalName    ?? null,
+          abbreviation:  props.abbreviation  ?? null,
+          sortingName:   props.sortingName   ?? null,
+          color:         props.color         ?? null,
+          foundedDate:   props.foundedDate   ?? null,
+          dissolvedDate: props.dissolvedDate ?? null,
+          country:       props.country       ?? null,
+        }
+      } else {
         await live.loadOrg(slug.value)
         applyModifyBlockOps(payload, live.savedSections.value)
       }

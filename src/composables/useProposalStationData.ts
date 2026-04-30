@@ -1,7 +1,9 @@
 /**
  * Controller-view preview wrapper for Station. See useProposalPersonData.
- * Pass A scope: modify-block only. TODO (Pass B follow-up): create-entity +
- * edge merge.
+ *
+ * Implements modify-block + create-entity skeleton. Edge merge for
+ * Station's bespoke StationPerson type is deferred until the
+ * controller-view refactor consumes it.
  */
 import { ref, computed } from 'vue'
 import { useStationData } from './useStationData.ts'
@@ -43,8 +45,29 @@ export function useProposalStationData(bundleId: string, entityId: string) {
 
       if (!slug.value) throw new Error(`useProposalStationData: ${entityId} is not a Station id`)
 
-      const isCreate = payload.ops.some((o) => o.op === 'create-entity')
-      if (!isCreate) {
+      const createOp = payload.ops.find((o) => o.op === 'create-entity')
+      if (createOp && createOp.op === 'create-entity') {
+        const props = createOp.props as Partial<{
+          canonicalName: string
+          type:          string | null
+          lat:           number | null
+          lng:           number | null
+          activeFrom:    string | null
+          activeTo:      string | null
+          description:   string | null
+          links:         string | null
+        }>
+        live.station.value = {
+          name:        props.canonicalName ?? createOp.slug,
+          type:        props.type        ?? null,
+          lat:         props.lat         ?? null,
+          lng:         props.lng         ?? null,
+          activeFrom:  props.activeFrom  ?? null,
+          activeTo:    props.activeTo    ?? null,
+          description: props.description ?? null,
+          links:       props.links       ?? null,
+        }
+      } else {
         await live.loadStation(slug.value)
         applyModifyBlockOps(payload, live.savedSections.value)
       }

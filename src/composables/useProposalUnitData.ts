@@ -2,9 +2,9 @@
  * Controller-view preview wrapper for Unit. Mirrors useProposalPersonData.
  * See `docs/PROPOSALS.md` § "Controller-view preview".
  *
- * Pass A scope: applies modify-block ops to savedSections.
- * TODO (Pass B follow-up): create-entity materialization + add/remove-edge
- * merge into the relation arrays.
+ * Implements modify-block + create-entity skeleton. Edge merge for Unit's
+ * bespoke relation types (UnitMember, UnitParent, UnitCourse) is deferred
+ * until the controller-view refactor consumes it.
  */
 import { ref, computed } from 'vue'
 import { useUnitData } from './useUnitData.ts'
@@ -46,8 +46,27 @@ export function useProposalUnitData(bundleId: string, entityId: string) {
 
       if (!slug.value) throw new Error(`useProposalUnitData: ${entityId} is not a Unit id`)
 
-      const isCreate = payload.ops.some((o) => o.op === 'create-entity')
-      if (!isCreate) {
+      const createOp = payload.ops.find((o) => o.op === 'create-entity')
+      if (createOp && createOp.op === 'create-entity') {
+        const props = createOp.props as Partial<{
+          canonicalName: string
+          formalName:    string | null
+          type:          string | null
+          color:         string | null
+          foundedDate:   string | null
+          dissolvedDate: string | null
+          country:       string | null
+        }>
+        live.unit.value = {
+          name:          props.canonicalName ?? createOp.slug,
+          formalName:    props.formalName    ?? null,
+          type:          props.type          ?? null,
+          color:         props.color         ?? null,
+          foundedDate:   props.foundedDate   ?? null,
+          dissolvedDate: props.dissolvedDate ?? null,
+          country:       props.country       ?? null,
+        }
+      } else {
         await live.loadUnit(slug.value)
         applyModifyBlockOps(payload, live.savedSections.value)
       }

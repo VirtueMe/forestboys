@@ -1,7 +1,9 @@
 /**
  * Controller-view preview wrapper for Transport. See useProposalPersonData.
- * Pass A scope: modify-block only. TODO (Pass B follow-up): create-entity +
- * edge merge.
+ *
+ * Implements modify-block + create-entity skeleton. Edge merge for
+ * Transport's bespoke TransportCrewMember type is deferred until the
+ * controller-view refactor consumes it.
  */
 import { ref, computed } from 'vue'
 import { useTransportData } from './useTransportData.ts'
@@ -43,8 +45,27 @@ export function useProposalTransportData(bundleId: string, entityId: string) {
 
       if (!slug.value) throw new Error(`useProposalTransportData: ${entityId} is not a Transport id`)
 
-      const isCreate = payload.ops.some((o) => o.op === 'create-entity')
-      if (!isCreate) {
+      const createOp = payload.ops.find((o) => o.op === 'create-entity')
+      if (createOp && createOp.op === 'create-entity') {
+        const props = createOp.props as Partial<{
+          canonicalName: string
+          type:          string | null
+          unit:          string | null
+          regser:        string | null
+          reserve:       string | null
+          description:   string | null
+          links:         string | null
+        }>
+        live.transport.value = {
+          name:        props.canonicalName ?? createOp.slug,
+          type:        props.type        ?? null,
+          unit:        props.unit        ?? null,
+          regser:      props.regser      ?? null,
+          reserve:     props.reserve     ?? null,
+          description: props.description ?? null,
+          links:       props.links       ?? null,
+        }
+      } else {
         await live.loadTransport(slug.value)
         applyModifyBlockOps(payload, live.savedSections.value)
       }
