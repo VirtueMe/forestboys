@@ -1,12 +1,20 @@
 /**
  * POST /api/proposals/request — request a Claude-generated proposal bundle
- * absorbing one outline. Creates a `bot-task` GitHub issue carrying the
- * request payload; the Action runs Claude, which produces a full bundle
- * (manifest + per-entity payloads with create-entity / modify-block /
- * add-edge ops). The Action POSTs the bundle to /api/proposals/ingest.
+ * absorbing one outline.
  *
- * Admin-session-gated. The endpoint itself is fast — issue creation is the
- * only side effect — but the resulting bot work is async (minutes).
+ * Two dispatch backends, env-selected:
+ *
+ *   - **GitHub** (production, default): create a `bot-task` issue carrying
+ *     the request payload. The Action runs Claude and POSTs the bundle to
+ *     /api/proposals/ingest.
+ *   - **Local** (smoke testing): if `BOT_DISPATCH_URL` is set, HMAC-POST
+ *     the request payload there instead. A local runner
+ *     (`scripts/bot/local-runner.ts`) accepts the dispatch, renders the
+ *     prompt, shells out to `claude -p`, and POSTs the bundle to ingest.
+ *
+ * Admin-session-gated. The endpoint itself is fast — dispatch is the only
+ * side effect — but the resulting bot work is async (seconds locally,
+ * minutes on GitHub).
  *
  * Body: { outlineId, outlineRev, promptHash }. Returns {issueNumber, issueUrl}.
  */
@@ -14,9 +22,11 @@
 import { requireAdmin } from '~/_lib/require-admin.ts'
 
 interface Env {
-  SESSION_SECRET: string
-  GITHUB_TOKEN:   string  // PAT with `issues:write` on the milorg repo
-  GITHUB_REPO:    string  // "<owner>/<repo>", e.g. "motstandsbevegelsen/milorg"
+  SESSION_SECRET:     string
+  GITHUB_TOKEN?:      string  // PAT with `issues:write` on the milorg repo
+  GITHUB_REPO?:       string  // "<owner>/<repo>", e.g. "motstandsbevegelsen/milorg"
+  BOT_DISPATCH_URL?:  string  // local smoke-test runner URL — overrides GitHub
+  BOT_INGEST_SECRET?: string  // shared secret for dispatch HMAC + ingest HMAC
 }
 
 const SLUG_RE        = /^[a-z0-9-]+$/
@@ -38,10 +48,6 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
   const guard = await requireAdmin(request, env)
   if (guard instanceof Response) return guard
 
-  if (!env.GITHUB_TOKEN || !env.GITHUB_REPO) {
-    return json({ error: 'GITHUB_TOKEN / GITHUB_REPO not configured' }, 500)
-  }
-
   const body = await request.json<BundleRequest>().catch(() => null)
   if (!body) return json({ error: 'Invalid JSON' }, 400)
 
@@ -49,11 +55,51 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
   if (typeof validated === 'string') return json({ error: validated }, 400)
 
   try {
-    const issue = await createBotTaskIssue(env, validated)
+    if (env.BOT_DISPATCH_URL) {
+      if (!env.BOT_INGEST_SECRET) return json({ error: 'BOT_INGEST_SECRET not configured (required for local dispatch)' }, 500)
+      const result = await dispatchLocal(env.BOT_DISPATCH_URL, env.BOT_INGEST_SECRET, validated)
+      return json(result)
+    }
+    if (!env.GITHUB_TOKEN || !env.GITHUB_REPO) {
+      return json({ error: 'GITHUB_TOKEN / GITHUB_REPO not configured' }, 500)
+    }
+    const issue = await createBotTaskIssue(env as Required<Env>, validated)
     return json({ issueNumber: issue.number, issueUrl: issue.html_url })
   } catch (e) {
     return json({ error: (e as Error).message }, 502)
   }
+}
+
+async function dispatchLocal(
+  url:    string,
+  secret: string,
+  req:    ValidatedRequest,
+): Promise<{ issueNumber: number; issueUrl: string }> {
+  const body = JSON.stringify(req)
+  const sig  = 'sha256=' + await hmacHex(secret, body)
+  const resp = await fetch(url, {
+    method:  'POST',
+    headers: {
+      'Content-Type':         'application/json',
+      'X-Hub-Signature-256':  sig,
+      'User-Agent':           'milorg-proposals/1.0',
+    },
+    body,
+  })
+  if (!resp.ok) {
+    const text = await resp.text()
+    throw new Error(`local dispatch ${resp.status}: ${text}`)
+  }
+  return await resp.json<{ issueNumber: number; issueUrl: string }>()
+}
+
+async function hmacHex(secret: string, body: string): Promise<string> {
+  const key = await crypto.subtle.importKey(
+    'raw', new TextEncoder().encode(secret),
+    { name: 'HMAC', hash: 'SHA-256' }, false, ['sign'],
+  )
+  const sig = await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(body))
+  return [...new Uint8Array(sig)].map((b) => b.toString(16).padStart(2, '0')).join('')
 }
 
 function validate(b: BundleRequest): ValidatedRequest | string {
@@ -78,7 +124,7 @@ interface GhIssue {
   html_url:  string
 }
 
-async function createBotTaskIssue(env: Env, req: ValidatedRequest): Promise<GhIssue> {
+async function createBotTaskIssue(env: Required<Env>, req: ValidatedRequest): Promise<GhIssue> {
   const title  = `bot-task: absorb outline ${req.outlineId} (rev ${req.outlineRev.slice(0, 8)})`
   const body   = renderIssueBody(req)
   const labels = ['bot-task', `outline:${req.outlineId}`]
