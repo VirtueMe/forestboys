@@ -87,20 +87,29 @@ export async function computeExpectedShas(
  * fetched). If a target isn't in the list (e.g. it's another bundle
  * entity not yet in Neo4j), we fall back to the slug as the name —
  * the chip will look ghost.
+ *
+ * `direction` selects which end of the edge this binding represents
+ * relative to the entity being previewed. `outbound` (the default) is
+ * for entities where the edge originates (Person-MEMBER_OF→Unit on
+ * the Person preview). `inbound` is for entities where the edge
+ * terminates (Unit-PART_OF→Org on the Org preview — the binding
+ * targets the Unit ends).
  */
 export interface EdgeBinding {
   entries: { value: RelationEntry[] }   // ref-like — composables pass the .value carrier
   targets: RelationTarget[]
   /** Slug of the target ref shape we expect (e.g. "Unit", "Operation"). */
   targetKind: string
+  direction?: 'outbound' | 'inbound'
 }
 
 export type EdgeMap = Record<string, EdgeBinding>
 
 /**
  * Apply `add-edge` / `remove-edge` ops to the relation arrays owned by
- * the wrapper composable. Outbound only in v1 — i.e. ops where
- * `from === entityId`. Returns counts for diagnostics.
+ * the wrapper composable. Each binding declares whether its edges are
+ * outbound (default — match `op.from === entityId`) or inbound
+ * (match `op.to === entityId`). Returns counts for diagnostics.
  *
  * Mutates the `.value` arrays in place so Vue reactivity flows.
  */
@@ -114,12 +123,16 @@ export function applyEdgeOps(
 
   for (const op of payload.ops) {
     if (op.op !== 'add-edge' && op.op !== 'remove-edge') continue
-    if (op.from !== entityId) { skipped++; continue }   // inbound — TODO
 
     const binding = edgeMap[op.type]
     if (!binding) { skipped++; continue }
 
-    const targetSlug = op.to.slice(op.to.indexOf(':') + 1)
+    const inbound = binding.direction === 'inbound'
+    const localEnd  = inbound ? op.to   : op.from
+    const targetEnd = inbound ? op.from : op.to
+    if (localEnd !== entityId) { skipped++; continue }
+
+    const targetSlug = targetEnd.slice(targetEnd.indexOf(':') + 1)
 
     if (op.op === 'remove-edge') {
       for (const entry of binding.entries.value) {

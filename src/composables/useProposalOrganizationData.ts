@@ -1,16 +1,15 @@
 /**
  * Controller-view preview wrapper for Organization. See useProposalPersonData.
  *
- * Implements modify-block + create-entity skeleton. Edge merge for Org's
- * inbound-only proposal-relevant edges (Unit-PART_OF→Org,
- * Operation-ORCHESTRATED_BY→Org) needs an inbound mode in
- * `applyEdgeOps` and is deferred until the controller-view refactor
- * consumes it.
+ * Org's proposal-relevant edges all terminate at the Organization:
+ * Unit-PART_OF→Org, Operation-ORCHESTRATED_BY→Org,
+ * Incident-ORCHESTRATED_BY→Org. The bindings declare `direction: 'inbound'`
+ * so applyEdgeOps matches `op.to === entityId`.
  */
 import { ref, computed } from 'vue'
 import { useOrganizationData } from './useOrganizationData.ts'
 import { useProposalBundle, type EntityStatus, type EntityPayload } from './useProposalBundle.ts'
-import { applyModifyBlockOps, computeExpectedShas } from './proposalMerge.ts'
+import { applyEdgeOps, applyModifyBlockOps, computeExpectedShas, type EdgeMap } from './proposalMerge.ts'
 
 interface ProposalSidecar {
   bundleId: string
@@ -69,9 +68,28 @@ export function useProposalOrganizationData(bundleId: string, entityId: string) 
           dissolvedDate: props.dissolvedDate ?? null,
           country:       props.country       ?? null,
         }
+        const edgeMap: EdgeMap = {
+          PART_OF:         { entries: live.unitEntries,      targets: [], targetKind: 'Unit',      direction: 'inbound' },
+          ORCHESTRATED_BY: { entries: live.operationEntries, targets: [], targetKind: 'Operation', direction: 'inbound' },
+        }
+        const synth: EntityPayload = {
+          ...payload,
+          ops: (createOp.edges ?? []).map((e) => ({
+            op: 'add-edge' as const, type: e.type, from: entityId, to: e.to, props: e.props,
+          })),
+        }
+        applyEdgeOps(synth, entityId, edgeMap, bundleId)
       } else {
         await live.loadOrg(slug.value)
         applyModifyBlockOps(payload, live.savedSections.value)
+        const edgeMap: EdgeMap = {
+          PART_OF:         { entries: live.unitEntries,      targets: live.unitTargets.value,      targetKind: 'Unit',      direction: 'inbound' },
+          ORCHESTRATED_BY: { entries: live.operationEntries, targets: live.operationTargets.value, targetKind: 'Operation', direction: 'inbound' },
+        }
+        // ORCHESTRATED_BY edges from Incidents share the type key with
+        // Operations; per-target-kind dispatch is deferred. Today the
+        // binding lands the chip on the operation array regardless.
+        applyEdgeOps(payload, entityId, edgeMap, bundleId)
       }
     } catch (e) {
       _proposal.value.error = (e as Error).message
