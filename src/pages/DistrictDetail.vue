@@ -49,8 +49,9 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, useTemplateRef, watch } from 'vue'
+import { computed, ref, useTemplateRef, watch, inject } from 'vue'
 import { useUnitData, type UnitNode } from '../composables/useUnitData.ts'
+import { UnitDataKey } from '../composables/proposalDataInjection.ts'
 import { useDetailCreateMode } from '../composables/useDetailCreateMode.ts'
 import DetailPage from '../components/DetailPage.vue'
 import AdminViewTabs from '../components/AdminViewTabs.vue'
@@ -75,7 +76,7 @@ const {
   parents, subUnits, courses, members, events,
   externalRefs, galleryImages,
   loadUnit, resetUnit,
-} = useUnitData()
+} = inject(UnitDataKey, () => useUnitData(), true)
 
 // Members editor uses a strategy that depends on whether the Unit is a
 // training course (Deltakere) or a regular unit (Medlemmer). The

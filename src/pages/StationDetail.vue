@@ -46,8 +46,9 @@
 </template>
 
 <script setup lang="ts">
-import { computed, useTemplateRef } from 'vue'
+import { computed, useTemplateRef, inject } from 'vue'
 import { useStationData, type StationNode } from '../composables/useStationData.ts'
+import { StationDataKey } from '../composables/proposalDataInjection.ts'
 import { useDetailCreateMode } from '../composables/useDetailCreateMode.ts'
 import DetailPage from '../components/DetailPage.vue'
 import AdminViewTabs from '../components/AdminViewTabs.vue'
@@ -69,7 +70,7 @@ const {
   station, savedSections,
   people, events, externalRefs, galleryImages,
   loadStation, resetStation,
-} = useStationData()
+} = inject(StationDataKey, () => useStationData(), true)
 
 const editPane = useTemplateRef<{
   scalarDraft: StationDraft | null

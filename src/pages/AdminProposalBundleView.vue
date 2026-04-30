@@ -34,23 +34,32 @@
           <li v-for="(op, i) in entry.opSummary" :key="i">{{ op }}</li>
         </ul>
 
-        <div v-if="entry.status === 'pending'" class="entity-actions">
-          <button
-            type="button"
-            class="action action--accept"
-            :disabled="busy === entry.entityId"
-            @click="onAccept(entry.entityId)"
+        <div class="entity-actions">
+          <RouterLink
+            v-if="previewHref(entry.entityId)"
+            :to="previewHref(entry.entityId)!"
+            class="action action--preview"
           >
-            Godkjenn
-          </button>
-          <button
-            type="button"
-            class="action action--deny"
-            :disabled="busy === entry.entityId"
-            @click="onDeny(entry.entityId)"
-          >
-            Avvis…
-          </button>
+            Forhåndsvis
+          </RouterLink>
+          <template v-if="entry.status === 'pending'">
+            <button
+              type="button"
+              class="action action--accept"
+              :disabled="busy === entry.entityId"
+              @click="onAccept(entry.entityId)"
+            >
+              Godkjenn
+            </button>
+            <button
+              type="button"
+              class="action action--deny"
+              :disabled="busy === entry.entityId"
+              @click="onDeny(entry.entityId)"
+            >
+              Avvis…
+            </button>
+          </template>
         </div>
 
         <p v-if="actionError[entry.entityId]" class="entity-error">{{ actionError[entry.entityId] }}</p>
@@ -75,6 +84,14 @@ const actionError = ref<Record<string, string>>({})
 onMounted(() => {
   void bundle.load()
 })
+
+const PREVIEWABLE = new Set(['Person', 'Unit', 'Organization', 'Station', 'Transport'])
+
+function previewHref(entityId: string): string | null {
+  const m = entityId.match(/^([A-Za-z]+):([a-z0-9-]+)$/)
+  if (!m || !PREVIEWABLE.has(m[1])) return null
+  return `/admin/proposals/${bundleId.value}/preview/${m[1]}/${m[2]}`
+}
 
 function statusLabel(s: EntityStatus): string {
   switch (s) {
@@ -250,6 +267,8 @@ async function onDeny(entityId: string) {
 .action--accept { background: var(--moss); color: var(--paper); border-color: transparent; }
 .action--accept:hover:not([disabled]) { filter: brightness(1.1); border-color: transparent; }
 .action--deny:hover:not([disabled])   { color: var(--danger); border-color: var(--danger); }
+.action--preview { text-decoration: none; }
+.action--preview:hover { background: var(--paper); border-color: var(--ink-soft); }
 
 .entity-error {
   margin: var(--space-sm) 0 0;

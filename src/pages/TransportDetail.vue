@@ -45,8 +45,9 @@
 </template>
 
 <script setup lang="ts">
-import { computed, useTemplateRef } from 'vue'
+import { computed, useTemplateRef, inject } from 'vue'
 import { useTransportData, type TransportNode } from '../composables/useTransportData.ts'
+import { TransportDataKey } from '../composables/proposalDataInjection.ts'
 import { useDetailCreateMode } from '../composables/useDetailCreateMode.ts'
 import DetailPage from '../components/DetailPage.vue'
 import AdminViewTabs from '../components/AdminViewTabs.vue'
@@ -68,7 +69,7 @@ const {
   transport, savedSections,
   crew, events, externalRefs, galleryImages,
   loadTransport, resetTransport,
-} = useTransportData()
+} = inject(TransportDataKey, () => useTransportData(), true)
 
 const editPane = useTemplateRef<{
   scalarDraft: TransportDraft | null

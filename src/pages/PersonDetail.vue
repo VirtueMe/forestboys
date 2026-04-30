@@ -54,10 +54,11 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, useTemplateRef, onMounted, onBeforeUnmount } from 'vue'
+import { ref, computed, watch, useTemplateRef, onMounted, onBeforeUnmount, inject } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useLocationCache } from '../composables/useLocationCache.ts'
 import { usePersonData } from '../composables/usePersonData.ts'
+import { PersonDataKey } from '../composables/proposalDataInjection.ts'
 import { useDetailCreateMode } from '../composables/useDetailCreateMode.ts'
 import DetailPage from '../components/DetailPage.vue'
 import AdminViewTabs from '../components/AdminViewTabs.vue'
@@ -74,7 +75,8 @@ const { people } = useLocationCache()
 const route  = useRoute()
 const router = useRouter()
 
-// All Neo4j fetch state + load/reset live in usePersonData.
+// Data layer: live by default, swappable to a proposal-wrapped composable
+// when a parent provides PersonDataKey (see AdminProposalEntityPreview).
 const {
   neo4jPerson,
   heroImage, galleryImages, externalRefs,
@@ -82,7 +84,7 @@ const {
   incidentEntries,
   relationsData,
   loadPerson, resetPerson,
-} = usePersonData()
+} = inject(PersonDataKey, () => usePersonData(), true)
 
 const { isCreate, mode, pendingDescription, onCreated, clearPending } =
   useDetailCreateMode({ kind: 'person', pathPrefix: '/person' })

@@ -1,0 +1,25 @@
+/**
+ * Injection keys per detail-page data composable. The 5 detail pages
+ * (`PersonDetail`, `DistrictDetail`, `OrganizationDetail`, `StationDetail`,
+ * `TransportDetail`) call `inject(key, () => useXData(), true)` so they
+ * default to the live composable when no provider exists, and pick up
+ * a proposal-wrapped composable when one is provided by the bundle
+ * preview page.
+ *
+ * The injected value is the full return of the corresponding composable
+ * (or its proposal-wrapped equivalent — same destructure shape).
+ *
+ * See `docs/PROPOSALS.md` § "Controller-view preview".
+ */
+import type { InjectionKey } from 'vue'
+import type { usePersonData }       from './usePersonData.ts'
+import type { useUnitData }         from './useUnitData.ts'
+import type { useOrganizationData } from './useOrganizationData.ts'
+import type { useStationData }      from './useStationData.ts'
+import type { useTransportData }    from './useTransportData.ts'
+
+export const PersonDataKey:       InjectionKey<ReturnType<typeof usePersonData>>       = Symbol('PersonData')
+export const UnitDataKey:         InjectionKey<ReturnType<typeof useUnitData>>         = Symbol('UnitData')
+export const OrganizationDataKey: InjectionKey<ReturnType<typeof useOrganizationData>> = Symbol('OrganizationData')
+export const StationDataKey:      InjectionKey<ReturnType<typeof useStationData>>      = Symbol('StationData')
+export const TransportDataKey:    InjectionKey<ReturnType<typeof useTransportData>>    = Symbol('TransportData')
