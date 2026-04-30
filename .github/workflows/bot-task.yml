@@ -71,6 +71,45 @@ jobs:
                   f.write(f'{k}={req[k]}\n')
           PYEOF
 
+      - name: Fetch entity context
+        id: context
+        env:
+          OUTLINE_ID:        ${{ steps.parse.outputs.outlineId }}
+          INGEST_URL:        ${{ vars.PROPOSAL_INGEST_URL }}
+          BOT_INGEST_SECRET: ${{ secrets.BOT_INGEST_SECRET }}
+        run: |
+          # GET /api/entity/Outline/<slug>/context — returns
+          #   { kind: 'Outline', outline: {...}, referencedEntities: [...] }
+          # The endpoint URL is derived from PROPOSAL_INGEST_URL's origin so
+          # we don't need a second workflow var. See
+          # functions/api/entity/[kind]/[slug]/context.ts.
+          python3 << 'PYEOF'
+          import os, json, urllib.parse, urllib.request, urllib.error, sys
+
+          ingest = urllib.parse.urlparse(os.environ['INGEST_URL'])
+          origin = f"{ingest.scheme}://{ingest.netloc}"
+          url    = f"{origin}/api/entity/Outline/{os.environ['OUTLINE_ID']}/context"
+
+          req = urllib.request.Request(
+              url,
+              method='GET',
+              headers={
+                  'Authorization': f"Bearer {os.environ['BOT_INGEST_SECRET']}",
+                  'Accept':        'application/json',
+                  'User-Agent':    'milorg-bot-task/1.0',
+              },
+          )
+          try:
+              with urllib.request.urlopen(req) as resp:
+                  payload = json.loads(resp.read().decode())
+          except urllib.error.HTTPError as e:
+              print(f"::error::context fetch failed {e.code}: {e.read().decode()}", file=sys.stderr)
+              sys.exit(1)
+
+          with open('/tmp/context.json', 'w') as f:
+              json.dump(payload, f)
+          PYEOF
+
       - name: Build fixture for the prompt
         id: fixture
         env:
@@ -78,10 +117,9 @@ jobs:
           OUTLINE_REV:  ${{ steps.parse.outputs.outlineRev }}
           PROMPT_HASH:  ${{ steps.parse.outputs.promptHash }}
         run: |
-          # v1 — outline body, live entities, similar accepts/denials are
-          # empty placeholders. Wire these up to /api/entity/<kind>/<slug>/context
-          # and the corpus endpoints once they exist (see PROPOSALS.md
-          # phase-6 followup).
+          # similar-accepts / similar-denials remain empty placeholders for
+          # phases 9–10 (denied-corpus + few-shot). Outline body + live
+          # entities now come from /api/entity/Outline/<id>/context.
           python3 << 'PYEOF'
           import os, json, datetime
 
@@ -89,6 +127,8 @@ jobs:
           outline_rev = os.environ['OUTLINE_REV']
           created_at  = datetime.datetime.now(datetime.timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ')
           bundle_id   = f"bundle:{outline_id}:{created_at}"
+
+          ctx = json.load(open('/tmp/context.json'))
 
           fixture = {
               'vars': {
@@ -98,8 +138,8 @@ jobs:
                   'BUNDLE_ID':            bundle_id,
                   'CREATED_AT':           created_at,
                   'MODEL_ID':             'claude-opus-4-7',
-                  'OUTLINE_JSON':         { 'outlineId': outline_id, 'outlineRev': outline_rev, 'note': 'outline body fetch not yet wired — see docs/PROPOSALS.md phase-6 followup' },
-                  'LIVE_ENTITIES_JSON':   [],
+                  'OUTLINE_JSON':         ctx['outline'],
+                  'LIVE_ENTITIES_JSON':   ctx['referencedEntities'],
                   'SIMILAR_ACCEPTS_JSON': [],
                   'SIMILAR_DENIALS_JSON': [],
               },

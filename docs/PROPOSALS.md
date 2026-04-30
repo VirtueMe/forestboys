@@ -794,6 +794,23 @@ jobs:
       - POST result to Cloudflare /api/proposals/ingest with HMAC header
 ```
 
+**`functions/api/entity/[kind]/[slug]/context.ts`** (Cloudflare)
+- GET `/api/entity/<kind>/<slug>/context`
+- Auth: `Authorization: Bearer ${BOT_INGEST_SECRET}` (constant-time
+  compare; same secret as the ingest HMAC — one rotation point).
+- For `kind=Outline`, returns `{ kind, outline, referencedEntities }`:
+  - `outline` — core props, descriptions with per-block `sha` (matches
+    what the accept-time drift check recomputes via `stableSha`),
+    plus `mentions: string[]` of `<Kind>:<slug>` ids targeted by
+    `MENTIONS` edges.
+  - `referencedEntities` — for every mention, the same `EntityContext`
+    shape (props + descriptions+shas + outbound edges restricted to
+    nodes carrying a slug + an entity-kind label). The bot uses this
+    to decide `create-entity` vs `modify-block`, pick `expectedSha`,
+    and resolve edge targets without inventing slugs.
+- For other kinds: returns `{ kind, entity }` with the same per-entity
+  shape (used for spot-checks; not part of the bot path today).
+
 **`functions/api/proposals/ingest.ts`** (Cloudflare)
 - POST `{entityId, blockPath, newValue, derivedFrom, model, generatedAt, promptHash}`
 - Verifies `X-Hub-Signature-256: sha256=<hmac(secret, body)>`
@@ -1209,7 +1226,8 @@ that emits single-op `modify-block` bundles.
 
 7. **Marker badges everywhere + entity-context fetch endpoint for the
    bot.** Marker badges on ItemCards / map markers / detail page
-   headers. `GET /api/entity/<kind>/<slug>/context` for the bot to
+   headers. `GET /api/entity/<kind>/<slug>/context` (✅ landed —
+   `functions/api/entity/[kind]/[slug]/context.ts`) for the bot to
    fetch real entity context (replaces the workflow's stubbed
    placeholder). Now bot output quality jumps because Claude has the
    live entity state to ground its proposals.
