@@ -11,12 +11,13 @@
  *   5. Read the bundle file Claude wrote.
  *   6. HMAC-POST to /api/proposals/ingest.
  *
- * Usage:
- *   BOT_INGEST_SECRET=<secret> \
- *   PROPOSAL_INGEST_URL=http://localhost:8788/api/proposals/ingest \
- *   ENTITY_CONTEXT_BASE=http://localhost:8788 \
- *   PORT=8789 \
- *   npx tsx scripts/bot/local-runner.ts
+ * Reads env via dotenv from `.env`. Required:
+ *   BOT_INGEST_SECRET    — shared with CF dev's BOT_INGEST_SECRET
+ *   PROPOSAL_INGEST_URL  — e.g. http://localhost:8788/api/proposals/ingest
+ * Optional:
+ *   ENTITY_CONTEXT_BASE  — defaults to PROPOSAL_INGEST_URL's origin
+ *   PORT                 — defaults to 8789
+ *   MODEL_ID             — defaults to claude-opus-4-7
  *
  * Then point the CF dev env (`.dev.vars`) at this runner:
  *   BOT_DISPATCH_URL=http://localhost:8789/dispatch
@@ -24,6 +25,7 @@
  * Run with: npx tsx scripts/bot/local-runner.ts
  */
 
+import 'dotenv/config'
 import http from 'node:http'
 import crypto from 'node:crypto'
 import { spawn } from 'node:child_process'
