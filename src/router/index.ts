@@ -20,9 +20,10 @@ import { ensureUser } from '../composables/useAuth.ts'
 
 // Admin routes are lazy-loaded so their chunks (including @portabletext/editor,
 // react, spdx-license-ids, etc.) never ship to public visitors.
-const AdminLayout      = () => import('../pages/AdminLayout.vue')
-const AdminPagesView    = () => import('../pages/AdminPagesView.vue')
-const AdminSourcesView  = () => import('../pages/AdminSourcesView.vue')
+const AdminLayout              = () => import('../pages/AdminLayout.vue')
+const AdminPagesView           = () => import('../pages/AdminPagesView.vue')
+const AdminSourcesView         = () => import('../pages/AdminSourcesView.vue')
+const AdminProposalBundleView  = () => import('../pages/AdminProposalBundleView.vue')
 
 const MAP_PARAMS = ['lat', 'lng', 'z', 'orgs', 'dists', 'q', 'si']
 
@@ -60,9 +61,10 @@ const router = createRouter({
       meta:     { requiresAdmin: true },
       redirect: '/admin/pages/home',
       children: [
-        { path: 'pages',         redirect: '/admin/pages/home' },
-        { path: 'pages/:slug',   component: AdminPagesView },
-        { path: 'sources',       component: AdminSourcesView },
+        { path: 'pages',                redirect: '/admin/pages/home' },
+        { path: 'pages/:slug',          component: AdminPagesView },
+        { path: 'sources',              component: AdminSourcesView },
+        { path: 'proposals/:bundleId',  component: AdminProposalBundleView },
       ],
     },
   ],

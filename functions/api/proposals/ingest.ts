@@ -331,7 +331,7 @@ async function commentAndClose(env: Env, v: ValidatedBundle): Promise<void> {
   if (!v.issueNumber || !env.GITHUB_TOKEN || !env.GITHUB_REPO) return
 
   const reviewUrl = env.ADMIN_BASE_URL
-    ? `${env.ADMIN_BASE_URL}/proposals/${v.manifest.bundleId}`
+    ? `${env.ADMIN_BASE_URL}/admin/proposals/${v.manifest.bundleId}`
     : `(set ADMIN_BASE_URL to enable review-link)`
 
   const entityList = v.manifest.entities.map((e) => `- \`${e.entityId}\` — ${e.opSummary.join(', ')}`).join('\n')
