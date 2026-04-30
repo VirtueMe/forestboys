@@ -14,6 +14,20 @@
       <div class="page-header">
         <RouterLink to="/registre" class="back-link">&#x2039; Tilbake</RouterLink>
         <h1 class="item-title">{{ item.title }}</h1>
+        <div v-if="isAdmin" class="admin-bar">
+          <button
+            type="button"
+            class="bot-request"
+            :disabled="requesting || !item.slug"
+            @click="onRequestBundle"
+          >
+            {{ requesting ? 'Sender…' : 'Be om forslag' }}
+          </button>
+          <p v-if="requestResult" class="bot-result">
+            Sendt — <a v-if="requestResult.issueUrl" :href="requestResult.issueUrl" target="_blank" rel="noopener">issue {{ requestResult.issueNumber || 'lokal' }}</a>
+          </p>
+          <p v-if="requestError" class="bot-error">{{ requestError }}</p>
+        </div>
       </div>
 
       <!-- Beskrivelse -->
@@ -85,11 +99,50 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRoute, RouterLink } from 'vue-router'
 import { useLocationCache } from '../composables/useLocationCache.ts'
+import { authFetch, useAuth } from '../composables/useAuth.ts'
 import { SANITY_IMG } from '../config/sanity.ts'
 import LegacyDescription from '../components/LegacyDescription.vue'
 
 const route = useRoute()
 const { outlines, loading, init } = useLocationCache()
+const { user } = useAuth()
+const isAdmin = computed(() => user.value?.role === 'admin')
+
+const requesting    = ref(false)
+const requestResult = ref<{ issueNumber: number; issueUrl: string } | null>(null)
+const requestError  = ref<string | null>(null)
+
+async function onRequestBundle(): Promise<void> {
+  if (!item.value?.slug) return
+  requesting.value    = true
+  requestResult.value = null
+  requestError.value  = null
+  try {
+    const res = await authFetch('/api/proposals/request', {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        outlineId:  item.value.slug,
+        outlineRev: 'smoke-test',
+        promptHash: '000000000000',
+      }),
+    })
+    const body = await res.json().catch(() => ({})) as
+      { issueNumber?: number; issueUrl?: string; error?: string }
+    if (!res.ok) {
+      requestError.value = body.error ?? `HTTP ${res.status}`
+      return
+    }
+    requestResult.value = {
+      issueNumber: body.issueNumber ?? 0,
+      issueUrl:    body.issueUrl    ?? '',
+    }
+  } catch (e) {
+    requestError.value = (e as Error).message
+  } finally {
+    requesting.value = false
+  }
+}
 
 onMounted(async () => { await init() })
 
@@ -184,6 +237,29 @@ function nextImage() {
   margin: 0;
   line-height: 1.25;
 }
+
+.admin-bar {
+  margin-top: 12px;
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  flex-wrap: wrap;
+}
+.bot-request {
+  font-family: var(--font-sans);
+  font-size: var(--size-body-ui);
+  padding: var(--space-sm) var(--space-md);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--rule);
+  background: var(--paper-sunken);
+  color: var(--ink);
+  cursor: pointer;
+}
+.bot-request:hover:not([disabled]) { background: var(--paper); border-color: var(--ink-soft); }
+.bot-request[disabled] { opacity: 0.5; cursor: not-allowed; }
+.bot-result { margin: 0; font-size: var(--size-label); color: var(--ink-soft); }
+.bot-result a { color: var(--focus); }
+.bot-error { margin: 0; font-size: var(--size-label); color: var(--danger); }
 
 .section {
   padding: 12px 16px;
