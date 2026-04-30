@@ -2,8 +2,18 @@
   <section v-if="entries.length" class="section">
     <h3 class="section-heading">{{ label }} ({{ entries.length }})</h3>
     <div class="relation-list">
-      <div v-for="e in entries" :key="e.targetSlug" class="relation-row">
+      <div
+        v-for="e in entries"
+        :key="e.targetSlug"
+        class="relation-row"
+        :class="{
+          'relation-row--ghost':   !!e.pendingFromBundle,
+          'relation-row--removed': !!e.pendingRemoval,
+        }"
+      >
         <RouterLink :to="strategy.targetRoute(e)" class="relation-link">{{ e.targetName }}</RouterLink>
+        <span v-if="e.pendingFromBundle" class="pending-chip pending-chip--add">Foreslått</span>
+        <span v-if="e.pendingRemoval"    class="pending-chip pending-chip--del">Vil fjernes</span>
         <span v-if="showRole && e.role" class="relation-role">
           {{ roleOptions?.[e.role] ?? e.role }}
         </span>
@@ -136,4 +146,34 @@ function periodOf(e: RelationEntry): string {
 }
 .passed-chip--ok { background: var(--moss); color: var(--paper); }
 .passed-chip--no { background: var(--paper-sunken); color: var(--danger); border-color: var(--rule); }
+
+/* Proposal-preview: dashed-border + desaturated chip for entries
+   fabricated from an add-edge op; strikethrough + muted for entries a
+   remove-edge op would drop on accept. Live consumers never see these
+   modifiers (the fields default to undefined in fetchEntries output). */
+.relation-row--ghost {
+  border: 1px dashed var(--rule);
+  border-radius: var(--radius-md);
+  padding: var(--space-xs) var(--space-sm);
+  background: var(--paper-sunken);
+  opacity: 0.85;
+}
+.relation-row--removed .relation-link {
+  text-decoration: line-through;
+  color: var(--muted);
+}
+.relation-row--removed { opacity: 0.6; }
+
+.pending-chip {
+  font-family: var(--font-sans);
+  font-size: var(--size-caps);
+  font-weight: 600;
+  letter-spacing: var(--tracking-caps);
+  text-transform: uppercase;
+  padding: var(--space-xs) var(--space-sm);
+  border-radius: var(--radius-pill);
+  border: 1px dashed var(--rule);
+}
+.pending-chip--add { color: var(--moss); }
+.pending-chip--del { color: var(--danger); }
 </style>

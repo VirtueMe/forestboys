@@ -28,6 +28,17 @@ export interface RelationEntry {
   order?:         number | null
   sections:       Section[]
   hasDescription: boolean
+  /**
+   * Proposal-preview sidecar (live consumers ignore both):
+   *   - `pendingFromBundle` — set on entries fabricated from an `add-edge`
+   *     op; the value is the bundle id so the chip can deep-link to the
+   *     bundle review.
+   *   - `pendingRemoval` — true on a live entry that an in-flight bundle's
+   *     `remove-edge` op would drop on accept.
+   * Render styling lives on the relation chip components.
+   */
+  pendingFromBundle?: string | null
+  pendingRemoval?:    boolean
 }
 
 export interface RelationStrategy {
