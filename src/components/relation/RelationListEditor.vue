@@ -38,7 +38,9 @@
                   class="unit-chip-clear"
                   :aria-label="pickerChipAria"
                   @click="clearTarget(e)"
-                >✕</button>
+                >
+                  ✕
+                </button>
               </div>
               <template v-else>
                 <input
@@ -57,7 +59,9 @@
                     type="button"
                     class="unit-result"
                     @mousedown.prevent="pickTarget(e, opt)"
-                  >{{ opt.name }}</button>
+                  >
+                    {{ opt.name }}
+                  </button>
                   <a
                     v-if="createHref"
                     :href="createHref"

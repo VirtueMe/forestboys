@@ -44,7 +44,9 @@
           :key="sub.slug"
           :to="`/district/${sub.slug}`"
           class="section-link"
-        >{{ sub.name }}</RouterLink>
+        >
+          {{ sub.name }}
+        </RouterLink>
       </div>
     </div>
   </details>
@@ -131,7 +133,9 @@
             :aria-expanded="expandedMember === p.slug"
             aria-label="Vis forklaring"
             @click="toggleMemberInfo(p.slug)"
-          >i</button>
+          >
+            i
+          </button>
           <div v-if="p.description && expandedMember === p.slug" class="relation-desc">
             <p class="relation-desc-text">{{ p.description }}</p>
             <SourceRef v-if="p.sourceRefs?.length" :refs="p.sourceRefs" />

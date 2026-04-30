@@ -10,7 +10,6 @@
 
       <!-- Not logged in -->
       <div v-else-if="!user" class="access-state">
-
         <div class="access-section">
           <p class="section-label">Allerede redaktør?</p>
           <a href="/auth/google" class="btn btn-google">
@@ -77,7 +76,6 @@
             Be om redaktørtilgang
           </a>
         </div>
-
       </div>
 
       <!-- Pending -->

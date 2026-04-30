@@ -48,7 +48,8 @@
           :is="c.source.url ? 'a' : 'span'"
           v-bind="c.source.url ? { href: c.source.url, target: '_blank', rel: 'noopener noreferrer' } : {}"
           class="kilder-ref"
-        >{{ c.source.title || c.source.id
+        >
+          {{ c.source.title || c.source.id
           }}<span v-if="c.source.authorFreeText" class="kilder-author"> — {{ c.source.authorFreeText }}</span>
         </component>
         <span v-if="c.source.url" class="kilder-arrow"> ↗</span>

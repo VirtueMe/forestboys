@@ -7,18 +7,18 @@
         :key="e.targetSlug"
         class="relation-row"
         :class="{
-          'relation-row--ghost':   !!e.pendingFromBundle,
+          'relation-row--ghost': !!e.pendingFromBundle,
           'relation-row--removed': !!e.pendingRemoval,
         }"
       >
         <RouterLink :to="strategy.targetRoute(e)" class="relation-link">{{ e.targetName }}</RouterLink>
         <span v-if="e.pendingFromBundle" class="pending-chip pending-chip--add">Foreslått</span>
-        <span v-if="e.pendingRemoval"    class="pending-chip pending-chip--del">Vil fjernes</span>
+        <span v-if="e.pendingRemoval" class="pending-chip pending-chip--del">Vil fjernes</span>
         <span v-if="showRole && e.role" class="relation-role">
           {{ roleOptions?.[e.role] ?? e.role }}
         </span>
         <span v-if="periodOf(e)" class="member-period">{{ periodOf(e) }}</span>
-        <span v-if="showPassed && e.passed === true"  class="passed-chip passed-chip--ok">Bestått</span>
+        <span v-if="showPassed && e.passed === true" class="passed-chip passed-chip--ok">Bestått</span>
         <span v-if="showPassed && e.passed === false" class="passed-chip passed-chip--no">Ikke bestått</span>
         <button
           v-if="e.hasDescription"

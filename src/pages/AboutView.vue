@@ -15,8 +15,8 @@
           :class="`layout-${card.layout}`"
         >
           <component
-            v-if="card.title"
             :is="`h${card.headingLevel}`"
+            v-if="card.title"
             class="block-heading"
           >
             {{ card.title }}
@@ -70,7 +70,8 @@
                   :is="c.source.url ? 'a' : 'span'"
                   v-bind="c.source.url ? { href: c.source.url, target: '_blank', rel: 'noopener noreferrer' } : {}"
                   class="kilder-ref"
-                >{{ c.source.title || c.source.id
+                >
+                  {{ c.source.title || c.source.id
                   }}<span v-if="c.source.authorFreeText" class="kilder-author"> — {{ c.source.authorFreeText }}</span>
                 </component>
                 <span v-if="c.source.url" class="kilder-arrow"> ↗</span>
@@ -142,7 +143,8 @@
                     :is="c.source.url ? 'a' : 'span'"
                     v-bind="c.source.url ? { href: c.source.url, target: '_blank', rel: 'noopener noreferrer' } : {}"
                     class="kilder-ref"
-                  >{{ c.source.title || c.source.id
+                  >
+                    {{ c.source.title || c.source.id
                     }}<span v-if="c.source.authorFreeText" class="kilder-author"> — {{ c.source.authorFreeText }}</span>
                   </component>
                   <span v-if="c.source.url" class="kilder-arrow"> ↗</span>
@@ -331,7 +333,7 @@ function handleInternalLinks(e: MouseEvent) {
   const link = (e.target as HTMLElement).closest('a.internal-link')
   if (link) {
     e.preventDefault()
-    router.push(link.getAttribute('href') ?? '/')
+    void router.push(link.getAttribute('href') ?? '/')
   }
 }
 

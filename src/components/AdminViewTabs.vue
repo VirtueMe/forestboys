@@ -5,13 +5,17 @@
       class="admin-tab"
       :class="{ active: modelValue === 'preview' }"
       @click="emit('update:modelValue', 'preview')"
-    >Forhåndsvisning</button>
+    >
+      Forhåndsvisning
+    </button>
     <button
       type="button"
       class="admin-tab"
       :class="{ active: modelValue === 'edit' }"
       @click="emit('update:modelValue', 'edit')"
-    >Rediger</button>
+    >
+      Rediger
+    </button>
   </div>
 </template>
 

@@ -17,7 +17,9 @@
         type="button"
         class="create-menu-item"
         @click="pick(k.kind)"
-      >{{ k.label }}</button>
+      >
+        {{ k.label }}
+      </button>
     </div>
   </div>
 </template>
@@ -49,7 +51,7 @@ const open   = ref(false)
 function pick(k: Kind) {
   open.value = false
   const entry = KINDS.find(e => e.kind === k)
-  if (entry) router.push(entry.path)
+  if (entry) void router.push(entry.path)
 }
 
 // Close dropdown on outside click.

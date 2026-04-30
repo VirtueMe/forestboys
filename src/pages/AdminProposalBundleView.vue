@@ -40,13 +40,17 @@
             class="action action--accept"
             :disabled="busy === entry.entityId"
             @click="onAccept(entry.entityId)"
-          >Godkjenn</button>
+          >
+            Godkjenn
+          </button>
           <button
             type="button"
             class="action action--deny"
             :disabled="busy === entry.entityId"
             @click="onDeny(entry.entityId)"
-          >Avvis…</button>
+          >
+            Avvis…
+          </button>
         </div>
 
         <p v-if="actionError[entry.entityId]" class="entity-error">{{ actionError[entry.entityId] }}</p>

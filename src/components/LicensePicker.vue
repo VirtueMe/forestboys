@@ -17,7 +17,9 @@
         class="picker-result"
         :class="{ 'is-sentinel': isSentinel(id) }"
         @mousedown.prevent="pick(id)"
-      >{{ id }}</button>
+      >
+        {{ id }}
+      </button>
     </div>
   </div>
 </template>

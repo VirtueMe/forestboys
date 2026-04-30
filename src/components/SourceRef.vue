@@ -1,8 +1,8 @@
 <template>
   <span v-if="refs?.length" class="source-refs">
     <span
-      v-for="(ref, i) in parsedRefs"
-      :key="ref.raw"
+      v-for="(r, i) in parsedRefs"
+      :key="r.raw"
       class="source-ref-wrap"
     >
       <button
@@ -13,26 +13,26 @@
         @click="toggle(i)"
       >
         <span class="source-chip-icon" aria-hidden="true">§</span>
-        <span class="source-chip-title">{{ chipLabel(ref) }}</span>
-        <span v-if="ref.fragmentLabel" class="source-chip-fragment">{{ ref.fragmentLabel }}</span>
+        <span class="source-chip-title">{{ chipLabel(r) }}</span>
+        <span v-if="r.fragmentLabel" class="source-chip-fragment">{{ r.fragmentLabel }}</span>
       </button>
       <div v-if="openIndex === i" class="source-popover" role="dialog">
         <header class="source-popover-header">
-          <span v-if="resolved(ref.id)?.type" class="source-popover-type">{{ typeLabel(resolved(ref.id)!.type) }}</span>
+          <span v-if="resolved(r.id)?.type" class="source-popover-type">{{ typeLabel(resolved(r.id)!.type) }}</span>
           <button class="source-popover-close" type="button" aria-label="Lukk" @click="openIndex = null">×</button>
         </header>
-        <p class="source-popover-title">{{ chipLabel(ref) }}</p>
-        <p v-if="ref.fragmentLabel" class="source-popover-meta">Referanse: {{ ref.fragmentLabel }}</p>
-        <p v-if="resolved(ref.id)?.domain" class="source-popover-meta">{{ resolved(ref.id)!.domain }}</p>
+        <p class="source-popover-title">{{ chipLabel(r) }}</p>
+        <p v-if="r.fragmentLabel" class="source-popover-meta">Referanse: {{ r.fragmentLabel }}</p>
+        <p v-if="resolved(r.id)?.domain" class="source-popover-meta">{{ resolved(r.id)!.domain }}</p>
         <a
-          v-if="resolved(ref.id)?.url"
-          :href="resolved(ref.id)!.url!"
+          v-if="resolved(r.id)?.url"
+          :href="resolved(r.id)!.url!"
           target="_blank"
           rel="noopener noreferrer"
           class="source-popover-link"
         >Åpne kilde ↗</a>
-        <p v-else-if="!resolved(ref.id)" class="source-popover-meta source-popover-missing">
-          Kilden finnes ikke i grafen ennå ({{ ref.id }}).
+        <p v-else-if="!resolved(r.id)" class="source-popover-meta source-popover-missing">
+          Kilden finnes ikke i grafen ennå ({{ r.id }}).
         </p>
       </div>
     </span>

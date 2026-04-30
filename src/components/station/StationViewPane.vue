@@ -55,7 +55,9 @@
           :key="p.slug"
           :to="`/person/${p.slug}`"
           class="section-link"
-        >{{ p.name }}</RouterLink>
+        >
+          {{ p.name }}
+        </RouterLink>
       </div>
     </div>
   </details>

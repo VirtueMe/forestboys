@@ -8,7 +8,9 @@
           type="button"
           aria-label="Lukk meny"
           @click="navOpen = false"
-        >✕</button>
+        >
+          ✕
+        </button>
       </div>
 
       <nav>
@@ -53,7 +55,9 @@
           type="button"
           aria-label="Åpne meny"
           @click="navOpen = true"
-        >☰</button>
+        >
+          ☰
+        </button>
         <span class="crumb">{{ crumb }}</span>
       </header>
       <main class="admin-content">

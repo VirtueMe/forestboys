@@ -1,8 +1,8 @@
 <template>
   <form class="edit-form" @submit.prevent="submit">
     <div class="edit-title">Rediger kilde</div>
-    <input v-model="form.title"          class="picker-input" type="text" placeholder="Tittel *" required />
-    <input v-model="form.url"            class="picker-input" type="url"  placeholder="URL" @blur="autoFill" />
+    <input v-model="form.title" class="picker-input" type="text" placeholder="Tittel *" required />
+    <input v-model="form.url" class="picker-input" type="url" placeholder="URL" @blur="autoFill" />
     <input v-model="form.authorFreeText" class="picker-input" type="text" placeholder="Forfatter" />
     <div class="form-row">
       <select v-model="form.type" class="picker-input">

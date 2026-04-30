@@ -17,7 +17,9 @@
         type="button"
         aria-label="Forrige"
         @click="prev"
-      >‹</button>
+      >
+        ‹
+      </button>
 
       <img
         v-if="currentImage"
@@ -34,7 +36,9 @@
         type="button"
         aria-label="Neste"
         @click="next"
-      >›</button>
+      >
+        ›
+      </button>
     </div>
 
     <div class="slider-meta">

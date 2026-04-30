@@ -54,12 +54,16 @@
             class="pane-tab"
             :class="{ active: paneView === 'preview' }"
             @click="paneView = 'preview'"
-          >Forhåndsvisning</button>
+          >
+            Forhåndsvisning
+          </button>
           <button
             class="pane-tab"
             :class="{ active: paneView === 'edit' }"
             @click="paneView = 'edit'"
-          >Rediger</button>
+          >
+            Rediger
+          </button>
         </div>
 
         <section v-if="paneView === 'preview'" class="pane">
@@ -126,7 +130,8 @@
                         :is="c.source.url ? 'a' : 'span'"
                         v-bind="c.source.url ? { href: c.source.url, target: '_blank', rel: 'noopener noreferrer' } : {}"
                         class="kilder-ref"
-                      >{{ c.source.title || c.source.id
+                      >
+                        {{ c.source.title || c.source.id
                         }}<span v-if="c.source.authorFreeText" class="kilder-author"> — {{ c.source.authorFreeText }}</span>
                       </component>
                       <span v-if="c.source.url" class="kilder-arrow"> ↗</span>
@@ -136,7 +141,6 @@
                 <div v-if="!selected.sections.length" class="muted">tomt</div>
               </div>
             </article>
-
           </template>
           <div v-else class="page-preview">
             <div class="page-preview-header">
@@ -144,11 +148,11 @@
               <div class="zoom-control">
                 <span class="zoom-icon">−</span>
                 <input
+                  v-model.number="zoom"
                   type="range"
                   min="0.5"
                   max="1.5"
                   step="0.1"
-                  v-model.number="zoom"
                   class="zoom-slider"
                   aria-label="Zoom"
                 />
@@ -297,7 +301,6 @@
                 <li v-for="(w, i) in headingWarnings" :key="i">{{ w }}</li>
               </ul>
             </div>
-
           </template>
           <div v-else class="pane-empty">Velg en blokk.</div>
         </section>

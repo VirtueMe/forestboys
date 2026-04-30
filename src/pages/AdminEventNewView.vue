@@ -6,11 +6,11 @@
       <label class="edit-label">Type</label>
       <div class="type-seg">
         <label class="type-seg-opt" :class="{ active: kind === 'incident' }">
-          <input type="radio" value="incident" v-model="kind" />
+          <input v-model="kind" type="radio" value="incident" />
           Hendelse
         </label>
         <label class="type-seg-opt" :class="{ active: kind === 'operation' }">
-          <input type="radio" value="operation" v-model="kind" />
+          <input v-model="kind" type="radio" value="operation" />
           Operasjon
         </label>
       </div>
@@ -108,7 +108,7 @@ function autoSlug() {
 }
 
 function cancel() {
-  if (returnTo) router.push(returnTo)
+  if (returnTo) void router.push(returnTo)
   else router.back()
 }
 
@@ -137,9 +137,9 @@ async function save() {
     const newSlug = body.slug ?? slug.value
     // Prefer returnTo with auto-expand hint; fall back to the event's own page.
     if (returnTo) {
-      router.push({ path: returnTo, query: { expandEvent: newSlug } })
+      void router.push({ path: returnTo, query: { expandEvent: newSlug } })
     } else {
-      router.push(`/events/${newSlug}`)
+      void router.push(`/events/${newSlug}`)
     }
   } catch (e) {
     error.value = (e as Error).message

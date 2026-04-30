@@ -74,11 +74,13 @@
         <!-- Beskrivelse -->
         <section v-if="event.description?.length" class="section">
           <h2 class="section-heading">Beskrivelse</h2>
+          <!-- eslint-disable vue/no-v-html -->
           <div
             class="portable-text"
             @click.capture="handleInternalLinks"
             v-html="blocksToHtml(event.description)"
           ></div>
+          <!-- eslint-enable vue/no-v-html -->
         </section>
 
         <!-- Fra Sted -->
@@ -472,7 +474,7 @@ function handleInternalLinks(e: MouseEvent) {
   const link = (e.target as HTMLElement).closest('a.internal-link')
   if (link) {
     e.preventDefault()
-    router.push(link.getAttribute('href') ?? '/')
+    void router.push(link.getAttribute('href') ?? '/')
   }
 }
 

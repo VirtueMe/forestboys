@@ -10,7 +10,7 @@
           {{ roleOptions?.[entry.role] ?? entry.role }}
         </span>
         <span v-if="periodOf(entry)" class="member-period">{{ periodOf(entry) }}</span>
-        <span v-if="showPassed && entry.passed === true"  class="passed-chip passed-chip--ok">Bestått</span>
+        <span v-if="showPassed && entry.passed === true" class="passed-chip passed-chip--ok">Bestått</span>
         <span v-if="showPassed && entry.passed === false" class="passed-chip passed-chip--no">Ikke bestått</span>
       </div>
       <template v-for="s in sortedSections" :key="s.order">
@@ -58,7 +58,8 @@
               :is="c.source.url ? 'a' : 'span'"
               v-bind="c.source.url ? { href: c.source.url, target: '_blank', rel: 'noopener noreferrer' } : {}"
               class="kilder-ref"
-            >{{ c.source.title || c.source.id
+            >
+              {{ c.source.title || c.source.id
               }}<span v-if="c.source.authorFreeText" class="kilder-author"> — {{ c.source.authorFreeText }}</span>
             </component>
             <span v-if="c.source.url" class="kilder-arrow"> ↗</span>

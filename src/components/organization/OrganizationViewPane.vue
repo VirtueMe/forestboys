@@ -23,7 +23,9 @@
             type="button"
             aria-label="Vis forklaring"
             @click="activeUnit = u"
-          >i</button>
+          >
+            i
+          </button>
         </div>
       </div>
     </div>

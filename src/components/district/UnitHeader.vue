@@ -23,7 +23,9 @@
           :aria-expanded="expandedParent === p.slug"
           aria-label="Vis forklaring"
           @click="toggleParentInfo(p.slug)"
-        >i</button>
+        >
+          i
+        </button>
         <div v-if="p.description && expandedParent === p.slug" class="parent-desc">
           <p class="parent-desc-text">{{ p.description }}</p>
           <SourceRef v-if="p.sourceRefs?.length" :refs="p.sourceRefs" />

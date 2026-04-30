@@ -14,8 +14,8 @@
       >
         <div class="section-controls">
           <span class="section-index">Seksjon {{ section.order }}</span>
-          <button type="button" class="section-btn" title="Opp"    @click="moveSection(section, -1)">↑</button>
-          <button type="button" class="section-btn" title="Ned"    @click="moveSection(section, 1)">↓</button>
+          <button type="button" class="section-btn" title="Opp" @click="moveSection(section, -1)">↑</button>
+          <button type="button" class="section-btn" title="Ned" @click="moveSection(section, 1)">↓</button>
           <button type="button" class="section-btn section-btn-delete" title="Slett" @click="removeSection(section)">✕</button>
         </div>
 

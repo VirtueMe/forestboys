@@ -37,7 +37,9 @@
             class="slug-toggle"
             :aria-label="slugEditable ? 'Lås slug' : 'Rediger slug'"
             @click="toggleSlugEdit"
-          >{{ slugEditable ? '✓' : '✎' }}</button>
+          >
+            {{ slugEditable ? '✓' : '✎' }}
+          </button>
         </div>
         <span v-if="slugTaken" class="slug-hint">Slug finnes allerede for en person.</span>
       </div>
