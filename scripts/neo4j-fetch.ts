@@ -3,10 +3,9 @@
  * Run with: npx tsx scripts/neo4j-fetch.ts
  */
 
-
 const PROJECT_ID = '7r6kqtqy'
-const DATASET    = 'production'
-const CDN        = `https://${PROJECT_ID}.apicdn.sanity.io/v2021-08-31/data/query/${DATASET}`
+const DATASET = 'production'
+const CDN = `https://${PROJECT_ID}.apicdn.sanity.io/v2021-08-31/data/query/${DATASET}`
 
 async function fetchAll<T>(query: string): Promise<T[]> {
   let results: T[] = []
@@ -16,9 +15,9 @@ async function fetchAll<T>(query: string): Promise<T[]> {
   while (true) {
     const filter = lastId ? query.replace(']', ` && _id > "${lastId}"]`) : query
     const url = `${CDN}?query=${encodeURIComponent(`${filter} | order(_id asc) [0...${pageSize}]`)}`
-    const res  = await fetch(url)
+    const res = await fetch(url)
     if (!res.ok) throw new Error(`Sanity fetch failed: ${res.status}`)
-    const json = await res.json() as { result: T[] }
+    const json = (await res.json()) as { result: T[] }
     const page = json.result ?? []
     results = results.concat(page)
     if (page.length < pageSize) break
@@ -51,4 +50,7 @@ async function main() {
   process.stderr.write(`Done — ${events.length} events written to stdout\n`)
 }
 
-main().catch(err => { console.error(err); process.exit(1) })
+main().catch((err) => {
+  console.error(err)
+  process.exit(1)
+})

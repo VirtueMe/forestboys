@@ -10,23 +10,33 @@
  */
 
 interface Env {
-  NEO4J_URI:       string   // neo4j+s://your-instance.databases.neo4j.io
-  NEO4J_USERNAME:  string
-  NEO4J_PASSWORD:  string
+  NEO4J_URI: string // neo4j+s://your-instance.databases.neo4j.io
+  NEO4J_USERNAME: string
+  NEO4J_PASSWORD: string
 }
 
 const ALLOWED_STATUSES = new Set(['approved', 'rejected'])
 
+interface Body {
+  id?: string
+  status?: string
+}
+
+interface ResultBody {
+  results: { columns: string[]; data: { row: unknown[] }[] }[]
+  errors: { code: string; message: string }[]
+}
+
 export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
   // ── Parse body ───────────────────────────────────────────────────────────────
-  let body: { id?: string; status?: string }
-  try {
-    body = await request.json()
-  } catch {
+  const body: Body | null = await request.json<Body>().catch(() => null)
+
+  if (!body) {
     return json({ error: 'Invalid JSON' }, 400)
   }
 
   const { id, status } = body
+
   if (!id || typeof id !== 'string') return json({ error: 'Missing id' }, 400)
   if (!status || !ALLOWED_STATUSES.has(status)) return json({ error: 'status must be "approved" or "rejected"' }, 400)
 
@@ -39,18 +49,20 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
   const neo4jRes = await fetch(neo4jUrl, {
     method: 'POST',
     headers: {
-      'Authorization': `Basic ${auth}`,
-      'Content-Type':  'application/json',
-      'Accept':        'application/json',
+      Authorization: `Basic ${auth}`,
+      'Content-Type': 'application/json',
+      Accept: 'application/json',
     },
     body: JSON.stringify({
-      statements: [{
-        statement:  `MATCH (ri:ReviewItem {id: $id})
+      statements: [
+        {
+          statement: `MATCH (ri:ReviewItem {id: $id})
                      SET ri.status     = $status,
                          ri.reviewedAt = $reviewedAt
                      RETURN ri.id AS id`,
-        parameters: { id, status, reviewedAt },
-      }],
+          parameters: { id, status, reviewedAt },
+        },
+      ],
     }),
   })
 
@@ -58,7 +70,8 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
     return json({ error: `Neo4j error: ${neo4jRes.status}` }, 502)
   }
 
-  const result = await neo4jRes.json()
+  const result: ResultBody = await neo4jRes.json()
+
   if (result.errors?.length) {
     return json({ error: result.errors[0].message }, 502)
   }
