@@ -5,7 +5,7 @@ production proposal pipeline (see `docs/PROPOSALS.md`):
 
 | Prompt              | Used by (in production)                        | Trigger                       |
 |---------------------|------------------------------------------------|-------------------------------|
-| `proposal-block`    | `bot-task` GitHub Action (Generation pipeline) | Outline applied to entity     |
+| `proposal-bundle`   | `bot-task` GitHub Action (Generation pipeline) | Outline absorption requested  |
 | `denial-analysis`   | `bot-deny-analysis` GitHub Action              | Substantive proposal denial   |
 
 The harness runs the same `claude` CLI in headless mode that the
@@ -33,10 +33,10 @@ scripts/prompts/
 npm run prompts:test
 
 # One prompt
-npm run prompts:test proposal-block
+npm run prompts:test proposal-bundle
 
 # Filter fixtures by substring
-npm run prompts:test proposal-block linge
+npm run prompts:test proposal-bundle linge
 ```
 
 Auth: uses your local `claude` CLI's session (run `claude` once to log
@@ -74,10 +74,10 @@ handler is a bug — they read these fields.
 A failed run prints the path to the rendered prompt and the raw output:
 
 ```
-▶ proposal-block/linge-biography ... ✗ FAIL
+▶ proposal-bundle/linge-pulje-4 ... ✗ FAIL
 output failed schema validation:
-[ { "instancePath": "/newValue/_type", "message": "must be equal to constant" } ]
-raw output: /tmp/prompt-test-XXX/proposal-block-linge-biography.json
+[ { "instancePath": "/entities/0/ops/0/op", "message": "must be equal to one of the allowed values" } ]
+raw output: /tmp/prompt-test-XXX/bundle-linge-pulje-4-2026-04-29T14-00-00Z.json
 rendered prompt: /tmp/prompt-test-XXX/rendered-prompt.txt
 ```
 

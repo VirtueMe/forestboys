@@ -1,4 +1,4 @@
-name: Bot task — proposal generation
+name: Bot task — bundle generation
 
 on:
   issues:
@@ -13,7 +13,7 @@ concurrency:
 
 permissions:
   contents: read       # checkout + read prompts/SCHEMA
-  issues:  write       # comment + close on success
+  issues:  write       # comment + close on success/skip
 
 jobs:
   generate:
@@ -44,9 +44,7 @@ jobs:
           body = os.environ['ISSUE_BODY']
 
           # Extract the first ```json fence — that's the request payload.
-          # The bot-task.md template + functions/api/proposals/request.ts
-          # both put it as the first fenced block; .github/ISSUE_TEMPLATE/...
-          # is the canonical contract.
+          # See .github/ISSUE_TEMPLATE/bot-task.md + functions/api/proposals/request.ts.
           match = re.search(r'```json\s*\n(.*?)\n```', body, re.DOTALL)
           if not match:
               print('::error::No ```json fence found in issue body', file=sys.stderr)
@@ -58,13 +56,12 @@ jobs:
               print(f'::error::Issue payload is not valid JSON: {e}', file=sys.stderr)
               sys.exit(1)
 
-          required = ['entityId', 'kind', 'slug', 'blockPath', 'outlineId', 'outlineRev', 'sectionPath', 'promptHash']
+          required = ['outlineId', 'outlineRev', 'promptHash']
           missing = [k for k in required if k not in req]
           if missing:
               print(f'::error::Missing required fields: {missing}', file=sys.stderr)
               sys.exit(1)
 
-          # Stash payload as a file for later steps + emit individual outputs
           with open('/tmp/req.json', 'w') as f:
               json.dump(req, f)
 
@@ -77,40 +74,42 @@ jobs:
       - name: Build fixture for the prompt
         id: fixture
         env:
-          ENTITY_ID:    ${{ steps.parse.outputs.entityId }}
-          ENTITY_KIND:  ${{ steps.parse.outputs.kind }}
-          BLOCK_PATH:   ${{ steps.parse.outputs.blockPath }}
           OUTLINE_ID:   ${{ steps.parse.outputs.outlineId }}
           OUTLINE_REV:  ${{ steps.parse.outputs.outlineRev }}
-          SECTION_PATH: ${{ steps.parse.outputs.sectionPath }}
           PROMPT_HASH:  ${{ steps.parse.outputs.promptHash }}
         run: |
-          # v1 — entity context, similar accepts, similar denials are all
+          # v1 — outline body, live entities, similar accepts/denials are
           # empty placeholders. Wire these up to /api/entity/<kind>/<slug>/context
-          # and the corpus endpoints once they exist.
+          # and the corpus endpoints once they exist (see PROPOSALS.md
+          # phase-6 followup).
           python3 << 'PYEOF'
-          import os, json
+          import os, json, datetime
+
+          outline_id  = os.environ['OUTLINE_ID']
+          outline_rev = os.environ['OUTLINE_REV']
+          created_at  = datetime.datetime.now(datetime.timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ')
+          bundle_id   = f"bundle:{outline_id}:{created_at}"
+
           fixture = {
               'vars': {
-                  'ENTITY_ID':            os.environ['ENTITY_ID'],
-                  'ENTITY_KIND':          os.environ['ENTITY_KIND'],
-                  'BLOCK_PATH':           os.environ['BLOCK_PATH'],
-                  'OUTLINE_ID':           os.environ['OUTLINE_ID'],
-                  'OUTLINE_REV':          os.environ['OUTLINE_REV'],
-                  'SECTION_PATH':         os.environ['SECTION_PATH'],
+                  'OUTLINE_ID':           outline_id,
+                  'OUTLINE_REV':          outline_rev,
                   'PROMPT_HASH':          os.environ['PROMPT_HASH'],
-                  'ENTITY_CONTEXT_JSON':  { 'id': os.environ['ENTITY_ID'], 'kind': os.environ['ENTITY_KIND'], 'note': 'context fetch not yet wired — see docs/PROPOSALS.md phase 6 followup' },
-                  'OUTLINE_SECTION_JSON': { 'outlineId': os.environ['OUTLINE_ID'], 'sectionPath': os.environ['SECTION_PATH'], 'note': 'outline body fetch not yet wired' },
+                  'BUNDLE_ID':            bundle_id,
+                  'CREATED_AT':           created_at,
+                  'MODEL_ID':             'claude-opus-4-7',
+                  'OUTLINE_JSON':         { 'outlineId': outline_id, 'outlineRev': outline_rev, 'note': 'outline body fetch not yet wired — see docs/PROPOSALS.md phase-6 followup' },
+                  'LIVE_ENTITIES_JSON':   [],
                   'SIMILAR_ACCEPTS_JSON': [],
                   'SIMILAR_DENIALS_JSON': [],
               },
-              'outputFile': f"proposal-block-{os.environ['ENTITY_ID'].replace(':', '-')}-{os.environ['BLOCK_PATH'].replace('.', '-')}.json",
+              'outputFile': f"bundle-{outline_id}-{created_at.replace(':', '-')}.json",
           }
           with open('/tmp/fixture.json', 'w') as f:
               json.dump(fixture, f)
-          # The output filename for ingest
           with open(os.environ['GITHUB_OUTPUT'], 'a') as f:
               f.write(f"output_path=/tmp/{fixture['outputFile']}\n")
+              f.write(f"bundle_id={bundle_id}\n")
           PYEOF
 
       - name: Render prompt
@@ -121,7 +120,7 @@ jobs:
           python3 << 'PYEOF'
           import os, re, json, sys
 
-          tmpl = open('scripts/prompts/proposal-block.txt').read()
+          tmpl = open('scripts/prompts/proposal-bundle.txt').read()
           fixture = json.load(open('/tmp/fixture.json'))
           vars_ = { **fixture['vars'], 'OUTPUT_PATH': os.environ['OUTPUT_PATH'] }
 
@@ -138,7 +137,6 @@ jobs:
               f.write(rendered)
           PYEOF
 
-          # Pass the rendered prompt to the next step via output
           {
             echo "prompt<<PROMPT_EOF"
             cat /tmp/prompt.txt
@@ -160,12 +158,13 @@ jobs:
             echo "::error::Claude did not write $OUTPUT_PATH"
             exit 1
           fi
-          # Loose schema check — full validation lives in the ingest endpoint
-          jq -e 'has("entityId") and has("blockPath") and has("newValue") and has("derivedFrom")' "$OUTPUT_PATH" > /dev/null \
-            || jq -e '.skip == true and (.reason | type == "string")' "$OUTPUT_PATH" > /dev/null \
+          # Loose shape check — full validation lives in ingest. Allow
+          # either a skip envelope or a bundle envelope.
+          jq -e '.skip == true and (.reason | type == "string")' "$OUTPUT_PATH" > /dev/null \
+            || jq -e 'has("bundleId") and has("outlineId") and has("outlineRev") and has("entities") and (.entities | type == "array") and (.entities | length > 0)' "$OUTPUT_PATH" > /dev/null \
             || { echo "::error::Output failed minimal shape check"; cat "$OUTPUT_PATH"; exit 1; }
 
-      - name: Skip — proposal opted out
+      - name: Skip — bot opted out
         id: skip_check
         env:
           OUTPUT_PATH: ${{ steps.fixture.outputs.output_path }}
@@ -190,7 +189,7 @@ jobs:
           import os, json, hmac, hashlib, urllib.request, urllib.error, sys
 
           body_bytes = open(os.environ['OUTPUT_PATH'], 'rb').read()
-          # Augment with issue metadata so the ingest comment can link back
+          # Augment with issue metadata so the ingest comment can link back.
           payload = json.loads(body_bytes)
           payload['issueNumber'] = int(os.environ['ISSUE_NUMBER'])
           body_bytes = json.dumps(payload, separators=(',', ':')).encode()
@@ -223,9 +222,9 @@ jobs:
           ISSUE_NUMBER: ${{ github.event.issue.number }}
           REASON:       ${{ steps.skip_check.outputs.skip_reason }}
         run: |
-          gh issue comment "$ISSUE_NUMBER" --body "Bot opted out of generating a proposal: $REASON"
+          gh issue comment "$ISSUE_NUMBER" --body "Bot opted out of generating a bundle: $REASON"
           gh issue close "$ISSUE_NUMBER"
 
       # Closing on successful ingest is the ingest endpoint's responsibility
-      # (it has the R2 path to comment with). On failure the issue stays open
-      # with the workflow's failure log so it can be re-run.
+      # (it has the bundle URL to comment with). On failure the issue stays
+      # open with the workflow's failure log so it can be re-run.

@@ -1,0 +1,69 @@
+{
+  "vars": {
+    "OUTLINE_ID": "linge-pulje-4",
+    "OUTLINE_REV": "rev-001",
+    "BUNDLE_ID": "bundle:linge-pulje-4:2026-04-29T14:00:00Z",
+    "CREATED_AT": "2026-04-29T14:00:00Z",
+    "MODEL_ID": "claude-opus-4-7",
+    "OUTLINE_JSON": {
+      "outlineId": "linge-pulje-4",
+      "outlineRev": "rev-001",
+      "title": "Kompani Linge — Pulje 4",
+      "sections": [
+        {
+          "path": "overview",
+          "heading": "Oversikt",
+          "body": [
+            "Pulje 4 var den fjerde rotasjonen av norske rekrutter gjennom Kompani Linges treningsprogramme i regi av SOE.",
+            "Iflg. Guhnfeldt 2018, p. 142 løp puljen mars–mai 1942: STS-26 → Ringway (fallskjerm) → Beaulieu (finishing school)."
+          ]
+        },
+        {
+          "path": "members",
+          "heading": "Medlemmer",
+          "body": [
+            "Erik Anderssen (f. 1920) ble tatt opp i puljen mars 1942 som operative.",
+            "Jan Warberg står allerede i grafen som operative i Kompani Linge — bekreft tilhørighet til pulje 4 i biografien."
+          ]
+        }
+      ]
+    },
+    "LIVE_ENTITIES_JSON": [
+      {
+        "entityId": "Person:warberg-jan",
+        "kind": "Person",
+        "canonicalName": "Jan Warberg",
+        "birthDate": "1920-04-15",
+        "memberOf": [
+          { "unit": "kompani-linge", "role": "operative", "startDate": "1942-03" }
+        ],
+        "descriptions": [
+          {
+            "sectionPath": "biography",
+            "blocks": [
+              { "blockKey": "k7f3", "sha": "abc123def456", "text": "Jan Warberg ble vervet til SOE..." }
+            ]
+          }
+        ]
+      },
+      {
+        "entityId": "Organization:soe",
+        "kind": "Organization",
+        "canonicalName": "Special Operations Executive"
+      },
+      {
+        "entityId": "Operation:linge-training-programme",
+        "kind": "Operation",
+        "canonicalName": "Linge Training Programme"
+      },
+      {
+        "entityId": "Outline:linge-pulje-4",
+        "kind": "Outline",
+        "outlineRev": "rev-001"
+      }
+    ],
+    "SIMILAR_ACCEPTS_JSON": [],
+    "SIMILAR_DENIALS_JSON": []
+  },
+  "outputFile": "bundle-linge-pulje-4.json"
+}

@@ -9,8 +9,8 @@
  *
  * Usage:
  *   tsx scripts/prompts/test.ts                       # all prompts, all fixtures
- *   tsx scripts/prompts/test.ts proposal-block        # one prompt, all its fixtures
- *   tsx scripts/prompts/test.ts proposal-block linge  # match fixture by substring
+ *   tsx scripts/prompts/test.ts proposal-bundle        # one prompt, all its fixtures
+ *   tsx scripts/prompts/test.ts proposal-bundle linge  # match fixture by substring
  *
  * Auth:
  *   Uses your local `claude` CLI's auth — log in once with `claude` or

@@ -1,0 +1,149 @@
+You are generating one proposal **bundle** absorbing a single outline
+into the Milorg historical-research graph. The bundle is reviewed by Jan
+Warberg (editor) entity-by-entity before it lands in Neo4j, so it must
+be conservative, sourced where possible, and never invent facts not
+supported by the outline + provided entity context.
+
+## Read these first (source-of-truth, do not skip)
+
+Read all three files in full before producing any output:
+
+1. `docs/SCHEMA.md` — the Neo4j graph spec. Pay attention to:
+   - Node-reference sections for every kind you may create
+     (Person, Unit, Operation, Incident, Station, Transport, Location,
+      Organization, Outline) — properties, allowed edges, controlled
+     vocabularies.
+   - The `HAS_CONTENT` description model and the `Description` node spec.
+   - The `desc:<kind>:<slug>:<order>` ID convention.
+   - Anti-patterns ("never store rich text in a node property",
+     "annotated edges sort last", etc.).
+2. `docs/PORTABLETEXT.md` — the Portable Text block shape used inside
+   `modify-block` and `create-entity` description payloads. Match it
+   exactly; non-conforming blocks will be rejected at ingest.
+3. `docs/PROPOSALS.md` — the proposal pipeline. Required reading:
+   - "Bundle shape" — the wire format the ingest endpoint expects.
+   - "Op vocabulary" — the six discriminated ops you may emit.
+   - "Provenance stamps" — what the bundle itself must carry.
+
+If your generated bundle contradicts anything in those docs, ingest
+will reject it. When in doubt, prefer the docs over your training-data
+knowledge of similar systems.
+
+## Outline being absorbed
+
+```json
+${OUTLINE_JSON}
+```
+
+## Live entities the outline references (current Neo4j state)
+
+```json
+${LIVE_ENTITIES_JSON}
+```
+
+Use these to decide whether an entity needs `create-entity` (not in
+this list) or `modify-block` / `add-edge` (already in this list).
+For `modify-block` ops, set `expectedSha` to the block's current sha
+from this context if available, else the empty string `""` (ingest
+accepts empty in v1; drift detection runs at accept time).
+
+## Recently accepted bundles for similar outlines (positive examples)
+
+```json
+${SIMILAR_ACCEPTS_JSON}
+```
+
+## Recently denied entities for this outline kind, with Jan's reasoning (avoid these patterns)
+
+```json
+${SIMILAR_DENIALS_JSON}
+```
+
+## Task
+
+Produce one bundle absorbing outline `${OUTLINE_ID}`. The bundle should:
+
+- Create entities the outline calls for that don't already exist in the
+  live graph (`create-entity` ops, with outbound edges in the same op).
+- Modify descriptions on existing entities where the outline updates
+  them (`modify-block` ops, one per block — never bundle multiple
+  blocks into one op).
+- Add or remove edges where the outline rewires relationships
+  (`add-edge` / `remove-edge` ops).
+- Always end with an `obsolete-outline` op on the outline entity itself
+  (`Outline:${OUTLINE_ID}`), reasoning briefly why the outline is now
+  fully absorbed. Jan does not accept this op directly — ingest stores
+  it; auto-archival fires once all other entities are accepted.
+
+Constraints:
+
+- Stay strictly within what the outline + live-entity context support.
+  No hallucinated dates, ranks, locations, or relationships.
+- Match Jan's editorial voice: factual, Norwegian where the entity is
+  Norwegian, citation-friendly. Mark inferred facts as inferred in the
+  prose ("antatt", "trolig", "iflg. <kilde>").
+- Do not duplicate content already present in `descriptions[]` on a
+  live entity — if the outline restates known facts, skip the op.
+- Edge targets must resolve to either a live entity (in
+  `LIVE_ENTITIES_JSON`) or another entity being created in this same
+  bundle. Don't reference entities you neither create nor see live.
+- Slugs must match `/^[a-z0-9-]+$/`. Entity IDs are `<Kind>:<slug>`.
+- `blockPath` must match `section.<slug>.block.<key>`.
+
+## Skip path
+
+If the outline has nothing left to absorb (already fully absorbed in a
+prior bundle, or is purely a placeholder), write:
+
+```json
+{ "skip": true, "reason": "<one sentence>" }
+```
+
+instead of a bundle. The workflow comments + closes the issue without
+ingesting.
+
+## Output
+
+Write a single JSON object to `${OUTPUT_PATH}` matching the bundle
+shape exactly:
+
+```jsonc
+{
+  "bundleId":   "${BUNDLE_ID}",
+  "outlineId":  "${OUTLINE_ID}",
+  "outlineRev": "${OUTLINE_REV}",
+  "summary":    "<one paragraph: what this bundle absorbs, in Jan's voice>",
+  "createdAt":  "${CREATED_AT}",
+  "model":      "${MODEL_ID}",
+  "promptHash": "${PROMPT_HASH}",
+  "entities": [
+    {
+      "entityId":    "<Kind>:<slug>",
+      "ops":         [ /* one or more ops, see vocabulary below */ ],
+      "derivedFrom": { "outlineId": "${OUTLINE_ID}", "sectionPath": "<section path or omit>", "outlineRev": "${OUTLINE_REV}" },
+      "source":      "claude:outline:${OUTLINE_ID}",
+      "generatedAt": "${CREATED_AT}"
+    }
+    // ... one entry per affected entity, including Outline:${OUTLINE_ID} with the obsolete-outline op
+  ]
+}
+```
+
+Op vocabulary (each entry in `ops[]` is one of):
+
+```jsonc
+{ "op": "create-entity", "kind": "<Kind>", "slug": "<slug>",
+  "props": { /* scalar props per SCHEMA.md */ },
+  "edges": [ { "type": "<EDGE_TYPE>", "to": "<Kind>:<slug>", "props": { /* optional */ } } ] }
+
+{ "op": "modify-block", "blockPath": "section.<slug>.block.<key>",
+  "expectedSha": "<sha or empty string>",
+  "newValue": { "_type": "block", "children": [ /* PT spans */ ], "markDefs": [ /* optional */ ] } }
+
+{ "op": "add-edge",    "type": "<EDGE_TYPE>", "from": "<Kind>:<slug>", "to": "<Kind>:<slug>", "props": { /* optional */ } }
+{ "op": "remove-edge", "type": "<EDGE_TYPE>", "from": "<Kind>:<slug>", "to": "<Kind>:<slug>" }
+{ "op": "delete-entity" }
+{ "op": "obsolete-outline", "reason": "<why fully absorbed>" }
+```
+
+No prose response — only the file write to `${OUTPUT_PATH}`.
