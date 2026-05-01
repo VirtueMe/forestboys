@@ -92,8 +92,7 @@ onBeforeUnmount(() => {
 }
 .pt-editable:focus { border-color: var(--focus); }
 
-.pt-editable p          { margin: 0 0 0.75em; }
-.pt-editable p:last-child { margin-bottom: 0; }
+.pt-editable p { margin: 0.5em 0 0.75em; }
 .pt-editable h1         { font-size: 24px; font-weight: 700; margin: 0 0 0.5em; color: var(--focus); }
 .pt-editable h2         { font-size: 20px; font-weight: 700; margin: 0 0 0.5em; color: var(--focus); }
 .pt-editable h3         { font-size: 17px; font-weight: 700; margin: 0 0 0.5em; color: var(--focus); }
