@@ -5,115 +5,293 @@
     <div v-else-if="!item" class="status">Oppføring ikke funnet.</div>
 
     <template v-else>
-      <!-- Hero image -->
-      <div v-if="heroUrl" class="hero">
-        <img :src="heroUrl" :alt="item.title" class="hero-img" />
-      </div>
-
       <!-- Header -->
       <div class="page-header">
         <RouterLink to="/registre" class="back-link">&#x2039; Tilbake</RouterLink>
-        <h1 class="item-title">{{ item.title }}</h1>
-        <div v-if="isAdmin" class="admin-bar">
+        <h1 class="item-title">{{ item.canonicalName }}</h1>
+      </div>
+
+      <AdminViewTabs
+        v-if="isAdmin"
+        v-model="mode"
+        :proposal-count="openBundles.length"
+        :proposal-running="botRunning"
+      />
+
+      <!-- Proposals tab (admin only) — one bundle at a time, navigable via the nav row -->
+      <template v-if="isAdmin && mode === 'proposals' && currentBundle">
+        <BundleReviewPanel
+          :key="currentBundle.bundleId"
+          :bundle-id="currentBundle.bundleId"
+          :older-bundle="olderBundle"
+          :newer-bundle="newerBundle"
+          @deleted="onBundleDeleted"
+          @navigate="onBundleNavigate"
+        />
+      </template>
+
+      <!-- Edit pane (admin only) -->
+      <template v-if="isAdmin && mode === 'edit'">
+        <section class="section edit-pane">
+          <h3 class="section-heading">Bot</h3>
           <button
             type="button"
             class="bot-request"
-            :disabled="requesting || !item.slug"
+            :disabled="requesting || botRunning"
             @click="onRequestBundle"
           >
-            {{ requesting ? 'Sender…' : 'Be om forslag' }}
+            {{ requesting ? 'Sender…' : botRunning ? 'Jobber…' : 'Be om forslag' }}
+          </button>
+          <button
+            v-if="botRunning"
+            type="button"
+            class="bot-cancel"
+            :disabled="cancelling"
+            @click="onCancelPending"
+          >
+            {{ cancelling ? 'Avbryter…' : 'Avbryt' }}
           </button>
           <p v-if="requestResult" class="bot-result">
             Sendt — <a v-if="requestResult.issueUrl" :href="requestResult.issueUrl" target="_blank" rel="noopener">issue {{ requestResult.issueNumber || 'lokal' }}</a>
           </p>
           <p v-if="requestError" class="bot-error">{{ requestError }}</p>
-        </div>
-      </div>
-
-      <!-- Beskrivelse -->
-      <section v-if="item.description" class="section">
-        <h3 class="section-heading">Beskrivelse</h3>
-        <LegacyDescription :text="item.description" />
-      </section>
-
-      <!-- Deltakere -->
-      <section v-if="item.people?.length" class="section">
-        <h3 class="section-heading">Deltakere ({{ item.people.length }})</h3>
-        <div class="link-list">
-          <RouterLink
-            v-for="person in item.people"
-            :key="person.slug"
-            :to="`/person/${person.slug}`"
-            class="section-link"
+        </section>
+        <DescriptionEditor
+          :saved="savedSections"
+          :endpoint="`/api/admin/outline/${item.slug}/sections`"
+          @saved="onSectionsSaved"
+        />
+        <section class="section edit-pane">
+          <button
+            type="button"
+            class="bot-request"
+            :disabled="requesting || botRunning"
+            @click="onRequestBundle"
           >
-            {{ person.name }}
-          </RouterLink>
-        </div>
-      </section>
+            {{ requesting ? 'Sender…' : botRunning ? 'Jobber…' : 'Be om forslag' }}
+          </button>
+        </section>
+      </template>
 
-      <!-- Galleri -->
-      <section v-if="item.gallery?.length" class="section">
-        <h3 class="section-heading">Galleri</h3>
-        <div class="carousel">
-          <button v-if="item.gallery.length > 1" class="carousel-btn" @click="prevImage">&#x2039;</button>
-          <img
-            :src="currentImageUrl"
-            :alt="`${item.title} bilde ${currentImageIndex + 1}`"
-            class="carousel-img"
-          />
-          <button v-if="item.gallery.length > 1" class="carousel-btn" @click="nextImage">&#x203a;</button>
-        </div>
-        <p v-if="item.gallery.length > 1" class="carousel-count">
-          {{ currentImageIndex + 1 }} / {{ item.gallery.length }}
-        </p>
-        <p v-if="currentCaption" class="carousel-caption">{{ currentCaption }}</p>
-      </section>
+      <!-- View panes -->
+      <template v-if="!isAdmin || mode === 'preview'">
+        <section v-if="descriptionHtml" class="section">
+          <h3 class="section-heading">Beskrivelse</h3>
+          <!-- eslint-disable vue/no-v-html -->
+          <div class="portable-text" v-html="descriptionHtml"></div>
+          <!-- eslint-enable vue/no-v-html -->
+        </section>
 
-      <!-- Video -->
-      <section v-if="item.movie" class="section">
-        <h3 class="section-heading">Video</h3>
-        <video controls class="video-player">
-          <source :src="item.movie" type="video/mp4" />
-        </video>
-      </section>
-
-      <!-- Lenker -->
-      <section v-if="item.links?.length" class="section">
-        <h3 class="section-heading">Nyttige lenker</h3>
-        <div class="link-list">
-          <a
-            v-for="link in item.links"
-            :key="link.url"
-            :href="link.url"
-            target="_blank"
-            rel="noopener noreferrer"
-            class="ext-link"
-          >{{ link.title || link.url }} <span class="ext-icon">↗</span></a>
-        </div>
-      </section>
+        <section v-if="mentions.length" class="section">
+          <h3 class="section-heading">Omtalte personer ({{ mentions.length }})</h3>
+          <div class="link-list">
+            <RouterLink
+              v-for="p in mentions"
+              :key="p.slug"
+              :to="`/person/${p.slug}`"
+              class="section-link"
+            >
+              {{ p.name }}
+            </RouterLink>
+          </div>
+        </section>
+      </template>
     </template>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
-import { useRoute, RouterLink } from 'vue-router'
-import { useLocationCache } from '../composables/useLocationCache.ts'
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
+import { useRoute, useRouter, RouterLink } from 'vue-router'
+import { neo4jQuery } from '../composables/useNeo4j.ts'
 import { authFetch, useAuth } from '../composables/useAuth.ts'
-import { SANITY_IMG } from '../config/sanity.ts'
-import LegacyDescription from '../components/LegacyDescription.vue'
+import { blocksToHtml } from '../utils/portableText.ts'
+import AdminViewTabs, { type AdminViewMode } from '../components/AdminViewTabs.vue'
+import DescriptionEditor from '../components/DescriptionEditor.vue'
+import BundleReviewPanel from '../components/BundleReviewPanel.vue'
+import type { Section } from '../components/SectionsEditor.vue'
 
-const route = useRoute()
-const { outlines, loading, init } = useLocationCache()
+const mode = ref<AdminViewMode>('preview')
+
+const route  = useRoute()
+const router = useRouter()
 const { user } = useAuth()
 const isAdmin = computed(() => user.value?.role === 'admin')
+
+interface OutlineRow {
+  slug:          string
+  canonicalName: string
+  sanityRev:     string | null
+}
+interface DescriptionRow { order: number | null; content: string | null }
+interface MentionRow     { slug: string; name: string }
+interface OpenBundle { bundleId: string; summary: string; createdAt: string }
+
+const openBundles      = ref<OpenBundle[]>([])
+const viewingBundleId  = ref<string | null>(null)
+
+const sortedBundles = computed<OpenBundle[]>(() =>
+  [...openBundles.value].sort((a, b) => b.createdAt.localeCompare(a.createdAt)),
+)
+const currentIdx = computed(() => {
+  if (!sortedBundles.value.length) return -1
+  if (viewingBundleId.value) {
+    const idx = sortedBundles.value.findIndex((b) => b.bundleId === viewingBundleId.value)
+    return idx === -1 ? 0 : idx
+  }
+  return 0
+})
+const currentBundle = computed<OpenBundle | null>(() =>
+  currentIdx.value >= 0 ? sortedBundles.value[currentIdx.value] : null,
+)
+const newerBundle = computed<OpenBundle | undefined>(() =>
+  currentIdx.value > 0 ? sortedBundles.value[currentIdx.value - 1] : undefined,
+)
+const olderBundle = computed<OpenBundle | undefined>(() =>
+  currentIdx.value >= 0 && currentIdx.value < sortedBundles.value.length - 1
+    ? sortedBundles.value[currentIdx.value + 1]
+    : undefined,
+)
+
+function onBundleNavigate(bundleId: string): void {
+  viewingBundleId.value = bundleId
+  void router.replace({ path: route.path, query: route.query, hash: `#proposal=${encodeURIComponent(bundleId)}` })
+}
+
+function onBundleDeleted(): void {
+  if (item.value) void loadOpenBundles(item.value.slug)
+  viewingBundleId.value = null
+  void router.replace({ path: route.path, query: route.query, hash: '' })
+}
+
+// Sync from URL hash (#proposal=<bundleId>) on mount + route changes.
+function syncFromHash(): void {
+  const m = route.hash.match(/^#proposal=(.+)$/)
+  viewingBundleId.value = m ? decodeURIComponent(m[1]) : null
+}
+watch(() => route.hash, syncFromHash, { immediate: true })
+
+const item          = ref<OutlineRow | null>(null)
+const savedSections = ref<Section[]>([])
+const mentions      = ref<MentionRow[]>([])
+const loading       = ref(true)
+
+async function load(slug: string): Promise<void> {
+  loading.value        = true
+  item.value           = null
+  savedSections.value  = []
+  mentions.value       = []
+  openBundles.value    = []
+  try {
+    const [outlineRows, descRows, mentionRows] = await Promise.all([
+      neo4jQuery<OutlineRow>(
+        `MATCH (o:Outline {slug: $slug})
+         RETURN o.slug AS slug, coalesce(o.canonicalName, o.title) AS canonicalName, o.sanityRev AS sanityRev`,
+        { slug },
+      ),
+      neo4jQuery<DescriptionRow>(
+        `MATCH (:Outline {slug: $slug})-[:HAS_CONTENT]->(d:Description)
+         RETURN d.order AS order, d.content AS content
+         ORDER BY coalesce(d.order, 1) ASC`,
+        { slug },
+      ),
+      neo4jQuery<MentionRow>(
+        `MATCH (:Outline {slug: $slug})-[:MENTIONS]->(p:Person)
+         RETURN p.slug AS slug, p.canonicalName AS name
+         ORDER BY name`,
+        { slug },
+      ),
+    ])
+    item.value          = outlineRows[0] ?? null
+    savedSections.value = descRows.map((r): Section => ({
+      order:       r.order ?? 1,
+      content:     r.content ?? '[]',
+      citations:   [],
+      sourcedFrom: null,
+    }))
+    mentions.value = mentionRows
+    if (isAdmin.value && item.value) {
+      void loadOpenBundles(slug)
+    }
+  } finally {
+    loading.value = false
+  }
+}
+
+async function loadOpenBundles(slug: string): Promise<void> {
+  try {
+    const res = await authFetch(`/api/admin/Outline/${slug}/proposals`)
+    if (!res.ok) return
+    const body = await res.json() as { openBundles?: OpenBundle[]; generationPending?: boolean }
+    openBundles.value = body.openBundles ?? []
+    botRunning.value  = body.generationPending ?? false
+  } catch { /* silent — proposal pane just stays empty */ }
+}
+
+// Realtime updates via SSE — re-fetch openBundles whenever a bundle
+// event fires for the current outline.
+let eventSource: EventSource | null = null
+function openEventStream(slug: string): void {
+  if (eventSource) eventSource.close()
+  eventSource = new EventSource(`/api/proposals/events?outlineId=${encodeURIComponent(slug)}`)
+  eventSource.onmessage = () => {
+    if (item.value?.slug === slug) {
+      botRunning.value = false
+      void loadOpenBundles(slug)
+    }
+  }
+  eventSource.onerror = () => {
+    // Browser auto-reconnects after a delay; nothing to do here.
+  }
+}
+watch(() => item.value?.slug, (s, prev) => {
+  if (s && s !== prev && isAdmin.value) openEventStream(s)
+})
+watch(isAdmin, (admin) => {
+  if (admin && item.value?.slug) openEventStream(item.value.slug)
+})
+
+onUnmounted(() => { eventSource?.close(); eventSource = null })
+
+function onSectionsSaved(sections: Section[]): void {
+  savedSections.value = sections
+}
+
+const descriptionHtml = computed<string>(() => {
+  const parts: string[] = []
+  for (const s of savedSections.value) {
+    if (!s.content) continue
+    try {
+      const blocks = JSON.parse(s.content) as unknown[]
+      parts.push(blocksToHtml(blocks as Parameters<typeof blocksToHtml>[0]))
+    } catch { /* skip malformed */ }
+  }
+  return parts.join('')
+})
+
+onMounted(() => { void load(route.params.slug as string) })
+watch(() => route.params.slug as string, (s) => { if (s) void load(s) })
 
 const requesting    = ref(false)
 const requestResult = ref<{ issueNumber: number; issueUrl: string } | null>(null)
 const requestError  = ref<string | null>(null)
+const botRunning    = ref(false)
+const cancelling    = ref(false)
+
+async function onCancelPending(): Promise<void> {
+  if (!item.value) return
+  if (!window.confirm('Avbryt ventende bot-jobb? Markeringen fjernes lokalt; en kjørende GitHub-action stoppes ikke.')) return
+  cancelling.value = true
+  try {
+    await authFetch(`/api/admin/proposals/pending/${item.value.slug}`, { method: 'DELETE' })
+    botRunning.value = false
+  } finally {
+    cancelling.value = false
+  }
+}
 
 async function onRequestBundle(): Promise<void> {
-  if (!item.value?.slug) return
+  if (!item.value) return
   requesting.value    = true
   requestResult.value = null
   requestError.value  = null
@@ -123,7 +301,7 @@ async function onRequestBundle(): Promise<void> {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         outlineId:  item.value.slug,
-        outlineRev: 'smoke-test',
+        outlineRev: item.value.sanityRev ?? 'smoke-test',
         promptHash: '000000000000',
       }),
     })
@@ -137,47 +315,12 @@ async function onRequestBundle(): Promise<void> {
       issueNumber: body.issueNumber ?? 0,
       issueUrl:    body.issueUrl    ?? '',
     }
+    botRunning.value = true
   } catch (e) {
     requestError.value = (e as Error).message
   } finally {
     requesting.value = false
   }
-}
-
-onMounted(async () => { await init() })
-
-const item = computed(() =>
-  outlines.value.find(o => o.slug === (route.params.slug as string)) ?? null,
-)
-
-const heroUrl = computed<string | null>(() => {
-  const thumb = item.value?.thumbnailUrl
-  if (!thumb) return null
-  return thumb.replace(/\?.*$/, '') + '?w=900&h=500&fit=crop&auto=format'
-})
-
-const currentImageIndex = ref(0)
-
-const currentImageUrl = computed<string>(() => {
-  const g = item.value?.gallery
-  if (!g?.length) return ''
-  const assetRef = (g[currentImageIndex.value].asset as { _ref: string })._ref
-  const path = assetRef.replace(/^image-/, '').replace(/-([a-z]+)$/, '.$1')
-  return `${SANITY_IMG}/${path}?w=900&auto=format`
-})
-
-const currentCaption = computed<string | null>(() =>
-  item.value?.gallery?.[currentImageIndex.value]?.caption ?? null,
-)
-
-function prevImage() {
-  const len = item.value?.gallery?.length ?? 0
-  currentImageIndex.value = (currentImageIndex.value - 1 + len) % len
-}
-
-function nextImage() {
-  const len = item.value?.gallery?.length ?? 0
-  currentImageIndex.value = (currentImageIndex.value + 1) % len
 }
 </script>
 
@@ -202,16 +345,6 @@ function nextImage() {
   text-align: center;
   font-size: 13px;
   color: var(--muted);
-}
-
-.hero { width: 100%; overflow: hidden; }
-
-.hero-img {
-  width: 100%;
-  height: 340px;
-  object-fit: cover;
-  object-position: center 20%;
-  display: block;
 }
 
 .page-header {
@@ -257,9 +390,25 @@ function nextImage() {
 }
 .bot-request:hover:not([disabled]) { background: var(--paper); border-color: var(--ink-soft); }
 .bot-request[disabled] { opacity: 0.5; cursor: not-allowed; }
+
+.bot-cancel {
+  margin-left: var(--space-sm);
+  font-family: var(--font-sans);
+  font-size: var(--size-label);
+  padding: 4px 10px;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: var(--ink-soft);
+  cursor: pointer;
+}
+.bot-cancel:hover:not([disabled]) { color: var(--danger); border-color: var(--danger); }
+.bot-cancel[disabled] { opacity: 0.5; cursor: not-allowed; }
 .bot-result { margin: 0; font-size: var(--size-label); color: var(--ink-soft); }
 .bot-result a { color: var(--focus); }
 .bot-error { margin: 0; font-size: var(--size-label); color: var(--danger); }
+
+
 
 .section {
   padding: 12px 16px;
@@ -276,71 +425,21 @@ function nextImage() {
   margin: 0 0 8px;
 }
 
-.link-list { display: flex; flex-direction: column; gap: 2px; }
+.portable-text :deep(p)  { margin: 0 0 8px; line-height: 1.55; color: var(--ink); }
+.portable-text :deep(h1),
+.portable-text :deep(h2),
+.portable-text :deep(h3) { margin: 16px 0 8px; color: var(--ink); }
+
+.link-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 10px;
+}
 
 .section-link {
-  display: block;
   font-size: 13px;
   color: var(--focus);
   text-decoration: none;
-  padding: 2px 0;
 }
 .section-link:hover { text-decoration: underline; }
-
-.ext-link {
-  display: block;
-  font-size: 13px;
-  color: var(--focus);
-  text-decoration: none;
-  padding: 2px 0;
-  word-break: break-all;
-}
-.ext-link:hover { text-decoration: underline; }
-.ext-icon { font-size: 11px; opacity: 0.6; }
-
-.carousel { display: flex; align-items: center; gap: 8px; }
-
-.carousel-img {
-  flex: 1;
-  width: 100%;
-  max-height: 320px;
-  object-fit: contain;
-  display: block;
-  border-radius: 4px;
-  background: var(--rule);
-}
-
-.carousel-btn {
-  background: none;
-  border: 1px solid var(--rule);
-  border-radius: 50%;
-  width: 32px;
-  height: 32px;
-  font-size: 20px;
-  color: var(--focus);
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  line-height: 1;
-}
-.carousel-btn:hover { border-color: var(--rule); }
-
-.carousel-count {
-  font-size: 11px;
-  color: var(--muted);
-  text-align: center;
-  margin: 6px 0 0;
-}
-
-.carousel-caption {
-  font-size: 12px;
-  color: var(--muted);
-  text-align: center;
-  margin: 4px 0 0;
-  font-style: italic;
-}
-
-.video-player { width: 100%; border-radius: 4px; display: block; }
 </style>

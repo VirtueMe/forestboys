@@ -2,7 +2,7 @@
   <Teleport to="body">
     <Transition name="modal">
       <div v-if="modelValue" class="modal-backdrop" @click.self="emit('update:modelValue', false)">
-        <div class="modal-card" role="dialog" :aria-label="title">
+        <div class="modal-card" :class="`modal-card--${size ?? 'default'}`" role="dialog" :aria-label="title">
           <div class="modal-header">
             <span class="modal-title">{{ title }}</span>
             <button class="modal-close" aria-label="Lukk" @click="emit('update:modelValue', false)">✕</button>
@@ -19,7 +19,12 @@
 <script setup lang="ts">
 import { onMounted, onUnmounted } from 'vue'
 
-const props = defineProps<{ modelValue: boolean; title?: string }>()
+const props = defineProps<{
+  modelValue: boolean
+  title?:     string
+  /** 'default' = 560px wide / 80vh; 'page' = full page width + height. */
+  size?:      'default' | 'page'
+}>()
 const emit  = defineEmits<{ 'update:modelValue': [value: boolean] }>()
 
 function onKeydown(e: KeyboardEvent) {
@@ -62,12 +67,20 @@ onUnmounted(() => document.removeEventListener('keydown', onKeydown))
 }
 
 @media (min-width: 600px) {
-  .modal-card {
+  .modal-card--default {
     border-bottom: 1px solid var(--rule);
     border-radius: var(--radius-md);
     width: 100%;
     max-width: 560px;
     max-height: 80dvh;
+  }
+  .modal-card--page {
+    border-bottom: 1px solid var(--rule);
+    border-radius: var(--radius-md);
+    width: 100%;
+    max-width: 1320px;
+    max-height: 90dvh;
+    margin: var(--space-lg) 0;
   }
 }
 
