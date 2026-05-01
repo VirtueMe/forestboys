@@ -264,6 +264,10 @@ function buildQuery(overrideLat?: number, overrideLng?: number, overrideZ?: numb
 }
 
 function replaceQuery() {
+  // KeepAlive keeps MapView/AppMap mounted after navigation; bail when
+  // we're no longer on /map so the map's query doesn't follow the user
+  // onto Registre / Hjem / etc.
+  if (!route.path.startsWith('/map')) return
   void router.replace({ path: route.fullPath.split('?')[0], query: buildQuery() })
 }
 
@@ -271,6 +275,7 @@ function onMoveEnd(move: MapMovePayload) {
   lastMove.value = move
   drawerRef.value?.resetPage()
   void saveMapState({ lat: move.centre.lat, lng: move.centre.lng, zoom: move.zoom, savedAt: Date.now() })
+  if (!route.path.startsWith('/map')) return
   void router.replace({
     path: route.fullPath.split('?')[0],
     query: buildQuery(move.centre.lat, move.centre.lng, move.zoom),
