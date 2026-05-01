@@ -1,0 +1,102 @@
+/**
+ * GET /api/admin/proposals — list every bundle in R2.
+ *
+ * Lightweight summary per bundle: bundleId, outlineId, summary, status,
+ * createdAt, pendingEntityCount, model. Sorted newest-first. The list
+ * is bounded by R2's per-prefix scan; we list manifests under
+ * proposals/bundles/<bundleId>/manifest.json and read each.
+ *
+ * Admin-session-gated.
+ */
+
+import { requireAdmin } from '~/_lib/require-admin.ts'
+
+interface Env {
+  SESSION_SECRET: string
+  PROPOSALS:      R2Bucket
+}
+
+interface BundleManifest {
+  bundleId:    string
+  outlineId:   string
+  summary:     string
+  createdAt:   string
+  model:       string
+  entities:    { entityId: string; status: string }[]
+  status?:     'pending' | 'blocked' | 'closed'
+  parentBundle?: string
+}
+
+interface BundleSummary {
+  bundleId:           string
+  outlineId:          string
+  summary:            string
+  model:              string
+  createdAt:          string
+  status:             'pending' | 'blocked' | 'closed'
+  pendingCount:       number
+  acceptedCount:      number
+  deniedCount:        number
+  totalEntities:      number
+  parentBundle:       string | null
+}
+
+export const onRequestGet: PagesFunction<Env> = async ({ request, env }) => {
+  const guard = await requireAdmin(request, env)
+  if (guard instanceof Response) return guard
+  if (!env.PROPOSALS) return json({ error: 'PROPOSALS R2 binding missing' }, 500)
+
+  // List manifest objects directly. R2 list returns keys ordered
+  // lexicographically; we'll sort by createdAt after.
+  const manifestKeys: string[] = []
+  let cursor: string | undefined
+  do {
+    const listing = await env.PROPOSALS.list({ prefix: 'proposals/bundles/', cursor, limit: 1000 })
+    for (const obj of listing.objects) {
+      if (obj.key.endsWith('/manifest.json')) manifestKeys.push(obj.key)
+    }
+    cursor = listing.truncated ? listing.cursor : undefined
+  } while (cursor)
+
+  const bundles: BundleSummary[] = []
+  for (const key of manifestKeys) {
+    try {
+      const obj = await env.PROPOSALS.get(key)
+      if (!obj) continue
+      const m = await obj.json<BundleManifest>()
+      const counts = m.entities.reduce(
+        (acc, e) => {
+          if (e.status === 'pending')  acc.pending++
+          if (e.status === 'accepted') acc.accepted++
+          if (e.status === 'denied')   acc.denied++
+          return acc
+        },
+        { pending: 0, accepted: 0, denied: 0 },
+      )
+      bundles.push({
+        bundleId:      m.bundleId,
+        outlineId:     m.outlineId,
+        summary:       m.summary,
+        model:         m.model,
+        createdAt:     m.createdAt,
+        status:        m.status ?? 'pending',
+        pendingCount:  counts.pending,
+        acceptedCount: counts.accepted,
+        deniedCount:   counts.denied,
+        totalEntities: m.entities.length,
+        parentBundle:  m.parentBundle ?? null,
+      })
+    } catch { /* skip malformed manifest */ }
+  }
+
+  bundles.sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+  return json({ bundles })
+}
+
+function json(data: unknown, status = 200): Response {
+  return new Response(JSON.stringify(data), {
+    status,
+    headers: { 'Content-Type': 'application/json' },
+  })
+}
+

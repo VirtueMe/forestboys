@@ -39,6 +39,17 @@
             </li>
           </ul>
         </div>
+
+        <div class="nav-group">
+          <div class="nav-group-label">Forslag</div>
+          <ul class="nav-list">
+            <li>
+              <router-link to="/admin/proposals" class="nav-link nav-link-nested" active-class="active">
+                Alle bundles
+              </router-link>
+            </li>
+          </ul>
+        </div>
       </nav>
 
       <div class="nav-footer">
@@ -80,7 +91,8 @@ const route = useRoute()
 const navOpen = ref(false)
 
 const crumb = computed(() => {
-  if (route.path.startsWith('/admin/sources')) return 'Kilder'
+  if (route.path.startsWith('/admin/sources'))   return 'Kilder'
+  if (route.path.startsWith('/admin/proposals')) return 'Forslag'
   const pageSlug = String(route.params.slug ?? '')
   const page = PAGES.find(p => p.slug === pageSlug)
   if (page) return `Sider · ${page.label}`
