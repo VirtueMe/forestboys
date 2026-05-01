@@ -97,7 +97,7 @@ const loading         = ref(true)
 
 onMounted(async () => {
   try {
-    const [orgs, units, stations, people, transport, articles, operations, equipment, sources] = await Promise.all([
+    const [orgs, units, stations, people, transport, articles, operations, equipment, sources, outlines] = await Promise.all([
       // Top-level Organizations only (sub-orgs surfaced via PART_OF* on demand).
       neo4jQuery<NeoRow>(
         `MATCH (o:Organization)
@@ -133,6 +133,10 @@ onMounted(async () => {
         `MATCH (src:Source)
          WHERE src.type IN ['book','report','newspaper','archive','interview','manual','document','correspondence','rank-table']
          RETURN src.title AS name, src.id AS slug ORDER BY name`),
+      neo4jQuery<NeoRow>(
+        `MATCH (o:Outline)
+         RETURN coalesce(o.canonicalName, o.title) AS name, o.slug AS slug
+         ORDER BY name`),
     ])
     neoOrgs.value         = orgs
     neoUnits.value        = units
@@ -144,6 +148,7 @@ onMounted(async () => {
       ...operations.map(x => ({ ...x, entityType: 'operation' })),
       ...equipment.map(x => ({ ...x, entityType: 'equipment' })),
       ...sources.map(x => ({ ...x, entityType: 'source' })),
+      ...outlines.map(x => ({ ...x, entityType: 'outline' })),
     ]
   } catch (err) {
     console.error('Registre: Neo4j fetch failed', err)
