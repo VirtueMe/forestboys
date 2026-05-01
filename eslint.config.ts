@@ -122,6 +122,6 @@ export default tseslint.config(
 
   // ── ignore build output ────────────────────────────────────────────────
   {
-    ignores: ['dist/**', 'node_modules/**', '*.d.ts', '.wrangler/**'],
+    ignores: ['dist/**', 'node_modules/**', '*.d.ts', '.wrangler/**', '**/.wrangler/**'],
   },
 )

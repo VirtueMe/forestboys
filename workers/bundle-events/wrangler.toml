@@ -1,0 +1,11 @@
+name = "milorg-bundle-events"
+main = "src/index.ts"
+compatibility_date = "2024-01-01"
+
+[[durable_objects.bindings]]
+name       = "BUNDLE_EVENTS"
+class_name = "BundleEventsDO"
+
+[[migrations]]
+tag         = "v1"
+new_classes = ["BundleEventsDO"]

@@ -13,3 +13,8 @@ bucket_name = "forestboys-images"
 [[r2_buckets]]
 binding = "PROPOSALS"
 bucket_name = "milorg-proposals"
+
+[[durable_objects.bindings]]
+name        = "BUNDLE_EVENTS"
+class_name  = "BundleEventsDO"
+script_name = "milorg-bundle-events"
