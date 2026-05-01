@@ -16,17 +16,40 @@
         </router-link>
       </div>
 
-      <!-- Login / access button -->
-      <router-link to="/access" class="access-btn" :aria-label="user ? user.name : 'Logg inn'">
-        <template v-if="user">
+      <!-- Login / user menu -->
+      <div v-if="user" class="user-menu" :class="{ open: userMenuOpen }">
+        <button
+          type="button"
+          class="access-btn"
+          :aria-label="user.name"
+          :aria-expanded="userMenuOpen"
+          @click="userMenuOpen = !userMenuOpen"
+        >
           <span class="access-initials">{{ user.name.charAt(0).toUpperCase() }}</span>
-        </template>
-        <template v-else>
-          <svg class="access-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-            <circle cx="12" cy="8" r="4" />
-            <path d="M4 20c0-4 3.6-7 8-7s8 3 8 7" />
-          </svg>
-        </template>
+        </button>
+        <div v-if="userMenuOpen" class="user-dropdown" role="menu">
+          <p class="user-name">{{ user.name }}</p>
+          <router-link v-if="isAdmin" to="/admin" class="user-action" role="menuitem" @click="userMenuOpen = false">
+            Admin
+          </router-link>
+          <router-link to="/access" class="user-action" role="menuitem" @click="userMenuOpen = false">
+            Konto
+          </router-link>
+          <button type="button" class="user-action user-logout" role="menuitem" @click="onLogout">
+            Logg ut
+          </button>
+        </div>
+      </div>
+      <router-link
+        v-else
+        to="/access"
+        class="access-btn"
+        aria-label="Logg inn"
+      >
+        <svg class="access-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+          <circle cx="12" cy="8" r="4" />
+          <path d="M4 20c0-4 3.6-7 8-7s8 3 8 7" />
+        </svg>
       </router-link>
 
       <!-- Mobile hamburger -->
@@ -55,8 +78,8 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch } from 'vue'
-import { useRoute } from 'vue-router'
+import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import { useAuth } from '../composables/useAuth.ts'
 
 interface NavItem {
@@ -75,11 +98,28 @@ const navItems: NavItem[] = [
   { label: 'Om oss',            path: '/about' },
 ]
 
-const route = useRoute()
+const route  = useRoute()
+const router = useRouter()
 const open = ref(false)
-const { user } = useAuth()
+const userMenuOpen = ref(false)
+const { user, logout } = useAuth()
+const isAdmin = computed(() => user.value?.role === 'admin')
 
-watch(() => route.path, () => { open.value = false })
+watch(() => route.path, () => { open.value = false; userMenuOpen.value = false })
+
+function onLogout(): void {
+  userMenuOpen.value = false
+  void logout().then(() => router.push('/'))
+}
+
+function onDocClick(e: MouseEvent): void {
+  if (!userMenuOpen.value) return
+  const target = e.target as HTMLElement
+  if (target.closest('.user-menu')) return
+  userMenuOpen.value = false
+}
+onMounted(()   => document.addEventListener('click', onDocClick))
+onUnmounted(() => document.removeEventListener('click', onDocClick))
 
 function isActive(item: NavItem): boolean {
   if (item.exact) return route.path === item.path
@@ -193,6 +233,57 @@ function isActive(item: NavItem): boolean {
   width: 16px;
   height: 16px;
 }
+
+.user-menu {
+  margin-left: auto;
+  position: relative;
+  flex-shrink: 0;
+}
+.user-menu .access-btn {
+  margin-left: 0;
+  cursor: pointer;
+  padding: 0;
+}
+.user-menu.open .access-btn { border-color: var(--faded-red); color: var(--faded-red); }
+
+.user-dropdown {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  min-width: 200px;
+  background: var(--paper-raised);
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-md);
+  padding: var(--space-xs);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  z-index: 200;
+}
+.user-name {
+  margin: 0;
+  padding: var(--space-sm) var(--space-md);
+  font-family: var(--font-sans);
+  font-size: var(--size-label);
+  font-weight: 600;
+  color: var(--ink-soft);
+  border-bottom: 1px solid var(--rule);
+}
+.user-action {
+  padding: var(--space-sm) var(--space-md);
+  font-family: var(--font-sans);
+  font-size: var(--size-body-ui);
+  color: var(--ink);
+  text-decoration: none;
+  background: transparent;
+  border: none;
+  border-radius: var(--radius-sm);
+  text-align: left;
+  cursor: pointer;
+}
+.user-action:hover { background: var(--paper-sunken); }
+.user-logout { color: var(--danger); }
 
 @media (min-width: 768px) {
   .access-btn {
