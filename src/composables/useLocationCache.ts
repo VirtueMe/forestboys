@@ -250,24 +250,20 @@ async function fetchFromNeo4j(): Promise<IdbCache> {
     indexedAt: new Date().toISOString(),
     locations: rawLocations
       .filter(l => isValidCoord(l.lat, l.lng))
-      .map(l => ({
+      .map((l): IdbLocation => ({
         _id: l._id, title: l.title, slug: l.slug,
-        coordinates: { lat: l.lat, lng: l.lng },
-        description: undefined,
-        thumbnailUrl: undefined,
+        lat: l.lat, lng: l.lng,
         events: l.events,
         organizations: [...new Set(l.events.map(e => e.organization).filter((x): x is string => Boolean(x)))],
         districts:     [...new Set(l.events.map(e => e.district).filter((x): x is string => Boolean(x)))],
-      } as unknown as IdbLocation)),
+      })),
     stations: rawStations
       .filter(s => isValidCoord(s.lat, s.lng))
-      .map(s => ({
+      .map((s): IdbStation => ({
         _id: s._id, title: s.title, slug: s.slug, type: s.type ?? undefined,
-        coordinates: { lat: s.lat, lng: s.lng },
-        description: undefined,
-        thumbnailUrl: undefined,
+        lat: s.lat, lng: s.lng,
         events: s.events,
-      } as unknown as IdbStation)),
+      })),
     people: rawPeople.map(p => ({
       _id: p._id, name: p.name, slug: p.slug,
       secretName: p.secretName ?? undefined,
@@ -403,7 +399,6 @@ async function fetchFromSanityUnused(): Promise<IdbCache> {
         const events = (l.events as IdbEvent[] | null) ?? []
         return {
           ...l,
-          coordinates:  { lat: l.lat as number, lng: l.lng as number },
           description:  blocksToText(l.description),
           thumbnailUrl: galleryThumb(l.gallery),
           events,
@@ -415,7 +410,6 @@ async function fetchFromSanityUnused(): Promise<IdbCache> {
       .filter(s => isValidCoord(s.lat, s.lng))
       .map(s => ({
         ...s,
-        coordinates:  { lat: s.lat as number, lng: s.lng as number },
         description:  blocksToText(s.description),
         thumbnailUrl: galleryThumb(s.gallery),
         events:       (s.events as IdbEvent[] | null) ?? [],

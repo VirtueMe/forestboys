@@ -219,7 +219,8 @@ function fitLocations() {
   const all = [
     ...props.locations.map(l => [l.lng, l.lat] as [number, number]),
     ...props.stations.map(s => [s.lng, s.lat] as [number, number]),
-  ]
+  ].filter(([lng, lat]) => Number.isFinite(lng) && Number.isFinite(lat))
+  if (!all.length) return
   const lngs = all.map(c => c[0])
   const lats = all.map(c => c[1])
   map.fitBounds(
