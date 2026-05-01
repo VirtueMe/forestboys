@@ -101,9 +101,10 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch, inject } from 'vue'
 import { useRoute, useRouter, RouterLink } from 'vue-router'
-import { neo4jQuery } from '../composables/useNeo4j.ts'
+import { useOutlineData } from '../composables/useOutlineData.ts'
+import { OutlineDataKey } from '../composables/proposalDataInjection.ts'
 import { authFetch, useAuth } from '../composables/useAuth.ts'
 import { blocksToHtml } from '../utils/portableText.ts'
 import AdminViewTabs, { type AdminViewMode } from '../components/AdminViewTabs.vue'
@@ -118,14 +119,10 @@ const router = useRouter()
 const { user } = useAuth()
 const isAdmin = computed(() => user.value?.role === 'admin')
 
-interface OutlineRow {
-  slug:          string
-  canonicalName: string
-  sanityRev:     string | null
-}
-interface DescriptionRow { order: number | null; content: string | null }
-interface MentionRow     { slug: string; name: string }
 interface OpenBundle { bundleId: string; summary: string; createdAt: string }
+
+const data = inject(OutlineDataKey, () => useOutlineData(), true)
+const { outline: item, savedSections, mentions, loadOutline, resetOutline } = data
 
 const openBundles      = ref<OpenBundle[]>([])
 const viewingBundleId  = ref<string | null>(null)
@@ -171,48 +168,15 @@ function syncFromHash(): void {
 }
 watch(() => route.hash, syncFromHash, { immediate: true })
 
-const item          = ref<OutlineRow | null>(null)
-const savedSections = ref<Section[]>([])
-const mentions      = ref<MentionRow[]>([])
-const loading       = ref(true)
+const loading = ref(true)
 
 async function load(slug: string): Promise<void> {
-  loading.value        = true
-  item.value           = null
-  savedSections.value  = []
-  mentions.value       = []
-  openBundles.value    = []
+  loading.value     = true
+  openBundles.value = []
+  resetOutline()
   try {
-    const [outlineRows, descRows, mentionRows] = await Promise.all([
-      neo4jQuery<OutlineRow>(
-        `MATCH (o:Outline {slug: $slug})
-         RETURN o.slug AS slug, coalesce(o.canonicalName, o.title) AS canonicalName, o.sanityRev AS sanityRev`,
-        { slug },
-      ),
-      neo4jQuery<DescriptionRow>(
-        `MATCH (:Outline {slug: $slug})-[:HAS_CONTENT]->(d:Description)
-         RETURN d.order AS order, d.content AS content
-         ORDER BY coalesce(d.order, 1) ASC`,
-        { slug },
-      ),
-      neo4jQuery<MentionRow>(
-        `MATCH (:Outline {slug: $slug})-[:MENTIONS]->(p:Person)
-         RETURN p.slug AS slug, p.canonicalName AS name
-         ORDER BY name`,
-        { slug },
-      ),
-    ])
-    item.value          = outlineRows[0] ?? null
-    savedSections.value = descRows.map((r): Section => ({
-      order:       r.order ?? 1,
-      content:     r.content ?? '[]',
-      citations:   [],
-      sourcedFrom: null,
-    }))
-    mentions.value = mentionRows
-    if (isAdmin.value && item.value) {
-      void loadOpenBundles(slug)
-    }
+    await loadOutline(slug)
+    if (isAdmin.value && item.value) void loadOpenBundles(slug)
   } finally {
     loading.value = false
   }

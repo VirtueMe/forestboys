@@ -17,12 +17,14 @@ import type { useUnitData }         from './useUnitData.ts'
 import type { useOrganizationData } from './useOrganizationData.ts'
 import type { useStationData }      from './useStationData.ts'
 import type { useTransportData }    from './useTransportData.ts'
+import type { useOutlineData }      from './useOutlineData.ts'
 
 export const PersonDataKey:       InjectionKey<ReturnType<typeof usePersonData>>       = Symbol('PersonData')
 export const UnitDataKey:         InjectionKey<ReturnType<typeof useUnitData>>         = Symbol('UnitData')
 export const OrganizationDataKey: InjectionKey<ReturnType<typeof useOrganizationData>> = Symbol('OrganizationData')
 export const StationDataKey:      InjectionKey<ReturnType<typeof useStationData>>      = Symbol('StationData')
 export const TransportDataKey:    InjectionKey<ReturnType<typeof useTransportData>>    = Symbol('TransportData')
+export const OutlineDataKey:      InjectionKey<ReturnType<typeof useOutlineData>>      = Symbol('OutlineData')
 
 /**
  * `true` while a detail page is rendering inside a proposal preview.

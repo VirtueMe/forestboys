@@ -12,7 +12,8 @@
     <component :is="OrganizationDetail" v-else-if="kind === 'Organization'" />
     <component :is="StationDetail" v-else-if="kind === 'Station'" />
     <component :is="TransportDetail" v-else-if="kind === 'Transport'" />
-    <p v-else class="muted">Ingen forhåndsvisning for kind «{{ kind }}» (Incident / Operation / Outline / Location).</p>
+    <component :is="OutlineDetail" v-else-if="kind === 'Outline'" />
+    <p v-else class="muted">Ingen forhåndsvisning for kind «{{ kind }}» (Incident / Operation / Location).</p>
 
     <section v-if="proposedEdges.length" class="edges-pane">
       <h3 class="edges-heading">Foreslåtte koblinger ({{ proposedEdges.length }})</h3>
@@ -44,7 +45,7 @@ import { computed, provide, ref, watch } from 'vue'
 import { neo4jQuery } from '@/composables/useNeo4j.ts'
 
 import {
-  PersonDataKey, UnitDataKey, OrganizationDataKey, StationDataKey, TransportDataKey,
+  PersonDataKey, UnitDataKey, OrganizationDataKey, StationDataKey, TransportDataKey, OutlineDataKey,
   ProposalPreviewKey,
 } from '@/composables/proposalDataInjection.ts'
 import { useProposalPersonData }       from '@/composables/useProposalPersonData.ts'
@@ -52,6 +53,7 @@ import { useProposalUnitData }         from '@/composables/useProposalUnitData.t
 import { useProposalOrganizationData } from '@/composables/useProposalOrganizationData.ts'
 import { useProposalStationData }      from '@/composables/useProposalStationData.ts'
 import { useProposalTransportData }    from '@/composables/useProposalTransportData.ts'
+import { useProposalOutlineData }      from '@/composables/useProposalOutlineData.ts'
 import type { EntityStatus } from '@/composables/useProposalBundle.ts'
 
 import PersonDetail       from '@/pages/PersonDetail.vue'
@@ -59,6 +61,7 @@ import DistrictDetail     from '@/pages/DistrictDetail.vue'
 import OrganizationDetail from '@/pages/OrganizationDetail.vue'
 import StationDetail      from '@/pages/StationDetail.vue'
 import TransportDetail    from '@/pages/TransportDetail.vue'
+import OutlineDetail      from '@/pages/OutlineDetail.vue'
 
 const props = defineProps<{ bundleId: string; kind: string; slug: string }>()
 const emit  = defineEmits<{ accepted: []; denied: [] }>()
@@ -71,6 +74,7 @@ const proposalData =
   props.kind === 'Organization' ? useProposalOrganizationData(props.bundleId, entityId) :
   props.kind === 'Station'      ? useProposalStationData(props.bundleId, entityId)      :
   props.kind === 'Transport'    ? useProposalTransportData(props.bundleId, entityId)    :
+  props.kind === 'Outline'      ? useProposalOutlineData(props.bundleId, entityId)      :
   null
 
 provide(ProposalPreviewKey, true)
@@ -82,6 +86,7 @@ if (proposalData) {
     case 'Organization': provide(OrganizationDataKey, proposalData as ReturnType<typeof useProposalOrganizationData>); break
     case 'Station':      provide(StationDataKey,      proposalData as ReturnType<typeof useProposalStationData>);      break
     case 'Transport':    provide(TransportDataKey,    proposalData as ReturnType<typeof useProposalTransportData>);    break
+    case 'Outline':      provide(OutlineDataKey,      proposalData as ReturnType<typeof useProposalOutlineData>);      break
   }
 }
 
