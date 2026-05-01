@@ -23,11 +23,17 @@
  */
 
 interface Env {
-  PROPOSALS:        R2Bucket
+  PROPOSALS:         R2Bucket
   BOT_INGEST_SECRET: string
-  GITHUB_TOKEN:     string
-  GITHUB_REPO:      string
-  ADMIN_BASE_URL?:  string  // e.g. "https://milorg.pages.dev"
+  GITHUB_TOKEN:      string
+  GITHUB_REPO:       string
+  ADMIN_BASE_URL?:   string  // e.g. "https://milorg.pages.dev"
+  BOT_DISPATCH_URL?: string  // local-runner only — for resolve dispatch
+  NEO4J_URI:         string
+  NEO4J_HTTP_URI?:   string
+  NEO4J_USERNAME:    string
+  NEO4J_PASSWORD:    string
+  BUNDLE_EVENTS?:    DurableObjectNamespace  // SSE pub-sub
 }
 
 const ENTITY_KINDS = new Set([
@@ -50,18 +56,30 @@ interface BundleEntityRef {
 }
 
 interface BundleManifest {
-  bundleId:    string
-  outlineId:   string
-  outlineRev:  string
-  summary:     string
-  createdAt:   string
-  model:       string
-  promptHash:  string
-  entities:    BundleEntityRef[]
+  bundleId:         string
+  outlineId:        string
+  outlineRev:       string
+  summary:          string
+  createdAt:        string
+  model:            string
+  promptHash:       string
+  entities:         BundleEntityRef[]
+  /** 'blocked' = at least one edge target neither lives nor is being
+   *  created in this bundle; the bundle waits for child bundles to
+   *  resolve `unresolvedRefs` before Jan can review. 'pending' on a
+   *  parent flips to 'closed' once every entity is non-pending. */
+  status?:          'pending' | 'blocked' | 'closed'
+  unresolvedRefs?:  string[]
+  /** Set on a child bundle generated to resolve a parent's unresolved
+   *  ref. The child manifest is otherwise identical to a parent's. */
+  parentBundle?:    string
+  resolvesEntities?: string[]
 }
 
+interface InitialDescription { order: number; content: string }
+
 type BundleOp =
-  | { op: 'create-entity'; kind: string; slug: string; props: Record<string, unknown>; edges?: { type: string; to: string; props?: Record<string, unknown> }[] }
+  | { op: 'create-entity'; kind: string; slug: string; props: Record<string, unknown>; edges?: { type: string; to: string; props?: Record<string, unknown> }[]; descriptions?: InitialDescription[] }
   | { op: 'modify-block'; blockPath: string; expectedSha: string; newValue: Record<string, unknown> }
   | { op: 'add-edge';     type: string; from: string; to: string; props?: Record<string, unknown> }
   | { op: 'remove-edge';  type: string; from: string; to: string }
@@ -119,14 +137,54 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
 
   try {
     await writeBundle(env, validated)
+
+    // Clear the pending-generation marker for this outline. Parents and
+    // children alike count as "this outline finished a generation".
+    await env.PROPOSALS.delete(`proposals/pending-generations/${validated.manifest.outlineId}.json`)
+
+    await broadcast(env, validated.manifest.outlineId, {
+      kind:     'bundle-created',
+      bundleId: validated.manifest.bundleId,
+    })
+
+    // Resolve unmet refs into manifest.status / unresolvedRefs.
+    const refs = await resolveBundleRefs(env, validated)
+    if (refs.unresolved.length) {
+      validated.manifest.status         = 'blocked'
+      validated.manifest.unresolvedRefs = refs.unresolved
+      await env.PROPOSALS.put(
+        `proposals/bundles/${validated.manifest.bundleId}/manifest.json`,
+        JSON.stringify(validated.manifest),
+        { httpMetadata: { contentType: 'application/json' } },
+      )
+      // Watcher index: each unresolved ref records who's waiting.
+      for (const id of refs.unresolved) {
+        await appendWatcher(env, id, validated.manifest.bundleId)
+      }
+      // Fire-and-forget resolve dispatches. Failure leaves the bundle
+      // blocked — Jan can re-trigger from the UI later.
+      void dispatchResolves(env, validated.manifest, refs.unresolved).catch((e) => {
+        console.error('resolve dispatch failed:', (e as Error).message)
+      })
+    }
+
+    // If this is a child resolving a parent's refs, revalidate the parent.
+    if (validated.manifest.parentBundle && validated.manifest.resolvesEntities?.length) {
+      void revalidateParent(env, validated.manifest.parentBundle).catch((e) => {
+        console.error('parent revalidate failed:', (e as Error).message)
+      })
+    }
+
     await commentAndClose(env, validated).catch((e) => {
       // Issue close failure is non-fatal — bundle is durable in R2.
       console.error('issue comment/close failed:', (e as Error).message)
     })
     return json({
-      ok:          true,
-      bundleId:    validated.manifest.bundleId,
-      entityCount: validated.manifest.entities.length,
+      ok:             true,
+      bundleId:       validated.manifest.bundleId,
+      entityCount:    validated.manifest.entities.length,
+      status:         validated.manifest.status ?? 'pending',
+      unresolvedRefs: refs.unresolved,
     })
   } catch (e) {
     return json({ error: (e as Error).message }, 502)
@@ -223,6 +281,16 @@ function validateOp(eid: string, op: Record<string, unknown>): string | null {
           if (err) return err
         }
       }
+      if (op.descriptions !== undefined) {
+        if (!Array.isArray(op.descriptions)) return `${eid} create-entity: descriptions must be an array`
+        for (const d of op.descriptions) {
+          if (!d || typeof d !== 'object')                                  return `${eid} create-entity: description must be object`
+          const dd = d as Record<string, unknown>
+          if (!Number.isInteger(dd.order) || (dd.order as number) < 1)      return `${eid} create-entity: description.order must be int >= 1`
+          if (typeof dd.content !== 'string')                                return `${eid} create-entity: description.content must be string (JSON-encoded PT array)`
+          try { JSON.parse(dd.content) } catch                                { return `${eid} create-entity: description.content must be JSON` }
+        }
+      }
       return null
     }
     case 'modify-block': {
@@ -309,7 +377,7 @@ async function appendToIndex(env: Env, key: string, bundleId: string): Promise<v
     let etag: string | undefined
 
     if (existing) {
-      etag  = existing.httpEtag
+      etag  = stripEtag(existing.httpEtag)
       index = await existing.json<IndexFile>()
       if (index.bundleIds.includes(bundleId)) return  // already indexed; idempotent
     } else {
@@ -397,4 +465,198 @@ function json(data: unknown, status = 200): Response {
     status,
     headers: { 'Content-Type': 'application/json' },
   })
+}
+
+/** R2's `httpEtag` returns the HTTP-quoted form (`"abc"`); the conditional
+ *  put's `etagMatches` rejects the quotes. Strip them. */
+interface RefScan { unresolved: string[] }
+
+async function resolveBundleRefs(env: Env, v: ValidatedBundle): Promise<RefScan> {
+  const created = new Set<string>()  // entities being created in this bundle
+  const targets = new Set<string>()  // edge target ids referenced
+
+  for (const [entityId, payload] of v.payloads) {
+    for (const op of payload.ops) {
+      if (op.op === 'create-entity') {
+        created.add(entityId)
+        for (const e of op.edges ?? []) targets.add(e.to)
+      } else if (op.op === 'add-edge' || op.op === 'remove-edge') {
+        targets.add(op.to)
+      }
+    }
+  }
+
+  const toCheck = [...targets].filter((id) => !created.has(id))
+  if (!toCheck.length) return { unresolved: [] }
+
+  // Group by kind for batched Cypher.
+  const byKind: Record<string, string[]> = {}
+  for (const id of toCheck) {
+    const m = id.match(ENTITY_ID_RE)
+    if (!m || !ENTITY_KINDS.has(m[1])) continue
+    ;(byKind[m[1]] ||= []).push(m[2])
+  }
+
+  const found = new Set<string>()
+  for (const [kind, slugs] of Object.entries(byKind)) {
+    try {
+      const rows = await runCypher<{ slug: string }>(
+        env,
+        `MATCH (n:\`${kind}\`) WHERE n.slug IN $slugs RETURN n.slug AS slug`,
+        { slugs },
+      )
+      for (const r of rows) found.add(`${kind}:${r.slug}`)
+    } catch (e) {
+      console.error(`resolveBundleRefs ${kind}:`, (e as Error).message)
+    }
+  }
+
+  return { unresolved: toCheck.filter((id) => !found.has(id)) }
+}
+
+async function runCypher<T>(env: Env, statement: string, parameters: Record<string, unknown>): Promise<T[]> {
+  const uri  = (env.NEO4J_HTTP_URI ?? coerceHttp(env.NEO4J_URI)).replace(/\/$/, '')
+  const auth = btoa(`${env.NEO4J_USERNAME}:${env.NEO4J_PASSWORD}`)
+  const res  = await fetch(`${uri}/db/neo4j/tx/commit`, {
+    method:  'POST',
+    headers: { Authorization: `Basic ${auth}`, 'Content-Type': 'application/json', Accept: 'application/json' },
+    body:    JSON.stringify({ statements: [{ statement, parameters }] }),
+  })
+  if (!res.ok) throw new Error(`Neo4j ${res.status}`)
+  interface CypherResp {
+    results: { columns: string[]; data: { row: unknown[] }[] }[]
+    errors:  { code: string; message: string }[]
+  }
+  const data = await res.json<CypherResp>()
+  if (data.errors?.length) throw new Error(data.errors[0].message)
+  const r = data.results[0]
+  if (!r) return []
+  return r.data.map(({ row }) => {
+    const obj: Record<string, unknown> = {}
+    r.columns.forEach((c, i) => { obj[c] = row[i] })
+    return obj as T
+  })
+}
+
+function coerceHttp(u: string): string {
+  if (u.startsWith('neo4j+s://')) return 'https://' + u.slice('neo4j+s://'.length)
+  if (u.startsWith('bolt://'))    return 'http://'  + u.slice('bolt://'.length).replace(':7687', ':7474')
+  return u
+}
+
+interface WatcherFile { watchers: string[] }
+
+async function appendWatcher(env: Env, entityId: string, bundleId: string): Promise<void> {
+  const key = `proposals/pending-resolutions/${entityId}.json`
+  for (let attempt = 0; attempt < 3; attempt++) {
+    const existing = await env.PROPOSALS.get(key)
+    let data: WatcherFile
+    let etag: string | undefined
+    if (existing) {
+      etag = stripEtag(existing.httpEtag)
+      data = await existing.json<WatcherFile>()
+      if (data.watchers.includes(bundleId)) return
+    } else {
+      data = { watchers: [] }
+    }
+    data.watchers.push(bundleId)
+    const opts: R2PutOptions = {
+      httpMetadata: { contentType: 'application/json' },
+      onlyIf:       etag ? { etagMatches: etag } : { etagDoesNotMatch: '*' },
+    }
+    if (await env.PROPOSALS.put(key, JSON.stringify(data), opts)) return
+  }
+  throw new Error(`appendWatcher: conditional write failed (${entityId})`)
+}
+
+async function dispatchResolves(env: Env, manifest: BundleManifest, unresolved: string[]): Promise<void> {
+  if (!env.BOT_DISPATCH_URL) {
+    console.warn(`[ingest] ${unresolved.length} unresolved refs but BOT_DISPATCH_URL not set — skipping resolve dispatch`)
+    return
+  }
+  const base = new URL(env.BOT_DISPATCH_URL)
+  const resolveUrl = `${base.origin}${base.pathname.replace(/\/dispatch$/, '/resolve')}`
+
+  // Dedup: only dispatch for entityIds that don't already have a child
+  // bundle in flight. Watcher file existing pre-our-write means another
+  // parent already triggered; we just attached as another watcher.
+  for (const entityId of unresolved) {
+    const watcherKey = `proposals/pending-resolutions/${entityId}.json`
+    const existing   = await env.PROPOSALS.get(watcherKey)
+    const watchers   = existing ? (await existing.json<WatcherFile>()).watchers : []
+    if (watchers.length > 1) continue  // someone else already kicked off resolution
+
+    const body = JSON.stringify({
+      type:           'resolve',
+      missingId:      entityId,
+      parentBundle:   manifest.bundleId,
+      parentOutlineId:  manifest.outlineId,
+      parentOutlineRev: manifest.outlineRev,
+    })
+    const sig = 'sha256=' + await hmacHex(env.BOT_INGEST_SECRET, body)
+    const resp = await fetch(resolveUrl, {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json', 'X-Hub-Signature-256': sig, 'User-Agent': 'milorg-ingest/1.0' },
+      body,
+    })
+    if (!resp.ok) console.error(`resolve dispatch ${entityId} -> ${resp.status}: ${await resp.text()}`)
+  }
+}
+
+async function hmacHex(secret: string, body: string): Promise<string> {
+  const key = await crypto.subtle.importKey(
+    'raw', new TextEncoder().encode(secret),
+    { name: 'HMAC', hash: 'SHA-256' }, false, ['sign'],
+  )
+  const sig = await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(body))
+  return [...new Uint8Array(sig)].map((b) => b.toString(16).padStart(2, '0')).join('')
+}
+
+async function revalidateParent(env: Env, parentBundleId: string): Promise<void> {
+  const manifestKey = `proposals/bundles/${parentBundleId}/manifest.json`
+  const manifestObj = await env.PROPOSALS.get(manifestKey)
+  if (!manifestObj) return
+  const parent = await manifestObj.json<BundleManifest>()
+
+  // Reload payloads to pass to resolveBundleRefs.
+  const payloads = new Map<string, EntityPayload>()
+  for (const ent of parent.entities) {
+    const obj = await env.PROPOSALS.get(`proposals/bundles/${parentBundleId}/entity/${ent.entityId}.json`)
+    if (obj) payloads.set(ent.entityId, await obj.json<EntityPayload>())
+  }
+
+  const refs = await resolveBundleRefs(env, { manifest: parent, payloads, issueNumber: null })
+  const wasBlocked = parent.status === 'blocked'
+  parent.unresolvedRefs = refs.unresolved
+  parent.status         = refs.unresolved.length ? 'blocked' : 'pending'
+  await env.PROPOSALS.put(manifestKey, JSON.stringify(parent), {
+    httpMetadata: { contentType: 'application/json' },
+  })
+
+  if (wasBlocked && parent.status === 'pending') {
+    await broadcast(env, parent.outlineId, {
+      kind:     'bundle-status',
+      bundleId: parent.bundleId,
+      status:   'pending',
+    })
+  }
+}
+
+async function broadcast(env: Env, outlineId: string, event: Record<string, unknown>): Promise<void> {
+  if (!env.BUNDLE_EVENTS) return
+  try {
+    const id   = env.BUNDLE_EVENTS.idFromName(outlineId)
+    const stub = env.BUNDLE_EVENTS.get(id)
+    await stub.fetch('https://bundle-events/broadcast', {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify(event),
+    })
+  } catch (e) {
+    console.error('broadcast failed:', (e as Error).message)
+  }
+}
+
+function stripEtag(etag: string): string {
+  return etag.replace(/^"(.*)"$/, '$1')
 }

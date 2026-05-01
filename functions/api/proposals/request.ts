@@ -27,6 +27,7 @@ interface Env {
   GITHUB_REPO?:       string  // "<owner>/<repo>", e.g. "motstandsbevegelsen/milorg"
   BOT_DISPATCH_URL?:  string  // local smoke-test runner URL — overrides GitHub
   BOT_INGEST_SECRET?: string  // shared secret for dispatch HMAC + ingest HMAC
+  PROPOSALS?:         R2Bucket
 }
 
 const SLUG_RE        = /^[a-z0-9-]+$/
@@ -58,16 +59,30 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
     if (env.BOT_DISPATCH_URL) {
       if (!env.BOT_INGEST_SECRET) return json({ error: 'BOT_INGEST_SECRET not configured (required for local dispatch)' }, 500)
       const result = await dispatchLocal(env.BOT_DISPATCH_URL, env.BOT_INGEST_SECRET, validated)
+      await markGenerationPending(env, validated.outlineId)
       return json(result)
     }
     if (!env.GITHUB_TOKEN || !env.GITHUB_REPO) {
       return json({ error: 'GITHUB_TOKEN / GITHUB_REPO not configured' }, 500)
     }
     const issue = await createBotTaskIssue(env as Required<Env>, validated)
+    await markGenerationPending(env, validated.outlineId)
     return json({ issueNumber: issue.number, issueUrl: issue.html_url })
   } catch (e) {
     return json({ error: (e as Error).message }, 502)
   }
+}
+
+async function markGenerationPending(env: Env, outlineId: string): Promise<void> {
+  if (!env.PROPOSALS) return
+  // 15-minute TTL so a stuck/failed run eventually clears the spinner.
+  const requestedAt = new Date().toISOString()
+  const expiresAt   = new Date(Date.now() + 15 * 60 * 1000).toISOString()
+  await env.PROPOSALS.put(
+    `proposals/pending-generations/${outlineId}.json`,
+    JSON.stringify({ requestedAt, expiresAt }),
+    { httpMetadata: { contentType: 'application/json' } },
+  )
 }
 
 async function dispatchLocal(

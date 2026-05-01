@@ -23,3 +23,10 @@ export const UnitDataKey:         InjectionKey<ReturnType<typeof useUnitData>>  
 export const OrganizationDataKey: InjectionKey<ReturnType<typeof useOrganizationData>> = Symbol('OrganizationData')
 export const StationDataKey:      InjectionKey<ReturnType<typeof useStationData>>      = Symbol('StationData')
 export const TransportDataKey:    InjectionKey<ReturnType<typeof useTransportData>>    = Symbol('TransportData')
+
+/**
+ * `true` while a detail page is rendering inside a proposal preview.
+ * AdminViewTabs hides itself and useDetailCreateMode skips the
+ * auto-flip-to-edit so the user can't mutate live state from the modal.
+ */
+export const ProposalPreviewKey: InjectionKey<boolean> = Symbol('ProposalPreview')

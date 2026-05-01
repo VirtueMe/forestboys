@@ -77,6 +77,42 @@ Produce one bundle absorbing outline `${OUTLINE_ID}`. The bundle should:
 
 Constraints:
 
+- **Do not summarize.** The bundle's job is to *structure* the outline's
+  content into the graph, not condense it. Every factual claim, name,
+  date, rank, location, ship, plane, operation, sabotage action,
+  letter, citation, anecdote, and bilingual passage in the outline
+  must survive into a `create-entity.descriptions` block or a
+  `modify-block` op. If the outline has 30 paragraphs, expect ~30
+  blocks. Compressing 30 paragraphs into 4 is data loss and will be
+  rejected.
+- **For NEW entities, put initial body inside `create-entity` via the
+  `descriptions` field**, NOT as standalone `modify-block` ops.
+  Schema:
+
+  ```jsonc
+  {
+    "op": "create-entity",
+    "kind": "Unit",
+    "slug": "...",
+    "props": { /* scalar fields ONLY: canonicalName, formalName, type, foundedDate, etc. */ },
+    "descriptions": [
+      { "order": 1, "content": "<JSON-stringified PT block array>" },
+      { "order": 2, "content": "<JSON-stringified PT block array>" }
+    ],
+    "edges": [ /* outbound edges, schema-correct direction */ ]
+  }
+  ```
+
+  `props` accepts only the schema-listed scalar fields for that kind —
+  do not invent property names like `descriptions`, `names`, `body`,
+  etc. inside `props`. The `descriptions` field is a sibling of `props`,
+  parsed by ingest as initial Description nodes (HAS_CONTENT).
+- `modify-block` is **only for existing entities** you are amending.
+  Never emit `modify-block` ops on an entity you are also creating in
+  the same bundle.
+- Preserve the outline's bilingual structure when present — don't
+  translate Norwegian into English or vice versa. Original quotes,
+  signatures, and dates stay verbatim.
 - Stay strictly within what the outline + live-entity context support.
   No hallucinated dates, ranks, locations, or relationships.
 - Match Jan's editorial voice: factual, Norwegian where the entity is
@@ -86,7 +122,23 @@ Constraints:
   live entity — if the outline restates known facts, skip the op.
 - Edge targets must resolve to either a live entity (in
   `LIVE_ENTITIES_JSON`) or another entity being created in this same
-  bundle. Don't reference entities you neither create nor see live.
+  bundle. Don't reference entities you neither create nor see live —
+  the runner verifies every target via `/api/entity/lookup` before
+  ingest and will reject the bundle if any are missing.
+- **Do not invent slugs.** If the outline mentions an organization,
+  unit, person, station, etc. that you can't find in
+  `LIVE_ENTITIES_JSON` and that you also don't create with a
+  `create-entity` op in this bundle, you must either:
+  (a) add a `create-entity` op for it (with all the props you can
+      derive from the outline), or
+  (b) drop the reference. Guessing a slug like
+      `Organization:norwegian-brigade-scotland` when the live entity
+      is `Organization:den-norske-brigade-i-storbritannia` is the
+      most common cause of bundle rejection.
+- Edge directions follow `docs/SCHEMA.md` exactly. Common ones:
+  `(Person)-[:MEMBER_OF]->(Unit)`, `(Unit)-[:PART_OF]->(Organization)`,
+  `(Person)-[:PARTICIPATED_IN]->(Operation)`,
+  `(Person)-[:INVOLVED_IN]->(Incident)`. Reversed edges are wrong.
 - Slugs must match `/^[a-z0-9-]+$/`. Entity IDs are `<Kind>:<slug>`.
 - `blockPath` must match `section.<slug>.block.<key>`.
 

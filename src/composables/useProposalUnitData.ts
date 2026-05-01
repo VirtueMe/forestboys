@@ -9,7 +9,7 @@
 import { ref, computed } from 'vue'
 import { useUnitData } from './useUnitData.ts'
 import { useProposalBundle, type EntityStatus, type EntityPayload } from './useProposalBundle.ts'
-import { applyModifyBlockOps, computeExpectedShas } from './proposalMerge.ts'
+import { applyModifyBlockOps, computeExpectedShas, synthesizeSectionsFromModifyOps } from './proposalMerge.ts'
 
 interface ProposalSidecar {
   bundleId: string
@@ -66,6 +66,7 @@ export function useProposalUnitData(bundleId: string, entityId: string) {
           dissolvedDate: props.dissolvedDate ?? null,
           country:       props.country       ?? null,
         }
+        live.savedSections.value = synthesizeSectionsFromModifyOps(payload)
       } else {
         await live.loadUnit(slug.value)
         applyModifyBlockOps(payload, live.savedSections.value)

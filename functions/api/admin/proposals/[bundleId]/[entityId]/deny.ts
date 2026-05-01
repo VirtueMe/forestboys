@@ -61,8 +61,8 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env, params }
 
   if (!env.PROPOSALS) return json({ error: 'PROPOSALS R2 binding missing' }, 500)
 
-  const bundleId = String(params.bundleId)
-  const entityId = String(params.entityId)
+  const bundleId = decodeURIComponent(String(params.bundleId))
+  const entityId = decodeURIComponent(String(params.entityId))
   if (!BUNDLE_ID_RE.test(bundleId)) return json({ error: 'bundleId malformed' }, 400)
   const idMatch = entityId.match(ENTITY_ID_RE)
   if (!idMatch) return json({ error: 'entityId malformed' }, 400)

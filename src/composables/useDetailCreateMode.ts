@@ -23,9 +23,10 @@
  * per-page state), but should call `clearPending()` from there so a
  * successful Lagre dismisses the recovery banner.
  */
-import { ref, computed, watch } from 'vue'
+import { ref, computed, watch, inject } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { consumePendingDescription, type PendingDescription, type PendingKind } from './usePendingDescription.ts'
+import { ProposalPreviewKey } from './proposalDataInjection.ts'
 import type { AdminViewMode } from '@/components/AdminViewTabs.vue'
 
 export interface UseDetailCreateModeOptions {
@@ -44,15 +45,19 @@ export function useDetailCreateMode(opts: UseDetailCreateModeOptions) {
   const mode      = ref<AdminViewMode>('preview')
   const pendingDescription = ref<PendingDescription | null>(null)
 
+  const inProposalPreview = inject(ProposalPreviewKey, false)
+
   // Force edit mode whenever we land on /<kind>/new — preview pane has
   // no saved data yet (the in-progress draft renders via header/preview
-  // overlays from the editors' defineExpose).
-  watch(isCreate, v => { if (v) mode.value = 'edit' }, { immediate: true })
+  // overlays from the editors' defineExpose). Skipped while previewing
+  // a proposal: edits there would mutate live state, not the bundle.
+  watch(isCreate, v => { if (v && !inProposalPreview) mode.value = 'edit' }, { immediate: true })
 
   // Recovery: a description draft from a previous failed create attempt
   // is stashed at the module level. On slug change we consume any
   // matching entry, seed the editor, and force edit mode.
   watch(slug, (s) => {
+    if (inProposalPreview) return
     const p = consumePendingDescription(opts.kind, s)
     if (p) {
       pendingDescription.value = p

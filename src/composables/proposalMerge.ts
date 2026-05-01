@@ -30,6 +30,47 @@ export function findBlockInSections(sections: Section[], key: string | null): Pt
   return null
 }
 
+const SECTION_PATH_RE = /^section\.([a-z0-9-]+)\.block\.[A-Za-z0-9_-]+$/
+
+/**
+ * Build Section[] for a freshly-created entity's preview.
+ *
+ * Preferred path: read `createOp.descriptions[]` (the schema-correct
+ * carrier for initial body) and map directly to Section[].
+ *
+ * Fallback path: if no descriptions are present but the bundle has
+ * `modify-block` ops on the new entity (older malformed bot output),
+ * synthesize Section[] by grouping those blocks under the section slug
+ * parsed from each blockPath. Keeps stale-bundle previews useful.
+ */
+export function synthesizeSectionsFromModifyOps(payload: EntityPayload): Section[] {
+  const createOp = payload.ops.find((o) => o.op === 'create-entity')
+  if (createOp && createOp.op === 'create-entity' && createOp.descriptions?.length) {
+    return createOp.descriptions.map((d): Section => ({
+      order:       d.order,
+      content:     d.content,
+      citations:   [],
+      sourcedFrom: null,
+    }))
+  }
+  const bySection = new Map<string, PtBlock[]>()
+  for (const op of payload.ops) {
+    if (op.op !== 'modify-block') continue
+    const m = op.blockPath.match(SECTION_PATH_RE)
+    if (!m) continue
+    const slug = m[1]
+    if (!bySection.has(slug)) bySection.set(slug, [])
+    bySection.get(slug)!.push(op.newValue)
+  }
+  let order = 1
+  return [...bySection.values()].map((blocks): Section => ({
+    order:       order++,
+    content:     JSON.stringify(blocks),
+    citations:   [],
+    sourcedFrom: null,
+  }))
+}
+
 /**
  * Replace each `modify-block` op's matching block in place across the
  * Section[] ref the page binds to. Returns the count of replacements.

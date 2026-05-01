@@ -72,11 +72,15 @@ export const onRequestGet: PagesFunction<Env> = async ({ request, env, params })
   const countOnly = url.searchParams.get('count') === 'true'
 
   try {
+    const generationPending = kind === 'Outline'
+      ? await checkGenerationPending(env, slug)
+      : false
+
     const indexObj = await env.PROPOSALS.get(`proposals/by-entity/${entityId}/index.json`)
     if (!indexObj) {
       return countOnly
-        ? json({ pendingCount: 0 })
-        : json({ entityId, openBundles: [] })
+        ? json({ pendingCount: 0, generationPending })
+        : json({ entityId, openBundles: [], generationPending })
     }
 
     const index = await indexObj.json<IndexFile>()
@@ -89,11 +93,26 @@ export const onRequestGet: PagesFunction<Env> = async ({ request, env, params })
     )
     const open = bundleEntries.filter((b): b is OpenBundleEntry => b !== null)
 
-    if (countOnly) return json({ pendingCount: open.length })
+    if (countOnly) return json({ pendingCount: open.length, generationPending })
 
-    return json({ entityId, openBundles: open })
+    return json({ entityId, openBundles: open, generationPending })
   } catch (e) {
     return json({ error: (e as Error).message }, 502)
+  }
+}
+
+async function checkGenerationPending(env: Env, outlineSlug: string): Promise<boolean> {
+  const obj = await env.PROPOSALS.get(`proposals/pending-generations/${outlineSlug}.json`)
+  if (!obj) return false
+  try {
+    const data = await obj.json<{ expiresAt: string }>()
+    if (Date.parse(data.expiresAt) < Date.now()) {
+      await env.PROPOSALS.delete(`proposals/pending-generations/${outlineSlug}.json`)
+      return false
+    }
+    return true
+  } catch {
+    return false
   }
 }
 

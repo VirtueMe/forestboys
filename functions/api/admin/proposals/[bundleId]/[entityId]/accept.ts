@@ -56,8 +56,8 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env, params }
 
   if (!env.PROPOSALS) return json({ error: 'PROPOSALS R2 binding missing' }, 500)
 
-  const bundleId = String(params.bundleId)
-  const entityId = String(params.entityId)
+  const bundleId = decodeURIComponent(String(params.bundleId))
+  const entityId = decodeURIComponent(String(params.entityId))
   if (!BUNDLE_ID_RE.test(bundleId)) return json({ error: 'bundleId malformed' }, 400)
   if (!ENTITY_ID_RE.test(entityId)) return json({ error: 'entityId malformed' }, 400)
 
@@ -80,7 +80,15 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env, params }
   if (!payloadObj) return json({ error: 'Payload not found' }, 404)
   const payload = await payloadObj.json<EntityPayload>()
 
-  // 2. Drift check.
+  // 2a. Same-bundle dependency check. Refuse to accept this entity if any
+  //     of its edge targets is another create-entity in the same bundle
+  //     that's still pending — apply-time MATCH would fail.
+  const unmetDeps = computePendingSiblingDeps(manifest, payload, entityId)
+  if (unmetDeps.length) {
+    return json({ kind: 'unmet-deps', pendingDeps: unmetDeps }, 409)
+  }
+
+  // 2b. Drift check.
   const drifted = await checkDrift(env, entityId, payload.ops, expectedShas)
   if (drifted.length) {
     return json({ kind: 'drift', driftedBlocks: drifted }, 409)
@@ -175,6 +183,30 @@ function isShaMap(v: unknown): v is Record<string, string> {
     if (typeof val !== 'string') return false
   }
   return true
+}
+
+/**
+ * Walk this entity's ops and collect any edge target that's also being
+ * created in the same bundle but hasn't been accepted yet. Apply-time
+ * MATCH on those targets would fail, so refuse upfront.
+ */
+function computePendingSiblingDeps(
+  manifest:  BundleManifest,
+  payload:   EntityPayload,
+  entityId:  string,
+): string[] {
+  const pendingCreates = new Set(
+    manifest.entities
+      .filter((e) => e.status === 'pending' && e.entityId !== entityId
+                  && e.opSummary.some((s) => s.startsWith('create')))
+      .map((e) => e.entityId),
+  )
+  const targets = new Set<string>()
+  for (const op of payload.ops) {
+    if (op.op === 'add-edge' || op.op === 'remove-edge') targets.add(op.to)
+    else if (op.op === 'create-entity') for (const e of op.edges ?? []) targets.add(e.to)
+  }
+  return [...targets].filter((t) => pendingCreates.has(t))
 }
 
 function json(data: unknown, status = 200): Response {

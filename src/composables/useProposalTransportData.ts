@@ -8,7 +8,7 @@
 import { ref, computed } from 'vue'
 import { useTransportData } from './useTransportData.ts'
 import { useProposalBundle, type EntityStatus, type EntityPayload } from './useProposalBundle.ts'
-import { applyModifyBlockOps, computeExpectedShas } from './proposalMerge.ts'
+import { applyModifyBlockOps, computeExpectedShas, synthesizeSectionsFromModifyOps } from './proposalMerge.ts'
 
 interface ProposalSidecar {
   bundleId: string
@@ -65,6 +65,7 @@ export function useProposalTransportData(bundleId: string, entityId: string) {
           description: props.description ?? null,
           links:       props.links       ?? null,
         }
+        live.savedSections.value = synthesizeSectionsFromModifyOps(payload)
       } else {
         await live.loadTransport(slug.value)
         applyModifyBlockOps(payload, live.savedSections.value)

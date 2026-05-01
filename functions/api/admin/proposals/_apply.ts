@@ -29,7 +29,7 @@ export const ENTITY_ID_RE = /^([A-Za-z]+):([a-z0-9-]+)$/
 export const BLOCK_PATH_RE = /^section\.([a-z0-9-]+)\.block\.([A-Za-z0-9_-]+)$/
 
 export type BundleOp =
-  | { op: 'create-entity'; kind: string; slug: string; props: Record<string, unknown>; edges?: { type: string; to: string; props?: Record<string, unknown> }[] }
+  | { op: 'create-entity'; kind: string; slug: string; props: Record<string, unknown>; edges?: { type: string; to: string; props?: Record<string, unknown> }[]; descriptions?: { order: number; content: string }[] }
   | { op: 'modify-block'; blockPath: string; expectedSha: string; newValue: PtBlock }
   | { op: 'add-edge';     type: string; from: string; to: string; props?: Record<string, unknown> }
   | { op: 'remove-edge';  type: string; from: string; to: string }
@@ -53,6 +53,10 @@ export interface BundleManifest {
   model:       string
   promptHash:  string
   entities:    { entityId: string; status: 'pending' | 'accepted' | 'denied' | 'drifted'; opSummary: string[] }[]
+  status?:          'pending' | 'blocked' | 'closed'
+  unresolvedRefs?:  string[]
+  parentBundle?:    string
+  resolvesEntities?: string[]
 }
 
 export interface IndexFile { bundleIds: string[] }
@@ -170,10 +174,25 @@ export async function applyEntityOps(
   for (const op of payload.ops) {
     switch (op.op) {
       case 'create-entity': {
+        // Strip the descriptions field if Claude leaked it into props
+        // (older malformed bundles) so it doesn't land as a node prop.
+        const { descriptions: _drop, ...sanitizedProps } = op.props
+        void _drop
         txStatements.push({
           statement: `CREATE (n:\`${op.kind}\`) SET n = $props, n.slug = $slug`,
-          parameters: { props: { ...op.props, slug: op.slug }, slug: op.slug },
+          parameters: { props: { ...sanitizedProps, slug: op.slug }, slug: op.slug },
         })
+        if (op.descriptions?.length) {
+          for (const d of op.descriptions) {
+            const descId = `desc:${op.kind}:${op.slug}:${d.order}`
+            txStatements.push({
+              statement:
+                `MATCH (n:\`${op.kind}\` {slug: $slug})
+                 CREATE (n)-[:HAS_CONTENT]->(:Description { id: $id, order: $order, content: $content })`,
+              parameters: { slug: op.slug, id: descId, order: d.order, content: d.content },
+            })
+          }
+        }
         if (op.edges) {
           for (const edge of op.edges) {
             const toMatch = edge.to.match(ENTITY_ID_RE)
@@ -190,7 +209,7 @@ export async function applyEntityOps(
             })
           }
         }
-        summary.appliedOps.push(`create ${entityId}`)
+        summary.appliedOps.push(`create ${entityId}${op.descriptions?.length ? ` (+${op.descriptions.length} descriptions)` : ''}`)
         break
       }
       case 'add-edge': {
@@ -349,7 +368,7 @@ export async function indexAdd(env: R2Like, key: string, bundleId: string): Prom
     let index: IndexFile
     let etag: string | undefined
     if (existing) {
-      etag  = existing.httpEtag
+      etag  = stripEtag(existing.httpEtag)
       index = await existing.json<IndexFile>()
       if (index.bundleIds.includes(bundleId)) return
     } else {
@@ -371,7 +390,7 @@ export async function indexRemove(env: R2Like, key: string, bundleId: string): P
   for (let attempt = 0; attempt < 3; attempt++) {
     const existing = await env.PROPOSALS.get(key)
     if (!existing) return  // nothing to remove
-    const etag    = existing.httpEtag
+    const etag    = stripEtag(existing.httpEtag)
     const index   = await existing.json<IndexFile>()
     const filtered = index.bundleIds.filter((b) => b !== bundleId)
     if (filtered.length === index.bundleIds.length) return  // wasn't there
@@ -405,7 +424,7 @@ export async function manifestSetStatus(
   for (let attempt = 0; attempt < 3; attempt++) {
     const existing = await env.PROPOSALS.get(key)
     if (!existing) throw new Error(`manifestSetStatus: bundle ${bundleId} not found`)
-    const etag     = existing.httpEtag
+    const etag     = stripEtag(existing.httpEtag)
     const manifest = await existing.json<BundleManifest>()
     const ent      = manifest.entities.find((e) => e.entityId === entityId)
     if (!ent)      throw new Error(`manifestSetStatus: entity ${entityId} not in bundle ${bundleId}`)
@@ -417,4 +436,10 @@ export async function manifestSetStatus(
     if (result) return manifest
   }
   throw new Error(`manifestSetStatus: conditional write failed after 3 attempts`)
+}
+
+/** R2's `httpEtag` returns the HTTP-quoted form (`"abc"`); the conditional
+ *  put's `etagMatches` rejects the quotes. Strip them. */
+function stripEtag(etag: string): string {
+  return etag.replace(/^"(.*)"$/, '$1')
 }

@@ -18,7 +18,7 @@ import { authFetch } from './useAuth.ts'
 export type EntityStatus = 'pending' | 'accepted' | 'denied' | 'drifted'
 
 export type BundleOp =
-  | { op: 'create-entity'; kind: string; slug: string; props: Record<string, unknown>; edges?: { type: string; to: string; props?: Record<string, unknown> }[] }
+  | { op: 'create-entity'; kind: string; slug: string; props: Record<string, unknown>; edges?: { type: string; to: string; props?: Record<string, unknown> }[]; descriptions?: { order: number; content: string }[] }
   | { op: 'modify-block'; blockPath: string; expectedSha: string; newValue: PtBlock }
   | { op: 'add-edge';     type: string; from: string; to: string; props?: Record<string, unknown> }
   | { op: 'remove-edge';  type: string; from: string; to: string }
@@ -38,15 +38,21 @@ export interface BundleEntityRef {
   opSummary: string[]
 }
 
+export type BundleStatus = 'pending' | 'blocked' | 'closed'
+
 export interface BundleManifest {
-  bundleId:   string
-  outlineId:  string
-  outlineRev: string
-  summary:    string
-  createdAt:  string
-  model:      string
-  promptHash: string
-  entities:   BundleEntityRef[]
+  bundleId:         string
+  outlineId:        string
+  outlineRev:       string
+  summary:          string
+  createdAt:        string
+  model:            string
+  promptHash:       string
+  entities:         BundleEntityRef[]
+  status?:          BundleStatus
+  unresolvedRefs?:  string[]
+  parentBundle?:    string
+  resolvesEntities?: string[]
 }
 
 export interface EntityPayload {
@@ -179,6 +185,34 @@ export function useProposalBundle(bundleId: string) {
     return out
   }
 
+  interface AcceptAllResponse {
+    bundleId:     string
+    results:      { entityId: string; status: 'accepted' | 'skipped' | 'failed'; reason?: string }[]
+    bundleClosed: boolean
+  }
+  async function acceptAll(message: string | null = null): Promise<AcceptAllResponse> {
+    const res = await authFetch(
+      `/api/admin/proposals/${encodeURIComponent(bundleId)}/accept-all`,
+      {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify({ message }),
+      },
+    )
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({})) as { error?: string }
+      throw new Error(body.error ?? `HTTP ${res.status}`)
+    }
+    const out = await res.json() as AcceptAllResponse
+    for (const r of out.results) {
+      if (r.status === 'accepted') {
+        const ref = getEntityRef(r.entityId)
+        if (ref) ref.status = 'accepted'
+      }
+    }
+    return out
+  }
+
   return {
     manifest,
     payloads,
@@ -188,6 +222,7 @@ export function useProposalBundle(bundleId: string) {
     getEntityRef,
     load,
     accept,
+    acceptAll,
     deny,
   }
 }

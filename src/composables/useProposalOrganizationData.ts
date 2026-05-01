@@ -9,7 +9,7 @@
 import { ref, computed } from 'vue'
 import { useOrganizationData } from './useOrganizationData.ts'
 import { useProposalBundle, type EntityStatus, type EntityPayload } from './useProposalBundle.ts'
-import { applyEdgeOps, applyModifyBlockOps, computeExpectedShas, type EdgeMap } from './proposalMerge.ts'
+import { applyEdgeOps, applyModifyBlockOps, computeExpectedShas, synthesizeSectionsFromModifyOps, type EdgeMap } from './proposalMerge.ts'
 
 interface ProposalSidecar {
   bundleId: string
@@ -68,6 +68,7 @@ export function useProposalOrganizationData(bundleId: string, entityId: string) 
           dissolvedDate: props.dissolvedDate ?? null,
           country:       props.country       ?? null,
         }
+        live.savedSections.value = synthesizeSectionsFromModifyOps(payload)
         const edgeMap: EdgeMap = {
           PART_OF:         { entries: live.unitEntries,      targets: [], targetKind: 'Unit',      direction: 'inbound' },
           ORCHESTRATED_BY: { entries: live.operationEntries, targets: [], targetKind: 'Operation', direction: 'inbound' },

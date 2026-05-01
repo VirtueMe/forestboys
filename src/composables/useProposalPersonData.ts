@@ -14,7 +14,7 @@
 import { ref, computed } from 'vue'
 import { usePersonData } from './usePersonData.ts'
 import { useProposalBundle, type EntityStatus, type EntityPayload } from './useProposalBundle.ts'
-import { applyEdgeOps, applyModifyBlockOps, computeExpectedShas, type EdgeMap } from './proposalMerge.ts'
+import { applyEdgeOps, applyModifyBlockOps, computeExpectedShas, synthesizeSectionsFromModifyOps, type EdgeMap } from './proposalMerge.ts'
 
 interface ProposalSidecar {
   bundleId: string
@@ -101,6 +101,7 @@ export function useProposalPersonData(bundleId: string, entityId: string) {
           })),
         }
         applyEdgeOps(synth, entityId, edgeMap, bundleId)
+        live.savedSections.value = synthesizeSectionsFromModifyOps(payload)
       } else {
         await live.loadPerson(slug.value)
         applyModifyBlockOps(payload, live.savedSections.value)

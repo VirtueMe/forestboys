@@ -46,6 +46,14 @@ interface DispatchBody {
   promptHash: string
 }
 
+interface ResolveBody {
+  type:             'resolve'
+  missingId:        string  // <Kind>:<slug>
+  parentBundle:     string
+  parentOutlineId:  string
+  parentOutlineRev: string
+}
+
 http.createServer((req, res) => {
   void handleDispatch(req, res)
 }).listen(PORT, () => {
@@ -55,8 +63,8 @@ http.createServer((req, res) => {
 })
 
 async function handleDispatch(req: http.IncomingMessage, res: http.ServerResponse): Promise<void> {
-  if (req.method !== 'POST' || req.url !== '/dispatch') {
-    reply(res, 404, { error: 'Use POST /dispatch' })
+  if (req.method !== 'POST') {
+    reply(res, 405, { error: 'Use POST' })
     return
   }
   try {
@@ -65,19 +73,31 @@ async function handleDispatch(req: http.IncomingMessage, res: http.ServerRespons
       reply(res, 401, { error: 'Invalid signature' })
       return
     }
-    const payload = JSON.parse(raw) as DispatchBody
-    console.log(`[runner] dispatch ${payload.outlineId} rev=${payload.outlineRev.slice(0, 8)}`)
 
-    // Reply immediately with a stub issueNumber/issueUrl so the admin UI
-    // unblocks; the real work continues in the background.
-    reply(res, 200, {
-      issueNumber: 0,
-      issueUrl:    `local://dispatch/${payload.outlineId}/${Date.now()}`,
-    })
+    if (req.url === '/dispatch') {
+      const payload = JSON.parse(raw) as DispatchBody
+      console.log(`[runner] dispatch ${payload.outlineId} rev=${payload.outlineRev.slice(0, 8)}`)
+      reply(res, 200, {
+        issueNumber: 0,
+        issueUrl:    `local://dispatch/${payload.outlineId}/${Date.now()}`,
+      })
+      void runBundlePipeline(payload).catch((e: Error) => {
+        console.error('[runner] pipeline failed:', e.message)
+      })
+      return
+    }
 
-    void runBundlePipeline(payload).catch((e: Error) => {
-      console.error('[runner] pipeline failed:', e.message)
-    })
+    if (req.url === '/resolve') {
+      const payload = JSON.parse(raw) as ResolveBody
+      console.log(`[runner] resolve ${payload.missingId} for parent ${payload.parentBundle}`)
+      reply(res, 200, { ok: true })
+      void runResolvePipeline(payload).catch((e: Error) => {
+        console.error('[runner] resolve failed:', e.message)
+      })
+      return
+    }
+
+    reply(res, 404, { error: 'Use POST /dispatch or /resolve' })
   } catch (e) {
     reply(res, 500, { error: (e as Error).message })
   }
@@ -129,6 +149,38 @@ async function runBundlePipeline(payload: DispatchBody): Promise<void> {
     return
   }
 
+  // Validate edge targets exist (live or being created in this bundle).
+  // Missing refs are flagged but the bundle still ingests — Jan resolves
+  // them at review time (deny with the correct slug, or fix the entity
+  // first then re-run). Apply-time MATCH on a missing target fails the
+  // affected op only, not the whole bundle.
+  const validation = await validateBundleRefs(bundle)
+  if (validation.missing.length || validation.malformed.length) {
+    const rewrites: Record<string, string> = {}
+    const lines: string[] = []
+    for (const id of validation.missing) {
+      const s = validation.suggestions[id]
+      if (s) {
+        rewrites[id] = s.id
+        lines.push(`  ${id}  →  ${s.id} (${s.name})  [auto-rewritten, ${s.hits} token match]`)
+      } else {
+        lines.push(`  ${id}  (no near match — Jan resolves)`)
+      }
+    }
+    if (Object.keys(rewrites).length) rewriteBundleRefs(bundle, rewrites)
+    console.warn(
+      `[runner] ${validation.missing.length + validation.malformed.length} unresolved reference(s):\n` +
+      (lines.length                ? lines.join('\n') + '\n' : '') +
+      (validation.malformed.length ? `  malformed: ${validation.malformed.join(', ')}\n` : ''),
+    )
+  }
+  if (validation.conflicts.length) {
+    console.warn(
+      `[runner] ${validation.conflicts.length} create-entity slug${validation.conflicts.length === 1 ? '' : 's'} already exist in graph — bundle will fail at apply-time:\n` +
+      validation.conflicts.map((c) => `  ${c.id} (${c.name}) — already exists; consider modify-block on it instead`).join('\n') + '\n',
+    )
+  }
+
   // POST to ingest with HMAC + issueNumber augmentation.
   const augmented = JSON.stringify({ ...bundle, issueNumber: 0 })
   const sig = 'sha256=' + hmacHex(SECRET, augmented)
@@ -145,6 +197,215 @@ async function runBundlePipeline(payload: DispatchBody): Promise<void> {
     throw new Error(`ingest ${ingestResp.status}: ${await ingestResp.text()}`)
   }
   console.log(`[runner] ingest ok: ${await ingestResp.text()}`)
+}
+
+interface BundleEntity { entityId: string; ops: { op: string; to?: string; edges?: { to: string }[] }[] }
+
+function rewriteBundleRefs(bundle: Record<string, unknown>, rewrites: Record<string, string>): void {
+  const entities = (bundle.entities as BundleEntity[]) ?? []
+  for (const ent of entities) {
+    for (const op of ent.ops ?? []) {
+      if (op.op === 'add-edge' || op.op === 'remove-edge') {
+        if (typeof op.to === 'string' && rewrites[op.to]) op.to = rewrites[op.to]
+      } else if (op.op === 'create-entity') {
+        for (const e of op.edges ?? []) {
+          if (typeof e.to === 'string' && rewrites[e.to]) e.to = rewrites[e.to]
+        }
+      }
+    }
+  }
+}
+
+interface ValidationResult {
+  missing:     string[]
+  malformed:   string[]
+  suggestions: Record<string, { id: string; name: string; hits: number }>
+  /** create-entity slugs that already exist in the live graph. */
+  conflicts:   { id: string; name: string }[]
+}
+
+async function validateBundleRefs(bundle: Record<string, unknown>): Promise<ValidationResult> {
+  const entities = (bundle.entities as BundleEntity[]) ?? []
+
+  // Collect every create-entity id (these are valid even though not in live graph yet).
+  const createdIds = new Set<string>()
+  for (const ent of entities) {
+    for (const op of ent.ops ?? []) {
+      if (op.op === 'create-entity') createdIds.add(ent.entityId)
+    }
+  }
+
+  // Collect every target referenced in add-edge / remove-edge / create-entity.edges.
+  const targets = new Set<string>()
+  for (const ent of entities) {
+    for (const op of ent.ops ?? []) {
+      if (op.op === 'add-edge' || op.op === 'remove-edge') {
+        if (typeof op.to === 'string') targets.add(op.to)
+      } else if (op.op === 'create-entity') {
+        for (const e of op.edges ?? []) {
+          if (typeof e.to === 'string') targets.add(e.to)
+        }
+      }
+    }
+  }
+
+  // Edge targets that need to exist (or be created in this bundle).
+  const toCheck = [...targets].filter((id) => !createdIds.has(id))
+  // Create-entity slugs need to NOT exist (otherwise it's a duplicate).
+  const createCheck = [...createdIds]
+
+  const allIds = [...new Set([...toCheck, ...createCheck])]
+  if (!allIds.length) return { missing: [], malformed: [], suggestions: {}, conflicts: [] }
+
+  const lookupUrl = `${CONTEXT_BASE}/api/entity/lookup`
+  const resp = await fetch(lookupUrl, {
+    method:  'POST',
+    headers: {
+      'Content-Type':  'application/json',
+      'Authorization': `Bearer ${SECRET}`,
+    },
+    body: JSON.stringify({ ids: allIds }),
+  })
+  if (!resp.ok) throw new Error(`lookup ${resp.status}: ${await resp.text()}`)
+  const data = await resp.json() as ValidationResult & { found: { id: string; name: string }[] }
+
+  const foundSet = new Set(data.found.map((f) => f.id))
+  const conflicts = data.found.filter((f) => createdIds.has(f.id))
+  // Edge `missing[]` from the endpoint covers the toCheck set; filter to only
+  // entries we actually wanted to verify (the endpoint returns missing for
+  // every id that wasn't found, including create-checks — which is fine).
+  const missing = data.missing.filter((id) => !createdIds.has(id) || !foundSet.has(id))
+
+  return {
+    missing,
+    malformed:   data.malformed,
+    suggestions: data.suggestions ?? {},
+    conflicts,
+  }
+}
+
+async function runResolvePipeline(payload: ResolveBody): Promise<void> {
+  const m = payload.missingId.match(/^([A-Za-z]+):([a-z0-9-]+)$/)
+  if (!m) throw new Error(`malformed missingId: ${payload.missingId}`)
+  const [, kind, slug] = m
+
+  const createdAt = new Date().toISOString().replace(/\.\d{3}Z$/, 'Z')
+  const bundleId  = `bundle:${payload.parentOutlineId}:${createdAt}`
+  const outputFile = `/tmp/bundle-resolve-${kind}-${slug}-${createdAt.replace(/:/g, '-')}.json`
+
+  // Pull the parent's outline context — the resolve prompt grounds in
+  // the same outline body.
+  const ctxResp = await fetch(
+    `${CONTEXT_BASE}/api/entity/Outline/${payload.parentOutlineId}/context`,
+    { headers: { Authorization: `Bearer ${SECRET}`, Accept: 'application/json' } },
+  )
+  if (!ctxResp.ok) throw new Error(`context fetch ${ctxResp.status}: ${await ctxResp.text()}`)
+  const ctx = await ctxResp.json() as { outline: unknown; referencedEntities: unknown }
+
+  const prompt = renderResolvePrompt({
+    kind, slug,
+    bundleId, createdAt,
+    parentBundle: payload.parentBundle,
+    outlineId:    payload.parentOutlineId,
+    outlineRev:   payload.parentOutlineRev,
+    outline:      ctx.outline,
+    liveEntities: ctx.referencedEntities,
+    outputPath:   outputFile,
+  })
+
+  console.log(`[runner] running claude -p (resolve → ${outputFile})`)
+  await runClaude(prompt)
+
+  const bundleRaw = await fs.readFile(outputFile, 'utf8')
+  const bundle    = JSON.parse(bundleRaw) as Record<string, unknown>
+
+  // Augment with parentBundle + resolvesEntities so ingest can revalidate.
+  const augmented = JSON.stringify({
+    ...bundle,
+    parentBundle:     payload.parentBundle,
+    resolvesEntities: [payload.missingId],
+    issueNumber:      0,
+  })
+  const sig = 'sha256=' + hmacHex(SECRET, augmented)
+  const ingestResp = await fetch(INGEST_URL, {
+    method:  'POST',
+    headers: {
+      'Content-Type':         'application/json',
+      'X-Hub-Signature-256':  sig,
+      'User-Agent':           'milorg-bot-task-local/1.0',
+    },
+    body: augmented,
+  })
+  if (!ingestResp.ok) throw new Error(`ingest ${ingestResp.status}: ${await ingestResp.text()}`)
+  console.log(`[runner] resolve ingest ok: ${await ingestResp.text()}`)
+}
+
+interface ResolvePromptVars {
+  kind: string; slug: string
+  bundleId: string; createdAt: string
+  parentBundle: string
+  outlineId: string; outlineRev: string
+  outline: unknown; liveEntities: unknown
+  outputPath: string
+}
+
+function renderResolvePrompt(v: ResolvePromptVars): string {
+  return `You are creating a single missing entity that another proposal bundle needs.
+
+The parent bundle (${v.parentBundle}) referenced ${v.kind}:${v.slug} but no such
+entity exists in the live graph. Your job: produce a small bundle with one
+\`create-entity\` op for ${v.kind}:${v.slug}, derived from the same outline
+the parent bundle was generated from. Use the outline + live entities for
+grounding; do not hallucinate facts.
+
+## Outline
+
+\`\`\`json
+${JSON.stringify(v.outline, null, 2)}
+\`\`\`
+
+## Live entities the outline references
+
+\`\`\`json
+${JSON.stringify(v.liveEntities, null, 2)}
+\`\`\`
+
+## Output
+
+Write a single JSON object to ${v.outputPath} matching the bundle shape:
+
+\`\`\`jsonc
+{
+  "bundleId":   "${v.bundleId}",
+  "outlineId":  "${v.outlineId}",
+  "outlineRev": "${v.outlineRev}",
+  "summary":    "Resolves ${v.kind}:${v.slug} for parent ${v.parentBundle}",
+  "createdAt":  "${v.createdAt}",
+  "model":      "claude-opus-4-7",
+  "promptHash": "resolve000000",
+  "entities": [
+    {
+      "entityId":    "${v.kind}:${v.slug}",
+      "ops": [
+        { "op": "create-entity", "kind": "${v.kind}", "slug": "${v.slug}", "props": { /* canonicalName + scalars from the outline */ } }
+      ],
+      "derivedFrom": { "outlineId": "${v.outlineId}", "outlineRev": "${v.outlineRev}" },
+      "source":      "claude:resolve:${v.parentBundle}",
+      "generatedAt": "${v.createdAt}"
+    }
+  ]
+}
+\`\`\`
+
+Rules:
+- Exactly one \`create-entity\` op; do not add modify-block, edges, or
+  obsolete-outline ops here.
+- Stay strictly within what the outline + live entities support. If the
+  outline doesn't actually mention the missing entity by a name that could
+  produce slug "${v.slug}", write \`{"skip": true, "reason": "<one sentence>"}\`
+  to the output file instead and stop.
+- Slugs must match /^[a-z0-9-]+$/.
+`
 }
 
 function runClaude(prompt: string): Promise<void> {
