@@ -15,7 +15,18 @@
         :reserve="displayReserve"
       />
 
-      <AdminViewTabs v-model="mode" />
+      <AdminViewTabs v-model="mode" :proposal-count="bundlesPanel.openBundles.value.length" />
+
+      <template v-if="mode === 'proposals' && bundlesPanel.currentBundle.value">
+        <BundleReviewPanel
+          :key="bundlesPanel.currentBundle.value.bundleId"
+          :bundle-id="bundlesPanel.currentBundle.value.bundleId"
+          :older-bundle="bundlesPanel.olderBundle.value"
+          :newer-bundle="bundlesPanel.newerBundle.value"
+          @deleted="bundlesPanel.onBundleDeleted"
+          @navigate="bundlesPanel.onBundleNavigate"
+        />
+      </template>
 
       <TransportEditPane
         v-show="mode === 'edit'"
@@ -31,6 +42,7 @@
       />
 
       <TransportViewPane
+        v-show="mode !== 'proposals'"
         :preview-sections="previewSections"
         :legacy-description="transport.description"
         :legacy-links-json="transport.links"
@@ -49,16 +61,28 @@ import { computed, useTemplateRef, inject } from 'vue'
 import { useTransportData, type TransportNode } from '../composables/useTransportData.ts'
 import { TransportDataKey } from '../composables/proposalDataInjection.ts'
 import { useDetailCreateMode } from '../composables/useDetailCreateMode.ts'
+import { useAuth } from '../composables/useAuth.ts'
+import { useEntityBundles } from '../composables/useEntityBundles.ts'
 import DetailPage from '../components/DetailPage.vue'
 import AdminViewTabs from '../components/AdminViewTabs.vue'
+import BundleReviewPanel from '../components/BundleReviewPanel.vue'
 import type { Section } from '../components/SectionsEditor.vue'
 import TransportHeader   from '../components/transport/TransportHeader.vue'
 import TransportEditPane from '../components/transport/TransportEditPane.vue'
 import TransportViewPane from '../components/transport/TransportViewPane.vue'
 import type { TransportDraft } from '../components/transport/TransportScalarEditor.vue'
 
+const { user } = useAuth()
+const isAdminTransport = computed(() => user.value?.role === 'admin')
+
 const { slug: transportSlug, isCreate, mode, pendingDescription, onCreated, clearPending } =
   useDetailCreateMode({ kind: 'transport', pathPrefix: '/transport' })
+
+const bundlesPanel = useEntityBundles({
+  kind:    'Transport',
+  slug:    transportSlug,
+  isAdmin: isAdminTransport,
+})
 
 function onSectionsSaved(sections: Section[]) {
   savedSections.value = sections

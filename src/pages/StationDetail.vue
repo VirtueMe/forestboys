@@ -16,7 +16,18 @@
         :lng="displayLng"
       />
 
-      <AdminViewTabs v-model="mode" />
+      <AdminViewTabs v-model="mode" :proposal-count="bundlesPanel.openBundles.value.length" />
+
+      <template v-if="mode === 'proposals' && bundlesPanel.currentBundle.value">
+        <BundleReviewPanel
+          :key="bundlesPanel.currentBundle.value.bundleId"
+          :bundle-id="bundlesPanel.currentBundle.value.bundleId"
+          :older-bundle="bundlesPanel.olderBundle.value"
+          :newer-bundle="bundlesPanel.newerBundle.value"
+          @deleted="bundlesPanel.onBundleDeleted"
+          @navigate="bundlesPanel.onBundleNavigate"
+        />
+      </template>
 
       <StationEditPane
         v-show="mode === 'edit'"
@@ -32,6 +43,7 @@
       />
 
       <StationViewPane
+        v-show="mode !== 'proposals'"
         :preview-sections="previewSections"
         :legacy-description="station.description"
         :legacy-links-json="station.links"
@@ -50,16 +62,28 @@ import { computed, useTemplateRef, inject } from 'vue'
 import { useStationData, type StationNode } from '../composables/useStationData.ts'
 import { StationDataKey } from '../composables/proposalDataInjection.ts'
 import { useDetailCreateMode } from '../composables/useDetailCreateMode.ts'
+import { useAuth } from '../composables/useAuth.ts'
+import { useEntityBundles } from '../composables/useEntityBundles.ts'
 import DetailPage from '../components/DetailPage.vue'
 import AdminViewTabs from '../components/AdminViewTabs.vue'
+import BundleReviewPanel from '../components/BundleReviewPanel.vue'
 import type { Section } from '../components/SectionsEditor.vue'
 import StationHeader   from '../components/station/StationHeader.vue'
 import StationEditPane from '../components/station/StationEditPane.vue'
 import StationViewPane from '../components/station/StationViewPane.vue'
 import type { StationDraft } from '../components/station/StationScalarEditor.vue'
 
+const { user } = useAuth()
+const isAdminStation = computed(() => user.value?.role === 'admin')
+
 const { slug: stationSlug, isCreate, mode, pendingDescription, onCreated, clearPending } =
   useDetailCreateMode({ kind: 'station', pathPrefix: '/station' })
+
+const bundlesPanel = useEntityBundles({
+  kind:    'Station',
+  slug:    stationSlug,
+  isAdmin: isAdminStation,
+})
 
 function onSectionsSaved(sections: Section[]) {
   savedSections.value = sections

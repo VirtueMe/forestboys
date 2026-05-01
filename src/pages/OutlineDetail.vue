@@ -101,10 +101,11 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted, watch, inject } from 'vue'
-import { useRoute, useRouter, RouterLink } from 'vue-router'
+import { ref, computed, onMounted, watch, inject } from 'vue'
+import { useRoute, RouterLink } from 'vue-router'
 import { useOutlineData } from '../composables/useOutlineData.ts'
 import { OutlineDataKey } from '../composables/proposalDataInjection.ts'
+import { useEntityBundles } from '../composables/useEntityBundles.ts'
 import { authFetch, useAuth } from '../composables/useAuth.ts'
 import { blocksToHtml } from '../utils/portableText.ts'
 import AdminViewTabs, { type AdminViewMode } from '../components/AdminViewTabs.vue'
@@ -115,64 +116,28 @@ import type { Section } from '../components/SectionsEditor.vue'
 const mode = ref<AdminViewMode>('preview')
 
 const route  = useRoute()
-const router = useRouter()
 const { user } = useAuth()
 const isAdmin = computed(() => user.value?.role === 'admin')
-
-interface OpenBundle { bundleId: string; summary: string; createdAt: string }
 
 const data = inject(OutlineDataKey, () => useOutlineData(), true)
 const { outline: item, savedSections, mentions, loadOutline, resetOutline } = data
 
-const openBundles      = ref<OpenBundle[]>([])
-const viewingBundleId  = ref<string | null>(null)
-
-const sortedBundles = computed<OpenBundle[]>(() =>
-  [...openBundles.value].sort((a, b) => b.createdAt.localeCompare(a.createdAt)),
-)
-const currentIdx = computed(() => {
-  if (!sortedBundles.value.length) return -1
-  if (viewingBundleId.value) {
-    const idx = sortedBundles.value.findIndex((b) => b.bundleId === viewingBundleId.value)
-    return idx === -1 ? 0 : idx
-  }
-  return 0
+const outlineSlug = computed(() => item.value?.slug ?? null)
+const bundles = useEntityBundles({
+  kind:              'Outline',
+  slug:              outlineSlug,
+  isAdmin,
+  realtimeOutlineId: outlineSlug,
 })
-const currentBundle = computed<OpenBundle | null>(() =>
-  currentIdx.value >= 0 ? sortedBundles.value[currentIdx.value] : null,
-)
-const newerBundle = computed<OpenBundle | undefined>(() =>
-  currentIdx.value > 0 ? sortedBundles.value[currentIdx.value - 1] : undefined,
-)
-const olderBundle = computed<OpenBundle | undefined>(() =>
-  currentIdx.value >= 0 && currentIdx.value < sortedBundles.value.length - 1
-    ? sortedBundles.value[currentIdx.value + 1]
-    : undefined,
-)
+const { openBundles, currentBundle, newerBundle, olderBundle, onBundleNavigate, onBundleDeleted, loadOpenBundles, generationPending } = bundles
 
-function onBundleNavigate(bundleId: string): void {
-  viewingBundleId.value = bundleId
-  void router.replace({ path: route.path, query: route.query, hash: `#proposal=${encodeURIComponent(bundleId)}` })
-}
-
-function onBundleDeleted(): void {
-  if (item.value) void loadOpenBundles(item.value.slug)
-  viewingBundleId.value = null
-  void router.replace({ path: route.path, query: route.query, hash: '' })
-}
-
-// Sync from URL hash (#proposal=<bundleId>) on mount + route changes.
-function syncFromHash(): void {
-  const m = route.hash.match(/^#proposal=(.+)$/)
-  viewingBundleId.value = m ? decodeURIComponent(m[1]) : null
-}
-watch(() => route.hash, syncFromHash, { immediate: true })
+// Surface the server-side pending-generation marker as the bot-running flag.
+watch(generationPending, (v) => { if (v) botRunning.value = true; else botRunning.value = false })
 
 const loading = ref(true)
 
 async function load(slug: string): Promise<void> {
-  loading.value     = true
-  openBundles.value = []
+  loading.value = true
   resetOutline()
   try {
     await loadOutline(slug)
@@ -181,41 +146,6 @@ async function load(slug: string): Promise<void> {
     loading.value = false
   }
 }
-
-async function loadOpenBundles(slug: string): Promise<void> {
-  try {
-    const res = await authFetch(`/api/admin/Outline/${slug}/proposals`)
-    if (!res.ok) return
-    const body = await res.json() as { openBundles?: OpenBundle[]; generationPending?: boolean }
-    openBundles.value = body.openBundles ?? []
-    botRunning.value  = body.generationPending ?? false
-  } catch { /* silent — proposal pane just stays empty */ }
-}
-
-// Realtime updates via SSE — re-fetch openBundles whenever a bundle
-// event fires for the current outline.
-let eventSource: EventSource | null = null
-function openEventStream(slug: string): void {
-  if (eventSource) eventSource.close()
-  eventSource = new EventSource(`/api/proposals/events?outlineId=${encodeURIComponent(slug)}`)
-  eventSource.onmessage = () => {
-    if (item.value?.slug === slug) {
-      botRunning.value = false
-      void loadOpenBundles(slug)
-    }
-  }
-  eventSource.onerror = () => {
-    // Browser auto-reconnects after a delay; nothing to do here.
-  }
-}
-watch(() => item.value?.slug, (s, prev) => {
-  if (s && s !== prev && isAdmin.value) openEventStream(s)
-})
-watch(isAdmin, (admin) => {
-  if (admin && item.value?.slug) openEventStream(item.value.slug)
-})
-
-onUnmounted(() => { eventSource?.close(); eventSource = null })
 
 function onSectionsSaved(sections: Section[]): void {
   savedSections.value = sections

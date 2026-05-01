@@ -19,7 +19,18 @@
       />
       <PersonRanksPreview v-if="person.type === 'soldier'" :ranks="heldRanks" />
 
-      <AdminViewTabs v-model="mode" />
+      <AdminViewTabs v-model="mode" :proposal-count="bundlesPanel.openBundles.value.length" />
+
+      <template v-if="mode === 'proposals' && bundlesPanel.currentBundle.value">
+        <BundleReviewPanel
+          :key="bundlesPanel.currentBundle.value.bundleId"
+          :bundle-id="bundlesPanel.currentBundle.value.bundleId"
+          :older-bundle="bundlesPanel.olderBundle.value"
+          :newer-bundle="bundlesPanel.newerBundle.value"
+          @deleted="bundlesPanel.onBundleDeleted"
+          @navigate="bundlesPanel.onBundleNavigate"
+        />
+      </template>
 
       <PersonEditPane
         v-show="mode === 'edit'"
@@ -40,7 +51,7 @@
       />
 
       <PersonViewPane
-        v-show="mode !== 'edit'"
+        v-show="mode === 'preview'"
         :person="person"
         :preview-sections="previewSections"
         :relations="relationsData"
@@ -62,6 +73,9 @@ import { PersonDataKey } from '../composables/proposalDataInjection.ts'
 import { useDetailCreateMode } from '../composables/useDetailCreateMode.ts'
 import DetailPage from '../components/DetailPage.vue'
 import AdminViewTabs from '../components/AdminViewTabs.vue'
+import BundleReviewPanel from '../components/BundleReviewPanel.vue'
+import { useAuth } from '../composables/useAuth.ts'
+import { useEntityBundles } from '../composables/useEntityBundles.ts'
 import type { Section } from '../components/SectionsEditor.vue'
 import type { ScalarDraft } from '../components/person/PersonScalarEditor.vue'
 import DetailHero          from '../components/DetailHero.vue'
@@ -88,6 +102,15 @@ const {
 
 const { isCreate, mode, pendingDescription, onCreated, clearPending } =
   useDetailCreateMode({ kind: 'person', pathPrefix: '/person' })
+
+const { user } = useAuth()
+const isAdminPerson = computed(() => user.value?.role === 'admin')
+const personSlug    = computed(() => neo4jPerson.value?.slug ?? null)
+const bundlesPanel = useEntityBundles({
+  kind:    'Person',
+  slug:    personSlug,
+  isAdmin: isAdminPerson,
+})
 
 function onSectionsSaved(sections: Section[]) {
   savedSections.value = sections

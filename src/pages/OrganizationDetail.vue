@@ -17,7 +17,18 @@
         :country="displayCountry"
       />
 
-      <AdminViewTabs v-model="mode" />
+      <AdminViewTabs v-model="mode" :proposal-count="bundlesPanel.openBundles.value.length" />
+
+      <template v-if="mode === 'proposals' && bundlesPanel.currentBundle.value">
+        <BundleReviewPanel
+          :key="bundlesPanel.currentBundle.value.bundleId"
+          :bundle-id="bundlesPanel.currentBundle.value.bundleId"
+          :older-bundle="bundlesPanel.olderBundle.value"
+          :newer-bundle="bundlesPanel.newerBundle.value"
+          @deleted="bundlesPanel.onBundleDeleted"
+          @navigate="bundlesPanel.onBundleNavigate"
+        />
+      </template>
 
       <OrganizationEditPane
         v-show="mode === 'edit'"
@@ -46,6 +57,7 @@
            naturally collapse via their own v-if; the header + Beskrivelse
            preview reflect the in-progress draft via the editor overlays. -->
       <OrganizationViewPane
+        v-show="mode !== 'proposals'"
         :preview-sections="previewSections"
         :unit-entries="unitEntries"
         :operation-entries="operationEntries"
@@ -64,16 +76,28 @@ import { computed, useTemplateRef, inject } from 'vue'
 import { useOrganizationData, type OrgNode } from '../composables/useOrganizationData.ts'
 import { OrganizationDataKey } from '../composables/proposalDataInjection.ts'
 import { useDetailCreateMode } from '../composables/useDetailCreateMode.ts'
+import { useAuth } from '../composables/useAuth.ts'
+import { useEntityBundles } from '../composables/useEntityBundles.ts'
 import DetailPage from '../components/DetailPage.vue'
 import AdminViewTabs from '../components/AdminViewTabs.vue'
+import BundleReviewPanel from '../components/BundleReviewPanel.vue'
 import type { Section } from '../components/SectionsEditor.vue'
 import OrganizationHeader   from '../components/organization/OrganizationHeader.vue'
 import OrganizationEditPane from '../components/organization/OrganizationEditPane.vue'
 import OrganizationViewPane from '../components/organization/OrganizationViewPane.vue'
 import type { OrgDraft }    from '../components/organization/OrganizationScalarEditor.vue'
 
+const { user } = useAuth()
+const isAdminOrg = computed(() => user.value?.role === 'admin')
+
 const { slug: orgSlug, isCreate, mode, pendingDescription, onCreated, clearPending } =
   useDetailCreateMode({ kind: 'organization', pathPrefix: '/organization' })
+
+const bundlesPanel = useEntityBundles({
+  kind:    'Organization',
+  slug:    orgSlug,
+  isAdmin: isAdminOrg,
+})
 
 function onSectionsSaved(sections: Section[]) {
   savedSections.value = sections

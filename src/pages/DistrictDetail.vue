@@ -16,7 +16,18 @@
         :parents="parents"
       />
 
-      <AdminViewTabs v-model="mode" />
+      <AdminViewTabs v-model="mode" :proposal-count="bundlesPanel.openBundles.value.length" />
+
+      <template v-if="mode === 'proposals' && bundlesPanel.currentBundle.value">
+        <BundleReviewPanel
+          :key="bundlesPanel.currentBundle.value.bundleId"
+          :bundle-id="bundlesPanel.currentBundle.value.bundleId"
+          :older-bundle="bundlesPanel.olderBundle.value"
+          :newer-bundle="bundlesPanel.newerBundle.value"
+          @deleted="bundlesPanel.onBundleDeleted"
+          @navigate="bundlesPanel.onBundleNavigate"
+        />
+      </template>
 
       <UnitEditPane
         v-show="mode === 'edit'"
@@ -34,6 +45,7 @@
       />
 
       <UnitViewPane
+        v-show="mode !== 'proposals'"
         :preview-sections="previewSections"
         :legacy-descriptions="legacyDescriptions"
         :sub-units="subUnits"
@@ -52,6 +64,9 @@
 import { computed, ref, useTemplateRef, watch, inject } from 'vue'
 import { useUnitData, type UnitNode } from '../composables/useUnitData.ts'
 import { UnitDataKey } from '../composables/proposalDataInjection.ts'
+import { useAuth } from '../composables/useAuth.ts'
+import { useEntityBundles } from '../composables/useEntityBundles.ts'
+import BundleReviewPanel from '../components/BundleReviewPanel.vue'
 import { useDetailCreateMode } from '../composables/useDetailCreateMode.ts'
 import DetailPage from '../components/DetailPage.vue'
 import AdminViewTabs from '../components/AdminViewTabs.vue'
@@ -65,6 +80,14 @@ import type { RelationEntry, RelationTarget } from '../components/relation/Relat
 
 const { slug: unitSlug, isCreate, mode, pendingDescription, onCreated, clearPending } =
   useDetailCreateMode({ kind: 'unit', pathPrefix: '/district' })
+
+const { user } = useAuth()
+const isAdminUnit = computed(() => user.value?.role === 'admin')
+const bundlesPanel = useEntityBundles({
+  kind:    'Unit',
+  slug:    unitSlug,
+  isAdmin: isAdminUnit,
+})
 
 function onSectionsSaved(sections: Section[]) {
   savedSections.value = sections
