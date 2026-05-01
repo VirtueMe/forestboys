@@ -149,7 +149,7 @@ const actionError = ref<Record<string, string>>({})
 
 onMounted(() => { void bundle.load() })
 
-const PREVIEWABLE = new Set(['Person', 'Unit', 'Organization', 'Station', 'Transport', 'Outline'])
+const PREVIEWABLE = new Set(['Person', 'Unit', 'Organization', 'Station', 'Transport', 'Outline', 'Operation', 'Incident', 'Location'])
 
 const preview    = ref<{ kind: string; slug: string } | null>(null)
 const modalOpen  = ref(false)
