@@ -1,6 +1,7 @@
 import { ref, computed, reactive, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useLocationCache, fetchEventDetailBySlug } from './useLocationCache.ts'
+import { useEventsList } from './useEventsList.ts'
 import type { IdbEvent, IdbEventDetail } from '../types/idb.ts'
 
 // ── Fallback colour maps ──────────────────────────────────────────────────────
@@ -38,7 +39,10 @@ const DISTRICT_COLORS: Record<string, string> = {
 export function useEventsContext() {
   const route  = useRoute()
   const router = useRouter()
-  const { events, orgColors, districtColors, loading, init } = useLocationCache()
+  // Events list now comes from Neo4j; orgColors/districtColors stay
+  // sourced from the Sanity-derived cache for now.
+  const { orgColors, districtColors } = useLocationCache()
+  const { events, loading, init } = useEventsList()
 
   // ── Colours ───────────────────────────────────────────────────────────────
   function orgColor(name: string): string {
