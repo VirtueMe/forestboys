@@ -1,7 +1,7 @@
 import { ref, computed, reactive, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useLocationCache, fetchEventDetailBySlug } from './useLocationCache.ts'
-import { useEventsList } from './useEventsList.ts'
+import { useEventsList, fetchEventDetailFromNeo4j } from './useEventsList.ts'
 import type { IdbEvent, IdbEventDetail } from '../types/idb.ts'
 
 // ── Fallback colour maps ──────────────────────────────────────────────────────
@@ -206,7 +206,12 @@ export function useEventsContext() {
     fetchingSlug.value = event.slug
     detailError.value  = false
     try {
-      const detail = await fetchEventDetailBySlug(event.slug)
+      // Prefer Neo4j; fall back to Sanity-IDB if Neo4j has no entry.
+      let detail = await fetchEventDetailFromNeo4j(event.slug)
+      if (!detail) {
+        try { detail = await fetchEventDetailBySlug(event.slug) }
+        catch { detail = null }
+      }
       if (!detail) { detailError.value = true; return }
       detailCache[event.slug] = detail
     } catch {

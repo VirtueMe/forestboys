@@ -10,7 +10,7 @@
  */
 import { ref } from 'vue'
 import { neo4jQuery } from './useNeo4j.ts'
-import type { IdbEvent } from '../types/idb.ts'
+import type { IdbEvent, IdbEventDetail } from '../types/idb.ts'
 
 interface EventRow {
   slug:         string
@@ -64,4 +64,112 @@ export function useEventsList() {
   }
 
   return { events, loading, init }
+}
+
+/**
+ * One-shot Neo4j detail fetch for a single Incident/Operation slug,
+ * shaped as IdbEventDetail so EventPanel can consume it without
+ * conditional rendering. Returns null when the node doesn't exist.
+ *
+ * Used as a fallback when Sanity-IDB has no entry for the slug.
+ */
+export async function fetchEventDetailFromNeo4j(slug: string): Promise<IdbEventDetail | null> {
+  const headRows = await neo4jQuery<{
+    kind: 'operation' | 'incident'
+    title: string | null
+    date: string | null
+    organization: string | null
+    district: string | null
+  }>(
+    `MATCH (e {slug: $slug}) WHERE e:Incident OR e:Operation
+     OPTIONAL MATCH (e)-[:ORCHESTRATED_BY]->(org:Organization)
+     OPTIONAL MATCH (e)-[:IN_DISTRICT]->(dist:Unit)
+     RETURN CASE WHEN 'Operation' IN labels(e) THEN 'operation' ELSE 'incident' END AS kind,
+            coalesce(e.codeName, e.canonicalName, e.title) AS title,
+            e.date AS date,
+            org.canonicalName AS organization,
+            dist.canonicalName AS district`,
+    { slug },
+  )
+  const head = headRows[0]
+  if (!head) return null
+
+  const kindLabel = head.kind === 'operation' ? 'Operation' : 'Incident'
+
+  const [descRows, locFromRows, locToRows, stFromRows, stToRows, peopleRows, galleryRows] = await Promise.all([
+    neo4jQuery<{ content: string | null }>(
+      `MATCH (:\`${kindLabel}\` {slug: $slug})-[:HAS_CONTENT]->(d:Description)
+       RETURN d.content AS content
+       ORDER BY coalesce(d.order, 1) ASC`,
+      { slug },
+    ),
+    neo4jQuery<{ slug: string; title: string }>(
+      `MATCH (:\`${kindLabel}\` {slug: $slug})-[:FROM]->(l:Location)
+       RETURN l.slug AS slug, coalesce(l.canonicalName, l.title) AS title`,
+      { slug },
+    ),
+    neo4jQuery<{ slug: string; title: string }>(
+      `MATCH (:\`${kindLabel}\` {slug: $slug})-[:TO]->(l:Location)
+       RETURN l.slug AS slug, coalesce(l.canonicalName, l.title) AS title`,
+      { slug },
+    ),
+    neo4jQuery<{ slug: string; title: string }>(
+      `MATCH (:\`${kindLabel}\` {slug: $slug})-[:FROM_STATION]->(s:Station)
+       RETURN s.slug AS slug, coalesce(s.canonicalName, s.title) AS title`,
+      { slug },
+    ),
+    neo4jQuery<{ slug: string; title: string }>(
+      `MATCH (:\`${kindLabel}\` {slug: $slug})-[:TO_STATION]->(s:Station)
+       RETURN s.slug AS slug, coalesce(s.canonicalName, s.title) AS title`,
+      { slug },
+    ),
+    neo4jQuery<{ slug: string; name: string }>(
+      `MATCH (p:Person)-[:INVOLVED_IN|PARTICIPATED_IN]->(:\`${kindLabel}\` {slug: $slug})
+       RETURN DISTINCT p.slug AS slug, p.canonicalName AS name
+       ORDER BY name`,
+      { slug },
+    ),
+    neo4jQuery<{ id: string; url: string | null; caption: string | null }>(
+      `MATCH (:\`${kindLabel}\` {slug: $slug})-[r:HAS_IMAGE]->(s:Source)
+       WHERE coalesce(s.kind, 'photograph') = 'photograph'
+       RETURN s.id AS id, s.url AS url, coalesce(r.caption, s.title) AS caption
+       ORDER BY coalesce(r.order, 9999), s.id`,
+      { slug },
+    ),
+  ])
+
+  // Synthesize PT description blocks from the Description content
+  // strings (each Description holds a JSON-stringified PT array).
+  const description: unknown[] = []
+  for (const r of descRows) {
+    if (!r.content) continue
+    try {
+      const blocks = JSON.parse(r.content) as unknown[]
+      for (const b of blocks) description.push(b)
+    } catch { /* skip malformed */ }
+  }
+
+  // Gallery shape mirrors Sanity's; consumers read .url first, asset second.
+  const gallery = galleryRows.map((g) => ({
+    asset:   { _ref: g.id, _type: 'reference' as const },
+    url:     g.url,
+    caption: g.caption,
+  }))
+
+  return {
+    _id:          slug,
+    title:        head.title ?? slug,
+    slug,
+    date:         head.date ?? undefined,
+    organization: head.organization ?? undefined,
+    district:     head.district     ?? undefined,
+    description: description.length ? description : undefined,
+    locationFrom: locFromRows[0] ?? undefined,
+    locationTo:   locToRows[0]   ?? undefined,
+    stationFrom:  stFromRows[0]  ?? undefined,
+    stationTo:    stToRows[0]    ?? undefined,
+    people:       peopleRows.length ? peopleRows : undefined,
+    gallery:      gallery.length    ? gallery    : undefined,
+    thumbnailUrl: gallery[0]?.url ?? undefined,
+  } as IdbEventDetail
 }

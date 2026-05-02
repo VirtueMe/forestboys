@@ -2,21 +2,6 @@
   <div class="event-page">
     <button class="back-btn" @click="router.back()">&#x2039; Tilbake</button>
 
-    <div v-if="isAdmin && nodeKind" class="kind-bar">
-      <span class="kind-label">Klassifisering</span>
-      <div class="kind-seg">
-        <label class="kind-seg-opt" :class="{ active: nodeKind === 'incident' }">
-          <input type="radio" value="incident" :checked="nodeKind === 'incident'" @change="flipKind('incident')" />
-          Hendelse
-        </label>
-        <label class="kind-seg-opt" :class="{ active: nodeKind === 'operation' }">
-          <input type="radio" value="operation" :checked="nodeKind === 'operation'" @change="flipKind('operation')" />
-          Operasjon
-        </label>
-      </div>
-      <span v-if="kindError" class="kind-error">{{ kindError }}</span>
-    </div>
-
     <div v-if="loading" class="status">Laster hendelse…</div>
     <div v-else-if="error" class="status error">Hendelsen ble ikke funnet.</div>
 
@@ -39,32 +24,16 @@
 
       <hr class="divider" />
 
-      <!-- Admin: event scalar editor -->
-      <section v-if="isAdmin && nodeKind" class="edit-section">
-        <h3 class="edit-section-heading">{{ nodeKind === 'operation' ? 'Operasjon' : 'Hendelse' }}</h3>
-        <div class="edit-row">
-          <label class="edit-label" for="edit-name">{{ nodeKind === 'operation' ? 'Kodenavn' : 'Tittel' }}</label>
-          <input id="edit-name" v-model="editForm.name" class="edit-input" type="text" />
-        </div>
-        <div class="edit-row">
-          <label class="edit-label" for="edit-date">Dato</label>
-          <input
-            id="edit-date"
-            v-model="editForm.date"
-            class="edit-input edit-input-date"
-            type="text"
-            placeholder="YYYY-MM-DD"
-          />
-        </div>
-        <footer v-if="editDirty" class="edit-save-bar">
-          <span class="edit-save-prompt">Ser det bra ut?</span>
-          <button type="button" class="edit-btn-primary" :disabled="editSaving" @click="saveEdit">
-            {{ editSaving ? 'Lagrer…' : 'Lagre' }}
-          </button>
-          <button type="button" class="edit-link-revert" :disabled="editSaving" @click="revertEdit">Angre</button>
-        </footer>
-        <div v-if="editError" class="edit-save-error">{{ editError }}</div>
-      </section>
+      <!-- Admin: full edit pane (scalar + description + relations) -->
+      <EventEditPane
+        v-if="isAdmin && neoEvent"
+        :event="neoEvent"
+        :saved-sections="savedSections"
+        :data="relationsData"
+        @saved-scalar="onSavedScalar"
+        @kind-flipped="() => loadEvent(String(route.params.slug))"
+        @saved-sections="sections => savedSections = sections"
+      />
 
       <!-- Article -->
       <article class="article">
@@ -184,22 +153,9 @@
           </div>
         </section>
 
-        <RelationListEditor
-          v-if="isAdmin && nodeKind"
-          :parent-slug="(route.params.slug as string)"
-          :entries="personEntries"
-          :targets="personTargets"
-          :strategy="personStrategy"
-          :label="personLabel"
-          add-label="+ Legg til person"
-          empty-label="Ingen personer knyttet"
-          search-placeholder="Søk person…"
-          picker-chip-aria="Bytt person"
-          validation-empty="Velg person for alle oppføringer før du lagrer."
-          :show-dates="false"
-        />
-
+        <!-- Non-admin: read-only people list (admin uses EventEditPane above) -->
         <RelationListView
+          v-if="!isAdmin"
           :entries="personEntries"
           :strategy="personStrategy"
           :label="personLabel"
@@ -207,77 +163,29 @@
         />
 
         <RelationInfoPopup :entry="activePerson" @close="activePerson = null" />
-
-        <!-- Hierarchy editors — admin only -->
-        <RelationListEditor
-          v-if="isAdmin && nodeKind === 'incident'"
-          :parent-slug="(route.params.slug as string)"
-          :entries="subIncidentEntries"
-          :targets="subIncidentTargets"
-          :strategy="SubIncidentsStrategy"
-          label="Underhendelser"
-          add-label="+ Legg til underhendelse"
-          empty-label="Ingen underhendelser"
-          search-placeholder="Søk hendelse…"
-          picker-chip-aria="Bytt hendelse"
-          validation-empty="Velg hendelse for alle oppføringer før du lagrer."
-          :show-dates="false"
-          :show-description="false"
-        />
-
-        <RelationListEditor
-          v-if="isAdmin && nodeKind === 'operation'"
-          :parent-slug="(route.params.slug as string)"
-          :entries="opIncidentEntries"
-          :targets="opIncidentTargets"
-          :strategy="OperationIncidentsStrategy"
-          label="Hendelser i operasjonen"
-          add-label="+ Legg til hendelse"
-          empty-label="Ingen hendelser knyttet"
-          search-placeholder="Søk hendelse…"
-          picker-chip-aria="Bytt hendelse"
-          validation-empty="Velg hendelse for alle oppføringer før du lagrer."
-          :show-dates="false"
-          :show-description="false"
-        />
-
-        <RelationListEditor
-          v-if="isAdmin && nodeKind === 'operation'"
-          :parent-slug="(route.params.slug as string)"
-          :entries="subOperationEntries"
-          :targets="subOperationTargets"
-          :strategy="SubOperationsStrategy"
-          label="Deloperasjoner"
-          add-label="+ Legg til deloperasjon"
-          empty-label="Ingen deloperasjoner"
-          search-placeholder="Søk operasjon…"
-          picker-chip-aria="Bytt operasjon"
-          validation-empty="Velg operasjon for alle oppføringer før du lagrer."
-          :show-dates="false"
-          :show-description="false"
-        />
       </article>
     </template>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, inject, watch } from 'vue'
+import { ref, computed, onMounted, inject } from 'vue'
 import { useRoute, useRouter, RouterLink } from 'vue-router'
 import { fetchEventDetailBySlug } from '../composables/useLocationCache.ts'
-import { useAuth, authFetch } from '../composables/useAuth.ts'
-import { useEventData, type EventKind } from '../composables/useEventData.ts'
+import { useAuth } from '../composables/useAuth.ts'
+import { useEventData } from '../composables/useEventData.ts'
 import { EventDataKey } from '../composables/proposalDataInjection.ts'
 import { SANITY_IMG } from '../config/sanity.ts'
 import { blocksToHtml } from '../utils/portableText.ts'
 import type { IdbEventDetail } from '../types/idb.ts'
-import RelationListEditor from '../components/relation/RelationListEditor.vue'
 import RelationListView   from '../components/relation/RelationListView.vue'
 import RelationInfoPopup  from '../components/relation/RelationInfoPopup.vue'
 import {
   PersonInvolvementStrategy, PersonParticipationStrategy,
 } from '../components/relation/strategies.ts'
 import type { RelationEntry } from '../components/relation/RelationStrategy.ts'
+import EventEditPane from '../components/event/EventEditPane.vue'
+import type { EventRelationsData } from '../components/event/EventRelations.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -302,27 +210,30 @@ const {
   loadEvent,
 } = eventData
 
-type NodeKind = EventKind
-const nodeKind  = computed<NodeKind | null>(() => neoEvent.value?.kind ?? null)
-const kindError = ref<string | null>(null)
 const activePerson = ref<RelationEntry | null>(null)
 
 const personLabel = computed(() =>
-  nodeKind.value === 'operation' ? 'Deltakere' : 'Involverte personer',
+  neoEvent.value?.kind === 'operation' ? 'Deltakere' : 'Involverte personer',
 )
 const personStrategy = computed(() =>
-  nodeKind.value === 'operation' ? PersonParticipationStrategy : PersonInvolvementStrategy,
+  neoEvent.value?.kind === 'operation' ? PersonParticipationStrategy : PersonInvolvementStrategy,
 )
 
-// Seed editForm whenever the Neo4j event refreshes.
-watch(neoEvent, (e) => {
-  if (e) {
-    editForm.value     = { name: e.canonicalName, date: e.date ?? '' }
-    editOriginal.value = { ...editForm.value }
-  }
-}, { immediate: true })
-
 const { locationFrom, locationTo, stationFrom, stationTo, gallery: neoGallery } = eventData
+
+const relationsData = computed<EventRelationsData>(() => ({
+  person:       { entries: personEntries.value,       targets: personTargets.value       },
+  subIncident:  { entries: subIncidentEntries.value,  targets: subIncidentTargets.value  },
+  subOperation: { entries: subOperationEntries.value, targets: subOperationTargets.value },
+  opIncident:   { entries: opIncidentEntries.value,   targets: opIncidentTargets.value   },
+}))
+
+function onSavedScalar(out: { name?: string; date?: string | null }) {
+  if (neoEvent.value) {
+    if (out.name != null) neoEvent.value.canonicalName = out.name
+    if (out.date !== undefined) neoEvent.value.date = out.date ?? null
+  }
+}
 
 // Prefer Neo4j edges; fall back to Sanity-IDB if Neo4j hasn't materialized.
 const displayLocationFrom = computed(() => locationFrom.value ?? event.value?.locationFrom ?? null)
@@ -358,85 +269,8 @@ const descriptionHtml = computed<string>(() => {
   return event.value?.description ? blocksToHtml(event.value.description) : ''
 })
 
-interface EditForm { name: string; date: string }
-const editForm     = ref<EditForm>({ name: '', date: '' })
-const editOriginal = ref<EditForm>({ name: '', date: '' })
-const editSaving   = ref(false)
-const editError    = ref<string | null>(null)
-const editDirty    = computed(() =>
-  editForm.value.name !== editOriginal.value.name || editForm.value.date !== editOriginal.value.date,
-)
-
-function revertEdit() {
-  editForm.value = { ...editOriginal.value }
-  editError.value = null
-}
-
-async function saveEdit() {
-  const slug = String(route.params.slug)
-  if (!slug) return
-  const body: Record<string, unknown> = {}
-  if (editForm.value.name !== editOriginal.value.name) body.name = editForm.value.name.trim()
-  if (editForm.value.date !== editOriginal.value.date) body.date = editForm.value.date.trim() || null
-  if (!Object.keys(body).length) return
-  editSaving.value = true
-  editError.value = null
-  try {
-    const res = await authFetch(`/api/admin/event/${encodeURIComponent(slug)}`, {
-      method:  'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body:    JSON.stringify(body),
-    })
-    const out = await res.json().catch(() => ({})) as { name?: string; date?: string | null; error?: string }
-    if (!res.ok) {
-      editError.value = out.error ?? `HTTP ${res.status}`
-      return
-    }
-    editOriginal.value = { name: out.name ?? editForm.value.name, date: out.date ?? '' }
-    editForm.value = { ...editOriginal.value }
-  } catch (e) {
-    editError.value = (e as Error).message
-  } finally {
-    editSaving.value = false
-  }
-}
-
-/** Live preview overlay — show draft values in the article header while dirty. */
-const displayName = computed(() =>
-  editDirty.value
-    ? editForm.value.name
-    : (editOriginal.value.name || neoEvent.value?.canonicalName || event.value?.title || ''),
-)
-const displayDate = computed(() =>
-  editDirty.value
-    ? editForm.value.date
-    : (editOriginal.value.date || neoEvent.value?.date || ''),
-)
-
-async function flipKind(target: NodeKind) {
-  const slug = String(route.params.slug)
-  if (!slug || nodeKind.value === target) return
-  const label = target === 'operation' ? 'Operasjon' : 'Hendelse'
-  if (!window.confirm(
-    `Endre klassifisering til ${label}? Dette skriver om edges (INVOLVED_IN/PARTICIPATED_IN, notater, hierarki).`,
-  )) return
-  kindError.value = null
-  try {
-    const res = await authFetch(`/api/admin/event/${encodeURIComponent(slug)}/kind`, {
-      method:  'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body:    JSON.stringify({ kind: target }),
-    })
-    const body = await res.json().catch(() => ({})) as { kind?: NodeKind; error?: string }
-    if (!res.ok) {
-      kindError.value = body.error ?? `HTTP ${res.status}`
-      return
-    }
-    await loadEvent(slug)
-  } catch (e) {
-    kindError.value = (e as Error).message
-  }
-}
+const displayName = computed(() => neoEvent.value?.canonicalName || event.value?.title || '')
+const displayDate = computed(() => neoEvent.value?.date || '')
 
 const currentImageUrl = computed<string>(() => {
   const g = displayGallery.value
@@ -493,149 +327,11 @@ onMounted(async () => {
   background: var(--paper);
 }
 
-/* ── Admin scalar editor ─────────────────────────────────── */
-.edit-section {
-  margin: 0 16px 16px;
-  padding: 16px;
-  background: var(--paper-raised);
-  border: 1px solid var(--rule);
-  border-radius: 6px;
-}
-.edit-section-heading {
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--muted);
-  margin: 0 0 12px;
-}
-.edit-row {
-  display: grid;
-  grid-template-columns: 120px 1fr;
-  gap: 12px;
-  align-items: center;
-  margin-bottom: 10px;
-}
-.edit-label {
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--ink);
-}
-.edit-input {
-  width: 100%;
-  padding: 8px 10px;
-  font-size: 14px;
-  color: var(--ink);
-  background: var(--paper);
-  border: 1px solid var(--rule);
-  border-radius: 4px;
-  box-sizing: border-box;
-  font-family: inherit;
-}
-.edit-input:focus {
-  outline: 2px solid var(--focus);
-  outline-offset: -1px;
-  border-color: var(--focus);
-}
-.edit-input-date { font-family: monospace; font-size: 12px; max-width: 160px; }
-.edit-save-bar {
-  margin-top: 12px;
-  padding: 10px 14px;
-  background: #fef3c7;
-  border: 1px solid #fcd34d;
-  border-radius: 6px;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-.edit-save-prompt { flex: 1; font-size: 13px; color: #92400e; font-weight: 600; }
-.edit-btn-primary {
-  padding: 8px 14px;
-  font-size: 12px;
-  font-weight: 600;
-  background: var(--focus);
-  color: #fff;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-}
-.edit-btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
-.edit-link-revert {
-  background: transparent;
-  border: none;
-  padding: 0;
-  font-size: 12px;
-  color: #92400e;
-  text-decoration: underline;
-  cursor: pointer;
-}
-.edit-link-revert:disabled { opacity: 0.5; cursor: not-allowed; }
-.edit-save-error {
-  margin-top: 8px;
-  padding: 8px 10px;
-  background: #fef2f2;
-  border: 1px solid #fecaca;
-  border-radius: 6px;
-  font-size: 12px;
-  color: #b91c1c;
-}
 .event-date {
-  font-family: monospace;
-  font-size: 13px;
+  font-family: var(--font-mono);
+  font-size: var(--size-label);
   color: var(--muted);
-  margin: -4px 0 16px;
-}
-
-/* ── Kind toggle (admin) ─────────────────────────────────── */
-.kind-bar {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 8px 16px;
-  margin: 0 16px 12px;
-  background: var(--paper-raised);
-  border: 1px solid var(--rule);
-  border-radius: 6px;
-  font-size: 12px;
-}
-.kind-label {
-  font-weight: 700;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: var(--muted);
-  font-size: 11px;
-}
-.kind-seg {
-  display: inline-flex;
-  border: 1px solid var(--rule);
-  border-radius: 4px;
-  overflow: hidden;
-}
-.kind-seg-opt {
-  display: inline-flex;
-  align-items: center;
-  padding: 6px 14px;
-  font-size: 13px;
-  color: var(--muted);
-  cursor: pointer;
-  user-select: none;
-}
-.kind-seg-opt + .kind-seg-opt { border-left: 1px solid var(--rule); }
-.kind-seg-opt input[type="radio"] {
-  position: absolute;
-  width: 1px; height: 1px;
-  opacity: 0;
-  pointer-events: none;
-}
-.kind-seg-opt.active {
-  background: var(--focus);
-  color: #fff;
-  font-weight: 600;
-}
-.kind-error {
-  color: #b91c1c;
-  font-size: 12px;
-  margin-left: 8px;
+  margin: -4px 0 var(--space-md);
 }
 
 /* ── Back ─────────────────────────────────────────────────── */
