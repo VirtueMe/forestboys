@@ -1,8 +1,10 @@
 /**
  * PATCH /api/admin/operation/:slug/sub-operations — replace the set of
- * child Operations that are PART_OF this Operation.
+ * child Operations contained by this Operation.
  *
  * Body: { children: [{ operationSlug }] }
+ *
+ *   (parent:Operation)-[:RELATED_TO {kind:'contains'}]->(child:Operation)
  */
 
 import { requireAdmin } from '~/_lib/require-admin.ts'
@@ -32,7 +34,7 @@ export const onRequestPatch: PagesFunction<Env> = async ({ request, env, params 
 
   try {
     await runCypher(env, `
-      MATCH (:Operation)-[r:PART_OF]->(parent:Operation {slug: $slug}) DELETE r
+      MATCH (parent:Operation {slug: $slug})-[r:RELATED_TO {kind:'contains'}]->(:Operation) DELETE r
     `, { slug })
 
     if (children.length) {
@@ -41,7 +43,9 @@ export const onRequestPatch: PagesFunction<Env> = async ({ request, env, params 
         UNWIND $items AS x
         OPTIONAL MATCH (child:Operation {slug: x.operationSlug})
         FOREACH (_ IN CASE WHEN child IS NOT NULL THEN [1] ELSE [] END |
-          CREATE (child)-[:PART_OF]->(parent)
+          MERGE (parent)-[r:RELATED_TO]->(child)
+          ON CREATE SET r.kind = 'contains'
+          ON MATCH  SET r.kind = 'contains'
         )
       `, { slug, items: children.map(c => ({ operationSlug: c.operationSlug })) })
     }

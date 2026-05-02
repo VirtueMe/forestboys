@@ -17,6 +17,7 @@ import type { RelationEntry, RelationTarget } from '@/components/relation/Relati
 import {
   PersonInvolvementStrategy, PersonParticipationStrategy,
   SubIncidentsStrategy, SubOperationsStrategy, OperationIncidentsStrategy,
+  IncidentInOperationStrategy,
 } from '@/components/relation/strategies.ts'
 
 export type EventKind = 'incident' | 'operation'
@@ -75,6 +76,8 @@ export function useEventData() {
   const subOperationTargets  = ref<RelationTarget[]>([])
   const opIncidentEntries    = ref<RelationEntry[]>([])
   const opIncidentTargets    = ref<RelationTarget[]>([])
+  const inOperationEntries   = ref<RelationEntry[]>([])
+  const inOperationTargets   = ref<RelationTarget[]>([])
 
   const personStrategy = computed(() =>
     event.value?.kind === 'operation' ? PersonParticipationStrategy : PersonInvolvementStrategy,
@@ -96,6 +99,8 @@ export function useEventData() {
     subOperationTargets.value  = []
     opIncidentEntries.value    = []
     opIncidentTargets.value    = []
+    inOperationEntries.value   = []
+    inOperationTargets.value   = []
   }
 
   async function loadEvent(slug: string): Promise<void> {
@@ -171,12 +176,16 @@ export function useEventData() {
     gallery.value       = galleryRows
 
     if (row.kind === 'incident') {
-      const [se, st] = await Promise.all([
+      const [se, st, ie, it] = await Promise.all([
         SubIncidentsStrategy.fetchEntries(slug),
         SubIncidentsStrategy.fetchTargets(),
+        IncidentInOperationStrategy.fetchEntries(slug),
+        IncidentInOperationStrategy.fetchTargets(),
       ])
       subIncidentEntries.value = se
       subIncidentTargets.value = st
+      inOperationEntries.value = ie
+      inOperationTargets.value = it
     } else {
       const [so, sot, oi, oit] = await Promise.all([
         SubOperationsStrategy.fetchEntries(slug),
@@ -201,6 +210,7 @@ export function useEventData() {
     subIncidentEntries, subIncidentTargets,
     subOperationEntries, subOperationTargets,
     opIncidentEntries,  opIncidentTargets,
+    inOperationEntries, inOperationTargets,
     loadEvent,
     resetEvent,
   }

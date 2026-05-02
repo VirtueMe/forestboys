@@ -1,10 +1,11 @@
 /**
  * PATCH /api/admin/incident/:slug/sub-incidents — replace the set of child
- * Incidents that are PART_OF this Incident.
+ * Incidents contained by this Incident.
  *
  * Body: { children: [{ incidentSlug }] }
  *
- * Replaces all `(c:Incident)-[:PART_OF]->(parent:Incident {slug})` edges.
+ *   (parent:Incident)-[:RELATED_TO {kind:'contains'}]->(child:Incident)
+ *
  * Refuses self-reference.
  */
 
@@ -35,7 +36,7 @@ export const onRequestPatch: PagesFunction<Env> = async ({ request, env, params 
 
   try {
     await runCypher(env, `
-      MATCH (:Incident)-[r:PART_OF]->(parent:Incident {slug: $slug}) DELETE r
+      MATCH (parent:Incident {slug: $slug})-[r:RELATED_TO {kind:'contains'}]->(:Incident) DELETE r
     `, { slug })
 
     if (children.length) {
@@ -44,7 +45,9 @@ export const onRequestPatch: PagesFunction<Env> = async ({ request, env, params 
         UNWIND $items AS x
         OPTIONAL MATCH (child:Incident {slug: x.incidentSlug})
         FOREACH (_ IN CASE WHEN child IS NOT NULL THEN [1] ELSE [] END |
-          CREATE (child)-[:PART_OF]->(parent)
+          MERGE (parent)-[r:RELATED_TO]->(child)
+          ON CREATE SET r.kind = 'contains'
+          ON MATCH  SET r.kind = 'contains'
         )
       `, { slug, items: children.map(c => ({ incidentSlug: c.incidentSlug })) })
     }

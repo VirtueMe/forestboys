@@ -783,12 +783,12 @@ async function fetchOperationOptions(): Promise<RelationTarget[]> {
   return rows
 }
 
-/** Children of an Incident — (child:Incident)-[:PART_OF]->(parent:Incident {slug}). */
+/** Children of an Incident — (parent:Incident)-[:RELATED_TO {kind:'contains'}]->(child:Incident). */
 export const SubIncidentsStrategy: RelationStrategy = {
   fetchTargets: fetchIncidentOptions,
   async fetchEntries(parentSlug) {
     const rows = await neo4jQuery<HierarchyRow>(`
-      MATCH (child:Incident)-[:PART_OF]->(parent:Incident {slug: $slug})
+      MATCH (parent:Incident {slug: $slug})-[:RELATED_TO {kind:'contains'}]->(child:Incident)
       RETURN child.slug AS targetSlug, child.title AS targetName
       ORDER BY targetName
     `, { slug: parentSlug })
@@ -809,12 +809,12 @@ export const SubIncidentsStrategy: RelationStrategy = {
   targetRoute(entry) { return `/events/${entry.targetSlug}` },
 }
 
-/** Children of an Operation — (child:Operation)-[:PART_OF]->(parent:Operation {slug}). */
+/** Children of an Operation — (parent:Operation)-[:RELATED_TO {kind:'contains'}]->(child:Operation). */
 export const SubOperationsStrategy: RelationStrategy = {
   fetchTargets: fetchOperationOptions,
   async fetchEntries(parentSlug) {
     const rows = await neo4jQuery<HierarchyRow>(`
-      MATCH (child:Operation)-[:PART_OF]->(parent:Operation {slug: $slug})
+      MATCH (parent:Operation {slug: $slug})-[:RELATED_TO {kind:'contains'}]->(child:Operation)
       RETURN child.slug AS targetSlug, child.codeName AS targetName
       ORDER BY targetName
     `, { slug: parentSlug })
@@ -835,12 +835,12 @@ export const SubOperationsStrategy: RelationStrategy = {
   targetRoute(entry) { return `/events/${entry.targetSlug}` },
 }
 
-/** Incidents inside an Operation — (i:Incident)-[:OCCURRED_IN]->(op:Operation {slug}). */
+/** Incidents inside an Operation — (op:Operation)-[:RELATED_TO {kind:'contains'}]->(i:Incident). */
 export const OperationIncidentsStrategy: RelationStrategy = {
   fetchTargets: fetchIncidentOptions,
   async fetchEntries(operationSlug) {
     const rows = await neo4jQuery<HierarchyRow>(`
-      MATCH (i:Incident)-[:OCCURRED_IN]->(op:Operation {slug: $slug})
+      MATCH (op:Operation {slug: $slug})-[:RELATED_TO {kind:'contains'}]->(i:Incident)
       RETURN i.slug AS targetSlug,
              i.title + CASE WHEN i.date IS NOT NULL THEN ' · ' + i.date ELSE '' END AS targetName
       ORDER BY i.date, targetName
@@ -852,6 +852,38 @@ export const OperationIncidentsStrategy: RelationStrategy = {
       method:  'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ incidents: entries.map(e => ({ incidentSlug: e.targetSlug })) }),
+    })
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({})) as { error?: string }
+      throw new Error(body.error ?? `HTTP ${res.status}`)
+    }
+  },
+  saveNote: noopSaveNote,
+  targetRoute(entry) { return `/events/${entry.targetSlug}` },
+}
+
+/**
+ * IncidentInOperationStrategy — the (single) parent Operation that contains
+ * this Incident via RELATED_TO {kind:'contains'}. Modelled as a list
+ * strategy with a 0-or-1 cardinality so it reuses RelationListEditor; the
+ * backend takes a single operationSlug (or null to detach).
+ */
+export const IncidentInOperationStrategy: RelationStrategy = {
+  fetchTargets: fetchOperationOptions,
+  async fetchEntries(incidentSlug) {
+    const rows = await neo4jQuery<HierarchyRow>(`
+      MATCH (op:Operation)-[:RELATED_TO {kind:'contains'}]->(i:Incident {slug: $slug})
+      RETURN op.slug AS targetSlug, op.codeName AS targetName
+      LIMIT 1
+    `, { slug: incidentSlug })
+    return rows.map(hierarchyRowToEntry)
+  },
+  async saveEntries(incidentSlug, entries) {
+    const opSlug = entries[0]?.targetSlug ?? null
+    const res = await authFetch(`/api/admin/incident/${encodeURIComponent(incidentSlug)}/in-operation`, {
+      method:  'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ operationSlug: opSlug }),
     })
     if (!res.ok) {
       const body = await res.json().catch(() => ({})) as { error?: string }

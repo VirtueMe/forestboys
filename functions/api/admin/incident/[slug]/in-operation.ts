@@ -1,10 +1,13 @@
 /**
- * PATCH /api/admin/operation/:slug/incidents — replace the set of
- * Incidents contained by this Operation.
+ * PATCH /api/admin/incident/:slug/in-operation — set or clear the parent
+ * Operation that contains this Incident.
  *
- * Body: { incidents: [{ incidentSlug }] }
+ * Body: { operationSlug: string | null }
  *
  *   (Operation)-[:RELATED_TO {kind:'contains'}]->(Incident)
+ *
+ * An Incident can sit inside at most one Operation; we replace the edge
+ * unconditionally.
  */
 
 import { requireAdmin } from '~/_lib/require-admin.ts'
@@ -14,8 +17,7 @@ interface Env extends Neo4jEnv {
   SESSION_SECRET: string
 }
 
-interface IncidentInput { incidentSlug: string }
-interface Body { incidents?: IncidentInput[] }
+interface Body { operationSlug?: string | null }
 
 export const onRequestPatch: PagesFunction<Env> = async ({ request, env, params }) => {
   const guard = await requireAdmin(request, env)
@@ -24,31 +26,29 @@ export const onRequestPatch: PagesFunction<Env> = async ({ request, env, params 
   const slug = String(params.slug)
   const body = await request.json<Body>().catch(() => null)
   if (!body) return json({ error: 'Invalid JSON' }, 400)
-  const incidents = body.incidents
-  if (!Array.isArray(incidents)) return json({ error: 'incidents must be an array' }, 400)
 
-  for (const i of incidents) {
-    if (typeof i.incidentSlug !== 'string' || !i.incidentSlug) return json({ error: 'Bad incidentSlug' }, 400)
+  const opSlug = body.operationSlug
+  if (opSlug !== null && (typeof opSlug !== 'string' || !opSlug)) {
+    return json({ error: 'operationSlug must be a non-empty string or null' }, 400)
   }
 
   try {
     await runCypher(env, `
-      MATCH (op:Operation {slug: $slug})-[r:RELATED_TO {kind:'contains'}]->(:Incident) DELETE r
+      MATCH (:Operation)-[r:RELATED_TO {kind:'contains'}]->(i:Incident {slug: $slug}) DELETE r
     `, { slug })
 
-    if (incidents.length) {
+    if (opSlug) {
       await runCypher(env, `
-        MATCH (op:Operation {slug: $slug})
-        UNWIND $items AS x
-        OPTIONAL MATCH (i:Incident {slug: x.incidentSlug})
-        FOREACH (_ IN CASE WHEN i IS NOT NULL THEN [1] ELSE [] END |
+        MATCH (i:Incident {slug: $slug})
+        OPTIONAL MATCH (op:Operation {slug: $opSlug})
+        FOREACH (_ IN CASE WHEN op IS NOT NULL THEN [1] ELSE [] END |
           MERGE (op)-[r:RELATED_TO]->(i)
           ON CREATE SET r.kind = 'contains'
           ON MATCH  SET r.kind = 'contains'
         )
-      `, { slug, items: incidents.map(i => ({ incidentSlug: i.incidentSlug })) })
+      `, { slug, opSlug })
     }
-    return json({ ok: true, count: incidents.length })
+    return json({ ok: true, operationSlug: opSlug ?? null })
   } catch (e) {
     return json({ error: (e as Error).message }, 502)
   }

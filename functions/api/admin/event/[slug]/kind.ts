@@ -3,18 +3,15 @@
  *
  * Body: { kind: 'incident' | 'operation' }
  *
- * Runs the full rewrite in one transaction:
+ * Runs the rewrite in one transaction:
  *   • label           Incident ↔ Operation
  *   • name property   title ↔ codeName
  *   • person edges    INVOLVED_IN ↔ PARTICIPATED_IN
  *   • desc notes      HAS_INCIDENT_NOTE ↔ HAS_OPERATION_NOTE
  *   • desc about      ABOUT_INCIDENT ↔ ABOUT_OPERATION
- *   • hierarchy       PART_OF ↔ OCCURRED_IN (edge type flips based on kinds on both ends)
  *
- * Promotion refuses if an outgoing `X-[:PART_OF]->parent:Incident` exists
- * (would become illegal Operation→PART_OF→Incident).
- * Demotion refuses if any `(other:Operation)-[:PART_OF]->X` exists
- * (would become illegal Operation→PART_OF→Incident).
+ * Hierarchy edges (RELATED_TO {kind:'contains'}) survive the flip
+ * unchanged — direction is container→child regardless of node kind.
  */
 
 import { requireAdmin } from '~/_lib/require-admin.ts'
@@ -54,20 +51,8 @@ export const onRequestPatch: PagesFunction<Env> = async ({ request, env, params 
 
     if (target === 'operation') {
       // Promote Incident → Operation.
-      // Block if X is itself PART_OF another Incident (op-in-incident would be illegal).
-      const [blocker] = await runCypher<{ parentSlug: string }>(env, `
-        MATCH (x:Incident {slug: $slug})-[:PART_OF]->(parent:Incident)
-        RETURN parent.slug AS parentSlug LIMIT 1
-      `, { slug })
-      if (blocker) {
-        return json({
-          error: `Can't promote: this Incident is PART_OF Incident "${blocker.parentSlug}". Detach first, or promote the parent too.`,
-        }, 409)
-      }
-
       await runCypher(env, `
         MATCH (x:Incident {slug: $slug})
-        // Node label + name property
         REMOVE x:Incident
         SET x:Operation
         SET x.codeName = coalesce(x.codeName, x.title)
@@ -90,39 +75,12 @@ export const onRequestPatch: PagesFunction<Env> = async ({ request, env, params 
           DELETE noteR, aboutR
           RETURN count(*) AS _
         }
-        // Incoming child Incidents: PART_OF (same-kind) → OCCURRED_IN (cross-kind)
-        CALL {
-          WITH x
-          MATCH (y:Incident)-[r:PART_OF]->(x)
-          CREATE (y)-[:OCCURRED_IN]->(x)
-          DELETE r
-          RETURN count(*) AS _
-        }
-        // Outgoing OCCURRED_IN (incident-in-op) → PART_OF (op-in-op, same-kind)
-        CALL {
-          WITH x
-          MATCH (x)-[r:OCCURRED_IN]->(parentOp:Operation)
-          CREATE (x)-[:PART_OF]->(parentOp)
-          DELETE r
-          RETURN count(*) AS _
-        }
       `, { slug })
 
       return json({ ok: true, kind: 'operation' })
     }
 
     // Demote Operation → Incident.
-    // Block if any Operation is PART_OF X (op-in-op nesting can't demote parent).
-    const [blocker] = await runCypher<{ childSlug: string }>(env, `
-      MATCH (other:Operation)-[:PART_OF]->(x:Operation {slug: $slug})
-      RETURN other.slug AS childSlug LIMIT 1
-    `, { slug })
-    if (blocker) {
-      return json({
-        error: `Can't demote: Operation "${blocker.childSlug}" is PART_OF this node. Detach or demote it first.`,
-      }, 409)
-    }
-
     await runCypher(env, `
       MATCH (x:Operation {slug: $slug})
       REMOVE x:Operation
@@ -145,22 +103,6 @@ export const onRequestPatch: PagesFunction<Env> = async ({ request, env, params 
         CREATE (p)-[:HAS_INCIDENT_NOTE]->(d)
         CREATE (d)-[:ABOUT_INCIDENT]->(x)
         DELETE noteR, aboutR
-        RETURN count(*) AS _
-      }
-      // Incoming child Incidents: OCCURRED_IN → PART_OF (same-kind, both Incident)
-      CALL {
-        WITH x
-        MATCH (y:Incident)-[r:OCCURRED_IN]->(x)
-        CREATE (y)-[:PART_OF]->(x)
-        DELETE r
-        RETURN count(*) AS _
-      }
-      // Outgoing PART_OF (op-in-op) → OCCURRED_IN (incident-in-op)
-      CALL {
-        WITH x
-        MATCH (x)-[r:PART_OF]->(parentOp:Operation)
-        CREATE (x)-[:OCCURRED_IN]->(parentOp)
-        DELETE r
         RETURN count(*) AS _
       }
     `, { slug })

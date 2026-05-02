@@ -207,6 +207,7 @@ const {
   subIncidentEntries, subIncidentTargets,
   subOperationEntries, subOperationTargets,
   opIncidentEntries, opIncidentTargets,
+  inOperationEntries, inOperationTargets,
   loadEvent,
 } = eventData
 
@@ -226,6 +227,7 @@ const relationsData = computed<EventRelationsData>(() => ({
   subIncident:  { entries: subIncidentEntries.value,  targets: subIncidentTargets.value  },
   subOperation: { entries: subOperationEntries.value, targets: subOperationTargets.value },
   opIncident:   { entries: opIncidentEntries.value,   targets: opIncidentTargets.value   },
+  inOperation:  { entries: inOperationEntries.value,  targets: inOperationTargets.value  },
 }))
 
 function onSavedScalar(out: { name?: string; date?: string | null }) {

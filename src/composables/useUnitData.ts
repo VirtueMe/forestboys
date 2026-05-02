@@ -289,7 +289,7 @@ export function useUnitData() {
                     'unit' AS subjectType, 0 AS sortKey
              UNION
              WITH unit
-             MATCH (unit)<-[:MEMBER_OF]-(:Person)-[:INVOLVED_IN]->(i:Incident)-[:PART_OF]->(op:Operation)-[h:HAS_IMAGE]->(s:Source)
+             MATCH (unit)<-[:MEMBER_OF]-(:Person)-[:INVOLVED_IN]->(i:Incident)<-[:RELATED_TO {kind:'contains'}]-(op:Operation)-[h:HAS_IMAGE]->(s:Source)
              WHERE coalesce(h.scope, 'propagate') <> 'entity'
                AND (i.date IS NULL OR (
                  (unit.foundedDate   IS NULL OR i.date >= unit.foundedDate) AND

@@ -18,6 +18,22 @@
     <RelationListEditor
       v-if="kind === 'incident'"
       :parent-slug="slug"
+      :entries="data.inOperation.entries"
+      :targets="data.inOperation.targets"
+      :strategy="IncidentInOperationStrategy"
+      label="Del av operasjon"
+      add-label="+ Knytt til operasjon"
+      empty-label="Ikke knyttet til en operasjon"
+      search-placeholder="Søk operasjon…"
+      picker-chip-aria="Bytt operasjon"
+      validation-empty="Velg operasjon eller fjern oppføringen før du lagrer."
+      :show-dates="false"
+      :show-description="false"
+    />
+
+    <RelationListEditor
+      v-if="kind === 'incident'"
+      :parent-slug="slug"
       :entries="data.subIncident.entries"
       :targets="data.subIncident.targets"
       :strategy="SubIncidentsStrategy"
@@ -73,6 +89,13 @@
       @open="e => activeEntry = e"
     />
     <RelationListView
+      v-if="kind === 'incident' && data.inOperation.entries.length"
+      :entries="data.inOperation.entries"
+      :strategy="IncidentInOperationStrategy"
+      label="Del av operasjon"
+      @open="e => activeEntry = e"
+    />
+    <RelationListView
       v-if="kind === 'incident'"
       :entries="data.subIncident.entries"
       :strategy="SubIncidentsStrategy"
@@ -115,6 +138,7 @@ import RelationInfoPopup  from '@/components/relation/RelationInfoPopup.vue'
 import {
   PersonInvolvementStrategy, PersonParticipationStrategy,
   SubIncidentsStrategy, SubOperationsStrategy, OperationIncidentsStrategy,
+  IncidentInOperationStrategy,
 } from '@/components/relation/strategies.ts'
 import type { RelationEntry, RelationTarget } from '@/components/relation/RelationStrategy.ts'
 import type { AdminViewMode } from '@/components/AdminViewTabs.vue'
@@ -125,6 +149,7 @@ export interface EventRelationsData {
   subIncident:  { entries: RelationEntry[]; targets: RelationTarget[] }
   subOperation: { entries: RelationEntry[]; targets: RelationTarget[] }
   opIncident:   { entries: RelationEntry[]; targets: RelationTarget[] }
+  inOperation:  { entries: RelationEntry[]; targets: RelationTarget[] }
 }
 
 const props = defineProps<{
