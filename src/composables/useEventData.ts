@@ -18,6 +18,7 @@ import {
   PersonInvolvementStrategy, PersonParticipationStrategy,
   SubIncidentsStrategy, SubOperationsStrategy, OperationIncidentsStrategy,
   IncidentInOperationStrategy,
+  OperationOrganizationsStrategy, OperationUnitsStrategy,
 } from '@/components/relation/strategies.ts'
 
 export type EventKind = 'incident' | 'operation'
@@ -78,10 +79,26 @@ export function useEventData() {
   const opIncidentTargets    = ref<RelationTarget[]>([])
   const inOperationEntries   = ref<RelationEntry[]>([])
   const inOperationTargets   = ref<RelationTarget[]>([])
+  const orgEntries           = ref<RelationEntry[]>([])
+  const orgTargets           = ref<RelationTarget[]>([])
+  const unitEntries          = ref<RelationEntry[]>([])
+  const unitTargets          = ref<RelationTarget[]>([])
 
   const personStrategy = computed(() =>
     event.value?.kind === 'operation' ? PersonParticipationStrategy : PersonInvolvementStrategy,
   )
+
+  /** Edges that block a kind flip from Operation → Incident. Surfaced as
+   *  an (i) marker so admins know what they need to detach (or force) before
+   *  a demote. Empty when current kind is 'incident' (promotion has no
+   *  blockers under the RELATED_TO model). */
+  const demoteBlockers = computed<{ orgs: { slug: string; name: string }[]; units: { slug: string; name: string }[] }>(() => {
+    if (event.value?.kind !== 'operation') return { orgs: [], units: [] }
+    return {
+      orgs:  orgEntries.value.map(e  => ({ slug: e.targetSlug, name: e.targetName })),
+      units: unitEntries.value.map(e => ({ slug: e.targetSlug, name: e.targetName })),
+    }
+  })
 
   function resetEvent() {
     event.value                = null
@@ -101,6 +118,10 @@ export function useEventData() {
     opIncidentTargets.value    = []
     inOperationEntries.value   = []
     inOperationTargets.value   = []
+    orgEntries.value           = []
+    orgTargets.value           = []
+    unitEntries.value          = []
+    unitTargets.value          = []
   }
 
   async function loadEvent(slug: string): Promise<void> {
@@ -187,16 +208,24 @@ export function useEventData() {
       inOperationEntries.value = ie
       inOperationTargets.value = it
     } else {
-      const [so, sot, oi, oit] = await Promise.all([
+      const [so, sot, oi, oit, oe, ot, ue, ut] = await Promise.all([
         SubOperationsStrategy.fetchEntries(slug),
         SubOperationsStrategy.fetchTargets(),
         OperationIncidentsStrategy.fetchEntries(slug),
         OperationIncidentsStrategy.fetchTargets(),
+        OperationOrganizationsStrategy.fetchEntries(slug),
+        OperationOrganizationsStrategy.fetchTargets(),
+        OperationUnitsStrategy.fetchEntries(slug),
+        OperationUnitsStrategy.fetchTargets(),
       ])
       subOperationEntries.value = so
       subOperationTargets.value = sot
       opIncidentEntries.value   = oi
       opIncidentTargets.value   = oit
+      orgEntries.value          = oe
+      orgTargets.value          = ot
+      unitEntries.value         = ue
+      unitTargets.value         = ut
     }
   }
 
@@ -211,6 +240,9 @@ export function useEventData() {
     subOperationEntries, subOperationTargets,
     opIncidentEntries,  opIncidentTargets,
     inOperationEntries, inOperationTargets,
+    orgEntries,         orgTargets,
+    unitEntries,        unitTargets,
+    demoteBlockers,
     loadEvent,
     resetEvent,
   }

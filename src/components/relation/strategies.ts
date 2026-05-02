@@ -783,6 +783,24 @@ async function fetchOperationOptions(): Promise<RelationTarget[]> {
   return rows
 }
 
+async function fetchOrganizationOptions(): Promise<RelationTarget[]> {
+  const rows = await neo4jQuery<{ slug: string; name: string }>(`
+    MATCH (o:Organization)
+    RETURN o.slug AS slug, o.canonicalName AS name
+    ORDER BY o.canonicalName
+  `)
+  return rows
+}
+
+async function fetchUnitOptions(): Promise<RelationTarget[]> {
+  const rows = await neo4jQuery<{ slug: string; name: string }>(`
+    MATCH (u:Unit)
+    RETURN u.slug AS slug, u.canonicalName AS name
+    ORDER BY u.canonicalName
+  `)
+  return rows
+}
+
 /** Children of an Incident — (parent:Incident)-[:RELATED_TO {kind:'contains'}]->(child:Incident). */
 export const SubIncidentsStrategy: RelationStrategy = {
   fetchTargets: fetchIncidentOptions,
@@ -892,6 +910,66 @@ export const IncidentInOperationStrategy: RelationStrategy = {
   },
   saveNote: noopSaveNote,
   targetRoute(entry) { return `/events/${entry.targetSlug}` },
+}
+
+/**
+ * OperationOrganizationsStrategy — Organizations orchestrating an
+ * Operation via ORCHESTRATED_BY. Multi-target list.
+ */
+export const OperationOrganizationsStrategy: RelationStrategy = {
+  fetchTargets: fetchOrganizationOptions,
+  async fetchEntries(operationSlug) {
+    const rows = await neo4jQuery<HierarchyRow>(`
+      MATCH (op:Operation {slug: $slug})-[:ORCHESTRATED_BY]->(o:Organization)
+      RETURN o.slug AS targetSlug, o.canonicalName AS targetName
+      ORDER BY targetName
+    `, { slug: operationSlug })
+    return rows.map(hierarchyRowToEntry)
+  },
+  async saveEntries(operationSlug, entries) {
+    const res = await authFetch(`/api/admin/operation/${encodeURIComponent(operationSlug)}/organizations`, {
+      method:  'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ organizations: entries.map(e => ({ organizationSlug: e.targetSlug })) }),
+    })
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({})) as { error?: string }
+      throw new Error(body.error ?? `HTTP ${res.status}`)
+    }
+  },
+  saveNote: noopSaveNote,
+  targetRoute(entry) { return `/organization/${entry.targetSlug}` },
+}
+
+/**
+ * OperationUnitsStrategy — Units participating in an Operation via
+ * (Unit)-[:PARTICIPATED_IN]->(Operation). Independent of orchestrating
+ * orgs — RAF squadrons, Norwegian patrols, Wehrmacht pursuers can all
+ * attach to the same op.
+ */
+export const OperationUnitsStrategy: RelationStrategy = {
+  fetchTargets: fetchUnitOptions,
+  async fetchEntries(operationSlug) {
+    const rows = await neo4jQuery<HierarchyRow>(`
+      MATCH (u:Unit)-[:PARTICIPATED_IN]->(op:Operation {slug: $slug})
+      RETURN u.slug AS targetSlug, u.canonicalName AS targetName
+      ORDER BY targetName
+    `, { slug: operationSlug })
+    return rows.map(hierarchyRowToEntry)
+  },
+  async saveEntries(operationSlug, entries) {
+    const res = await authFetch(`/api/admin/operation/${encodeURIComponent(operationSlug)}/units`, {
+      method:  'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ units: entries.map(e => ({ unitSlug: e.targetSlug })) }),
+    })
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({})) as { error?: string }
+      throw new Error(body.error ?? `HTTP ${res.status}`)
+    }
+  },
+  saveNote: noopSaveNote,
+  targetRoute(entry) { return `/district/${entry.targetSlug}` },
 }
 
 /**

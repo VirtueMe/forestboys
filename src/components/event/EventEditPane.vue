@@ -3,6 +3,7 @@
     <EventScalarEditor
       ref="scalarEditor"
       :saved="event"
+      :demote-blockers="demoteBlockers"
       @saved="out => emit('savedScalar', out)"
       @kind-flipped="kind => emit('kindFlipped', kind)"
     />
@@ -40,7 +41,7 @@
  * overlay can read unsaved drafts and reflect them live.
  */
 import { useTemplateRef } from 'vue'
-import EventScalarEditor, { type EventScalarDraft } from './EventScalarEditor.vue'
+import EventScalarEditor, { type EventScalarDraft, type DemoteBlockers } from './EventScalarEditor.vue'
 import EventRelations, { type EventRelationsData } from './EventRelations.vue'
 import DescriptionEditor from '@/components/DescriptionEditor.vue'
 import type { Section } from '@/components/SectionsEditor.vue'
@@ -48,11 +49,14 @@ import type { EventKind, EventNode } from '@/composables/useEventData.ts'
 
 interface ScalarSaved { name?: string; date?: string | null }
 
-defineProps<{
-  event:         EventNode
-  savedSections: Section[]
-  data:          EventRelationsData
-}>()
+withDefaults(defineProps<{
+  event:           EventNode
+  savedSections:   Section[]
+  data:            EventRelationsData
+  demoteBlockers?: DemoteBlockers
+}>(), {
+  demoteBlockers: () => ({ orgs: [], units: [] }),
+})
 
 const emit = defineEmits<{
   savedScalar:   [out: ScalarSaved]

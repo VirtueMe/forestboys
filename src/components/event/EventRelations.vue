@@ -50,6 +50,36 @@
     <template v-if="kind === 'operation'">
       <RelationListEditor
         :parent-slug="slug"
+        :entries="data.org.entries"
+        :targets="data.org.targets"
+        :strategy="OperationOrganizationsStrategy"
+        label="Organisasjoner"
+        add-label="+ Legg til organisasjon"
+        empty-label="Ingen organisasjoner knyttet"
+        search-placeholder="Søk organisasjon…"
+        picker-chip-aria="Bytt organisasjon"
+        validation-empty="Velg organisasjon for alle oppføringer før du lagrer."
+        :show-dates="false"
+        :show-description="false"
+      />
+
+      <RelationListEditor
+        :parent-slug="slug"
+        :entries="data.unit.entries"
+        :targets="data.unit.targets"
+        :strategy="OperationUnitsStrategy"
+        label="Avdelinger"
+        add-label="+ Legg til avdeling"
+        empty-label="Ingen avdelinger knyttet"
+        search-placeholder="Søk avdeling…"
+        picker-chip-aria="Bytt avdeling"
+        validation-empty="Velg avdeling for alle oppføringer før du lagrer."
+        :show-dates="false"
+        :show-description="false"
+      />
+
+      <RelationListEditor
+        :parent-slug="slug"
         :entries="data.opIncident.entries"
         :targets="data.opIncident.targets"
         :strategy="OperationIncidentsStrategy"
@@ -104,6 +134,20 @@
     />
     <template v-if="kind === 'operation'">
       <RelationListView
+        v-if="data.org.entries.length"
+        :entries="data.org.entries"
+        :strategy="OperationOrganizationsStrategy"
+        label="Organisasjoner"
+        @open="e => activeEntry = e"
+      />
+      <RelationListView
+        v-if="data.unit.entries.length"
+        :entries="data.unit.entries"
+        :strategy="OperationUnitsStrategy"
+        label="Avdelinger"
+        @open="e => activeEntry = e"
+      />
+      <RelationListView
         :entries="data.opIncident.entries"
         :strategy="OperationIncidentsStrategy"
         label="Hendelser i operasjonen"
@@ -139,6 +183,7 @@ import {
   PersonInvolvementStrategy, PersonParticipationStrategy,
   SubIncidentsStrategy, SubOperationsStrategy, OperationIncidentsStrategy,
   IncidentInOperationStrategy,
+  OperationOrganizationsStrategy, OperationUnitsStrategy,
 } from '@/components/relation/strategies.ts'
 import type { RelationEntry, RelationTarget } from '@/components/relation/RelationStrategy.ts'
 import type { AdminViewMode } from '@/components/AdminViewTabs.vue'
@@ -150,6 +195,8 @@ export interface EventRelationsData {
   subOperation: { entries: RelationEntry[]; targets: RelationTarget[] }
   opIncident:   { entries: RelationEntry[]; targets: RelationTarget[] }
   inOperation:  { entries: RelationEntry[]; targets: RelationTarget[] }
+  org:          { entries: RelationEntry[]; targets: RelationTarget[] }
+  unit:         { entries: RelationEntry[]; targets: RelationTarget[] }
 }
 
 const props = defineProps<{

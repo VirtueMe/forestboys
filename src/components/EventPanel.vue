@@ -28,6 +28,7 @@
       :event="neoEvent"
       :saved-sections="savedSections"
       :data="relationsData"
+      :demote-blockers="demoteBlockers"
       @saved-scalar="onSavedScalar"
       @kind-flipped="() => loadEvent(props.event.slug)"
       @saved-sections="sections => savedSections = sections"
@@ -171,6 +172,9 @@ const {
   subOperationEntries, subOperationTargets,
   opIncidentEntries, opIncidentTargets,
   inOperationEntries, inOperationTargets,
+  orgEntries, orgTargets,
+  unitEntries, unitTargets,
+  demoteBlockers,
   loadEvent,
 } = eventData
 watch(() => props.event.slug, (slug) => { if (slug) void loadEvent(slug) }, { immediate: true })
@@ -190,6 +194,8 @@ const relationsData = computed<EventRelationsData>(() => ({
   subOperation: { entries: subOperationEntries.value,  targets: subOperationTargets.value  },
   opIncident:   { entries: opIncidentEntries.value,    targets: opIncidentTargets.value    },
   inOperation:  { entries: inOperationEntries.value,   targets: inOperationTargets.value   },
+  org:          { entries: orgEntries.value,            targets: orgTargets.value           },
+  unit:         { entries: unitEntries.value,           targets: unitTargets.value          },
 }))
 
 function onSavedScalar(out: { name?: string; date?: string | null }) {

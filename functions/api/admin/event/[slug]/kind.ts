@@ -22,7 +22,9 @@ interface Env extends Neo4jEnv {
 }
 
 interface Body {
-  kind?: 'incident' | 'operation'
+  kind?:  'incident' | 'operation'
+  /** Skip blocker check + auto-strip blocking edges. Demote-only. */
+  force?: boolean
 }
 
 export const onRequestPatch: PagesFunction<Env> = async ({ request, env, params }) => {
@@ -64,7 +66,7 @@ export const onRequestPatch: PagesFunction<Env> = async ({ request, env, params 
           MATCH (p:Person)-[r:INVOLVED_IN]->(x)
           CREATE (p)-[:PARTICIPATED_IN]->(x)
           DELETE r
-          RETURN count(*) AS _
+          RETURN count(*) AS personEdges
         }
         // Incoming ABOUT_INCIDENT → ABOUT_OPERATION (+ rename the note edge on Person→Description)
         CALL {
@@ -73,14 +75,40 @@ export const onRequestPatch: PagesFunction<Env> = async ({ request, env, params 
           CREATE (p)-[:HAS_OPERATION_NOTE]->(d)
           CREATE (d)-[:ABOUT_OPERATION]->(x)
           DELETE noteR, aboutR
-          RETURN count(*) AS _
+          RETURN count(*) AS noteEdges
         }
+        RETURN x.slug AS slug
       `, { slug })
 
       return json({ ok: true, kind: 'operation' })
     }
 
     // Demote Operation → Incident.
+    // Incidents don't carry direct ORCHESTRATED_BY / PARTICIPATED_IN edges
+    // (org/unit context is inherited via parent operation, people, etc.).
+    // If any such edges exist, refuse with the blocker list — admin can
+    // either detach explicitly or retry with `force: true` to auto-strip.
+    if (!body.force) {
+      const [orgs, units] = await Promise.all([
+        runCypher<{ slug: string; name: string }>(env, `
+          MATCH (x:Operation {slug: $slug})-[:ORCHESTRATED_BY]->(o:Organization)
+          RETURN o.slug AS slug, o.canonicalName AS name
+          ORDER BY name
+        `, { slug }),
+        runCypher<{ slug: string; name: string }>(env, `
+          MATCH (u:Unit)-[:PARTICIPATED_IN]->(x:Operation {slug: $slug})
+          RETURN u.slug AS slug, u.canonicalName AS name
+          ORDER BY name
+        `, { slug }),
+      ])
+      if (orgs.length || units.length) {
+        return json({
+          error: "Kan ikke endre til hendelse — fjern eller bekreft først.",
+          blockers: { orgs, units },
+        }, 409)
+      }
+    }
+
     await runCypher(env, `
       MATCH (x:Operation {slug: $slug})
       REMOVE x:Operation
@@ -88,13 +116,25 @@ export const onRequestPatch: PagesFunction<Env> = async ({ request, env, params 
       SET x.title = coalesce(x.title, x.codeName)
       REMOVE x.codeName
       WITH x
-      // Incoming PARTICIPATED_IN → INVOLVED_IN
+      // Incoming PARTICIPATED_IN from Person → INVOLVED_IN
       CALL {
         WITH x
         MATCH (p:Person)-[r:PARTICIPATED_IN]->(x)
         CREATE (p)-[:INVOLVED_IN]->(x)
         DELETE r
-        RETURN count(*) AS _
+        RETURN count(*) AS personEdges
+      }
+      // Strip orchestrating-org edges (incidents don't carry these).
+      CALL {
+        WITH x
+        MATCH (x)-[r:ORCHESTRATED_BY]->(:Organization) DELETE r
+        RETURN count(*) AS orgEdges
+      }
+      // Strip unit-participation edges (incidents don't carry these).
+      CALL {
+        WITH x
+        MATCH (:Unit)-[r:PARTICIPATED_IN]->(x) DELETE r
+        RETURN count(*) AS unitEdges
       }
       // Incoming ABOUT_OPERATION → ABOUT_INCIDENT
       CALL {
@@ -103,8 +143,9 @@ export const onRequestPatch: PagesFunction<Env> = async ({ request, env, params 
         CREATE (p)-[:HAS_INCIDENT_NOTE]->(d)
         CREATE (d)-[:ABOUT_INCIDENT]->(x)
         DELETE noteR, aboutR
-        RETURN count(*) AS _
+        RETURN count(*) AS noteEdges
       }
+      RETURN x.slug AS slug
     `, { slug })
 
     return json({ ok: true, kind: 'incident' })
