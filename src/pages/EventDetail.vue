@@ -20,7 +20,7 @@
     <div v-if="loading" class="status">Laster hendelse…</div>
     <div v-else-if="error" class="status error">Hendelsen ble ikke funnet.</div>
 
-    <template v-else-if="event">
+    <template v-else-if="event || neoEvent">
       <!-- Timeline.js section -->
       <section class="timeline-section">
         <h2 class="timeline-heading">Tidslinjeutforsker</h2>
@@ -68,54 +68,54 @@
 
       <!-- Article -->
       <article class="article">
-        <h2 class="event-title">{{ displayName || event.title }}</h2>
+        <h2 class="event-title">{{ displayName }}</h2>
         <p v-if="displayDate" class="event-date">{{ displayDate }}</p>
 
         <!-- Beskrivelse -->
-        <section v-if="event.description?.length" class="section">
+        <section v-if="descriptionHtml" class="section">
           <h2 class="section-heading">Beskrivelse</h2>
           <!-- eslint-disable vue/no-v-html -->
           <div
             class="portable-text"
             @click.capture="handleInternalLinks"
-            v-html="blocksToHtml(event.description)"
+            v-html="descriptionHtml"
           ></div>
           <!-- eslint-enable vue/no-v-html -->
         </section>
 
         <!-- Fra Sted -->
-        <section v-if="event.locationFrom" class="section">
+        <section v-if="displayLocationFrom" class="section">
           <h2 class="section-heading">Fra Sted</h2>
-          <RouterLink :to="`/map/${event.locationFrom.slug}`" class="section-link">
-            {{ event.locationFrom.title }}
+          <RouterLink :to="`/map/${displayLocationFrom.slug}`" class="section-link">
+            {{ displayLocationFrom.title }}
           </RouterLink>
         </section>
 
         <!-- Til Sted -->
-        <section v-if="event.locationTo" class="section">
+        <section v-if="displayLocationTo" class="section">
           <h2 class="section-heading">Til Sted</h2>
-          <RouterLink :to="`/map/${event.locationTo.slug}`" class="section-link">
-            {{ event.locationTo.title }}
+          <RouterLink :to="`/map/${displayLocationTo.slug}`" class="section-link">
+            {{ displayLocationTo.title }}
           </RouterLink>
         </section>
 
         <!-- Fra Base -->
-        <section v-if="event.stationFrom || event.stationTo" class="section">
+        <section v-if="displayStationFrom || displayStationTo" class="section">
           <h2 class="section-heading">Fra Base</h2>
-          <RouterLink v-if="event.stationFrom" :to="`/station/${event.stationFrom.slug}`" class="section-link">
-            {{ event.stationFrom.title }}
+          <RouterLink v-if="displayStationFrom" :to="`/station/${displayStationFrom.slug}`" class="section-link">
+            {{ displayStationFrom.title }}
           </RouterLink>
-          <RouterLink v-if="event.stationTo" :to="`/station/${event.stationTo.slug}`" class="section-link">
-            {{ event.stationTo.title }}
+          <RouterLink v-if="displayStationTo" :to="`/station/${displayStationTo.slug}`" class="section-link">
+            {{ displayStationTo.title }}
           </RouterLink>
         </section>
 
         <!-- Deltakere -->
-        <section v-if="event.people?.length" class="section">
+        <section v-if="displayPeople.length" class="section">
           <h2 class="section-heading">Deltakere</h2>
           <div class="people-list">
             <RouterLink
-              v-for="person in event.people"
+              v-for="person in displayPeople"
               :key="person.slug"
               :to="`/person/${person.slug}`"
               class="section-link"
@@ -125,8 +125,8 @@
           </div>
         </section>
 
-        <!-- Transportmiddel -->
-        <section v-if="event.transport?.length" class="section">
+        <!-- Transportmiddel (Sanity-only for now) -->
+        <section v-if="event?.transport?.length" class="section">
           <h2 class="section-heading">Transportmiddel</h2>
           <div class="transport-list">
             <RouterLink
@@ -141,11 +141,11 @@
         </section>
 
         <!-- Galleri -->
-        <section v-if="event.gallery?.length" class="section">
+        <section v-if="displayGallery.length" class="section">
           <h2 class="section-heading">Galleri</h2>
           <div class="carousel">
             <button
-              v-if="event.gallery.length > 1"
+              v-if="displayGallery.length > 1"
               class="carousel-btn carousel-prev"
               @click="prevImage"
             >
@@ -153,24 +153,24 @@
             </button>
             <img
               :src="currentImageUrl"
-              :alt="`${event.title} bilde ${currentImageIndex + 1}`"
+              :alt="`${displayName} bilde ${currentImageIndex + 1}`"
               class="carousel-img"
             />
             <button
-              v-if="event.gallery.length > 1"
+              v-if="displayGallery.length > 1"
               class="carousel-btn carousel-next"
               @click="nextImage"
             >
               &#x203a;
             </button>
           </div>
-          <p v-if="event.gallery.length > 1" class="carousel-count">
-            {{ currentImageIndex + 1 }} / {{ event.gallery.length }}
+          <p v-if="displayGallery.length > 1" class="carousel-count">
+            {{ currentImageIndex + 1 }} / {{ displayGallery.length }}
           </p>
         </section>
 
-        <!-- Nyttige lenker -->
-        <section v-if="event.links?.length" class="section">
+        <!-- Nyttige lenker (Sanity-only for now) -->
+        <section v-if="event?.links?.length" class="section">
           <h2 class="section-heading">Nyttige lenker</h2>
           <div class="links-list">
             <a
@@ -262,11 +262,12 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, inject, watch } from 'vue'
 import { useRoute, useRouter, RouterLink } from 'vue-router'
 import { fetchEventDetailBySlug } from '../composables/useLocationCache.ts'
-import { neo4jQuery } from '../composables/useNeo4j.ts'
 import { useAuth, authFetch } from '../composables/useAuth.ts'
+import { useEventData, type EventKind } from '../composables/useEventData.ts'
+import { EventDataKey } from '../composables/proposalDataInjection.ts'
 import { SANITY_IMG } from '../config/sanity.ts'
 import { blocksToHtml } from '../utils/portableText.ts'
 import type { IdbEventDetail } from '../types/idb.ts'
@@ -275,9 +276,8 @@ import RelationListView   from '../components/relation/RelationListView.vue'
 import RelationInfoPopup  from '../components/relation/RelationInfoPopup.vue'
 import {
   PersonInvolvementStrategy, PersonParticipationStrategy,
-  SubIncidentsStrategy, SubOperationsStrategy, OperationIncidentsStrategy,
 } from '../components/relation/strategies.ts'
-import type { RelationEntry, RelationTarget } from '../components/relation/RelationStrategy.ts'
+import type { RelationEntry } from '../components/relation/RelationStrategy.ts'
 
 const route = useRoute()
 const router = useRouter()
@@ -289,91 +289,74 @@ const currentImageIndex = ref(0)
 const { user } = useAuth()
 const isAdmin  = computed(() => user.value?.role === 'admin')
 
-type NodeKind = 'incident' | 'operation'
-const nodeKind  = ref<NodeKind | null>(null)
+// Neo4j data layer — live by default, swappable to a proposal-wrapped
+// composable when EventDataKey is provided (proposal preview modal).
+const eventData = inject(EventDataKey, () => useEventData(), true)
+const {
+  event: neoEvent,
+  savedSections,
+  personEntries, personTargets,
+  subIncidentEntries, subIncidentTargets,
+  subOperationEntries, subOperationTargets,
+  opIncidentEntries, opIncidentTargets,
+  loadEvent,
+} = eventData
+
+type NodeKind = EventKind
+const nodeKind  = computed<NodeKind | null>(() => neoEvent.value?.kind ?? null)
 const kindError = ref<string | null>(null)
+const activePerson = ref<RelationEntry | null>(null)
 
-const personEntries = ref<RelationEntry[]>([])
-const personTargets = ref<RelationTarget[]>([])
-const activePerson  = ref<RelationEntry | null>(null)
-
-const subIncidentEntries = ref<RelationEntry[]>([])
-const subIncidentTargets = ref<RelationTarget[]>([])
-const subOperationEntries = ref<RelationEntry[]>([])
-const subOperationTargets = ref<RelationTarget[]>([])
-const opIncidentEntries = ref<RelationEntry[]>([])
-const opIncidentTargets = ref<RelationTarget[]>([])
-
-async function loadHierarchy(slug: string) {
-  try {
-    if (nodeKind.value === 'incident') {
-      const [entries, targets] = await Promise.all([
-        SubIncidentsStrategy.fetchEntries(slug),
-        SubIncidentsStrategy.fetchTargets(),
-      ])
-      subIncidentEntries.value = entries
-      subIncidentTargets.value = targets
-      subOperationEntries.value = []
-      subOperationTargets.value = []
-      opIncidentEntries.value = []
-      opIncidentTargets.value = []
-    } else if (nodeKind.value === 'operation') {
-      const [subOps, subOpsTargets, incInOp, incInOpTargets] = await Promise.all([
-        SubOperationsStrategy.fetchEntries(slug),
-        SubOperationsStrategy.fetchTargets(),
-        OperationIncidentsStrategy.fetchEntries(slug),
-        OperationIncidentsStrategy.fetchTargets(),
-      ])
-      subOperationEntries.value = subOps
-      subOperationTargets.value = subOpsTargets
-      opIncidentEntries.value = incInOp
-      opIncidentTargets.value = incInOpTargets
-      subIncidentEntries.value = []
-      subIncidentTargets.value = []
-    }
-  } catch { /* ignore — just leaves arrays empty */ }
-}
-
-const personStrategy = computed(() =>
-  nodeKind.value === 'operation' ? PersonParticipationStrategy : PersonInvolvementStrategy,
-)
 const personLabel = computed(() =>
   nodeKind.value === 'operation' ? 'Deltakere' : 'Involverte personer',
 )
+const personStrategy = computed(() =>
+  nodeKind.value === 'operation' ? PersonParticipationStrategy : PersonInvolvementStrategy,
+)
 
-async function loadPersons(slug: string) {
-  try {
-    const [entries, targets] = await Promise.all([
-      personStrategy.value.fetchEntries(slug),
-      personStrategy.value.fetchTargets(),
-    ])
-    personEntries.value = entries
-    personTargets.value = targets
-  } catch {
-    personEntries.value = []
-    personTargets.value = []
+// Seed editForm whenever the Neo4j event refreshes.
+watch(neoEvent, (e) => {
+  if (e) {
+    editForm.value     = { name: e.canonicalName, date: e.date ?? '' }
+    editOriginal.value = { ...editForm.value }
   }
-}
+}, { immediate: true })
 
-async function loadNodeKind(slug: string) {
-  try {
-    const rows = await neo4jQuery<{ kind: NodeKind | null; name: string | null; date: string | null }>(`
-      MATCH (n {slug: $slug})
-      WHERE n:Incident OR n:Operation
-      RETURN CASE WHEN 'Operation' IN labels(n) THEN 'operation' ELSE 'incident' END AS kind,
-             coalesce(n.codeName, n.title) AS name,
-             n.date AS date
-    `, { slug })
-    const row = rows[0]
-    nodeKind.value = row?.kind ?? null
-    if (row) {
-      editForm.value = { name: row.name ?? '', date: row.date ?? '' }
-      editOriginal.value = { ...editForm.value }
+const { locationFrom, locationTo, stationFrom, stationTo, gallery: neoGallery } = eventData
+
+// Prefer Neo4j edges; fall back to Sanity-IDB if Neo4j hasn't materialized.
+const displayLocationFrom = computed(() => locationFrom.value ?? event.value?.locationFrom ?? null)
+const displayLocationTo   = computed(() => locationTo.value   ?? event.value?.locationTo   ?? null)
+const displayStationFrom  = computed(() => stationFrom.value  ?? event.value?.stationFrom  ?? null)
+const displayStationTo    = computed(() => stationTo.value    ?? event.value?.stationTo    ?? null)
+const displayPeople = computed(() =>
+  personEntries.value.length
+    ? personEntries.value.map((p) => ({ slug: p.targetSlug, name: p.targetName }))
+    : (event.value?.people ?? []),
+)
+const displayGallery = computed(() =>
+  neoGallery.value.length
+    ? neoGallery.value.map((g) => ({ url: g.url, caption: g.caption, asset: null }))
+    : (event.value?.gallery ?? []).map((g) => ({
+        url:     null,
+        caption: g.caption ?? null,
+        asset:   g.asset,
+      })),
+)
+const descriptionHtml = computed<string>(() => {
+  if (savedSections.value.length) {
+    const parts: string[] = []
+    for (const s of savedSections.value) {
+      if (!s.content) continue
+      try {
+        const blocks = JSON.parse(s.content) as unknown[]
+        parts.push(blocksToHtml(blocks as Parameters<typeof blocksToHtml>[0]))
+      } catch { /* skip */ }
     }
-  } catch {
-    nodeKind.value = null
+    return parts.join('')
   }
-}
+  return event.value?.description ? blocksToHtml(event.value.description) : ''
+})
 
 interface EditForm { name: string; date: string }
 const editForm     = ref<EditForm>({ name: '', date: '' })
@@ -420,10 +403,14 @@ async function saveEdit() {
 
 /** Live preview overlay — show draft values in the article header while dirty. */
 const displayName = computed(() =>
-  editDirty.value ? editForm.value.name : (editOriginal.value.name || (event.value?.title ?? '')),
+  editDirty.value
+    ? editForm.value.name
+    : (editOriginal.value.name || neoEvent.value?.canonicalName || event.value?.title || ''),
 )
 const displayDate = computed(() =>
-  editDirty.value ? editForm.value.date : editOriginal.value.date,
+  editDirty.value
+    ? editForm.value.date
+    : (editOriginal.value.date || neoEvent.value?.date || ''),
 )
 
 async function flipKind(target: NodeKind) {
@@ -445,28 +432,34 @@ async function flipKind(target: NodeKind) {
       kindError.value = body.error ?? `HTTP ${res.status}`
       return
     }
-    nodeKind.value = body.kind ?? target
-    await Promise.all([loadPersons(slug), loadHierarchy(slug)])
+    await loadEvent(slug)
   } catch (e) {
     kindError.value = (e as Error).message
   }
 }
 
 const currentImageUrl = computed<string>(() => {
-  const gallery = event.value?.gallery
-  if (!gallery?.length) return ''
-  const ref = (gallery[currentImageIndex.value].asset as { _ref: string })._ref
-  const path = ref.replace(/^image-/, '').replace(/-([a-z]+)$/, '.$1')
-  return `${SANITY_IMG}/${path}?w=900&auto=format`
+  const g = displayGallery.value
+  if (!g.length) return ''
+  const item = g[currentImageIndex.value]
+  if (item.url) return item.url
+  if (item.asset && '_ref' in item.asset) {
+    const path = (item.asset as { _ref: string })._ref
+      .replace(/^image-/, '').replace(/-([a-z]+)$/, '.$1')
+    return `${SANITY_IMG}/${path}?w=900&auto=format`
+  }
+  return ''
 })
 
 function prevImage() {
-  const len = event.value?.gallery?.length ?? 0
+  const len = displayGallery.value.length
+  if (!len) return
   currentImageIndex.value = (currentImageIndex.value - 1 + len) % len
 }
 
 function nextImage() {
-  const len = event.value?.gallery?.length ?? 0
+  const len = displayGallery.value.length
+  if (!len) return
   currentImageIndex.value = (currentImageIndex.value + 1) % len
 }
 
@@ -480,19 +473,15 @@ function handleInternalLinks(e: MouseEvent) {
 
 onMounted(async () => {
   const slug = route.params.slug as string
-  try {
-    const [detail] = await Promise.all([
-      fetchEventDetailBySlug(slug),
-      loadNodeKind(slug).then(() => loadHierarchy(slug)),
-      loadPersons(slug),
-    ])
-    event.value = detail
-    if (!event.value) error.value = true
-  } catch {
-    error.value = true
-  } finally {
-    loading.value = false
-  }
+  // Run Neo4j load in parallel; let the Sanity fetch fail independently
+  // (the slug may be Neo4j-only with no Sanity counterpart).
+  const [sanityResult] = await Promise.allSettled([
+    fetchEventDetailBySlug(slug),
+    loadEvent(slug),
+  ])
+  if (sanityResult.status === 'fulfilled') event.value = sanityResult.value
+  if (!event.value && !neoEvent.value) error.value = true
+  loading.value = false
 })
 </script>
 

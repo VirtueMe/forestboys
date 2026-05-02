@@ -28,6 +28,24 @@ export interface EventNode {
   date:          string | null
 }
 
+export interface EventLocationRef {
+  slug:  string
+  title: string
+  lat:   number | null
+  lng:   number | null
+}
+
+export interface EventStationRef {
+  slug:  string
+  title: string
+}
+
+export interface EventGalleryImage {
+  id:      string
+  url:     string | null
+  caption: string | null
+}
+
 interface SectionRow { order: number | null; content: string | null }
 
 function rowToSection(r: SectionRow): Section {
@@ -42,6 +60,12 @@ function rowToSection(r: SectionRow): Section {
 export function useEventData() {
   const event         = ref<EventNode | null>(null)
   const savedSections = ref<Section[]>([])
+
+  const locationFrom = ref<EventLocationRef | null>(null)
+  const locationTo   = ref<EventLocationRef | null>(null)
+  const stationFrom  = ref<EventStationRef  | null>(null)
+  const stationTo    = ref<EventStationRef  | null>(null)
+  const gallery      = ref<EventGalleryImage[]>([])
 
   const personEntries        = ref<RelationEntry[]>([])
   const personTargets        = ref<RelationTarget[]>([])
@@ -59,6 +83,11 @@ export function useEventData() {
   function resetEvent() {
     event.value                = null
     savedSections.value        = []
+    locationFrom.value         = null
+    locationTo.value           = null
+    stationFrom.value          = null
+    stationTo.value            = null
+    gallery.value              = []
     personEntries.value        = []
     personTargets.value        = []
     subIncidentEntries.value   = []
@@ -95,7 +124,7 @@ export function useEventData() {
     }
 
     const kindLabel = row.kind === 'operation' ? 'Operation' : 'Incident'
-    const [descRows, persons, personTargetsList] = await Promise.all([
+    const [descRows, persons, personTargetsList, locFromRows, locToRows, stFromRows, stToRows, galleryRows] = await Promise.all([
       neo4jQuery<SectionRow>(
         `MATCH (:\`${kindLabel}\` {slug: $slug})-[:HAS_CONTENT]->(d:Description)
          RETURN d.order AS order, d.content AS content
@@ -104,10 +133,42 @@ export function useEventData() {
       ),
       personStrategy.value.fetchEntries(slug),
       personStrategy.value.fetchTargets(),
+      neo4jQuery<EventLocationRef>(
+        `MATCH (:\`${kindLabel}\` {slug: $slug})-[:FROM]->(l:Location)
+         RETURN l.slug AS slug, coalesce(l.canonicalName, l.title) AS title, l.lat AS lat, l.lng AS lng`,
+        { slug },
+      ),
+      neo4jQuery<EventLocationRef>(
+        `MATCH (:\`${kindLabel}\` {slug: $slug})-[:TO]->(l:Location)
+         RETURN l.slug AS slug, coalesce(l.canonicalName, l.title) AS title, l.lat AS lat, l.lng AS lng`,
+        { slug },
+      ),
+      neo4jQuery<EventStationRef>(
+        `MATCH (:\`${kindLabel}\` {slug: $slug})-[:FROM_STATION]->(s:Station)
+         RETURN s.slug AS slug, coalesce(s.canonicalName, s.title) AS title`,
+        { slug },
+      ),
+      neo4jQuery<EventStationRef>(
+        `MATCH (:\`${kindLabel}\` {slug: $slug})-[:TO_STATION]->(s:Station)
+         RETURN s.slug AS slug, coalesce(s.canonicalName, s.title) AS title`,
+        { slug },
+      ),
+      neo4jQuery<EventGalleryImage>(
+        `MATCH (:\`${kindLabel}\` {slug: $slug})-[r:HAS_IMAGE]->(s:Source)
+         WHERE coalesce(s.kind, 'photograph') = 'photograph'
+         RETURN s.id AS id, s.url AS url, coalesce(r.caption, s.title) AS caption
+         ORDER BY coalesce(r.order, 9999), s.id`,
+        { slug },
+      ),
     ])
     savedSections.value = descRows.map(rowToSection)
     personEntries.value = persons
     personTargets.value = personTargetsList
+    locationFrom.value  = locFromRows[0] ?? null
+    locationTo.value    = locToRows[0]   ?? null
+    stationFrom.value   = stFromRows[0]  ?? null
+    stationTo.value     = stToRows[0]    ?? null
+    gallery.value       = galleryRows
 
     if (row.kind === 'incident') {
       const [se, st] = await Promise.all([
@@ -133,6 +194,9 @@ export function useEventData() {
   return {
     event,
     savedSections,
+    locationFrom, locationTo,
+    stationFrom,  stationTo,
+    gallery,
     personEntries, personTargets,
     subIncidentEntries, subIncidentTargets,
     subOperationEntries, subOperationTargets,

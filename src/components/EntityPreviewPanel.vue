@@ -13,7 +13,7 @@
     <component :is="StationDetail" v-else-if="kind === 'Station'" />
     <component :is="TransportDetail" v-else-if="kind === 'Transport'" />
     <component :is="OutlineDetail" v-else-if="kind === 'Outline'" />
-    <component :is="EventPreviewBody" v-else-if="kind === 'Operation' || kind === 'Incident'" />
+    <component :is="EventDetail" v-else-if="kind === 'Operation' || kind === 'Incident'" />
     <component :is="LocationPreviewBody" v-else-if="kind === 'Location'" />
     <p v-else class="muted">Ingen forhåndsvisning for kind «{{ kind }}».</p>
 
@@ -67,7 +67,7 @@ import OrganizationDetail from '@/pages/OrganizationDetail.vue'
 import StationDetail      from '@/pages/StationDetail.vue'
 import TransportDetail    from '@/pages/TransportDetail.vue'
 import OutlineDetail      from '@/pages/OutlineDetail.vue'
-import EventPreviewBody    from '@/components/EventPreviewBody.vue'
+import EventDetail         from '@/pages/EventDetail.vue'
 import LocationPreviewBody from '@/components/LocationPreviewBody.vue'
 
 const props = defineProps<{ bundleId: string; kind: string; slug: string }>()
