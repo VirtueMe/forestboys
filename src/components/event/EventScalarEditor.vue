@@ -6,8 +6,8 @@
       <label class="edit-label">Klassifisering</label>
       <div class="kind-stack">
         <div class="type-seg">
-          <label class="type-seg-opt" :class="{ active: draft.kind === 'incident' }">
-            <input v-model="draft.kind" type="radio" value="incident" />
+          <label class="type-seg-opt" :class="{ active: draft.kind === 'incident', disabled: incidentDisabled }">
+            <input v-model="draft.kind" type="radio" value="incident" :disabled="incidentDisabled" />
             <span class="type-seg-label">
               Hendelse
               <button
@@ -16,7 +16,7 @@
                 class="info-marker"
                 :class="{ open: blockerOpen }"
                 aria-label="Vis blokkerende koblinger"
-                @click.prevent="blockerOpen = !blockerOpen"
+                @click.stop.prevent="blockerOpen = true"
               >i</button>
             </span>
           </label>
@@ -25,7 +25,6 @@
             Operasjon
           </label>
         </div>
-
       </div>
     </div>
 
@@ -58,7 +57,9 @@
             class="blocker-force-btn"
             :disabled="saving"
             @click="forceDemote"
-          >Fjern alle koblinger og endre</button>
+          >
+            Fjern alle koblinger og endre
+          </button>
         </footer>
       </div>
     </AppModal>
@@ -145,6 +146,13 @@ const blockerOpen  = ref(false)
 
 const hasDemoteBlockers = computed(() =>
   props.demoteBlockers.orgs.length > 0 || props.demoteBlockers.units.length > 0,
+)
+
+// "Hendelse" radio is disabled while saved kind is "operation" and
+// blocker edges exist. Admin clicks the (i) marker to see what's
+// blocking and optionally force-demote.
+const incidentDisabled = computed(() =>
+  baseline.value.kind === 'operation' && hasDemoteBlockers.value,
 )
 
 function snapshot() {
@@ -420,6 +428,11 @@ defineExpose({ draft, dirty })
   background: var(--ink);
   color: var(--paper);
   font-weight: 500;
+}
+.type-seg-opt.disabled {
+  cursor: not-allowed;
+  color: var(--muted);
+  background: var(--paper-sunken);
 }
 
 @media (max-width: 520px) {
