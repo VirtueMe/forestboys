@@ -56,7 +56,6 @@ const router = createRouter({
     { path: '/registre',               component: RegistreView },
     { path: '/about',                   component: AboutView },
     { path: '/access',                  component: AccessView },
-    { path: '/review',                  component: ReviewView },
     {
       path:     '/admin',
       component: AdminLayout,
@@ -66,6 +65,7 @@ const router = createRouter({
         { path: 'pages',                redirect: '/admin/pages/home' },
         { path: 'pages/:slug',          component: AdminPagesView },
         { path: 'sources',              component: AdminSourcesView },
+        { path: 'review',                                    component: ReviewView },
         { path: 'proposals',                                 component: AdminProposalListView },
         { path: 'proposals/:bundleId',                       component: AdminProposalBundleView },
         { path: 'proposals/:bundleId/preview/:kind/:slug',   component: AdminProposalEntityPreview },
