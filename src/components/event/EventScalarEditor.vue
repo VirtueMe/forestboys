@@ -70,6 +70,32 @@
     </div>
 
     <div class="edit-row">
+      <label class="edit-label" for="edit-event-slug">Slug</label>
+      <div class="slug-stack">
+        <div class="slug-field">
+          <input
+            id="edit-event-slug"
+            v-model="draft.slug"
+            class="edit-input"
+            :class="{ locked: !slugEditable, [`slug-${slugState}`]: true }"
+            :readonly="!slugEditable"
+            type="text"
+            placeholder="kebab-case"
+          />
+          <button
+            type="button"
+            class="slug-toggle"
+            :aria-label="slugEditable ? 'Lås slug' : 'Rediger slug'"
+            @click="toggleSlugEdit"
+          >
+            {{ slugEditable ? '✓' : '✎' }}
+          </button>
+        </div>
+        <span v-if="slugTaken" class="slug-hint">Slug finnes allerede for en hendelse eller operasjon.</span>
+      </div>
+    </div>
+
+    <div class="edit-row">
       <label class="edit-label" for="edit-event-date">Dato</label>
       <input
         id="edit-event-date"
@@ -83,7 +109,7 @@
 
   <footer v-if="dirty" class="edit-save-bar">
     <span class="edit-save-prompt">Ser det bra ut?</span>
-    <button type="button" class="edit-btn-primary" :disabled="saving" @click="save">
+    <button type="button" class="edit-btn-primary" :disabled="saving || !canSave" @click="save">
       {{ saving ? 'Lagrer…' : 'Lagre' }}
     </button>
     <button type="button" class="edit-link-revert" :disabled="saving" @click="revert">Angre</button>
@@ -105,6 +131,8 @@ import { ref, computed, watch } from 'vue'
 import { RouterLink } from 'vue-router'
 import AppModal from '@/components/AppModal.vue'
 import { authFetch } from '@/composables/useAuth.ts'
+import { neo4jQuery } from '@/composables/useNeo4j.ts'
+import { slugify, SLUG_RE } from '@/utils/slug.ts'
 import type { EventKind, EventNode } from '@/composables/useEventData.ts'
 
 export interface DemoteBlockers {
@@ -115,12 +143,14 @@ export interface DemoteBlockers {
 interface SaveResponse {
   name?:  string
   date?:  string | null
+  slug?:  string
   error?: string
 }
 
 export interface EventScalarDraft {
   name: string
   date: string
+  slug: string
   kind: EventKind
 }
 
@@ -136,13 +166,60 @@ const props = withDefaults(defineProps<{
 const emit = defineEmits<{
   saved:       [updates: SaveResponse]
   kindFlipped: [kind: EventKind]
+  slugChanged: [newSlug: string]
 }>()
 
-const draft        = ref<EventScalarDraft>({ name: '', date: '', kind: 'incident' })
-const baseline     = ref<EventScalarDraft>({ name: '', date: '', kind: 'incident' })
+const draft        = ref<EventScalarDraft>({ name: '', date: '', slug: '', kind: 'incident' })
+const baseline     = ref<EventScalarDraft>({ name: '', date: '', slug: '', kind: 'incident' })
 const saving       = ref(false)
 const error        = ref<string | null>(null)
 const blockerOpen  = ref(false)
+
+const slugEditable = ref(false)
+const slugTaken    = ref(false)
+const slugChecking = ref(false)
+let slugCheckTimer: ReturnType<typeof setTimeout> | null = null
+
+watch(() => draft.value.slug, (s) => {
+  // Reset taken flag whenever the input changes; only the latest value
+  // matters for save eligibility.
+  slugTaken.value    = false
+  slugChecking.value = false
+  if (slugCheckTimer) clearTimeout(slugCheckTimer)
+  if (s === baseline.value.slug) return       // unchanged — nothing to check
+  if (!SLUG_RE.test(s) || s === 'new') return
+  slugChecking.value = true
+  slugCheckTimer = setTimeout(async () => {
+    try {
+      const rows = await neo4jQuery<{ slug: string }>(
+        `MATCH (n {slug: $slug}) WHERE n:Incident OR n:Operation RETURN n.slug AS slug LIMIT 1`,
+        { slug: s },
+      )
+      if (draft.value.slug === s) slugTaken.value = rows.length > 0
+    } catch { /* silent — server still validates on PATCH */ }
+    finally {
+      if (draft.value.slug === s) slugChecking.value = false
+    }
+  }, 250)
+})
+
+const slugState = computed<'neutral' | 'invalid' | 'valid'>(() => {
+  const s = draft.value.slug.trim()
+  if (!s || s === baseline.value.slug) return 'neutral'
+  if (!SLUG_RE.test(s) || s === 'new')  return 'invalid'
+  if (slugChecking.value) return 'neutral'
+  if (slugTaken.value)    return 'invalid'
+  return 'valid'
+})
+
+function toggleSlugEdit() {
+  if (!slugEditable.value) {
+    slugEditable.value = true
+  } else {
+    draft.value.slug = slugify(draft.value.slug)
+    slugEditable.value = false
+  }
+}
 
 const hasDemoteBlockers = computed(() =>
   props.demoteBlockers.orgs.length > 0 || props.demoteBlockers.units.length > 0,
@@ -159,19 +236,32 @@ function snapshot() {
   const snap: EventScalarDraft = {
     name: props.saved.canonicalName ?? '',
     date: props.saved.date ?? '',
+    slug: props.saved.slug ?? '',
     kind: props.saved.kind,
   }
   draft.value    = { ...snap }
   baseline.value = { ...snap }
   error.value    = null
+  slugEditable.value = false
+  slugTaken.value    = false
 }
 watch(() => props.saved, snapshot, { immediate: true, deep: true })
 
 const dirty = computed(() =>
   draft.value.name !== baseline.value.name ||
   draft.value.date !== baseline.value.date ||
+  draft.value.slug !== baseline.value.slug ||
   draft.value.kind !== baseline.value.kind,
 )
+
+const canSave = computed(() => {
+  if (!dirty.value) return false
+  if (draft.value.slug !== baseline.value.slug) {
+    const s = draft.value.slug.trim()
+    if (!SLUG_RE.test(s) || s === 'new' || slugTaken.value) return false
+  }
+  return true
+})
 
 const kindLabel = computed(() => draft.value.kind === 'operation' ? 'Operasjon' : 'Hendelse')
 const nameLabel = computed(() => draft.value.kind === 'operation' ? 'Kodenavn' : 'Tittel')
@@ -245,6 +335,7 @@ async function save() {
     const body: Record<string, unknown> = {}
     if (draft.value.name !== baseline.value.name) body.name = draft.value.name.trim()
     if (draft.value.date !== baseline.value.date) body.date = draft.value.date.trim() || null
+    if (draft.value.slug !== baseline.value.slug) body.slug = draft.value.slug.trim()
     if (Object.keys(body).length) {
       const res = await authFetch(`/api/admin/event/${encodeURIComponent(slug)}`, {
         method:  'PATCH',
@@ -253,10 +344,16 @@ async function save() {
       })
       const out = await res.json().catch(() => ({})) as SaveResponse
       if (!res.ok) {
+        if (res.status === 409 && body.slug) {
+          slugTaken.value    = true
+          slugEditable.value = true
+        }
         error.value = out.error ?? `HTTP ${res.status}`
         return
       }
       emit('saved', out)
+      // Slug rename: the URL must change; tell parents so they can navigate.
+      if (out.slug && out.slug !== slug) emit('slugChanged', out.slug)
     }
     snapshot()
   } catch (e) {
@@ -314,6 +411,28 @@ defineExpose({ draft, dirty })
   border-color: var(--focus);
 }
 .edit-input-narrow { max-width: 160px; }
+.edit-input.locked { background: var(--paper-sunken); color: var(--muted); font-family: var(--font-mono); font-size: var(--size-mono); }
+.edit-input.slug-valid   { color: var(--moss);   border-color: var(--moss); }
+.edit-input.slug-invalid { color: var(--danger); border-color: var(--danger); }
+
+.slug-stack { display: flex; flex-direction: column; gap: var(--space-xs); }
+.slug-field { display: flex; gap: var(--space-xs); }
+.slug-toggle {
+  flex-shrink: 0;
+  width: 36px;
+  background: var(--paper);
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-md);
+  font-size: var(--size-body-ui);
+  color: var(--ink-soft);
+  cursor: pointer;
+}
+.slug-toggle:hover { background: var(--paper-sunken); color: var(--faded-red); }
+.slug-hint {
+  font-family: var(--font-sans);
+  font-size: var(--size-label);
+  color: var(--danger);
+}
 
 .kind-stack { display: flex; flex-direction: column; gap: var(--space-sm); position: relative; }
 

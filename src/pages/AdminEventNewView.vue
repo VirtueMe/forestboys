@@ -23,19 +23,33 @@
         v-model="name"
         class="edit-input"
         type="text"
-        @input="autoSlug"
       />
     </div>
 
     <div class="edit-row">
       <label class="edit-label" for="new-event-slug">Slug</label>
-      <input
-        id="new-event-slug"
-        v-model="slug"
-        class="edit-input"
-        type="text"
-        placeholder="kebab-case"
-      />
+      <div class="slug-stack">
+        <div class="slug-field">
+          <input
+            id="new-event-slug"
+            v-model="slug"
+            class="edit-input"
+            :class="{ locked: !slugEditable, [`slug-${slugState}`]: true }"
+            :readonly="!slugEditable"
+            type="text"
+            placeholder="kebab-case"
+          />
+          <button
+            type="button"
+            class="slug-toggle"
+            :aria-label="slugEditable ? 'Lås slug' : 'Rediger slug'"
+            @click="toggleSlugEdit"
+          >
+            {{ slugEditable ? '✓' : '✎' }}
+          </button>
+        </div>
+        <span v-if="slugTaken" class="slug-hint">Slug finnes allerede for en hendelse eller operasjon.</span>
+      </div>
     </div>
 
     <div class="edit-row">
@@ -71,9 +85,11 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { authFetch } from '../composables/useAuth.ts'
+import { neo4jQuery } from '../composables/useNeo4j.ts'
+import { slugify, SLUG_RE } from '../utils/slug.ts'
 
 type Kind = 'incident' | 'operation'
 
@@ -94,17 +110,63 @@ const saving = ref(false)
 const error  = ref<string | null>(null)
 
 const kindLabel = computed(() => kind.value === 'operation' ? 'operasjon' : 'hendelse')
-const canSave   = computed(() => name.value.trim().length > 0 && /^[a-z0-9-]+$/.test(slug.value))
 
-let slugEdited = false
-function autoSlug() {
-  if (slugEdited) return
-  slug.value = name.value
-    .toLowerCase()
-    .replace(/[^\w\s-]/g, '')
-    .trim()
-    .replace(/\s+/g, '-')
-    .replace(/-+/g, '-')
+const slugEdited   = ref(false)
+const slugEditable = ref(false)
+const slugTaken    = ref(false)
+const slugChecking = ref(false)
+let slugCheckTimer: ReturnType<typeof setTimeout> | null = null
+
+watch(name, (v) => {
+  if (slugEdited.value) return
+  slug.value = slugify(v)
+})
+
+watch(slug, (s) => {
+  slugTaken.value    = false
+  slugChecking.value = false
+  if (slugCheckTimer) clearTimeout(slugCheckTimer)
+  if (!SLUG_RE.test(s) || s === 'new') return
+  slugChecking.value = true
+  slugCheckTimer = setTimeout(async () => {
+    try {
+      const rows = await neo4jQuery<{ slug: string }>(
+        `MATCH (n {slug: $slug}) WHERE n:Incident OR n:Operation RETURN n.slug AS slug LIMIT 1`,
+        { slug: s },
+      )
+      if (slug.value === s) slugTaken.value = rows.length > 0
+    } catch { /* silent — server still validates on POST */ }
+    finally {
+      if (slug.value === s) slugChecking.value = false
+    }
+  }, 250)
+})
+
+const slugState = computed<'neutral' | 'invalid' | 'valid'>(() => {
+  const s = slug.value.trim()
+  if (!s || s === 'new') return 'neutral'
+  if (!SLUG_RE.test(s))  return 'invalid'
+  if (slugChecking.value) return 'neutral'
+  if (slugTaken.value)    return 'invalid'
+  return 'valid'
+})
+
+const canSave = computed(() => {
+  const s = slug.value.trim()
+  return name.value.trim().length > 0
+    && SLUG_RE.test(s)
+    && s !== 'new'
+    && !slugTaken.value
+})
+
+function toggleSlugEdit() {
+  if (!slugEditable.value) {
+    slugEditable.value = true
+    slugEdited.value = true
+  } else {
+    slug.value = slugify(slug.value)
+    slugEditable.value = false
+  }
 }
 
 function cancel() {
@@ -132,6 +194,10 @@ async function save() {
     const body = await res.json().catch(() => ({})) as { slug?: string; error?: string }
     if (!res.ok) {
       error.value = body.error ?? `HTTP ${res.status}`
+      if (res.status === 409) {
+        slugTaken.value    = true
+        slugEditable.value = true
+      }
       return
     }
     const newSlug = body.slug ?? slug.value
@@ -186,6 +252,27 @@ async function save() {
 }
 .edit-input:focus { outline: 2px solid var(--focus); outline-offset: -1px; border-color: var(--focus); }
 .edit-input-date { font-family: monospace; font-size: 12px; max-width: 160px; }
+.edit-input.locked { background: var(--paper-sunken); color: var(--muted); font-family: var(--font-mono); font-size: var(--size-mono); }
+.edit-input.slug-valid   { color: var(--moss);   border-color: var(--moss); }
+.edit-input.slug-invalid { color: var(--danger); border-color: var(--danger); }
+
+.slug-stack { display: flex; flex-direction: column; gap: 4px; }
+.slug-field { display: flex; gap: 4px; }
+.slug-toggle {
+  flex-shrink: 0;
+  width: 36px;
+  background: var(--paper);
+  border: 1px solid var(--rule);
+  border-radius: 4px;
+  font-size: 14px;
+  color: var(--ink-soft);
+  cursor: pointer;
+}
+.slug-toggle:hover { background: var(--paper-sunken); color: var(--faded-red); }
+.slug-hint {
+  font-size: 12px;
+  color: var(--danger);
+}
 .type-seg {
   display: inline-flex;
   border: 1px solid var(--rule);

@@ -6,6 +6,7 @@
       :demote-blockers="demoteBlockers"
       @saved="out => emit('savedScalar', out)"
       @kind-flipped="kind => emit('kindFlipped', kind)"
+      @slug-changed="newSlug => emit('slugChanged', newSlug)"
     />
 
     <DescriptionEditor
@@ -61,6 +62,7 @@ withDefaults(defineProps<{
 const emit = defineEmits<{
   savedScalar:   [out: ScalarSaved]
   kindFlipped:   [kind: EventKind]
+  slugChanged:   [newSlug: string]
   savedSections: [sections: Section[]]
 }>()
 

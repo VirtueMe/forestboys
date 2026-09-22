@@ -113,13 +113,15 @@ Edge properties:
 
 ### Hierarchical filter rule
 
-For node types with `PART_OF` hierarchies (Unit, Organization, Operation):
+For node types with `PART_OF` hierarchies (Unit, Organization, VesselClass):
 
 - A *top-level* node has no outbound `PART_OF` to its own label.
   - Top-level Unit: `WHERE NOT (u:Unit)-[:PART_OF]->(:Unit)`
   - Top-level Organization: `WHERE NOT (o:Organization)-[:PART_OF]->(:Organization)`
 - *"All descendants of"* queries traverse `PART_OF*0..`:
   - `MATCH (p:Person)-[:MEMBER_OF]->(:Unit)-[:PART_OF*0..]->(u:Unit {slug: $slug})`
+
+Event hierarchy (Incident/Operation) uses `RELATED_TO {kind:'contains'}` instead — same containment semantics, opposite direction (parent → child), traversal pattern is `(:Operation {slug:$slug})-[:RELATED_TO {kind:'contains'}*0..]->(:Incident|Operation)`.
 
 ### Aggregation by query, not duplication
 
@@ -294,22 +296,31 @@ Formations / sub-groups: Kompani Linge, KP F, Eksportgrupper, MTB squadrons, Mil
 
 `status` ∈ `planned | active | completed | terminated | abandoned | unknown`
 
+Operations are journeys / missions / campaigns: they have an orchestrator, participants from various units, and (often) directional from→to start and end points. Incidents are the point-in-time events that happen during them.
+
 **Outbound:**
 
-| Edge              | To             | Properties                                                                       |
-|-------------------|----------------|----------------------------------------------------------------------------------|
-| `ORCHESTRATED_BY` | `Organization` | —                                                                                |
-| `ENDED_BY`        | `Incident`     | when termination *is* an incident                                                |
-| `PART_OF`         | `Operation`    | parent = campaign / program; child = specific mission                            |
-| `HAS_CELL`        | `Location`     | `cellType, role, startDate, endDate`                                             |
-| `HAS_CONTENT`     | `Description`  | sections                                                                         |
+| Edge                                    | To             | Properties                                            |
+|-----------------------------------------|----------------|-------------------------------------------------------|
+| `ORCHESTRATED_BY`                       | `Organization` | multi — orgs running the op                           |
+| `ENDED_BY`                              | `Incident`     | when termination *is* an incident                     |
+| `RELATED_TO {kind:'contains'}`          | `Incident`     | multi — enkeltepisoder under operasjonen              |
+| `RELATED_TO {kind:'contains'}`          | `Operation`    | multi — deloperasjoner                                |
+| `FROM`                                  | `Location`     | single — departure                                    |
+| `TO`                                    | `Location`     | single — arrival                                      |
+| `FROM_STATION`                          | `Station`      | single — base of departure                            |
+| `TO_STATION`                            | `Station`      | single — base of arrival                              |
+| `HAS_CELL`                              | `Location`     | `cellType, role, startDate, endDate`                  |
+| `HAS_CONTENT`                           | `Description`  | sections                                              |
 
 `HAS_CELL.cellType` controlled vocabulary: `HQ | amøbe | bi-celle | depot | …`
 
 **Inbound:**
-- `(:Incident)-[:OCCURRED_IN]->(o)` — incidents that occurred during this operation (cross-kind link)
-- `(:Operation)-[:PART_OF]->(o)` — child operations (same-kind nesting)
-- `(:Person)-[:PARTICIPATED_IN]->(o)` — operation participants
+- `(:Operation)-[:RELATED_TO {kind:'contains'}]->(o)` — parent campaign (single in practice)
+- `(:Person)-[:PARTICIPATED_IN]->(o)` — multi
+- `(:Unit)-[:PARTICIPATED_IN]->(o)` — multi, units involved regardless of orchestrator (RAF squadrons, Norwegian patrols, Wehrmacht pursuers)
+
+**Demote rules** — `PATCH /api/admin/event/:slug/kind` to `incident` blocks (409) if the Operation has any `ORCHESTRATED_BY` org or `(:Unit)-[:PARTICIPATED_IN]->` edges, since incidents don't carry these. Body `{force:true}` strips them in one transaction. Future extension: same blocker check for `FROM/TO/FROM_STATION/TO_STATION`.
 
 ---
 
@@ -320,29 +331,43 @@ Formations / sub-groups: Kompani Linge, KP F, Eksportgrupper, MTB squadrons, Mil
 
 `type` controlled vocabulary (extensible): `drop | arrest | sabotage | meeting | escape | crash | death | transport | …`
 
-The "what happened" node. Dated, located, with participants and outcomes.
+The "what happened" node. Point-in-time, single-place. Org/Unit context is **not** carried as direct edges — derived via parent operation, related people (`MEMBER_OF` walks), or related incidents.
 
 **Outbound:**
 
-| Edge          | To                          | Properties                          |
-|---------------|-----------------------------|-------------------------------------|
-| `PART_OF`     | `Incident`                  | same-kind nesting (parent incident) |
-| `OCCURRED_IN` | `Operation`                 | cross-kind link to a parent operation |
-| `AT`          | `Location`                  | —                                   |
-| `FROM`        | `Location` \| `Station`     | departure point                     |
-| `TO`          | `Location` \| `Station`     | arrival point                       |
-| `USED`        | `Transport`                 | `role`                              |
-| `USED`        | `EquipmentType`             | `quantity, role`                    |
-| `SOURCED_FROM`| `Source`                    | provenance                          |
-| `HAS_IMAGE`   | `Source`                    | gallery                             |
+| Edge                            | To              | Properties                          |
+|---------------------------------|-----------------|-------------------------------------|
+| `RELATED_TO {kind:'contains'}`  | `Incident`      | multi — sub-incidents               |
+| `AT`                            | `Location`      | single — where it happened          |
+| `AT_STATION`                    | `Station`       | single — radio station, airfield, etc. |
+| `USED`                          | `Transport`     | `role`                              |
+| `USED`                          | `EquipmentType` | `quantity, role`                    |
+| `SOURCED_FROM`                  | `Source`        | provenance                          |
+| `HAS_IMAGE`                     | `Source`        | gallery                             |
 
 **Inbound:**
+- `(:Operation)-[:RELATED_TO {kind:'contains'}]->(i)` — parent operation (single in practice)
+- `(:Incident)-[:RELATED_TO {kind:'contains'}]->(i)` — parent incident
 - `(:Person)-[:INVOLVED_IN]->(i)` — participants
 - `(:Operation)-[:ENDED_BY]->(i)`
 
-**Promotion rules** (Incident ↔ Operation):
-- Incident ↔ Incident: same-kind grouping uses `PART_OF`.
-- Incident ↔ Operation: cross-kind link uses `OCCURRED_IN`.
+---
+
+### Event hierarchy edge — `RELATED_TO`
+
+A single edge type carries every Incident↔Operation containment relation. The `kind` property reserves the slot for richer semantics later (`'related'`, `'precedes'`, `'caused'`).
+
+**Direction is always container → child**, regardless of the labels on either end:
+
+| Edge                                                          | Meaning                                       |
+|---------------------------------------------------------------|-----------------------------------------------|
+| `(:Operation)-[:RELATED_TO {kind:'contains'}]->(:Incident)`   | enkeltepisoder under operasjonen              |
+| `(:Operation)-[:RELATED_TO {kind:'contains'}]->(:Operation)`  | deloperasjoner                                |
+| `(:Incident)-[:RELATED_TO {kind:'contains'}]->(:Incident)`    | underhendelser                                |
+
+**Why one edge:** kind flips (`PATCH /event/:slug/kind`) become a pure label rename. Edges survive untouched — no rewrites, no illegal-combo blockers on the hierarchy. Replaces the earlier `PART_OF` (same-kind) + `OCCURRED_IN` (cross-kind) split.
+
+Migration: `scripts/migrate-related-to.cypher` rewrites legacy edges; `scripts/migrate-incident-at.cypher` collapses Incident's directional `FROM`/`TO` into `AT`/`AT_STATION` (FROM wins when both exist).
 
 ---
 
@@ -384,9 +409,10 @@ Migration target: `Event` → `Incident`, normalize `DEPARTED_FROM_STATION` → 
 
 **Inbound:**
 - `(:Operation)-[:HAS_CELL]->(l)` `{cellType}`
+- `(:Operation)-[:FROM|TO]->(l)` — single each, journey endpoints
+- `(:Incident)-[:AT]->(l)` — single, where it happened
 - `(:Unit)-[:BASED_AT|COVERS]->(l)`
 - `(:Person)-[:BORN_AT|HOME_AT]->(l)`
-- `(:Incident)-[:AT|FROM|TO]->(l)`
 
 ---
 
@@ -406,6 +432,8 @@ Migration target: `Event` → `Incident`, normalize `DEPARTED_FROM_STATION` → 
 
 **Inbound:**
 - `(:Person)-[:STATIONED_AT]->(s)`
+- `(:Operation)-[:FROM_STATION|TO_STATION]->(s)` — single each
+- `(:Incident)-[:AT_STATION]->(s)` — single
 - `(:Event)-[:DEPARTED_FROM_STATION|ARRIVED_AT_STATION]->(s)` (legacy)
 
 **Legacy properties not yet migrated:**

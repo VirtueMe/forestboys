@@ -31,6 +31,38 @@
       :show-description="false"
     />
 
+    <template v-if="kind === 'incident'">
+      <RelationListEditor
+        :parent-slug="slug"
+        :entries="data.atLocation.entries"
+        :targets="data.atLocation.targets"
+        :strategy="IncidentAtLocationStrategy"
+        label="Sted"
+        add-label="+ Legg til sted"
+        empty-label="Ingen sted angitt"
+        search-placeholder="Søk sted…"
+        picker-chip-aria="Bytt sted"
+        validation-empty="Velg sted eller fjern oppføringen før du lagrer."
+        :show-dates="false"
+        :show-description="false"
+      />
+
+      <RelationListEditor
+        :parent-slug="slug"
+        :entries="data.atStation.entries"
+        :targets="data.atStation.targets"
+        :strategy="IncidentAtStationStrategy"
+        label="Base"
+        add-label="+ Legg til base"
+        empty-label="Ingen base angitt"
+        search-placeholder="Søk base…"
+        picker-chip-aria="Bytt base"
+        validation-empty="Velg base eller fjern oppføringen før du lagrer."
+        :show-dates="false"
+        :show-description="false"
+      />
+    </template>
+
     <RelationListEditor
       v-if="kind === 'incident'"
       :parent-slug="slug"
@@ -74,6 +106,66 @@
         search-placeholder="Søk avdeling…"
         picker-chip-aria="Bytt avdeling"
         validation-empty="Velg avdeling for alle oppføringer før du lagrer."
+        :show-dates="false"
+        :show-description="false"
+      />
+
+      <RelationListEditor
+        :parent-slug="slug"
+        :entries="data.fromLocation.entries"
+        :targets="data.fromLocation.targets"
+        :strategy="OperationFromLocationStrategy"
+        label="Fra Sted"
+        add-label="+ Legg til startsted"
+        empty-label="Ingen startsted"
+        search-placeholder="Søk sted…"
+        picker-chip-aria="Bytt sted"
+        validation-empty="Velg sted eller fjern oppføringen før du lagrer."
+        :show-dates="false"
+        :show-description="false"
+      />
+
+      <RelationListEditor
+        :parent-slug="slug"
+        :entries="data.toLocation.entries"
+        :targets="data.toLocation.targets"
+        :strategy="OperationToLocationStrategy"
+        label="Til Sted"
+        add-label="+ Legg til endesteder"
+        empty-label="Ingen endesteder"
+        search-placeholder="Søk sted…"
+        picker-chip-aria="Bytt sted"
+        validation-empty="Velg sted eller fjern oppføringen før du lagrer."
+        :show-dates="false"
+        :show-description="false"
+      />
+
+      <RelationListEditor
+        :parent-slug="slug"
+        :entries="data.fromStation.entries"
+        :targets="data.fromStation.targets"
+        :strategy="OperationFromStationStrategy"
+        label="Fra Base"
+        add-label="+ Legg til startbase"
+        empty-label="Ingen startbase"
+        search-placeholder="Søk base…"
+        picker-chip-aria="Bytt base"
+        validation-empty="Velg base eller fjern oppføringen før du lagrer."
+        :show-dates="false"
+        :show-description="false"
+      />
+
+      <RelationListEditor
+        :parent-slug="slug"
+        :entries="data.toStation.entries"
+        :targets="data.toStation.targets"
+        :strategy="OperationToStationStrategy"
+        label="Til Base"
+        add-label="+ Legg til endebase"
+        empty-label="Ingen endebase"
+        search-placeholder="Søk base…"
+        picker-chip-aria="Bytt base"
+        validation-empty="Velg base eller fjern oppføringen før du lagrer."
         :show-dates="false"
         :show-description="false"
       />
@@ -184,6 +276,9 @@ import {
   SubIncidentsStrategy, SubOperationsStrategy, OperationIncidentsStrategy,
   IncidentInOperationStrategy,
   OperationOrganizationsStrategy, OperationUnitsStrategy,
+  OperationFromLocationStrategy, OperationToLocationStrategy,
+  OperationFromStationStrategy,  OperationToStationStrategy,
+  IncidentAtLocationStrategy,    IncidentAtStationStrategy,
 } from '@/components/relation/strategies.ts'
 import type { RelationEntry, RelationTarget } from '@/components/relation/RelationStrategy.ts'
 import type { AdminViewMode } from '@/components/AdminViewTabs.vue'
@@ -197,6 +292,12 @@ export interface EventRelationsData {
   inOperation:  { entries: RelationEntry[]; targets: RelationTarget[] }
   org:          { entries: RelationEntry[]; targets: RelationTarget[] }
   unit:         { entries: RelationEntry[]; targets: RelationTarget[] }
+  fromLocation: { entries: RelationEntry[]; targets: RelationTarget[] }
+  toLocation:   { entries: RelationEntry[]; targets: RelationTarget[] }
+  fromStation:  { entries: RelationEntry[]; targets: RelationTarget[] }
+  toStation:    { entries: RelationEntry[]; targets: RelationTarget[] }
+  atLocation:   { entries: RelationEntry[]; targets: RelationTarget[] }
+  atStation:    { entries: RelationEntry[]; targets: RelationTarget[] }
 }
 
 const props = defineProps<{

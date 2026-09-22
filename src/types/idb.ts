@@ -108,6 +108,8 @@ export interface IdbEventDetail {
   title: string
   slug: string
   date?: string
+  /** 'incident' or 'operation' — drives kind-aware UI labels (Sted vs Fra/Til). */
+  kind?: 'incident' | 'operation'
   organization?: string
   district?: string
   group?: string

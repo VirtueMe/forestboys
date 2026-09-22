@@ -45,6 +45,7 @@
         :event="visibleDetail"
         class="panel"
         @select-event-slug="slug => router.push(`/events/${slug}`)"
+        @event-renamed="({ from, to }) => { renameEvent(from, to); router.replace(`/events/${to}`) }"
         @select-date="openDateModal"
       />
     </div>
@@ -150,7 +151,7 @@ const {
   isDetail,
   org, districts, setOrg, setDistricts, availableDistricts, allOrgs,
   districtColorMap, searchQuery, hasFilter, resetFilters,
-  filteredEvents, visibleDetail, loadingDetail, detailError,
+  filteredEvents, visibleDetail, loadingDetail, detailError, renameEvent,
   orgColor, buildTimelineData,
 } = useEventsContext()
 

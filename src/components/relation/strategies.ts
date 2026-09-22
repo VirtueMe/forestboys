@@ -801,6 +801,140 @@ async function fetchUnitOptions(): Promise<RelationTarget[]> {
   return rows
 }
 
+async function fetchLocationOptions(): Promise<RelationTarget[]> {
+  const rows = await neo4jQuery<{ slug: string; name: string }>(`
+    MATCH (l:Location)
+    RETURN l.slug AS slug, coalesce(l.canonicalName, l.title) AS name
+    ORDER BY name
+  `)
+  return rows
+}
+
+async function fetchStationOptions(): Promise<RelationTarget[]> {
+  const rows = await neo4jQuery<{ slug: string; name: string }>(`
+    MATCH (s:Station)
+    RETURN s.slug AS slug, coalesce(s.canonicalName, s.title) AS name
+    ORDER BY name
+  `)
+  return rows
+}
+
+/**
+ * Single-target edge strategy factory. Used for all six location/station
+ * slots (Operation FROM/TO/FROM_STATION/TO_STATION + Incident AT/AT_STATION).
+ * Each instance is a list strategy with 0..1 cardinality so RelationListEditor
+ * works unchanged; saveEntries packs the first slug as the body field.
+ *
+ * `endpointPath(slug)` returns the URL path. `bodyField` is the JSON key
+ * the backend expects ('locationSlug' | 'stationSlug'). `route` is the
+ * targetRoute prefix.
+ */
+function singleEdgeStrategy(opts: {
+  fetchTargets: () => Promise<RelationTarget[]>
+  matchClause:  (slug: string) => string  // returns full Cypher with `target` props selected
+  endpointPath: (parentSlug: string) => string
+  bodyField:    'locationSlug' | 'stationSlug'
+  routePrefix:  string
+}): RelationStrategy {
+  return {
+    fetchTargets: opts.fetchTargets,
+    async fetchEntries(parentSlug) {
+      const rows = await neo4jQuery<HierarchyRow>(opts.matchClause(parentSlug), { slug: parentSlug })
+      return rows.map(hierarchyRowToEntry)
+    },
+    async saveEntries(parentSlug, entries) {
+      const targetSlug = entries[0]?.targetSlug ?? null
+      const res = await authFetch(opts.endpointPath(parentSlug), {
+        method:  'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify({ [opts.bodyField]: targetSlug }),
+      })
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({})) as { error?: string }
+        throw new Error(body.error ?? `HTTP ${res.status}`)
+      }
+    },
+    saveNote: noopSaveNote,
+    targetRoute(entry) { return `${opts.routePrefix}/${entry.targetSlug}` },
+  }
+}
+
+/* ── Operation location/station slots ─────────────────────────── */
+
+export const OperationFromLocationStrategy = singleEdgeStrategy({
+  fetchTargets: fetchLocationOptions,
+  matchClause:  () => `
+    MATCH (op:Operation {slug: $slug})-[:FROM]->(l:Location)
+    RETURN l.slug AS targetSlug, coalesce(l.canonicalName, l.title) AS targetName
+    LIMIT 1
+  `,
+  endpointPath: s => `/api/admin/operation/${encodeURIComponent(s)}/from-location`,
+  bodyField:    'locationSlug',
+  routePrefix:  '/map',
+})
+
+export const OperationToLocationStrategy = singleEdgeStrategy({
+  fetchTargets: fetchLocationOptions,
+  matchClause:  () => `
+    MATCH (op:Operation {slug: $slug})-[:TO]->(l:Location)
+    RETURN l.slug AS targetSlug, coalesce(l.canonicalName, l.title) AS targetName
+    LIMIT 1
+  `,
+  endpointPath: s => `/api/admin/operation/${encodeURIComponent(s)}/to-location`,
+  bodyField:    'locationSlug',
+  routePrefix:  '/map',
+})
+
+export const OperationFromStationStrategy = singleEdgeStrategy({
+  fetchTargets: fetchStationOptions,
+  matchClause:  () => `
+    MATCH (op:Operation {slug: $slug})-[:FROM_STATION]->(s:Station)
+    RETURN s.slug AS targetSlug, coalesce(s.canonicalName, s.title) AS targetName
+    LIMIT 1
+  `,
+  endpointPath: s => `/api/admin/operation/${encodeURIComponent(s)}/from-station`,
+  bodyField:    'stationSlug',
+  routePrefix:  '/station',
+})
+
+export const OperationToStationStrategy = singleEdgeStrategy({
+  fetchTargets: fetchStationOptions,
+  matchClause:  () => `
+    MATCH (op:Operation {slug: $slug})-[:TO_STATION]->(s:Station)
+    RETURN s.slug AS targetSlug, coalesce(s.canonicalName, s.title) AS targetName
+    LIMIT 1
+  `,
+  endpointPath: s => `/api/admin/operation/${encodeURIComponent(s)}/to-station`,
+  bodyField:    'stationSlug',
+  routePrefix:  '/station',
+})
+
+/* ── Incident single AT slots ─────────────────────────────────── */
+
+export const IncidentAtLocationStrategy = singleEdgeStrategy({
+  fetchTargets: fetchLocationOptions,
+  matchClause:  () => `
+    MATCH (i:Incident {slug: $slug})-[:AT]->(l:Location)
+    RETURN l.slug AS targetSlug, coalesce(l.canonicalName, l.title) AS targetName
+    LIMIT 1
+  `,
+  endpointPath: s => `/api/admin/incident/${encodeURIComponent(s)}/at-location`,
+  bodyField:    'locationSlug',
+  routePrefix:  '/map',
+})
+
+export const IncidentAtStationStrategy = singleEdgeStrategy({
+  fetchTargets: fetchStationOptions,
+  matchClause:  () => `
+    MATCH (i:Incident {slug: $slug})-[:AT_STATION]->(s:Station)
+    RETURN s.slug AS targetSlug, coalesce(s.canonicalName, s.title) AS targetName
+    LIMIT 1
+  `,
+  endpointPath: s => `/api/admin/incident/${encodeURIComponent(s)}/at-station`,
+  bodyField:    'stationSlug',
+  routePrefix:  '/station',
+})
+
 /** Children of an Incident — (parent:Incident)-[:RELATED_TO {kind:'contains'}]->(child:Incident). */
 export const SubIncidentsStrategy: RelationStrategy = {
   fetchTargets: fetchIncidentOptions,

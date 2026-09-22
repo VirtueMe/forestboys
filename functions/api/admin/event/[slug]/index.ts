@@ -1,13 +1,17 @@
 /**
  * PATCH /api/admin/event/:slug — update scalar fields on an Incident or
- * Operation. The endpoint is kind-agnostic: body carries { name, date } and
- * the server routes `name` to `title` (Incident) or `codeName` (Operation)
- * based on the node's label.
+ * Operation. The endpoint is kind-agnostic: body carries { name, date,
+ * slug } and the server routes `name` to `title` (Incident) or
+ * `codeName` (Operation) based on the node's label.
  *
  * Body:
- *   { name?: string, date?: string | null }
+ *   { name?: string, date?: string | null, slug?: string }
  *
- * Response: { name, date, kind }
+ * Slug rename: validates shape + collision against any other Incident/
+ * Operation. Edges survive (Neo4j keys edges by node identity, not
+ * property). Returns the new slug so the client can navigate.
+ *
+ * Response: { name, date, slug, kind }
  */
 
 import { requireAdmin } from '~/_lib/require-admin.ts'
@@ -20,7 +24,10 @@ interface Env extends Neo4jEnv {
 interface Body {
   name?: string
   date?: string | null
+  slug?: string
 }
+
+const SLUG_RE = /^[a-z0-9-]+$/
 
 function isDateOrNull(v: unknown): v is string | null {
   if (v === null || v === undefined) return true
@@ -41,6 +48,12 @@ export const onRequestPatch: PagesFunction<Env> = async ({ request, env, params 
   if (body.date !== undefined && !isDateOrNull(body.date)) {
     return json({ error: `Bad date: ${String(body.date)}` }, 400)
   }
+  if (body.slug !== undefined) {
+    if (typeof body.slug !== 'string' || !SLUG_RE.test(body.slug)) {
+      return json({ error: 'slug må være små bokstaver, tall og bindestrek' }, 400)
+    }
+    if (body.slug === 'new') return json({ error: 'slug "new" er reservert' }, 400)
+  }
 
   try {
     const [current] = await runCypher<{ kind: 'incident' | 'operation' | null }>(env, `
@@ -50,22 +63,41 @@ export const onRequestPatch: PagesFunction<Env> = async ({ request, env, params 
     `, { slug })
     if (!current?.kind) return json({ error: 'Node not found or not an Incident/Operation' }, 404)
 
+    // Slug collision check (skip if unchanged).
+    if (body.slug !== undefined && body.slug !== slug) {
+      const [hit] = await runCypher<{ exists: boolean }>(env, `
+        OPTIONAL MATCH (n {slug: $newSlug})
+        WHERE n:Incident OR n:Operation
+        RETURN n IS NOT NULL AS exists
+      `, { newSlug: body.slug })
+      if (hit?.exists) return json({ error: `Slug finnes allerede: ${body.slug}` }, 409)
+    }
+
     const nameProp = current.kind === 'operation' ? 'codeName' : 'title'
     const setClauses: string[] = []
     const params2: Record<string, unknown> = { slug }
     if (body.name !== undefined) { setClauses.push(`n.${nameProp} = $name`); params2.name = body.name.trim() }
     if (body.date !== undefined) { setClauses.push(`n.date = $date`);      params2.date = body.date }
+    if (body.slug !== undefined && body.slug !== slug) {
+      setClauses.push(`n.slug = $newSlug`); params2.newSlug = body.slug
+    }
 
     if (!setClauses.length) return json({ ok: true, kind: current.kind, unchanged: true })
 
-    const [updated] = await runCypher<{ name: string | null; date: string | null }>(env, `
+    const [updated] = await runCypher<{ slug: string; name: string | null; date: string | null }>(env, `
       MATCH (n {slug: $slug})
       WHERE n:Incident OR n:Operation
       SET ${setClauses.join(', ')}
-      RETURN n.${nameProp} AS name, n.date AS date
+      RETURN n.slug AS slug, n.${nameProp} AS name, n.date AS date
     `, params2)
 
-    return json({ ok: true, kind: current.kind, name: updated?.name ?? null, date: updated?.date ?? null })
+    return json({
+      ok:   true,
+      kind: current.kind,
+      slug: updated?.slug ?? slug,
+      name: updated?.name ?? null,
+      date: updated?.date ?? null,
+    })
   } catch (e) {
     return json({ error: (e as Error).message }, 502)
   }

@@ -31,6 +31,7 @@
       :demote-blockers="demoteBlockers"
       @saved-scalar="onSavedScalar"
       @kind-flipped="() => loadEvent(props.event.slug)"
+      @slug-changed="newSlug => emit('event-renamed', { from: props.event.slug, to: newSlug })"
       @saved-sections="sections => savedSections = sections"
     />
 
@@ -47,29 +48,33 @@
         <!-- eslint-enable vue/no-v-html -->
       </section>
 
-      <!-- Fra Sted -->
+      <!-- Sted (incident: AT) / Fra Sted (operation: FROM) -->
       <section v-if="event.locationFrom" class="section">
-        <h3 class="section-heading">Fra Sted</h3>
+        <h3 class="section-heading">{{ event.kind === 'operation' ? 'Fra Sted' : 'Sted' }}</h3>
         <RouterLink :to="`/map/${event.locationFrom.slug}`" class="section-link">
           {{ event.locationFrom.title }}
         </RouterLink>
       </section>
 
-      <!-- Til Sted -->
-      <section v-if="event.locationTo" class="section">
+      <!-- Til Sted — operation only -->
+      <section v-if="event.kind === 'operation' && event.locationTo" class="section">
         <h3 class="section-heading">Til Sted</h3>
         <RouterLink :to="`/map/${event.locationTo.slug}`" class="section-link">
           {{ event.locationTo.title }}
         </RouterLink>
       </section>
 
-      <!-- Stasjoner -->
+      <!-- Base (incident: AT_STATION) / Stasjoner (operation: FROM/TO_STATION) -->
       <section v-if="event.stationFrom || event.stationTo" class="section">
-        <h3 class="section-heading">{{ event.stationFrom && event.stationTo ? 'Stasjoner' : (event.stationFrom ? 'Fra Base' : 'Til Base') }}</h3>
+        <h3 class="section-heading">{{
+          event.kind === 'operation'
+            ? (event.stationFrom && event.stationTo ? 'Stasjoner' : (event.stationFrom ? 'Fra Base' : 'Til Base'))
+            : 'Base'
+        }}</h3>
         <RouterLink v-if="event.stationFrom" :to="`/station/${event.stationFrom.slug}`" class="section-link">
           {{ event.stationFrom.title }}
         </RouterLink>
-        <RouterLink v-if="event.stationTo" :to="`/station/${event.stationTo.slug}`" class="section-link">
+        <RouterLink v-if="event.kind === 'operation' && event.stationTo" :to="`/station/${event.stationTo.slug}`" class="section-link">
           {{ event.stationTo.title }}
         </RouterLink>
       </section>
@@ -154,6 +159,9 @@ const props = defineProps<{ event: IdbEventDetail }>()
 const emit  = defineEmits<{
   'select-event-slug': [slug: string]
   'select-date':       [date: string]
+  // Rename, not navigation: the parent must re-key its caches before the
+  // URL changes, or the new slug resolves to nothing.
+  'event-renamed':     [move: { from: string; to: string }]
 }>()
 
 const { user } = useAuth()
@@ -174,6 +182,12 @@ const {
   inOperationEntries, inOperationTargets,
   orgEntries, orgTargets,
   unitEntries, unitTargets,
+  fromLocationEntries, fromLocationTargets,
+  toLocationEntries,   toLocationTargets,
+  fromStationEntries,  fromStationTargets,
+  toStationEntries,    toStationTargets,
+  atLocationEntries,   atLocationTargets,
+  atStationEntries,    atStationTargets,
   demoteBlockers,
   loadEvent,
 } = eventData
@@ -196,6 +210,12 @@ const relationsData = computed<EventRelationsData>(() => ({
   inOperation:  { entries: inOperationEntries.value,   targets: inOperationTargets.value   },
   org:          { entries: orgEntries.value,            targets: orgTargets.value           },
   unit:         { entries: unitEntries.value,           targets: unitTargets.value          },
+  fromLocation: { entries: fromLocationEntries.value,   targets: fromLocationTargets.value  },
+  toLocation:   { entries: toLocationEntries.value,     targets: toLocationTargets.value    },
+  fromStation:  { entries: fromStationEntries.value,    targets: fromStationTargets.value   },
+  toStation:    { entries: toStationEntries.value,      targets: toStationTargets.value     },
+  atLocation:   { entries: atLocationEntries.value,     targets: atLocationTargets.value    },
+  atStation:    { entries: atStationEntries.value,      targets: atStationTargets.value     },
 }))
 
 function onSavedScalar(out: { name?: string; date?: string | null }) {

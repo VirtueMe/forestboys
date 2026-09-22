@@ -19,6 +19,9 @@ import {
   SubIncidentsStrategy, SubOperationsStrategy, OperationIncidentsStrategy,
   IncidentInOperationStrategy,
   OperationOrganizationsStrategy, OperationUnitsStrategy,
+  OperationFromLocationStrategy, OperationToLocationStrategy,
+  OperationFromStationStrategy,  OperationToStationStrategy,
+  IncidentAtLocationStrategy, IncidentAtStationStrategy,
 } from '@/components/relation/strategies.ts'
 
 export type EventKind = 'incident' | 'operation'
@@ -83,6 +86,21 @@ export function useEventData() {
   const orgTargets           = ref<RelationTarget[]>([])
   const unitEntries          = ref<RelationEntry[]>([])
   const unitTargets          = ref<RelationTarget[]>([])
+  // Location/station single-target slots. Loaded lazy-by-kind: an
+  // Incident gets `at*`; an Operation gets `from*` + `to*`. The unused
+  // sets stay empty.
+  const fromLocationEntries  = ref<RelationEntry[]>([])
+  const fromLocationTargets  = ref<RelationTarget[]>([])
+  const toLocationEntries    = ref<RelationEntry[]>([])
+  const toLocationTargets    = ref<RelationTarget[]>([])
+  const fromStationEntries   = ref<RelationEntry[]>([])
+  const fromStationTargets   = ref<RelationTarget[]>([])
+  const toStationEntries     = ref<RelationEntry[]>([])
+  const toStationTargets     = ref<RelationTarget[]>([])
+  const atLocationEntries    = ref<RelationEntry[]>([])
+  const atLocationTargets    = ref<RelationTarget[]>([])
+  const atStationEntries     = ref<RelationEntry[]>([])
+  const atStationTargets     = ref<RelationTarget[]>([])
 
   const personStrategy = computed(() =>
     event.value?.kind === 'operation' ? PersonParticipationStrategy : PersonInvolvementStrategy,
@@ -122,6 +140,18 @@ export function useEventData() {
     orgTargets.value           = []
     unitEntries.value          = []
     unitTargets.value          = []
+    fromLocationEntries.value  = []
+    fromLocationTargets.value  = []
+    toLocationEntries.value    = []
+    toLocationTargets.value    = []
+    fromStationEntries.value   = []
+    fromStationTargets.value   = []
+    toStationEntries.value     = []
+    toStationTargets.value     = []
+    atLocationEntries.value    = []
+    atLocationTargets.value    = []
+    atStationEntries.value     = []
+    atStationTargets.value     = []
   }
 
   async function loadEvent(slug: string): Promise<void> {
@@ -197,18 +227,26 @@ export function useEventData() {
     gallery.value       = galleryRows
 
     if (row.kind === 'incident') {
-      const [se, st, ie, it] = await Promise.all([
+      const [se, st, ie, it, atL, atLT, atS, atST] = await Promise.all([
         SubIncidentsStrategy.fetchEntries(slug),
         SubIncidentsStrategy.fetchTargets(),
         IncidentInOperationStrategy.fetchEntries(slug),
         IncidentInOperationStrategy.fetchTargets(),
+        IncidentAtLocationStrategy.fetchEntries(slug),
+        IncidentAtLocationStrategy.fetchTargets(),
+        IncidentAtStationStrategy.fetchEntries(slug),
+        IncidentAtStationStrategy.fetchTargets(),
       ])
       subIncidentEntries.value = se
       subIncidentTargets.value = st
       inOperationEntries.value = ie
       inOperationTargets.value = it
+      atLocationEntries.value  = atL
+      atLocationTargets.value  = atLT
+      atStationEntries.value   = atS
+      atStationTargets.value   = atST
     } else {
-      const [so, sot, oi, oit, oe, ot, ue, ut] = await Promise.all([
+      const [so, sot, oi, oit, oe, ot, ue, ut, fL, fLT, tL, tLT, fS, fST, tS, tST] = await Promise.all([
         SubOperationsStrategy.fetchEntries(slug),
         SubOperationsStrategy.fetchTargets(),
         OperationIncidentsStrategy.fetchEntries(slug),
@@ -217,15 +255,31 @@ export function useEventData() {
         OperationOrganizationsStrategy.fetchTargets(),
         OperationUnitsStrategy.fetchEntries(slug),
         OperationUnitsStrategy.fetchTargets(),
+        OperationFromLocationStrategy.fetchEntries(slug),
+        OperationFromLocationStrategy.fetchTargets(),
+        OperationToLocationStrategy.fetchEntries(slug),
+        OperationToLocationStrategy.fetchTargets(),
+        OperationFromStationStrategy.fetchEntries(slug),
+        OperationFromStationStrategy.fetchTargets(),
+        OperationToStationStrategy.fetchEntries(slug),
+        OperationToStationStrategy.fetchTargets(),
       ])
-      subOperationEntries.value = so
-      subOperationTargets.value = sot
-      opIncidentEntries.value   = oi
-      opIncidentTargets.value   = oit
-      orgEntries.value          = oe
-      orgTargets.value          = ot
-      unitEntries.value         = ue
-      unitTargets.value         = ut
+      subOperationEntries.value  = so
+      subOperationTargets.value  = sot
+      opIncidentEntries.value    = oi
+      opIncidentTargets.value    = oit
+      orgEntries.value           = oe
+      orgTargets.value           = ot
+      unitEntries.value          = ue
+      unitTargets.value          = ut
+      fromLocationEntries.value  = fL
+      fromLocationTargets.value  = fLT
+      toLocationEntries.value    = tL
+      toLocationTargets.value    = tLT
+      fromStationEntries.value   = fS
+      fromStationTargets.value   = fST
+      toStationEntries.value     = tS
+      toStationTargets.value     = tST
     }
   }
 
@@ -242,6 +296,12 @@ export function useEventData() {
     inOperationEntries, inOperationTargets,
     orgEntries,         orgTargets,
     unitEntries,        unitTargets,
+    fromLocationEntries, fromLocationTargets,
+    toLocationEntries,   toLocationTargets,
+    fromStationEntries,  fromStationTargets,
+    toStationEntries,    toStationTargets,
+    atLocationEntries,   atLocationTargets,
+    atStationEntries,    atStationTargets,
     demoteBlockers,
     loadEvent,
     resetEvent,

@@ -33,6 +33,7 @@
         :demote-blockers="demoteBlockers"
         @saved-scalar="onSavedScalar"
         @kind-flipped="() => loadEvent(String(route.params.slug))"
+        @slug-changed="onSlugChanged"
         @saved-sections="sections => savedSections = sections"
       />
 
@@ -211,6 +212,12 @@ const {
   inOperationEntries, inOperationTargets,
   orgEntries, orgTargets,
   unitEntries, unitTargets,
+  fromLocationEntries, fromLocationTargets,
+  toLocationEntries,   toLocationTargets,
+  fromStationEntries,  fromStationTargets,
+  toStationEntries,    toStationTargets,
+  atLocationEntries,   atLocationTargets,
+  atStationEntries,    atStationTargets,
   demoteBlockers,
   loadEvent,
 } = eventData
@@ -234,6 +241,12 @@ const relationsData = computed<EventRelationsData>(() => ({
   inOperation:  { entries: inOperationEntries.value,  targets: inOperationTargets.value  },
   org:          { entries: orgEntries.value,           targets: orgTargets.value          },
   unit:         { entries: unitEntries.value,          targets: unitTargets.value         },
+  fromLocation: { entries: fromLocationEntries.value,  targets: fromLocationTargets.value },
+  toLocation:   { entries: toLocationEntries.value,    targets: toLocationTargets.value   },
+  fromStation:  { entries: fromStationEntries.value,   targets: fromStationTargets.value  },
+  toStation:    { entries: toStationEntries.value,     targets: toStationTargets.value    },
+  atLocation:   { entries: atLocationEntries.value,    targets: atLocationTargets.value   },
+  atStation:    { entries: atStationEntries.value,     targets: atStationTargets.value    },
 }))
 
 function onSavedScalar(out: { name?: string; date?: string | null }) {
@@ -241,6 +254,13 @@ function onSavedScalar(out: { name?: string; date?: string | null }) {
     if (out.name != null) neoEvent.value.canonicalName = out.name
     if (out.date !== undefined) neoEvent.value.date = out.date ?? null
   }
+}
+
+async function onSlugChanged(newSlug: string) {
+  // Replace the URL silently and re-load the event under the new slug so
+  // all downstream queries (relations, sections, blockers) re-key.
+  await router.replace(`/events/${encodeURIComponent(newSlug)}`)
+  await loadEvent(newSlug)
 }
 
 // Prefer Neo4j edges; fall back to Sanity-IDB if Neo4j hasn't materialized.

@@ -42,7 +42,7 @@ export function useEventsContext() {
   // Events list now comes from Neo4j; orgColors/districtColors stay
   // sourced from the Sanity-derived cache for now.
   const { orgColors, districtColors } = useLocationCache()
-  const { events, loading, init } = useEventsList()
+  const { events, loading, init, renameEvent: renameEventRow } = useEventsList()
 
   // ── Colours ───────────────────────────────────────────────────────────────
   function orgColor(name: string): string {
@@ -221,6 +221,23 @@ export function useEventsContext() {
     }
   }, { immediate: true })
 
+  /**
+   * Re-key a renamed event in both caches. `slugEvent` resolves the URL
+   * slug against the cached list, so a rename leaves the new URL pointing
+   * at nothing — isDetail goes false and the whole detail block unmounts,
+   * error branch included. Carrying the detail across too avoids a refetch
+   * of data the rename didn't change.
+   */
+  function renameEvent(oldSlug: string, newSlug: string): void {
+    if (oldSlug === newSlug) return
+    renameEventRow(oldSlug, newSlug)
+    const cached = detailCache[oldSlug]
+    if (cached) {
+      detailCache[newSlug] = { ...cached, slug: newSlug, _id: newSlug }
+      delete detailCache[oldSlug]
+    }
+  }
+
   // ── Timeline data builder ─────────────────────────────────────────────────
   function buildTimelineData(evts: IdbEvent[]): Record<string, unknown> {
     const slugVal = (route.params.slug as string | undefined) ?? ''
@@ -278,6 +295,7 @@ export function useEventsContext() {
     visibleDetail,
     loadingDetail,
     detailError,
+    renameEvent,
     // colours
     orgColor,
     // timeline

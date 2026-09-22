@@ -63,7 +63,19 @@ export function useEventsList() {
     }
   }
 
-  return { events, loading, init }
+  /**
+   * Patch a cached row after a slug rename. The list is fetched once per
+   * EventsView mount, so without this the renamed event is unreachable by
+   * its new slug until a full reload.
+   */
+  function renameEvent(oldSlug: string, newSlug: string): void {
+    const row = events.value.find(e => e.slug === oldSlug)
+    if (!row) return
+    row.slug = newSlug
+    row._id  = newSlug
+  }
+
+  return { events, loading, init, renameEvent }
 }
 
 /**
@@ -95,6 +107,14 @@ export async function fetchEventDetailFromNeo4j(slug: string): Promise<IdbEventD
   if (!head) return null
 
   const kindLabel = head.kind === 'operation' ? 'Operation' : 'Incident'
+  // Incidents collapsed FROM/TO into single AT (location + station). Read
+  // the right edges per kind so the preview renders cleanly. The IDB shape
+  // still has only locationFrom/stationFrom slots, so the AT edge maps in
+  // there for incidents — EventPanel relabels by `event.kind`.
+  const locFromEdge   = kindLabel === 'Operation' ? '[:FROM]'         : '[:AT]'
+  const locToEdge     = kindLabel === 'Operation' ? '[:TO]'           : '[:AT]'   // unused for incidents
+  const stFromEdge    = kindLabel === 'Operation' ? '[:FROM_STATION]' : '[:AT_STATION]'
+  const stToEdge      = kindLabel === 'Operation' ? '[:TO_STATION]'   : '[:AT_STATION]'
 
   const [descRows, locFromRows, locToRows, stFromRows, stToRows, peopleRows, galleryRows] = await Promise.all([
     neo4jQuery<{ content: string | null }>(
@@ -104,25 +124,29 @@ export async function fetchEventDetailFromNeo4j(slug: string): Promise<IdbEventD
       { slug },
     ),
     neo4jQuery<{ slug: string; title: string }>(
-      `MATCH (:\`${kindLabel}\` {slug: $slug})-[:FROM]->(l:Location)
+      `MATCH (:\`${kindLabel}\` {slug: $slug})-${locFromEdge}->(l:Location)
        RETURN l.slug AS slug, coalesce(l.canonicalName, l.title) AS title`,
       { slug },
     ),
+    kindLabel === 'Operation'
+      ? neo4jQuery<{ slug: string; title: string }>(
+          `MATCH (:\`${kindLabel}\` {slug: $slug})-${locToEdge}->(l:Location)
+           RETURN l.slug AS slug, coalesce(l.canonicalName, l.title) AS title`,
+          { slug },
+        )
+      : Promise.resolve([] as { slug: string; title: string }[]),
     neo4jQuery<{ slug: string; title: string }>(
-      `MATCH (:\`${kindLabel}\` {slug: $slug})-[:TO]->(l:Location)
-       RETURN l.slug AS slug, coalesce(l.canonicalName, l.title) AS title`,
-      { slug },
-    ),
-    neo4jQuery<{ slug: string; title: string }>(
-      `MATCH (:\`${kindLabel}\` {slug: $slug})-[:FROM_STATION]->(s:Station)
+      `MATCH (:\`${kindLabel}\` {slug: $slug})-${stFromEdge}->(s:Station)
        RETURN s.slug AS slug, coalesce(s.canonicalName, s.title) AS title`,
       { slug },
     ),
-    neo4jQuery<{ slug: string; title: string }>(
-      `MATCH (:\`${kindLabel}\` {slug: $slug})-[:TO_STATION]->(s:Station)
-       RETURN s.slug AS slug, coalesce(s.canonicalName, s.title) AS title`,
-      { slug },
-    ),
+    kindLabel === 'Operation'
+      ? neo4jQuery<{ slug: string; title: string }>(
+          `MATCH (:\`${kindLabel}\` {slug: $slug})-${stToEdge}->(s:Station)
+           RETURN s.slug AS slug, coalesce(s.canonicalName, s.title) AS title`,
+          { slug },
+        )
+      : Promise.resolve([] as { slug: string; title: string }[]),
     neo4jQuery<{ slug: string; name: string }>(
       `MATCH (p:Person)-[:INVOLVED_IN|PARTICIPATED_IN]->(:\`${kindLabel}\` {slug: $slug})
        RETURN DISTINCT p.slug AS slug, p.canonicalName AS name
@@ -160,6 +184,7 @@ export async function fetchEventDetailFromNeo4j(slug: string): Promise<IdbEventD
     _id:          slug,
     title:        head.title ?? slug,
     slug,
+    kind:         head.kind,
     date:         head.date ?? undefined,
     organization: head.organization ?? undefined,
     district:     head.district     ?? undefined,
