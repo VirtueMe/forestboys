@@ -11,6 +11,7 @@
 /stations                  Stasjoner list
 /station/:slug             Stasjon detail
 /location/:slug            Sted detail (admin: Rediger + /location/new)
+/equipment/:slug           Utstyr detail (admin: Rediger + /equipment/new)
 /people                    Personer list — virtual scroll, search
 /person/:slug/:child?      Person detail; child = sub-entity slug
 /transport                 Fremdriftsmidler list
@@ -38,6 +39,7 @@
 { path: '/stations',                component: StationsView },
 { path: '/station/:slug',           component: StationDetail },
 { path: '/location/:slug',          component: LocationDetail },
+{ path: '/equipment/:slug',         component: EquipmentDetail },
 { path: '/people',                  component: PeopleView },
 { path: '/person/:slug/:child?',    component: PersonDetail },
 { path: '/transport',               component: TransportView },

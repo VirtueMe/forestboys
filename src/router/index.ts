@@ -5,6 +5,7 @@ import EventsView    from '../pages/EventsView.vue'
 import StationsView  from '../pages/StationsView.vue'
 import StationDetail from '../pages/StationDetail.vue'
 import LocationDetail from '../pages/LocationDetail.vue'
+import EquipmentDetail from '../pages/EquipmentDetail.vue'
 import PeopleView    from '../pages/PeopleView.vue'
 import PersonDetail  from '../pages/PersonDetail.vue'
 import TransportView   from '../pages/TransportView.vue'
@@ -48,6 +49,7 @@ const router = createRouter({
     { path: '/stations',                component: StationsView },
     { path: '/station/:slug',           component: StationDetail },
     { path: '/location/:slug',          component: LocationDetail },
+    { path: '/equipment/:slug',         component: EquipmentDetail },
     { path: '/people',                  component: PeopleView },
     { path: '/person/:slug/:child?',    component: PersonDetail },
     { path: '/transport',               component: TransportView },

@@ -34,7 +34,7 @@
 import { ref, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 
-type Kind = 'organization' | 'person' | 'unit' | 'station' | 'location' | 'transport'
+type Kind = 'organization' | 'person' | 'unit' | 'station' | 'location' | 'equipment' | 'transport'
 
 const KINDS: ReadonlyArray<{ kind: Kind; label: string; path: string }> = [
   { kind: 'organization', label: 'Organisasjon',    path: '/organization/new' },
@@ -42,6 +42,7 @@ const KINDS: ReadonlyArray<{ kind: Kind; label: string; path: string }> = [
   { kind: 'unit',         label: 'Avdeling',        path: '/district/new' },
   { kind: 'station',      label: 'Stasjon',         path: '/station/new' },
   { kind: 'location',     label: 'Sted',            path: '/location/new' },
+  { kind: 'equipment',    label: 'Utstyr',          path: '/equipment/new' },
   { kind: 'transport',    label: 'Fremkomstmiddel', path: '/transport/new' },
 ]
 

@@ -1321,3 +1321,39 @@ export const OrgIncidentsStrategy: RelationStrategy = {
   saveNote: noteIsNoop,
   targetRoute(entry) { return `/events/${entry.targetSlug}` },
 }
+
+/**
+ * Equipment pairing — (a:EquipmentType)-[:PAIRED_WITH]-(b:EquipmentType).
+ * Symmetric: read in both directions, saved as one outgoing edge per pair
+ * (the endpoint clears edges either way before recreating).
+ */
+export const EquipmentPairedStrategy: RelationStrategy = {
+  async fetchTargets() {
+    return neo4jQuery<RelationTarget>(`
+      MATCH (e:EquipmentType) WHERE e.slug IS NOT NULL
+      RETURN e.slug AS slug, trim(e.canonicalName) AS name
+      ORDER BY name
+    `)
+  },
+  async fetchEntries(parentSlug) {
+    const rows = await neo4jQuery<HierarchyRow>(`
+      MATCH (:EquipmentType {slug: $slug})-[:PAIRED_WITH]-(other:EquipmentType)
+      RETURN DISTINCT other.slug AS targetSlug, trim(other.canonicalName) AS targetName
+      ORDER BY targetName
+    `, { slug: parentSlug })
+    return rows.map(hierarchyRowToEntry)
+  },
+  async saveEntries(parentSlug, entries) {
+    const res = await authFetch(`/api/admin/equipment/${encodeURIComponent(parentSlug)}/paired`, {
+      method:  'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ paired: entries.map(e => ({ equipmentSlug: e.targetSlug })) }),
+    })
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({})) as { error?: string }
+      throw new Error(body.error ?? `HTTP ${res.status}`)
+    }
+  },
+  saveNote: noopSaveNote,
+  targetRoute(entry) { return `/equipment/${entry.targetSlug}` },
+}
