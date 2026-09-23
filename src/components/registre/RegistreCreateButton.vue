@@ -34,13 +34,14 @@
 import { ref, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 
-type Kind = 'organization' | 'person' | 'unit' | 'station' | 'transport'
+type Kind = 'organization' | 'person' | 'unit' | 'station' | 'location' | 'transport'
 
 const KINDS: ReadonlyArray<{ kind: Kind; label: string; path: string }> = [
   { kind: 'organization', label: 'Organisasjon',    path: '/organization/new' },
   { kind: 'person',       label: 'Person',          path: '/person/new' },
   { kind: 'unit',         label: 'Avdeling',        path: '/district/new' },
   { kind: 'station',      label: 'Stasjon',         path: '/station/new' },
+  { kind: 'location',     label: 'Sted',            path: '/location/new' },
   { kind: 'transport',    label: 'Fremkomstmiddel', path: '/transport/new' },
 ]
 

@@ -90,6 +90,7 @@ interface NeoRow { name: string; slug: string; color?: string | null; entityType
 const neoOrgs         = ref<NeoRow[]>([])
 const neoUnits        = ref<NeoRow[]>([])
 const neoStations     = ref<NeoRow[]>([])
+const neoLocations    = ref<NeoRow[]>([])
 const neoPeople       = ref<NeoRow[]>([])
 const neoTransport    = ref<NeoRow[]>([])
 const neoInformasjon  = ref<NeoRow[]>([])
@@ -97,7 +98,7 @@ const loading         = ref(true)
 
 onMounted(async () => {
   try {
-    const [orgs, units, stations, people, transport, articles, operations, equipment, sources, outlines] = await Promise.all([
+    const [orgs, units, stations, locations, people, transport, articles, operations, equipment, sources, outlines] = await Promise.all([
       // Top-level Organizations only (sub-orgs surfaced via PART_OF* on demand).
       neo4jQuery<NeoRow>(
         `MATCH (o:Organization)
@@ -113,6 +114,10 @@ onMounted(async () => {
       neo4jQuery<NeoRow>(
         `MATCH (s:Station)
          RETURN s.canonicalName AS name, s.slug AS slug
+         ORDER BY name`),
+      neo4jQuery<NeoRow>(
+        `MATCH (l:Location)
+         RETURN l.canonicalName AS name, l.slug AS slug
          ORDER BY name`),
       neo4jQuery<NeoRow>(
         `MATCH (p:Person)
@@ -141,6 +146,7 @@ onMounted(async () => {
     neoOrgs.value         = orgs
     neoUnits.value        = units
     neoStations.value     = stations
+    neoLocations.value    = locations
     neoPeople.value       = people
     neoTransport.value    = transport
     neoInformasjon.value  = [
@@ -164,12 +170,13 @@ onMounted(async () => {
 })
 
 // ── Type config ───────────────────────────────────────────────
-const TYPE_OPTIONS = ['Organisasjon', 'Avdeling', 'Stasjon', 'Person', 'Fremkomstmiddel', 'Informasjon']
+const TYPE_OPTIONS = ['Organisasjon', 'Avdeling', 'Stasjon', 'Sted', 'Person', 'Fremkomstmiddel', 'Informasjon']
 
 const TYPE_COLORS: Record<string, string> = {
   Organisasjon:    'var(--color-orange, #e38924)',
   Avdeling:        'var(--color-teal, #047485)',
   Stasjon:         'var(--focus)',
+  Sted:            'var(--ink-soft)',
   Person:          'var(--moss)',
   Fremkomstmiddel: 'var(--faded-red)',
   Informasjon:     'var(--muted)',
@@ -179,6 +186,7 @@ const TYPE_KEY: Record<string, string> = {
   Organisasjon:    'organization',
   Avdeling:        'district',
   Stasjon:         'station',
+  Sted:            'location',
   Person:          'person',
   Fremkomstmiddel: 'transport',
   Informasjon:     'outline',
@@ -227,6 +235,10 @@ const allEntries = computed<Entry[]>(() => {
     ...neoStations.value.map(s => ({
       type: 'station', label: 'Stasjon',
       name: s.name, slug: s.slug, route: `/station/${s.slug}`,
+    })),
+    ...neoLocations.value.map(l => ({
+      type: 'location', label: 'Sted',
+      name: l.name, slug: l.slug, route: `/location/${l.slug}`,
     })),
     ...neoPeople.value.map(p => ({
       type: 'person', label: 'Person',

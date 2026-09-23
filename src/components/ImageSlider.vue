@@ -210,7 +210,7 @@ function subjectRoute(img: SlideImage): string {
     case 'person':       return `/person/${img.subjectSlug}`
     case 'incident':     return `/events/${img.subjectSlug}`
     case 'station':      return `/station/${img.subjectSlug}`
-    case 'location':     return `/map/${img.subjectSlug}`
+    case 'location':     return `/location/${img.subjectSlug}`
     case 'transport':    return `/transport/${img.subjectSlug}`
     default:             return '/'
   }

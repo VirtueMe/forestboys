@@ -10,6 +10,7 @@
 /events/:slug              Hendelsekatalog — detail mode, scoped timeline
 /stations                  Stasjoner list
 /station/:slug             Stasjon detail
+/location/:slug            Sted detail (admin: Rediger + /location/new)
 /people                    Personer list — virtual scroll, search
 /person/:slug/:child?      Person detail; child = sub-entity slug
 /transport                 Fremdriftsmidler list
@@ -36,6 +37,7 @@
 { path: '/directory',               redirect: '/events' },
 { path: '/stations',                component: StationsView },
 { path: '/station/:slug',           component: StationDetail },
+{ path: '/location/:slug',          component: LocationDetail },
 { path: '/people',                  component: PeopleView },
 { path: '/person/:slug/:child?',    component: PersonDetail },
 { path: '/transport',               component: TransportView },

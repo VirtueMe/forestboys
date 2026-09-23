@@ -4,6 +4,7 @@ import MapView       from '../pages/MapView.vue'
 import EventsView    from '../pages/EventsView.vue'
 import StationsView  from '../pages/StationsView.vue'
 import StationDetail from '../pages/StationDetail.vue'
+import LocationDetail from '../pages/LocationDetail.vue'
 import PeopleView    from '../pages/PeopleView.vue'
 import PersonDetail  from '../pages/PersonDetail.vue'
 import TransportView   from '../pages/TransportView.vue'
@@ -45,6 +46,7 @@ const router = createRouter({
     { path: '/directory', redirect: '/events' },
     { path: '/stations',                component: StationsView },
     { path: '/station/:slug',           component: StationDetail },
+    { path: '/location/:slug',          component: LocationDetail },
     { path: '/people',                  component: PeopleView },
     { path: '/person/:slug/:child?',    component: PersonDetail },
     { path: '/transport',               component: TransportView },
