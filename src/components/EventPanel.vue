@@ -51,7 +51,7 @@
       <!-- Sted (incident: AT) / Fra Sted (operation: FROM) -->
       <section v-if="event.locationFrom" class="section">
         <h3 class="section-heading">{{ event.kind === 'operation' ? 'Fra Sted' : 'Sted' }}</h3>
-        <RouterLink :to="`/map/${event.locationFrom.slug}`" class="section-link">
+        <RouterLink :to="placeRoute(event.locationFrom.slug)" class="section-link">
           {{ event.locationFrom.title }}
         </RouterLink>
       </section>
@@ -59,7 +59,7 @@
       <!-- Til Sted — operation only -->
       <section v-if="event.kind === 'operation' && event.locationTo" class="section">
         <h3 class="section-heading">Til Sted</h3>
-        <RouterLink :to="`/map/${event.locationTo.slug}`" class="section-link">
+        <RouterLink :to="placeRoute(event.locationTo.slug)" class="section-link">
           {{ event.locationTo.title }}
         </RouterLink>
       </section>
@@ -152,6 +152,7 @@ import BundleReviewPanel from './BundleReviewPanel.vue'
 import EventEditPane from './event/EventEditPane.vue'
 import type { EventRelationsData } from './event/EventRelations.vue'
 import { useAuth } from '../composables/useAuth.ts'
+import { usePlaceRoute } from '../composables/usePlaceRoute.ts'
 import { useEventData } from '../composables/useEventData.ts'
 import { useEntityBundles } from '../composables/useEntityBundles.ts'
 
@@ -166,6 +167,7 @@ const emit  = defineEmits<{
 
 const { user } = useAuth()
 const isAdmin = computed(() => user.value?.role === 'admin')
+const placeRoute = usePlaceRoute()
 
 // Neo4j event data — used for the edit form + Forslag tab. EventsView
 // loads detail via fetchEventDetailFromNeo4j into the `event` prop, so

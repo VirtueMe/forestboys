@@ -29,7 +29,7 @@
       <RouterLink
         v-for="loc in person.locations"
         :key="loc.slug"
-        :to="`/map/${loc.slug}`"
+        :to="placeRoute(loc.slug)"
         class="section-link"
       >
         {{ loc.title }}
@@ -83,6 +83,7 @@
 import { ref, computed } from 'vue'
 import { RouterLink } from 'vue-router'
 import type { IdbEvent } from '@/types/idb.ts'
+import { usePlaceRoute } from '@/composables/usePlaceRoute.ts'
 
 interface PersonShape {
   events?:    IdbEvent[]
@@ -99,6 +100,8 @@ const props = defineProps<{
   /** Hide the legacy IDB events list when Neo4j incidents take precedence. */
   showLegacyEvents:  boolean
 }>()
+
+const placeRoute = usePlaceRoute()
 
 const eventSortAsc = ref(true)
 

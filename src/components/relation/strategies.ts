@@ -870,7 +870,7 @@ export const OperationFromLocationStrategy = singleEdgeStrategy({
   `,
   endpointPath: s => `/api/admin/operation/${encodeURIComponent(s)}/from-location`,
   bodyField:    'locationSlug',
-  routePrefix:  '/map',
+  routePrefix:  '/location',
 })
 
 export const OperationToLocationStrategy = singleEdgeStrategy({
@@ -882,7 +882,7 @@ export const OperationToLocationStrategy = singleEdgeStrategy({
   `,
   endpointPath: s => `/api/admin/operation/${encodeURIComponent(s)}/to-location`,
   bodyField:    'locationSlug',
-  routePrefix:  '/map',
+  routePrefix:  '/location',
 })
 
 export const OperationFromStationStrategy = singleEdgeStrategy({
@@ -920,7 +920,7 @@ export const IncidentAtLocationStrategy = singleEdgeStrategy({
   `,
   endpointPath: s => `/api/admin/incident/${encodeURIComponent(s)}/at-location`,
   bodyField:    'locationSlug',
-  routePrefix:  '/map',
+  routePrefix:  '/location',
 })
 
 export const IncidentAtStationStrategy = singleEdgeStrategy({

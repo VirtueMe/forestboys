@@ -57,7 +57,7 @@
         <!-- Fra Sted -->
         <section v-if="displayLocationFrom" class="section">
           <h2 class="section-heading">Fra Sted</h2>
-          <RouterLink :to="`/map/${displayLocationFrom.slug}`" class="section-link">
+          <RouterLink :to="placeRoute(displayLocationFrom.slug)" class="section-link">
             {{ displayLocationFrom.title }}
           </RouterLink>
         </section>
@@ -65,7 +65,7 @@
         <!-- Til Sted -->
         <section v-if="displayLocationTo" class="section">
           <h2 class="section-heading">Til Sted</h2>
-          <RouterLink :to="`/map/${displayLocationTo.slug}`" class="section-link">
+          <RouterLink :to="placeRoute(displayLocationTo.slug)" class="section-link">
             {{ displayLocationTo.title }}
           </RouterLink>
         </section>
@@ -175,6 +175,7 @@ import { ref, computed, onMounted, inject } from 'vue'
 import { useRoute, useRouter, RouterLink } from 'vue-router'
 import { fetchEventDetailBySlug } from '../composables/useLocationCache.ts'
 import { useAuth } from '../composables/useAuth.ts'
+import { usePlaceRoute } from '../composables/usePlaceRoute.ts'
 import { useEventData } from '../composables/useEventData.ts'
 import { EventDataKey } from '../composables/proposalDataInjection.ts'
 import { SANITY_IMG } from '../config/sanity.ts'
@@ -198,6 +199,7 @@ const currentImageIndex = ref(0)
 
 const { user } = useAuth()
 const isAdmin  = computed(() => user.value?.role === 'admin')
+const placeRoute = usePlaceRoute()
 
 // Neo4j data layer — live by default, swappable to a proposal-wrapped
 // composable when EventDataKey is provided (proposal preview modal).
