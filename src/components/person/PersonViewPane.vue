@@ -1,28 +1,31 @@
 <template>
-  <section v-if="previewSections.length || person.descriptionHtml || person.description" class="section">
-    <h3 class="section-heading">Beskrivelse</h3>
-    <DescriptionPreview v-if="previewSections.length" :sections="previewSections" itemprop="description" />
-    <LegacyDescription v-else :html="person.descriptionHtml" :text="person.description" itemprop="description" />
-  </section>
+  <!-- Single root so the page's v-show applies. -->
+  <div class="view-pane">
+    <section v-if="previewSections.length || person.descriptionHtml || person.description" class="section">
+      <h3 class="section-heading">Beskrivelse</h3>
+      <DescriptionPreview v-if="previewSections.length" :sections="previewSections" itemprop="description" />
+      <LegacyDescription v-else :html="person.descriptionHtml" :text="person.description" itemprop="description" />
+    </section>
 
-  <PersonRelations
-    mode="preview"
-    :slug="person.slug"
-    :data="relations"
-  />
+    <PersonRelations
+      mode="preview"
+      :slug="person.slug"
+      :data="relations"
+    />
 
-  <PersonExtraSections
-    :person="person"
-    :outlines="outlines"
-    :show-legacy-events="showLegacyEvents"
-  />
+    <PersonExtraSections
+      :person="person"
+      :outlines="outlines"
+      :show-legacy-events="showLegacyEvents"
+    />
 
-  <section v-if="galleryImages.length" class="section">
-    <h3 class="section-heading">Galleri ({{ galleryImages.length }})</h3>
-    <ImageSlider :images="galleryImages" />
-  </section>
+    <section v-if="galleryImages.length" class="section">
+      <h3 class="section-heading">Galleri ({{ galleryImages.length }})</h3>
+      <ImageSlider :images="galleryImages" />
+    </section>
 
-  <PersonExternalRefs :refs="externalRefs" />
+    <PersonExternalRefs :refs="externalRefs" />
+  </div>
 </template>
 
 <script setup lang="ts">

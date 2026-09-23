@@ -1,123 +1,126 @@
 <template>
-  <details v-if="!hideEditable && previewSections.length" class="section" open>
-    <summary class="section-summary">
-      <h3 class="section-heading">Beskrivelse</h3>
-    </summary>
-    <div class="section-body">
-      <DescriptionPreview :sections="previewSections" />
-    </div>
-  </details>
+  <!-- Single root so the page's v-show applies. -->
+  <div class="view-pane">
+    <details v-if="!hideEditable && previewSections.length" class="section" open>
+      <summary class="section-summary">
+        <h3 class="section-heading">Beskrivelse</h3>
+      </summary>
+      <div class="section-body">
+        <DescriptionPreview :sections="previewSections" />
+      </div>
+    </details>
 
-  <details v-if="!hideEditable && unitEntries.length" class="section" open>
-    <summary class="section-summary">
-      <h3 class="section-heading">Underavdelinger ({{ unitEntries.length }})</h3>
-    </summary>
-    <div class="section-body">
-      <div class="relation-list">
-        <div v-for="u in unitEntries" :key="u.targetSlug" class="relation-row">
-          <RouterLink :to="`/district/${u.targetSlug}`" class="relation-link">{{ u.targetName }}</RouterLink>
-          <span v-if="u.role" class="relation-role">{{ PART_OF_ROLE_LABEL[u.role] ?? u.role }}</span>
-          <button
-            v-if="u.hasDescription"
-            class="info-marker"
-            type="button"
-            aria-label="Vis forklaring"
-            @click="activeUnit = u"
+    <details v-if="!hideEditable && unitEntries.length" class="section" open>
+      <summary class="section-summary">
+        <h3 class="section-heading">Underavdelinger ({{ unitEntries.length }})</h3>
+      </summary>
+      <div class="section-body">
+        <div class="relation-list">
+          <div v-for="u in unitEntries" :key="u.targetSlug" class="relation-row">
+            <RouterLink :to="`/district/${u.targetSlug}`" class="relation-link">{{ u.targetName }}</RouterLink>
+            <span v-if="u.role" class="relation-role">{{ PART_OF_ROLE_LABEL[u.role] ?? u.role }}</span>
+            <button
+              v-if="u.hasDescription"
+              class="info-marker"
+              type="button"
+              aria-label="Vis forklaring"
+              @click="activeUnit = u"
+            >
+              i
+            </button>
+          </div>
+        </div>
+      </div>
+    </details>
+
+    <RelationInfoPopup
+      :entry="activeUnit"
+      :role-options="PART_OF_ROLE_LABEL"
+      show-role
+      @close="activeUnit = null"
+    />
+
+    <details v-if="!hideEditable && operationEntries.length" class="section" open>
+      <summary class="section-summary">
+        <h3 class="section-heading">Operasjoner ({{ operationEntries.length }})</h3>
+      </summary>
+      <div class="section-body">
+        <div class="relation-list">
+          <div v-for="op in operationEntries" :key="op.targetSlug" class="relation-row">
+            <RouterLink :to="`/events/${op.targetSlug}`" class="relation-link">{{ op.targetName }}</RouterLink>
+            <span v-if="op.startDate" class="relation-date">{{ op.startDate }}</span>
+          </div>
+        </div>
+      </div>
+    </details>
+
+    <details v-if="!hideEditable && incidentEntries.length" class="section" open>
+      <summary class="section-summary">
+        <h3 class="section-heading">Hendelser ({{ incidentEntries.length }})</h3>
+      </summary>
+      <div class="section-body">
+        <div class="relation-list">
+          <div v-for="ev in incidentEntries" :key="ev.targetSlug" class="relation-row">
+            <RouterLink :to="`/events/${ev.targetSlug}`" class="relation-link">{{ ev.targetName }}</RouterLink>
+            <span v-if="ev.startDate" class="relation-date">{{ ev.startDate }}</span>
+          </div>
+        </div>
+      </div>
+    </details>
+
+    <details v-if="galleryImages.length" class="section" open>
+      <summary class="section-summary">
+        <h3 class="section-heading">Galleri ({{ galleryImages.length }})</h3>
+      </summary>
+      <div class="section-body">
+        <ImageSlider :images="galleryImages" />
+      </div>
+    </details>
+
+    <details v-if="people.length" class="section" open>
+      <summary class="section-summary">
+        <h3 class="section-heading">Deltakere ({{ people.length }})</h3>
+      </summary>
+      <div class="section-body">
+        <div class="link-list">
+          <RouterLink
+            v-for="p in people"
+            :key="p.slug"
+            :to="`/person/${p.slug}`"
+            class="person-item"
           >
-            i
-          </button>
+            <span class="person-name">{{ p.name }}</span>
+            <span class="person-count">{{ p.eventCount }} hendelser</span>
+          </RouterLink>
         </div>
       </div>
-    </div>
-  </details>
+    </details>
 
-  <RelationInfoPopup
-    :entry="activeUnit"
-    :role-options="PART_OF_ROLE_LABEL"
-    show-role
-    @close="activeUnit = null"
-  />
-
-  <details v-if="!hideEditable && operationEntries.length" class="section" open>
-    <summary class="section-summary">
-      <h3 class="section-heading">Operasjoner ({{ operationEntries.length }})</h3>
-    </summary>
-    <div class="section-body">
-      <div class="relation-list">
-        <div v-for="op in operationEntries" :key="op.targetSlug" class="relation-row">
-          <RouterLink :to="`/events/${op.targetSlug}`" class="relation-link">{{ op.targetName }}</RouterLink>
-          <span v-if="op.startDate" class="relation-date">{{ op.startDate }}</span>
+    <details class="section" open>
+      <summary class="section-summary">
+        <h3 class="section-heading">Lenker<span v-if="externalRefs.length"> ({{ externalRefs.length }})</span></h3>
+      </summary>
+      <div class="section-body">
+        <div v-if="externalRefs.length" class="link-list">
+          <a
+            v-for="r in externalRefs"
+            :key="r.id"
+            :href="r.url"
+            target="_blank"
+            rel="noopener noreferrer"
+            class="ref-item"
+          >
+            <span class="ref-title">{{ r.title ?? r.url }}</span>
+            <span class="ref-meta">
+              <span v-if="r.nbBacked" class="ref-nb" title="Nasjonalbiblioteket">NB</span>
+              <span v-if="r.domain" class="ref-domain">{{ r.domain }}</span>
+            </span>
+          </a>
         </div>
+        <p v-else class="section-empty">Ingen lenker registrert ennå.</p>
       </div>
-    </div>
-  </details>
-
-  <details v-if="!hideEditable && incidentEntries.length" class="section" open>
-    <summary class="section-summary">
-      <h3 class="section-heading">Hendelser ({{ incidentEntries.length }})</h3>
-    </summary>
-    <div class="section-body">
-      <div class="relation-list">
-        <div v-for="ev in incidentEntries" :key="ev.targetSlug" class="relation-row">
-          <RouterLink :to="`/events/${ev.targetSlug}`" class="relation-link">{{ ev.targetName }}</RouterLink>
-          <span v-if="ev.startDate" class="relation-date">{{ ev.startDate }}</span>
-        </div>
-      </div>
-    </div>
-  </details>
-
-  <details v-if="galleryImages.length" class="section" open>
-    <summary class="section-summary">
-      <h3 class="section-heading">Galleri ({{ galleryImages.length }})</h3>
-    </summary>
-    <div class="section-body">
-      <ImageSlider :images="galleryImages" />
-    </div>
-  </details>
-
-  <details v-if="people.length" class="section" open>
-    <summary class="section-summary">
-      <h3 class="section-heading">Deltakere ({{ people.length }})</h3>
-    </summary>
-    <div class="section-body">
-      <div class="link-list">
-        <RouterLink
-          v-for="p in people"
-          :key="p.slug"
-          :to="`/person/${p.slug}`"
-          class="person-item"
-        >
-          <span class="person-name">{{ p.name }}</span>
-          <span class="person-count">{{ p.eventCount }} hendelser</span>
-        </RouterLink>
-      </div>
-    </div>
-  </details>
-
-  <details class="section" open>
-    <summary class="section-summary">
-      <h3 class="section-heading">Lenker<span v-if="externalRefs.length"> ({{ externalRefs.length }})</span></h3>
-    </summary>
-    <div class="section-body">
-      <div v-if="externalRefs.length" class="link-list">
-        <a
-          v-for="r in externalRefs"
-          :key="r.id"
-          :href="r.url"
-          target="_blank"
-          rel="noopener noreferrer"
-          class="ref-item"
-        >
-          <span class="ref-title">{{ r.title ?? r.url }}</span>
-          <span class="ref-meta">
-            <span v-if="r.nbBacked" class="ref-nb" title="Nasjonalbiblioteket">NB</span>
-            <span v-if="r.domain" class="ref-domain">{{ r.domain }}</span>
-          </span>
-        </a>
-      </div>
-      <p v-else class="section-empty">Ingen lenker registrert ennå.</p>
-    </div>
-  </details>
+    </details>
+  </div>
 </template>
 
 <script setup lang="ts">

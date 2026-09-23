@@ -1,174 +1,177 @@
 <template>
-  <details v-if="!hideEditable && previewSections.length" class="section" open>
-    <summary class="section-summary">
-      <h3 class="section-heading">Beskrivelse</h3>
-    </summary>
-    <div class="section-body">
-      <DescriptionPreview :sections="previewSections" />
-    </div>
-  </details>
+  <!-- Single root so the page's v-show applies. -->
+  <div class="view-pane">
+    <details v-if="!hideEditable && previewSections.length" class="section" open>
+      <summary class="section-summary">
+        <h3 class="section-heading">Beskrivelse</h3>
+      </summary>
+      <div class="section-body">
+        <DescriptionPreview :sections="previewSections" />
+      </div>
+    </details>
 
-  <!-- Legacy ABOUT descriptions (sanity-outline-migration). Read-only
-       until a future migration converts them to HAS_CONTENT. -->
-  <details v-if="legacyDescriptions.length" class="section" open>
-    <summary class="section-summary">
-      <h3 class="section-heading">Beskrivelse (arkiv)<span v-if="legacyDescriptions.length > 1"> ({{ legacyDescriptions.length }})</span></h3>
-    </summary>
-    <div class="section-body">
-      <article
-        v-for="(d, i) in legacyHtml"
-        :key="`${d.recordedDate ?? 'd'}-${i}`"
-        class="description-entry"
-      >
-        <!-- eslint-disable vue/no-v-html -->
-        <div class="portable-text" v-html="d.html"></div>
-        <!-- eslint-enable vue/no-v-html -->
-        <footer
-          v-if="showDescriptionAttribution(d)"
-          class="description-attribution"
+    <!-- Legacy ABOUT descriptions (sanity-outline-migration). Read-only
+         until a future migration converts them to HAS_CONTENT. -->
+    <details v-if="legacyDescriptions.length" class="section" open>
+      <summary class="section-summary">
+        <h3 class="section-heading">Beskrivelse (arkiv)<span v-if="legacyDescriptions.length > 1"> ({{ legacyDescriptions.length }})</span></h3>
+      </summary>
+      <div class="section-body">
+        <article
+          v-for="(d, i) in legacyHtml"
+          :key="`${d.recordedDate ?? 'd'}-${i}`"
+          class="description-entry"
         >
-          <span v-if="d.author" class="description-author">{{ d.author }}</span>
-          <span v-if="d.recordedDate" class="description-date">{{ d.recordedDate }}</span>
-          <SourceRef v-if="d.sourceRefs?.length" :refs="d.sourceRefs" />
-        </footer>
-      </article>
-    </div>
-  </details>
-
-  <details v-if="subUnits.length" class="section" open>
-    <summary class="section-summary"><h3 class="section-heading">Underavdelinger ({{ subUnits.length }})</h3></summary>
-    <div class="section-body">
-      <div class="link-list">
-        <RouterLink
-          v-for="sub in subUnits"
-          :key="sub.slug"
-          :to="`/district/${sub.slug}`"
-          class="section-link"
-        >
-          {{ sub.name }}
-        </RouterLink>
-      </div>
-    </div>
-  </details>
-
-  <details v-if="courses.length" class="section" open>
-    <summary class="section-summary"><h3 class="section-heading">Kurs ({{ courses.length }})</h3></summary>
-    <div class="section-body">
-      <div class="course-table-wrap">
-        <table class="course-table">
-          <thead>
-            <tr>
-              <th>Kurs</th>
-              <th>Oppstart</th>
-              <th class="num">Elever</th>
-              <th class="num">Mangler</th>
-              <th>Gruppe</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr v-for="c in courses" :key="c.slug">
-              <td><RouterLink :to="`/district/${c.slug}`" class="course-link">{{ c.letter }}</RouterLink></td>
-              <td class="course-date">{{ c.startDate ?? '—' }}</td>
-              <td class="num">{{ c.studentCount }}</td>
-              <td class="num">{{ c.missingCount > 0 ? c.missingCount : '—' }}</td>
-              <td class="course-group">{{ c.targetGroup ?? '—' }}</td>
-            </tr>
-          </tbody>
-          <tfoot>
-            <tr class="course-total">
-              <td>Sum</td>
-              <td></td>
-              <td class="num">{{ courseTotals.students }}</td>
-              <td class="num">{{ courseTotals.missing > 0 ? courseTotals.missing : '—' }}</td>
-              <td></td>
-            </tr>
-          </tfoot>
-        </table>
-      </div>
-    </div>
-  </details>
-
-  <details v-if="events.length" class="section" open>
-    <summary class="section-summary"><h3 class="section-heading">Hendelser ({{ events.length }})</h3></summary>
-    <div class="section-body">
-      <div class="section-tools">
-        <button class="sort-btn" @click="eventSortAsc = !eventSortAsc">Dato {{ eventSortAsc ? '↑' : '↓' }}</button>
-      </div>
-      <div class="link-list">
-        <RouterLink
-          v-for="event in sortedEvents"
-          :key="event.slug"
-          :to="`/events/${event.slug}`"
-          class="event-item"
-        >
-          <span class="event-date">{{ formatDate(event.date) }}</span>
-          <span class="event-title">{{ event.title }}</span>
-        </RouterLink>
-      </div>
-    </div>
-  </details>
-
-  <details v-if="galleryImages.length" class="section" open>
-    <summary class="section-summary"><h3 class="section-heading">Galleri ({{ galleryImages.length }})</h3></summary>
-    <div class="section-body">
-      <ImageSlider :images="galleryImages" />
-    </div>
-  </details>
-
-  <details v-if="!hideEditable && members.length" class="section" open>
-    <summary class="section-summary"><h3 class="section-heading">Medlemmer ({{ members.length }})</h3></summary>
-    <div class="section-body">
-      <div class="relation-list">
-        <div v-for="p in members" :key="p.slug" class="relation-row member-row">
-          <RouterLink :to="`/person/${p.slug}`" class="person-name-link">{{ p.name }}</RouterLink>
-          <span v-if="p.status === 'KIA'" class="status-marker status-marker--kia" title="Falt">✝</span>
-          <span v-else-if="p.status === 'ambiguous'" class="status-marker status-marker--ambig" title="Uavklart skjebne">∞</span>
-          <span v-if="p.rank" class="rank-badge">{{ p.rank }}</span>
-          <span v-if="p.role" class="relation-role">{{ ROLE_LABEL[p.role] ?? p.role }}</span>
-          <span v-if="memberPeriod(p)" class="member-period">{{ memberPeriod(p) }}</span>
-          <button
-            v-if="p.description"
-            class="info-marker"
-            type="button"
-            :aria-expanded="expandedMember === p.slug"
-            aria-label="Vis forklaring"
-            @click="toggleMemberInfo(p.slug)"
+          <!-- eslint-disable vue/no-v-html -->
+          <div class="portable-text" v-html="d.html"></div>
+          <!-- eslint-enable vue/no-v-html -->
+          <footer
+            v-if="showDescriptionAttribution(d)"
+            class="description-attribution"
           >
-            i
-          </button>
-          <div v-if="p.description && expandedMember === p.slug" class="relation-desc">
-            <p class="relation-desc-text">{{ p.description }}</p>
-            <SourceRef v-if="p.sourceRefs?.length" :refs="p.sourceRefs" />
+            <span v-if="d.author" class="description-author">{{ d.author }}</span>
+            <span v-if="d.recordedDate" class="description-date">{{ d.recordedDate }}</span>
+            <SourceRef v-if="d.sourceRefs?.length" :refs="d.sourceRefs" />
+          </footer>
+        </article>
+      </div>
+    </details>
+
+    <details v-if="subUnits.length" class="section" open>
+      <summary class="section-summary"><h3 class="section-heading">Underavdelinger ({{ subUnits.length }})</h3></summary>
+      <div class="section-body">
+        <div class="link-list">
+          <RouterLink
+            v-for="sub in subUnits"
+            :key="sub.slug"
+            :to="`/district/${sub.slug}`"
+            class="section-link"
+          >
+            {{ sub.name }}
+          </RouterLink>
+        </div>
+      </div>
+    </details>
+
+    <details v-if="courses.length" class="section" open>
+      <summary class="section-summary"><h3 class="section-heading">Kurs ({{ courses.length }})</h3></summary>
+      <div class="section-body">
+        <div class="course-table-wrap">
+          <table class="course-table">
+            <thead>
+              <tr>
+                <th>Kurs</th>
+                <th>Oppstart</th>
+                <th class="num">Elever</th>
+                <th class="num">Mangler</th>
+                <th>Gruppe</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="c in courses" :key="c.slug">
+                <td><RouterLink :to="`/district/${c.slug}`" class="course-link">{{ c.letter }}</RouterLink></td>
+                <td class="course-date">{{ c.startDate ?? '—' }}</td>
+                <td class="num">{{ c.studentCount }}</td>
+                <td class="num">{{ c.missingCount > 0 ? c.missingCount : '—' }}</td>
+                <td class="course-group">{{ c.targetGroup ?? '—' }}</td>
+              </tr>
+            </tbody>
+            <tfoot>
+              <tr class="course-total">
+                <td>Sum</td>
+                <td></td>
+                <td class="num">{{ courseTotals.students }}</td>
+                <td class="num">{{ courseTotals.missing > 0 ? courseTotals.missing : '—' }}</td>
+                <td></td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+      </div>
+    </details>
+
+    <details v-if="events.length" class="section" open>
+      <summary class="section-summary"><h3 class="section-heading">Hendelser ({{ events.length }})</h3></summary>
+      <div class="section-body">
+        <div class="section-tools">
+          <button class="sort-btn" @click="eventSortAsc = !eventSortAsc">Dato {{ eventSortAsc ? '↑' : '↓' }}</button>
+        </div>
+        <div class="link-list">
+          <RouterLink
+            v-for="event in sortedEvents"
+            :key="event.slug"
+            :to="`/events/${event.slug}`"
+            class="event-item"
+          >
+            <span class="event-date">{{ formatDate(event.date) }}</span>
+            <span class="event-title">{{ event.title }}</span>
+          </RouterLink>
+        </div>
+      </div>
+    </details>
+
+    <details v-if="galleryImages.length" class="section" open>
+      <summary class="section-summary"><h3 class="section-heading">Galleri ({{ galleryImages.length }})</h3></summary>
+      <div class="section-body">
+        <ImageSlider :images="galleryImages" />
+      </div>
+    </details>
+
+    <details v-if="!hideEditable && members.length" class="section" open>
+      <summary class="section-summary"><h3 class="section-heading">Medlemmer ({{ members.length }})</h3></summary>
+      <div class="section-body">
+        <div class="relation-list">
+          <div v-for="p in members" :key="p.slug" class="relation-row member-row">
+            <RouterLink :to="`/person/${p.slug}`" class="person-name-link">{{ p.name }}</RouterLink>
+            <span v-if="p.status === 'KIA'" class="status-marker status-marker--kia" title="Falt">✝</span>
+            <span v-else-if="p.status === 'ambiguous'" class="status-marker status-marker--ambig" title="Uavklart skjebne">∞</span>
+            <span v-if="p.rank" class="rank-badge">{{ p.rank }}</span>
+            <span v-if="p.role" class="relation-role">{{ ROLE_LABEL[p.role] ?? p.role }}</span>
+            <span v-if="memberPeriod(p)" class="member-period">{{ memberPeriod(p) }}</span>
+            <button
+              v-if="p.description"
+              class="info-marker"
+              type="button"
+              :aria-expanded="expandedMember === p.slug"
+              aria-label="Vis forklaring"
+              @click="toggleMemberInfo(p.slug)"
+            >
+              i
+            </button>
+            <div v-if="p.description && expandedMember === p.slug" class="relation-desc">
+              <p class="relation-desc-text">{{ p.description }}</p>
+              <SourceRef v-if="p.sourceRefs?.length" :refs="p.sourceRefs" />
+            </div>
           </div>
         </div>
       </div>
-    </div>
-  </details>
+    </details>
 
-  <details class="section" open>
-    <summary class="section-summary">
-      <h3 class="section-heading">Lenker<span v-if="externalRefs.length"> ({{ externalRefs.length }})</span></h3>
-    </summary>
-    <div class="section-body">
-      <div v-if="externalRefs.length" class="link-list">
-        <a
-          v-for="r in externalRefs"
-          :key="r.id"
-          :href="r.url"
-          target="_blank"
-          rel="noopener noreferrer"
-          class="ref-item"
-        >
-          <span class="ref-title">{{ r.title ?? r.url }}</span>
-          <span class="ref-meta">
-            <span v-if="r.nbBacked" class="ref-nb" title="Nasjonalbiblioteket">NB</span>
-            <span v-if="r.domain" class="ref-domain">{{ r.domain }}</span>
-          </span>
-        </a>
+    <details class="section" open>
+      <summary class="section-summary">
+        <h3 class="section-heading">Lenker<span v-if="externalRefs.length"> ({{ externalRefs.length }})</span></h3>
+      </summary>
+      <div class="section-body">
+        <div v-if="externalRefs.length" class="link-list">
+          <a
+            v-for="r in externalRefs"
+            :key="r.id"
+            :href="r.url"
+            target="_blank"
+            rel="noopener noreferrer"
+            class="ref-item"
+          >
+            <span class="ref-title">{{ r.title ?? r.url }}</span>
+            <span class="ref-meta">
+              <span v-if="r.nbBacked" class="ref-nb" title="Nasjonalbiblioteket">NB</span>
+              <span v-if="r.domain" class="ref-domain">{{ r.domain }}</span>
+            </span>
+          </a>
+        </div>
+        <p v-else class="section-empty">Ingen lenker registrert ennå.</p>
       </div>
-      <p v-else class="section-empty">Ingen lenker registrert ennå.</p>
-    </div>
-  </details>
+    </details>
+  </div>
 </template>
 
 <script setup lang="ts">

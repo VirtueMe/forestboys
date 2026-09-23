@@ -1,111 +1,114 @@
 <template>
-  <details v-if="!hideEditable && previewSections.length" class="section" open>
-    <summary class="section-summary">
-      <h3 class="section-heading">Beskrivelse</h3>
-    </summary>
-    <div class="section-body">
-      <DescriptionPreview :sections="previewSections" />
-    </div>
-  </details>
-
-  <!-- Legacy free-text description from Sanity migration. Read-only
-       until migrated to HAS_CONTENT. -->
-  <details v-if="legacyDescription" class="section" open>
-    <summary class="section-summary">
-      <h3 class="section-heading">Beskrivelse (arkiv)</h3>
-    </summary>
-    <div class="section-body">
-      <LegacyDescription :text="legacyDescription" />
-    </div>
-  </details>
-
-  <details v-if="events.length" class="section" open>
-    <summary class="section-summary">
-      <h3 class="section-heading">Hendelser ({{ events.length }})</h3>
-    </summary>
-    <div class="section-body">
-      <div class="section-tools">
-        <button class="sort-btn" @click="eventSortAsc = !eventSortAsc">Dato {{ eventSortAsc ? '↑' : '↓' }}</button>
+  <!-- Single root so the page's v-show applies. -->
+  <div class="view-pane">
+    <details v-if="!hideEditable && previewSections.length" class="section" open>
+      <summary class="section-summary">
+        <h3 class="section-heading">Beskrivelse</h3>
+      </summary>
+      <div class="section-body">
+        <DescriptionPreview :sections="previewSections" />
       </div>
-      <div class="link-list">
-        <RouterLink
-          v-for="event in sortedEvents"
-          :key="`${event.slug}-${event.direction}`"
-          :to="`/events/${event.slug}`"
-          class="event-item"
-        >
-          <span class="event-date">{{ formatDate(event.date) }}</span>
-          <span class="event-direction" :class="`event-direction--${event.direction}`">
-            {{ event.direction === 'departed' ? 'Avgang' : 'Ankomst' }}
-          </span>
-          <span class="event-title">{{ event.title }}</span>
-        </RouterLink>
-      </div>
-    </div>
-  </details>
+    </details>
 
-  <details v-if="people.length" class="section" open>
-    <summary class="section-summary">
-      <h3 class="section-heading">Deltakere ({{ people.length }})</h3>
-    </summary>
-    <div class="section-body">
-      <div class="link-list">
-        <RouterLink
-          v-for="p in people"
-          :key="p.slug"
-          :to="`/person/${p.slug}`"
-          class="section-link"
-        >
-          {{ p.name }}
-        </RouterLink>
+    <!-- Legacy free-text description from Sanity migration. Read-only
+         until migrated to HAS_CONTENT. -->
+    <details v-if="legacyDescription" class="section" open>
+      <summary class="section-summary">
+        <h3 class="section-heading">Beskrivelse (arkiv)</h3>
+      </summary>
+      <div class="section-body">
+        <LegacyDescription :text="legacyDescription" />
       </div>
-    </div>
-  </details>
+    </details>
 
-  <details v-if="galleryImages.length" class="section" open>
-    <summary class="section-summary">
-      <h3 class="section-heading">Galleri ({{ galleryImages.length }})</h3>
-    </summary>
-    <div class="section-body">
-      <ImageSlider :images="galleryImages" />
-    </div>
-  </details>
-
-  <details class="section" open>
-    <summary class="section-summary">
-      <h3 class="section-heading">Lenker<span v-if="totalLinkCount"> ({{ totalLinkCount }})</span></h3>
-    </summary>
-    <div class="section-body">
-      <div v-if="totalLinkCount" class="link-list">
-        <a
-          v-for="r in externalRefs"
-          :key="r.id"
-          :href="r.url"
-          target="_blank"
-          rel="noopener noreferrer"
-          class="ref-item"
-        >
-          <span class="ref-title">{{ r.title ?? r.url }}</span>
-          <span class="ref-meta">
-            <span v-if="r.nbBacked" class="ref-nb" title="Nasjonalbiblioteket">NB</span>
-            <span v-if="r.domain" class="ref-domain">{{ r.domain }}</span>
-          </span>
-        </a>
-        <a
-          v-for="(l, i) in legacyLinks"
-          :key="`legacy-${i}`"
-          :href="l.link"
-          target="_blank"
-          rel="noopener noreferrer"
-          class="ref-item"
-        >
-          <span class="ref-title">{{ l.title || l.link }}</span>
-          <span class="ref-meta"><span class="ref-archive">arkiv</span></span>
-        </a>
+    <details v-if="events.length" class="section" open>
+      <summary class="section-summary">
+        <h3 class="section-heading">Hendelser ({{ events.length }})</h3>
+      </summary>
+      <div class="section-body">
+        <div class="section-tools">
+          <button class="sort-btn" @click="eventSortAsc = !eventSortAsc">Dato {{ eventSortAsc ? '↑' : '↓' }}</button>
+        </div>
+        <div class="link-list">
+          <RouterLink
+            v-for="event in sortedEvents"
+            :key="`${event.slug}-${event.direction}`"
+            :to="`/events/${event.slug}`"
+            class="event-item"
+          >
+            <span class="event-date">{{ formatDate(event.date) }}</span>
+            <span class="event-direction" :class="`event-direction--${event.direction}`">
+              {{ event.direction === 'departed' ? 'Avgang' : 'Ankomst' }}
+            </span>
+            <span class="event-title">{{ event.title }}</span>
+          </RouterLink>
+        </div>
       </div>
-      <p v-else class="section-empty">Ingen lenker registrert ennå.</p>
-    </div>
-  </details>
+    </details>
+
+    <details v-if="people.length" class="section" open>
+      <summary class="section-summary">
+        <h3 class="section-heading">Deltakere ({{ people.length }})</h3>
+      </summary>
+      <div class="section-body">
+        <div class="link-list">
+          <RouterLink
+            v-for="p in people"
+            :key="p.slug"
+            :to="`/person/${p.slug}`"
+            class="section-link"
+          >
+            {{ p.name }}
+          </RouterLink>
+        </div>
+      </div>
+    </details>
+
+    <details v-if="galleryImages.length" class="section" open>
+      <summary class="section-summary">
+        <h3 class="section-heading">Galleri ({{ galleryImages.length }})</h3>
+      </summary>
+      <div class="section-body">
+        <ImageSlider :images="galleryImages" />
+      </div>
+    </details>
+
+    <details class="section" open>
+      <summary class="section-summary">
+        <h3 class="section-heading">Lenker<span v-if="totalLinkCount"> ({{ totalLinkCount }})</span></h3>
+      </summary>
+      <div class="section-body">
+        <div v-if="totalLinkCount" class="link-list">
+          <a
+            v-for="r in externalRefs"
+            :key="r.id"
+            :href="r.url"
+            target="_blank"
+            rel="noopener noreferrer"
+            class="ref-item"
+          >
+            <span class="ref-title">{{ r.title ?? r.url }}</span>
+            <span class="ref-meta">
+              <span v-if="r.nbBacked" class="ref-nb" title="Nasjonalbiblioteket">NB</span>
+              <span v-if="r.domain" class="ref-domain">{{ r.domain }}</span>
+            </span>
+          </a>
+          <a
+            v-for="(l, i) in legacyLinks"
+            :key="`legacy-${i}`"
+            :href="l.link"
+            target="_blank"
+            rel="noopener noreferrer"
+            class="ref-item"
+          >
+            <span class="ref-title">{{ l.title || l.link }}</span>
+            <span class="ref-meta"><span class="ref-archive">arkiv</span></span>
+          </a>
+        </div>
+        <p v-else class="section-empty">Ingen lenker registrert ennå.</p>
+      </div>
+    </details>
+  </div>
 </template>
 
 <script setup lang="ts">
