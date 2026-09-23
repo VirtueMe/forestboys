@@ -41,6 +41,17 @@
         </div>
 
         <div class="nav-group">
+          <div class="nav-group-label">Oppslag</div>
+          <ul class="nav-list">
+            <li>
+              <router-link to="/admin/ranks" class="nav-link nav-link-nested" active-class="active">
+                Grader
+              </router-link>
+            </li>
+          </ul>
+        </div>
+
+        <div class="nav-group">
           <div class="nav-group-label">Forslag</div>
           <ul class="nav-list">
             <li>

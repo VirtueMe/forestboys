@@ -24,6 +24,7 @@ import { ensureUser } from '../composables/useAuth.ts'
 const AdminLayout              = () => import('../pages/AdminLayout.vue')
 const AdminPagesView           = () => import('../pages/AdminPagesView.vue')
 const AdminSourcesView         = () => import('../pages/AdminSourcesView.vue')
+const AdminRanksView           = () => import('../pages/AdminRanksView.vue')
 const AdminProposalListView    = () => import('../pages/AdminProposalListView.vue')
 const AdminProposalBundleView  = () => import('../pages/AdminProposalBundleView.vue')
 const AdminProposalEntityPreview = () => import('../pages/AdminProposalEntityPreview.vue')
@@ -67,6 +68,7 @@ const router = createRouter({
         { path: 'pages',                redirect: '/admin/pages/home' },
         { path: 'pages/:slug',          component: AdminPagesView },
         { path: 'sources',              component: AdminSourcesView },
+        { path: 'ranks',                component: AdminRanksView },
         { path: 'review',                                    component: ReviewView },
         { path: 'proposals',                                 component: AdminProposalListView },
         { path: 'proposals/:bundleId',                       component: AdminProposalBundleView },
