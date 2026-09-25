@@ -14,6 +14,7 @@ Entry point for all design and architecture documents.
 | [DATA.md](DATA.md) | Sanity schema, GROQ queries, IndexedDB caching strategy |
 | [COLOURS.md](COLOURS.md) | Org and district colour maps, derivation and fallback |
 | [DB.md](DB.md) | Long-term graph database consideration — note for the motstandsbevegelsen handoff |
+| [EQUIPMENT-LIFECYCLE.md](EQUIPMENT-LIFECYCLE.md) | Equipment lifecycle possibilities — manufactured, in service, lost / never recovered (discussion, nothing decided) |
 
 ---
 
