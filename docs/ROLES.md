@@ -143,3 +143,15 @@ read Role nodes.
    editors to keep it short, with the popover expanding in place ("Les
    mer") for longer texts? (The Roller page is admin-only, so visitors
    can't be sent there.)
+
+---
+
+## Later
+
+- **Editable role groups.** Groups (scopes) are fixed in code today: each
+  one maps to the edge that stores the role
+  (`functions/_lib/role-scopes.ts`), with Norwegian labels in
+  `src/utils/roleScopes.ts`. Making them editable would mean storing the
+  label (and possibly a description) as data, while the group → edge
+  mapping stays in code — a new relation still needs code to read and
+  write its `role`.

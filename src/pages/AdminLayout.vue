@@ -48,6 +48,11 @@
                 Grader
               </router-link>
             </li>
+            <li>
+              <router-link to="/admin/roles" class="nav-link nav-link-nested" active-class="active">
+                Roller
+              </router-link>
+            </li>
           </ul>
         </div>
 
