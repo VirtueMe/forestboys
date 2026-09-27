@@ -7,7 +7,7 @@
       </header>
       <div class="popup-sub">
         <span v-if="showRole && entry.role" class="relation-role">
-          {{ roleOptions?.[entry.role] ?? entry.role }}
+          <RoleLabel :role-key="entry.role" :fallback="roleOptions?.[entry.role]" />
         </span>
         <span v-if="periodOf(entry)" class="member-period">{{ periodOf(entry) }}</span>
         <span v-if="showPassed && entry.passed === true" class="passed-chip passed-chip--ok">Bestått</span>
@@ -72,6 +72,7 @@
 
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted } from 'vue'
+import RoleLabel from '@/components/role/RoleLabel.vue'
 import { blocksToHtml } from '@/utils/portableText.ts'
 import type { Section, Citation } from '@/components/SectionsEditor.vue'
 import type { RelationEntry } from './RelationStrategy.ts'

@@ -126,7 +126,7 @@
             <span v-if="p.status === 'KIA'" class="status-marker status-marker--kia" title="Falt">✝</span>
             <span v-else-if="p.status === 'ambiguous'" class="status-marker status-marker--ambig" title="Uavklart skjebne">∞</span>
             <span v-if="p.rank" class="rank-badge">{{ p.rank }}</span>
-            <span v-if="p.role" class="relation-role">{{ ROLE_LABEL[p.role] ?? p.role }}</span>
+            <span v-if="p.role" class="relation-role"><RoleLabel :role-key="p.role" :fallback="ROLE_LABEL[p.role]" /></span>
             <span v-if="memberPeriod(p)" class="member-period">{{ memberPeriod(p) }}</span>
             <button
               v-if="p.description"
@@ -189,6 +189,7 @@
  * modes.
  */
 import { ref, computed } from 'vue'
+import RoleLabel from '@/components/role/RoleLabel.vue'
 import { RouterLink } from 'vue-router'
 import ImageSlider, { type SlideImage } from '@/components/ImageSlider.vue'
 import DescriptionPreview from '@/components/DescriptionPreview.vue'

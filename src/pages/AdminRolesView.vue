@@ -70,6 +70,7 @@
 import { ref, computed } from 'vue'
 import { authFetch } from '@/composables/useAuth.ts'
 import { scopeLabel } from '@/utils/roleScopes.ts'
+import { invalidateRoles } from '@/composables/useRoles.ts'
 import RoleEditForm, { type RoleRow } from '@/components/role/RoleEditForm.vue'
 
 const roles       = ref<RoleRow[]>([])
@@ -119,6 +120,7 @@ function toggleEdit(key: string) {
 
 function onCreated(r: RoleRow) {
   roles.value.push(r)
+  invalidateRoles()
   creating.value = false
   // Straight into edit so the description can be written right away.
   editingKey.value = r.key
@@ -127,11 +129,13 @@ function onCreated(r: RoleRow) {
 function onSaved(r: RoleRow) {
   const row = roles.value.find(x => x.key === r.key)
   if (row) Object.assign(row, r)
+  invalidateRoles()
 }
 
 function onDescription(key: string, has: boolean) {
   const row = roles.value.find(x => x.key === key)
   if (row) row.hasDescription = has
+  invalidateRoles()
 }
 
 async function confirmDelete(r: RoleRow) {
@@ -146,6 +150,7 @@ async function confirmDelete(r: RoleRow) {
       return
     }
     roles.value = roles.value.filter(x => x.key !== r.key)
+    invalidateRoles()
   } catch (e) {
     error.value = (e as Error).message
   } finally {

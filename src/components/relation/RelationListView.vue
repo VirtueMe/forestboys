@@ -15,7 +15,7 @@
         <span v-if="e.pendingFromBundle" class="pending-chip pending-chip--add">Foreslått</span>
         <span v-if="e.pendingRemoval" class="pending-chip pending-chip--del">Vil fjernes</span>
         <span v-if="showRole && e.role" class="relation-role">
-          {{ roleOptions?.[e.role] ?? e.role }}
+          <RoleLabel :role-key="e.role" :fallback="roleOptions?.[e.role]" />
         </span>
         <span v-if="periodOf(e)" class="member-period">{{ periodOf(e) }}</span>
         <span v-if="showPassed && e.passed === true" class="passed-chip passed-chip--ok">Bestått</span>
@@ -36,6 +36,7 @@
 
 <script setup lang="ts">
 import { RouterLink } from 'vue-router'
+import RoleLabel from '@/components/role/RoleLabel.vue'
 import type { RelationEntry, RelationStrategy } from './RelationStrategy.ts'
 
 withDefaults(defineProps<{

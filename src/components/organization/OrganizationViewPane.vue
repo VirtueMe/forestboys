@@ -18,7 +18,7 @@
         <div class="relation-list">
           <div v-for="u in unitEntries" :key="u.targetSlug" class="relation-row">
             <RouterLink :to="`/district/${u.targetSlug}`" class="relation-link">{{ u.targetName }}</RouterLink>
-            <span v-if="u.role" class="relation-role">{{ PART_OF_ROLE_LABEL[u.role] ?? u.role }}</span>
+            <span v-if="u.role" class="relation-role"><RoleLabel :role-key="u.role" :fallback="PART_OF_ROLE_LABEL[u.role]" /></span>
             <button
               v-if="u.hasDescription"
               class="info-marker"
@@ -134,6 +134,7 @@
  * summary + body so the global section.section rule doesn't apply).
  */
 import { ref } from 'vue'
+import RoleLabel from '@/components/role/RoleLabel.vue'
 import { RouterLink } from 'vue-router'
 import ImageSlider, { type SlideImage } from '@/components/ImageSlider.vue'
 import DescriptionPreview from '@/components/DescriptionPreview.vue'

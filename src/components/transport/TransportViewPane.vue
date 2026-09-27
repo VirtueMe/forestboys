@@ -49,7 +49,7 @@
         <div class="relation-list">
           <div v-for="p in crew" :key="`${p.slug}-${p.role ?? ''}`" class="relation-row">
             <RouterLink :to="`/person/${p.slug}`" class="person-name-link">{{ p.name }}</RouterLink>
-            <span v-if="p.role" class="relation-role">{{ p.role }}</span>
+            <span v-if="p.role" class="relation-role"><RoleLabel :role-key="p.role" /></span>
           </div>
         </div>
       </div>
@@ -107,6 +107,7 @@
  * TransportViewPane — read-only sections of a Transport page.
  *
  * Three legacy data shapes from the Sanity import remain on the node:
+import RoleLabel from '@/components/role/RoleLabel.vue'
  * `description` (free text), `links` (JSON string). They render as
  * dedicated "arkiv" UI until migrated to HAS_CONTENT and REFERENCED_IN.
  *

@@ -15,7 +15,7 @@
           <span v-if="p.color" class="color-dot" :style="{ background: p.color }"></span>
           {{ p.name }}
         </RouterLink>
-        <span v-if="p.role" class="parent-role">{{ ROLE_LABEL[p.role] ?? p.role }}</span>
+        <span v-if="p.role" class="parent-role"><RoleLabel :role-key="p.role" :fallback="ROLE_LABEL[p.role]" /></span>
         <button
           v-if="p.description"
           class="info-marker"
@@ -45,6 +45,7 @@
  * before it's anything else.
  */
 import { ref } from 'vue'
+import RoleLabel from '@/components/role/RoleLabel.vue'
 import { RouterLink } from 'vue-router'
 import SourceRef from '@/components/SourceRef.vue'
 import type { UnitParent } from '@/composables/useUnitData.ts'
