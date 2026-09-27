@@ -72,7 +72,7 @@ export const onRequestPatch: PagesFunction<Env> = async ({ request, env, params 
     // Drop existing HAS_CONTENT edges + orphan Descriptions
     await runCypher(env, `
       MATCH (o:Organization {slug: $slug})-[r:HAS_CONTENT]->(d:Description)
-      DELETE r, d
+      DETACH DELETE d
     `, { slug })
 
     if (payload.length) {

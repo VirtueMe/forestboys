@@ -64,7 +64,7 @@ export const onRequestPatch: PagesFunction<Env> = async ({ request, env, params 
   try {
     await runCypher(env, `
       MATCH (t:Transport {slug: $slug})-[r:HAS_CONTENT]->(d:Description)
-      DELETE r, d
+      DETACH DELETE d
     `, { slug })
 
     if (payload.length) {

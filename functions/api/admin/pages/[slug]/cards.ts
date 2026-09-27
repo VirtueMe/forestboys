@@ -144,7 +144,7 @@ export const onRequestPatch: PagesFunction<Env> = async ({ request, env, params 
       await runCypher(env, `
         MATCH (p:Page {slug: $slug})-[:HAS_CARD]->(c:Card {id: $cardId})
         OPTIONAL MATCH (c)-[r:HAS_CONTENT]->(d:Description)
-        DELETE r, d
+        DETACH DELETE d
       `, { slug, cardId: it.id })
 
       if (it.sections.length) {
