@@ -60,7 +60,9 @@ never "ended the same day". Display as "1943 –" (see Open question 3 for
 | `training` | Opplæring | Trained there |
 | `operating` | Operatør | Ran something there (radio station, depot) |
 
-The list is a starting point for Jan to adjust.
+The list is a starting point for Jan to adjust. Roles are meant to
+become editable data with descriptions — see `ROLES.md` (scope
+`stationed`).
 
 **R5 — Sources.** Each link carries citations like other edges
 (`sourceRefs`), so a period can be backed by a page in a book.
