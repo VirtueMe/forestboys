@@ -5,6 +5,7 @@
 
 import { requireAdmin } from '~/_lib/require-admin.ts'
 import { runCypher, type Neo4jEnv } from '~/_lib/neo4j.ts'
+import { findInvalidRole } from '~/_lib/role-scopes.ts'
 
 interface Env extends Neo4jEnv {
   SESSION_SECRET: string
@@ -37,6 +38,13 @@ export const onRequestPatch: PagesFunction<Env> = async ({ request, env, params 
     if (typeof m.personSlug !== 'string' || !m.personSlug) return json({ error: 'Bad personSlug' }, 400)
     if (!isDateOrNull(m.startDate)) return json({ error: `Bad startDate: ${String(m.startDate)}` }, 400)
     if (!isDateOrNull(m.endDate))   return json({ error: `Bad endDate: ${String(m.endDate)}` }, 400)
+  }
+
+  try {
+    const badRole = await findInvalidRole(env, 'membership', members.map(m => m.role))
+    if (badRole) return json({ error: `Ukjent rolle for denne koblingen: ${badRole}` }, 400)
+  } catch (e) {
+    return json({ error: (e as Error).message }, 502)
   }
 
   try {

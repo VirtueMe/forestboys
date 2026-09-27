@@ -32,7 +32,7 @@
         picker-chip-aria="Bytt person"
         validation-empty="Velg person for alle oppføringer før du lagrer."
         :show-role="!isCourse"
-        :role-options="!isCourse ? ROLE_LABEL : undefined"
+        :role-scope="!isCourse ? 'membership' : undefined"
         :default-role="!isCourse ? 'member' : null"
         :show-passed="isCourse"
       />
@@ -80,12 +80,6 @@ const emit = defineEmits<{
 const isCourse = computed(() => props.unit.type === 'course')
 const personStrategy = computed(() => (isCourse.value ? UnitAttendeesStrategy : UnitMembersStrategy))
 
-const ROLE_LABEL: Record<string, string> = {
-  administrative: 'administrativt',
-  operational:    'operativt',
-  sponsor:        'sponsor',
-  parent:         'overordnet',
-}
 
 const scalarEditor = useTemplateRef<{ draft: UnitDraft; dirty: boolean } | null>('scalarEditor')
 const descEditor   = useTemplateRef<{ draft: Section[]; dirty: boolean } | null>('descEditor')

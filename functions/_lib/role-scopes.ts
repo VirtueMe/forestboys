@@ -7,6 +7,8 @@
  * Add a scope here when a new relation grows a `role` property.
  */
 
+import { runCypher, type Neo4jEnv } from './neo4j.ts'
+
 export const ROLE_SCOPE_EDGES: Record<string, string> = {
   'membership': 'MEMBER_OF',     // Person → Unit / Organization
   'part-of':    'PART_OF',       // Unit → Organization
@@ -38,4 +40,20 @@ export function parseScopes(v: unknown): { list: string[] } | { error: string } 
     if (!list.includes(s)) list.push(s)
   }
   return { list }
+}
+
+/**
+ * Validates `role` values on a batch of edges against the Role nodes of
+ * one scope. Returns the first value that isn't a string key offered in
+ * that scope, or null when all are fine (null / undefined roles are
+ * allowed — "no role"). One query per batch.
+ */
+export async function findInvalidRole(env: Neo4jEnv, scope: string, values: unknown[]): Promise<string | null> {
+  const given = values.filter(v => v !== null && v !== undefined)
+  if (!given.length) return null
+  const rows = await runCypher<{ key: string }>(env,
+    `MATCH (r:Role) WHERE $scope IN r.scopes RETURN r.key AS key`, { scope })
+  const allowed = new Set(rows.map(r => r.key))
+  const bad = given.find(v => typeof v !== 'string' || !allowed.has(v))
+  return bad === undefined ? null : JSON.stringify(bad)
 }

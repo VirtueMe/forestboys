@@ -13,7 +13,7 @@
       picker-chip-aria="Bytt enhet"
       validation-empty="Velg enhet for alle medlemskap før du lagrer."
       show-role
-      :role-options="ROLE_LABEL"
+      role-scope="membership"
       default-role="member"
     />
 
@@ -73,7 +73,6 @@
       :strategy="MembershipStrategy"
       label="Medlemskap"
       show-role
-      :role-options="ROLE_LABEL"
       @open="openMembership"
     />
     <RelationListView
@@ -99,7 +98,6 @@
       :entry="activeEntry"
       :show-role="activeShowsRole"
       :show-passed="activeShowsPassed"
-      :role-options="ROLE_LABEL"
       @close="activeEntry = null"
     />
   </template>
@@ -125,7 +123,7 @@ import RelationListView   from '@/components/relation/RelationListView.vue'
 import RelationInfoPopup  from '@/components/relation/RelationInfoPopup.vue'
 import {
   MembershipStrategy, AttendanceStrategy,
-  IncidentStrategy, OperationStrategy, ROLE_LABEL,
+  IncidentStrategy, OperationStrategy,
 } from '@/components/relation/strategies.ts'
 import type { RelationEntry, RelationTarget } from '@/components/relation/RelationStrategy.ts'
 import type { AdminViewMode } from '@/components/AdminViewTabs.vue'

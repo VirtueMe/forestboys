@@ -11,7 +11,7 @@
     picker-chip-aria="Bytt avdeling"
     validation-empty="Velg avdeling for alle rader før du lagrer."
     show-role
-    :role-options="PART_OF_ROLE_LABEL"
+    role-scope="part-of"
     :show-dates="false"
     :signature-extra="entrySignatureExtra"
     :summary-extra="entrySummaryExtra"
@@ -40,7 +40,7 @@
  * useOrganizationData) and passes them through.
  */
 import RelationListEditor from '@/components/relation/RelationListEditor.vue'
-import { OrganizationUnitsStrategy, PART_OF_ROLE_LABEL } from '@/components/relation/strategies.ts'
+import { OrganizationUnitsStrategy } from '@/components/relation/strategies.ts'
 import type { RelationEntry, RelationTarget } from '@/components/relation/RelationStrategy.ts'
 
 defineProps<{

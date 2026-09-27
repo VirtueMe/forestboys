@@ -8,15 +8,12 @@
 
 import { requireAdmin } from '~/_lib/require-admin.ts'
 import { runCypher, type Neo4jEnv } from '~/_lib/neo4j.ts'
+import { findInvalidRole } from '~/_lib/role-scopes.ts'
 
 interface Env extends Neo4jEnv {
   SESSION_SECRET: string
 }
 
-const ROLES = new Set([
-  'administrative', 'operational', 'sponsor', 'parent',
-  'operative', 'courier', 'radiotelegraph', 'host', 'informant', 'member',
-])
 
 interface MembershipInput {
   unitSlug:   string
@@ -46,11 +43,15 @@ export const onRequestPatch: PagesFunction<Env> = async ({ request, env, params 
 
   for (const m of memberships) {
     if (typeof m.unitSlug !== 'string' || !m.unitSlug) return json({ error: 'Bad unitSlug' }, 400)
-    if (m.role !== undefined && m.role !== null && (typeof m.role !== 'string' || !ROLES.has(m.role))) {
-      return json({ error: `Bad role: ${String(m.role)}` }, 400)
-    }
     if (!isDateOrNull(m.startDate)) return json({ error: `Bad startDate: ${String(m.startDate)} — use YYYY, YYYY-MM, or YYYY-MM-DD` }, 400)
     if (!isDateOrNull(m.endDate))   return json({ error: `Bad endDate: ${String(m.endDate)} — use YYYY, YYYY-MM, or YYYY-MM-DD` }, 400)
+  }
+
+  try {
+    const badRole = await findInvalidRole(env, 'membership', memberships.map(m => m.role))
+    if (badRole) return json({ error: `Ukjent rolle for denne koblingen: ${badRole}` }, 400)
+  } catch (e) {
+    return json({ error: (e as Error).message }, 502)
   }
 
   try {

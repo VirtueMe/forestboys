@@ -7,7 +7,7 @@
       </header>
       <div class="popup-sub">
         <span v-if="showRole && entry.role" class="relation-role">
-          <RoleLabel :role-key="entry.role" :fallback="roleOptions?.[entry.role]" />
+          <RoleLabel :role-key="entry.role" />
         </span>
         <span v-if="periodOf(entry)" class="member-period">{{ periodOf(entry) }}</span>
         <span v-if="showPassed && entry.passed === true" class="passed-chip passed-chip--ok">Bestått</span>
@@ -81,11 +81,9 @@ const props = withDefaults(defineProps<{
   entry:        RelationEntry | null
   showRole?:    boolean
   showPassed?:  boolean
-  roleOptions?: Record<string, string>
 }>(), {
   showRole:    false,
   showPassed:  false,
-  roleOptions: undefined,
 })
 
 const emit = defineEmits<{ close: [] }>()

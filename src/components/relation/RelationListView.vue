@@ -15,7 +15,7 @@
         <span v-if="e.pendingFromBundle" class="pending-chip pending-chip--add">Foreslått</span>
         <span v-if="e.pendingRemoval" class="pending-chip pending-chip--del">Vil fjernes</span>
         <span v-if="showRole && e.role" class="relation-role">
-          <RoleLabel :role-key="e.role" :fallback="roleOptions?.[e.role]" />
+          <RoleLabel :role-key="e.role" />
         </span>
         <span v-if="periodOf(e)" class="member-period">{{ periodOf(e) }}</span>
         <span v-if="showPassed && e.passed === true" class="passed-chip passed-chip--ok">Bestått</span>
@@ -45,11 +45,9 @@ withDefaults(defineProps<{
   label:        string
   showRole?:    boolean
   showPassed?:  boolean
-  roleOptions?: Record<string, string>
 }>(), {
   showRole:    false,
   showPassed:  false,
-  roleOptions: undefined,
 })
 
 const emit = defineEmits<{ open: [entry: RelationEntry] }>()

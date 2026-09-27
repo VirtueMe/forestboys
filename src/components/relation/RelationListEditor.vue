@@ -71,15 +71,19 @@
               </template>
             </div>
             <select
-              v-if="showRole && roleOptions"
+              v-if="showRole && roleScope"
               v-model="e.role"
               class="edit-input membership-role"
+              :title="e.role ? roleText(e.role) : undefined"
             >
               <option :value="null">—</option>
-              <option v-for="(roleName, value) in roleOptions" :key="value" :value="value">{{ roleName }}</option>
+              <option v-for="r in roleOptions" :key="r.key" :value="r.key">{{ r.name }}</option>
+              <!-- A stored value outside this group stays visible instead of silently blanking. -->
+              <option v-if="e.role && !roleOptions.some(r => r.key === e.role)" :value="e.role">{{ e.role }} (ukjent)</option>
             </select>
             <button type="button" class="rank-remove-btn" @click="removeEntry(i)">Fjern</button>
           </div>
+          <p v-if="showRole && roleScope && e.role && roleText(e.role)" class="role-help">{{ roleText(e.role) }}</p>
           <div v-if="showDates" class="membership-edit-dates">
             <input
               class="edit-input edit-input-date"
@@ -141,9 +145,10 @@
 <script setup lang="ts">
 // Parent owns the `entries` array (reactive). Editor mutates in place.
 /* eslint-disable vue/no-mutating-props */
-import { computed, ref, watch } from 'vue'
+import { computed, ref, watch, toRef } from 'vue'
 import SectionsEditor, { type Section } from '@/components/SectionsEditor.vue'
 import type { RelationEntry, RelationStrategy, RelationTarget } from './RelationStrategy.ts'
+import { useRoles, useRoleOptions } from '@/composables/useRoles.ts'
 
 const props = withDefaults(defineProps<{
   parentSlug: string
@@ -162,7 +167,9 @@ const props = withDefaults(defineProps<{
   showDates?:       boolean
   showPassed?:      boolean
   showDescription?: boolean
-  roleOptions?:     Record<string, string>
+  /** Role group (docs/ROLES.md) the picker offers, e.g. 'membership'.
+   *  Options and help text come from the Role nodes. */
+  roleScope?:       string
   defaultRole?:     string | null
   /** Optional "create new" button at the bottom of the typeahead dropdown. */
   createLabel?:     string
@@ -180,7 +187,7 @@ const props = withDefaults(defineProps<{
   showDates:       true,
   showPassed:      false,
   showDescription: true,
-  roleOptions:     undefined,
+  roleScope:       undefined,
   defaultRole:     null,
   createLabel:     undefined,
   createHref:      undefined,
@@ -190,6 +197,10 @@ const props = withDefaults(defineProps<{
 })
 
 const emit = defineEmits<{ saved: [] }>()
+
+const { roles }   = useRoles()
+const roleOptions = useRoleOptions(toRef(props, 'roleScope'))
+const roleText    = (key: string) => roles.value.get(key)?.text ?? ''
 
 const expandedIndex = ref<number | null>(null)
 const pickerQuery   = ref('')
@@ -304,7 +315,7 @@ function removeEntry(i: number) {
 
 function summaryOf(e: RelationEntry): string {
   const bits: string[] = []
-  if (props.showRole && e.role) bits.push(props.roleOptions?.[e.role] ?? e.role)
+  if (props.showRole && e.role) bits.push(roles.value.get(e.role)?.name ?? e.role)
   if (e.startDate || e.endDate) bits.push(`${e.startDate ?? '?'}${e.endDate ? ` – ${e.endDate}` : ''}`)
   if (props.showPassed && e.passed === true)  bits.push('Bestått')
   if (props.showPassed && e.passed === false) bits.push('Ikke bestått')
@@ -551,6 +562,13 @@ function revert() {
   font-weight: 500;
 }
 
+.role-help {
+  margin: var(--space-xs) 0 0;
+  font-family: var(--font-sans);
+  font-size: var(--size-label);
+  line-height: var(--leading-normal);
+  color: var(--muted);
+}
 .rank-remove-btn {
   height: 32px;
   padding: 0 var(--space-md);

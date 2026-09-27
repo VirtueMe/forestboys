@@ -15,7 +15,7 @@
           <span v-if="p.color" class="color-dot" :style="{ background: p.color }"></span>
           {{ p.name }}
         </RouterLink>
-        <span v-if="p.role" class="parent-role"><RoleLabel :role-key="p.role" :fallback="ROLE_LABEL[p.role]" /></span>
+        <span v-if="p.role" class="parent-role"><RoleLabel :role-key="p.role" /></span>
         <button
           v-if="p.description"
           class="info-marker"
@@ -59,12 +59,6 @@ defineProps<{
   parents:        UnitParent[]
 }>()
 
-const ROLE_LABEL: Record<string, string> = {
-  administrative: 'administrativt',
-  operational:    'operativt',
-  sponsor:        'sponsor',
-  parent:         'overordnet',
-}
 
 const expandedParent = ref<string | null>(null)
 function toggleParentInfo(slug: string) {

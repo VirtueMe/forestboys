@@ -6,7 +6,7 @@
       class="role-label"
       :aria-expanded="open"
       :aria-label="`Forklaring: ${label}`"
-      :title="plainText"
+      :title="role?.text"
       @click.stop="open = !open"
     >{{ label }}</button>
     <span v-if="open" class="role-popover" role="dialog" :aria-label="label">
@@ -16,7 +16,7 @@
       </span>
       <span class="role-popover-name">{{ label }}</span>
       <!-- eslint-disable vue/no-v-html -->
-      <span class="role-popover-text portable-text" v-html="html"></span>
+      <span class="role-popover-text portable-text" v-html="role?.html"></span>
       <!-- eslint-enable vue/no-v-html -->
       <span v-if="role?.sourceIds.length" class="role-popover-sources">
         <SourceRef :refs="role.sourceIds" />
@@ -29,8 +29,8 @@
 /**
  * RoleLabel — a relation role as shown to visitors (docs/ROLES.md R11–R14).
  *
- * Shows the Role's name (falling back to the caller's label, then the
- * raw key). When the role has a description, the label itself is the
+ * Shows the Role's name (falling back to the raw key for a value with no
+ * Role node). When the role has a description, the label itself is the
  * trigger — dotted underline; click / tap / Enter opens a popover with
  * the description and its sources as SourceRef chips. Hover gives the
  * plain text via `title`. Without a description it renders plain text.
@@ -40,28 +40,15 @@
  */
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRoles } from '@/composables/useRoles.ts'
-import { blocksToHtml, blocksToText } from '@/utils/portableText.ts'
 import SourceRef from '@/components/SourceRef.vue'
 
-const props = defineProps<{
-  roleKey:   string
-  /** Label to show until / unless the Role node provides a name. */
-  fallback?: string | null
-}>()
+const props = defineProps<{ roleKey: string }>()
 
 const { roles } = useRoles()
 const role  = computed(() => roles.value.get(props.roleKey) ?? null)
-const label = computed(() => role.value?.name ?? props.fallback ?? props.roleKey)
+const label = computed(() => role.value?.name ?? props.roleKey)
 
-type Blocks = Parameters<typeof blocksToHtml>[0]
-function parsed(): Blocks[] {
-  return (role.value?.sections ?? []).flatMap((c) => {
-    try { return [JSON.parse(c) as Blocks] } catch { return [] }
-  })
-}
-const html           = computed(() => parsed().map(b => blocksToHtml(b)).join(''))
-const plainText      = computed(() => parsed().map(b => blocksToText(b)).join(' ').trim())
-const hasDescription = computed(() => plainText.value.length > 0)
+const hasDescription = computed(() => !!role.value?.text)
 
 const open = ref(false)
 const wrap = ref<HTMLElement | null>(null)

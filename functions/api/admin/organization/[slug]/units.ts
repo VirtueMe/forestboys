@@ -10,6 +10,7 @@
 
 import { requireAdmin } from '~/_lib/require-admin.ts'
 import { runCypher, type Neo4jEnv } from '~/_lib/neo4j.ts'
+import { findInvalidRole } from '~/_lib/role-scopes.ts'
 
 interface Env extends Neo4jEnv {
   SESSION_SECRET: string
@@ -25,8 +26,6 @@ interface Body {
   units?: UnitInput[]
 }
 
-const VALID_ROLES = new Set(['administrative', 'operational', 'sponsor', 'parent'])
-
 export const onRequestPatch: PagesFunction<Env> = async ({ request, env, params }) => {
   const guard = await requireAdmin(request, env)
   if (guard instanceof Response) return guard
@@ -39,12 +38,16 @@ export const onRequestPatch: PagesFunction<Env> = async ({ request, env, params 
 
   for (const u of units) {
     if (typeof u.unitSlug !== 'string' || !u.unitSlug) return json({ error: 'Bad unitSlug' }, 400)
-    if (u.role !== undefined && u.role !== null && !VALID_ROLES.has(u.role)) {
-      return json({ error: `Bad role: ${u.role}` }, 400)
-    }
     if (u.order !== undefined && u.order !== null && (!Number.isInteger(u.order) || u.order < 0)) {
       return json({ error: `Bad order: ${u.order}` }, 400)
     }
+  }
+
+  try {
+    const badRole = await findInvalidRole(env, 'part-of', units.map(u => u.role))
+    if (badRole) return json({ error: `Ukjent rolle for denne koblingen: ${badRole}` }, 400)
+  } catch (e) {
+    return json({ error: (e as Error).message }, 502)
   }
 
   const payload = units.map(u => ({

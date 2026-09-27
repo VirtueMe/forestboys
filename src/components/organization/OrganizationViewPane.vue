@@ -18,7 +18,7 @@
         <div class="relation-list">
           <div v-for="u in unitEntries" :key="u.targetSlug" class="relation-row">
             <RouterLink :to="`/district/${u.targetSlug}`" class="relation-link">{{ u.targetName }}</RouterLink>
-            <span v-if="u.role" class="relation-role"><RoleLabel :role-key="u.role" :fallback="PART_OF_ROLE_LABEL[u.role]" /></span>
+            <span v-if="u.role" class="relation-role"><RoleLabel :role-key="u.role" /></span>
             <button
               v-if="u.hasDescription"
               class="info-marker"
@@ -35,7 +35,6 @@
 
     <RelationInfoPopup
       :entry="activeUnit"
-      :role-options="PART_OF_ROLE_LABEL"
       show-role
       @close="activeUnit = null"
     />
@@ -139,7 +138,6 @@ import { RouterLink } from 'vue-router'
 import ImageSlider, { type SlideImage } from '@/components/ImageSlider.vue'
 import DescriptionPreview from '@/components/DescriptionPreview.vue'
 import RelationInfoPopup from '@/components/relation/RelationInfoPopup.vue'
-import { PART_OF_ROLE_LABEL } from '@/components/relation/strategies.ts'
 import type { RelationEntry } from '@/components/relation/RelationStrategy.ts'
 import type { Section } from '@/components/SectionsEditor.vue'
 import type { ExternalRef } from '@/components/person/PersonExternalRefs.vue'

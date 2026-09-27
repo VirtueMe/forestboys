@@ -9,28 +9,6 @@ import { authFetch }  from '@/composables/useAuth.ts'
 import type { Section } from '@/components/SectionsEditor.vue'
 import type { RelationEntry, RelationStrategy, RelationTarget } from './RelationStrategy.ts'
 
-export const ROLE_LABEL: Record<string, string> = {
-  administrative: 'administrativt',
-  operational:    'operativt',
-  sponsor:        'sponsor',
-  parent:         'overordnet',
-  operative:      'operatør',
-  courier:        'kurér',
-  radiotelegraph: 'radiotelegrafist',
-  host:           'vert',
-  informant:      'informant',
-  member:         'medlem',
-}
-
-/** Roles valid on PART_OF (Unit → Organization). Must mirror the backend's
- *  VALID_ROLES in /api/admin/organization/:slug/units. */
-export const PART_OF_ROLE_LABEL: Record<string, string> = {
-  administrative: 'administrativt',
-  operational:    'operativt',
-  sponsor:        'sponsor',
-  parent:         'overordnet',
-}
-
 interface CitationRow {
   inline:       boolean | null
   sourceId:     string | null
