@@ -11,9 +11,12 @@
  *   conflict  graph differs from the baseline → edited in the graph, review
  *   review    baseline not trustworthy for this person (its _updatedAt ≠ the
  *             node's sanityUpdatedAt), so graph edits can't be told apart
- *   not-imported  the graph holds nothing for this field on this person
- *             (person descriptions were never imported — Sanity is the
- *             only copy), so there is nothing to sync yet
+ *   not-imported  the graph holds nothing for this field on this person,
+ *             so there is nothing to sync yet
+ *
+ * Descriptions were imported later than the rest (scripts/import-person-
+ * descriptions.ts), so their baseline is not the April export but the
+ * `description_sha` stamped on the Person at import.
  *
  * Calibration: the same graph-vs-baseline comparison is run on people who
  * have NOT changed in Sanity. Agreement there should be near 100%; the
@@ -30,6 +33,7 @@ import { readFileSync, writeFileSync, mkdirSync } from 'node:fs'
 import { resolve } from 'node:path'
 import neo4j from 'neo4j-driver'
 import * as dotenv from 'dotenv'
+import { fieldSha } from './lib/sanity-sha.ts'
 dotenv.config()
 
 const API      = 'https://7r6kqtqy.api.sanity.io/v2021-08-31/data/query/production'
@@ -49,6 +53,7 @@ interface GraphPerson {
   links:           string[]
   images:          string[]
   content:         string[]
+  descriptionSha:  string | null
   rels:            number
   graphOnlyRels:   number
 }
@@ -59,14 +64,6 @@ const ws = (s: string) => s.replace(/\s+/g, ' ').trim()
 
 /** Sanity scalar → string; anything else (missing, object) → ''. */
 const str = (v: unknown): string => (typeof v === 'string' || typeof v === 'number' ? String(v) : '')
-
-function ptText(blocks: unknown): string {
-  if (!Array.isArray(blocks)) return ''
-  return ws(blocks.map(b => {
-    const kids = (b as { children?: { text?: string }[] }).children ?? []
-    return kids.map(c => c.text ?? '').join('')
-  }).join('\n'))
-}
 
 /** image-<hash>-<WxH>-<ext> → <hash>-<WxH>.<ext>, the tail of the CDN url. */
 function imageKey(ref: string): string {
@@ -96,6 +93,10 @@ interface Field {
   same?: (g: GraphPerson, d: Doc) => boolean
   /** False when the graph holds nothing for this field on this person. */
   imported?: (g: GraphPerson) => boolean
+  /** Hash of the value this field was imported with, stamped on the node —
+   *  replaces the April baseline for fields imported later. `fromSanity` /
+   *  `fromGraph` then return hashes too. */
+  importedSha?: (g: GraphPerson) => string | null
 }
 
 const FIELDS: Field[] = [
@@ -117,9 +118,11 @@ const FIELDS: Field[] = [
       .map(i => i.asset?._ref).filter((r): r is string => !!r).map(imageKey)),
     fromGraph:  g => sortedJoin(g.images) },
   { sanity: 'description',
-    fromSanity: d => ptText(d.description),
-    fromGraph:  g => ws(g.content.map(c => { try { return ptText(JSON.parse(c)) } catch { return '' } }).join('\n')),
-    imported:   g => g.content.length > 0 },
+    fromSanity:  d => fieldSha(d.description ?? null),
+    // Sections concatenate back into one block list; a single imported section is unchanged by this.
+    fromGraph:   g => fieldSha(g.content.flatMap(c => { try { return JSON.parse(c) as unknown[] } catch { return [] } })),
+    imported:    g => g.content.length > 0,
+    importedSha: g => g.descriptionSha },
 ]
 
 function same(f: Field, g: GraphPerson, d: Doc): boolean {
@@ -179,7 +182,8 @@ async function fetchGraphPeople(): Promise<Map<string, GraphPerson>> {
       }
       RETURN p.sanityId AS sanityId, p.sanityUpdatedAt AS sanityUpdatedAt, p.slug AS slug,
              p.canonicalName AS canonicalName, p.secretName AS secretName, p.home AS home,
-             p.birthYear AS birthYear, links, images, content, rels, graphOnlyRels
+             p.birthYear AS birthYear, p.description_sha AS descriptionSha,
+             links, images, content, rels, graphOnlyRels
     `)
     return new Map(r.records.map(rec => {
       const g = rec.toObject() as GraphPerson
@@ -210,7 +214,8 @@ async function main() {
       if (f.imported && !f.imported(g)) return
       const c = calib[i]
       c.total++
-      if (same(f, g, b)) c.agree++
+      const agrees = f.importedSha ? f.fromGraph(g) === f.importedSha(g) : same(f, g, b)
+      if (agrees) c.agree++
       else if (c.samples.length < 5) c.samples.push({ slug: g.slug, graph: f.fromGraph(g).slice(0, 120), baseline: f.fromSanity(b).slice(0, 120) })
     })
   }
@@ -228,6 +233,15 @@ async function main() {
     const trusted = !!base
     const fields: { field: string; verdict: Verdict }[] = []
     for (const f of FIELDS) {
+      if (f.importedSha) {
+        const stamp = f.importedSha(g)
+        if (!stamp) continue
+        if (f.fromSanity(s) === stamp) continue
+        const verdict: Verdict = same(f, g, s) ? 'already' : f.fromGraph(g) === stamp ? 'clean' : 'conflict'
+        fields.push({ field: f.sanity, verdict })
+        tally[f.sanity][verdict]++
+        continue
+      }
       // Changed = differs from what the graph was built from (or, untrusted, from the graph).
       const changed = base ? f.fromSanity(s) !== f.fromSanity(base) : !same(f, g, s)
       if (!changed) continue

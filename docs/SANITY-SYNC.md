@@ -71,6 +71,23 @@ node's `sanityUpdatedAt`:
 For the 166 without a trustworthy baseline, every difference between
 Sanity and the graph goes to review.
 
+### Fields imported after April
+
+A field imported later has no April baseline. Its import stamps the
+imported value's hash on the node instead, next to the existing per-field
+provenance (`<field>_sourceRef`, `<field>_state`):
+`<field>_sanityUpdatedAt` and `<field>_sha` (sha256 of the value as stable
+JSON, `scripts/lib/sanity-sha.ts`). The three-way compare then uses the
+stamp as the baseline: Sanity changed the field when its value no longer
+hashes to the stamp, the graph was edited when the stored value no longer
+does.
+
+- **Person descriptions** — never imported with the rest (the Person page
+  showed them from the Sanity cache). Imported 2026-09-27 by
+  `scripts/import-person-descriptions.ts`: 3 462 people, one section each,
+  `description_state: 'candidate'`. 163 people with descriptions are not
+  in the graph yet; the new-person import must bring theirs along.
+
 ---
 
 ## Sync
