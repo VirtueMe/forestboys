@@ -15,6 +15,7 @@ Entry point for all design and architecture documents.
 | [COLOURS.md](COLOURS.md) | Org and district colour maps, derivation and fallback |
 | [DB.md](DB.md) | Long-term graph database consideration — note for the motstandsbevegelsen handoff |
 | [EQUIPMENT-LIFECYCLE.md](EQUIPMENT-LIFECYCLE.md) | Equipment lifecycle possibilities — manufactured, in service, lost / never recovered (discussion, nothing decided) |
+| [PERSON-STATIONED-AT.md](PERSON-STATIONED-AT.md) | Requirements for linking a Person to a Location / Station with role and timeframe (draft, open questions) |
 
 ---
 
