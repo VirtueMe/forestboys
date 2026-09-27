@@ -46,23 +46,22 @@
       </div>
     </details>
 
-    <details v-if="people.length" class="section" open>
+    <details v-if="!hideEditable && people.length" class="section" open>
       <summary class="section-summary">
         <h3 class="section-heading">Deltakere ({{ people.length }})</h3>
       </summary>
       <div class="section-body">
-        <div class="link-list">
-          <RouterLink
-            v-for="p in people"
-            :key="p.slug"
-            :to="`/person/${p.slug}`"
-            class="section-link"
-          >
-            {{ p.name }}
-          </RouterLink>
-        </div>
+        <RelationListView
+          :entries="people"
+          :strategy="StationStaysStrategy"
+          label="Deltakere"
+          show-role
+          headless
+          @open="e => activeStay = e"
+        />
       </div>
     </details>
+    <RelationInfoPopup :entry="activeStay" show-role @close="activeStay = null" />
 
     <details v-if="galleryImages.length" class="section" open>
       <summary class="section-summary">
@@ -127,13 +126,18 @@ import ImageSlider, { type SlideImage } from '@/components/ImageSlider.vue'
 import DescriptionPreview from '@/components/DescriptionPreview.vue'
 import LegacyDescription from '@/components/LegacyDescription.vue'
 import type { Section } from '@/components/SectionsEditor.vue'
-import type { StationPerson, StationEvent, StationExternalRef } from '@/composables/useStationData.ts'
+import RelationListView from '@/components/relation/RelationListView.vue'
+import RelationInfoPopup from '@/components/relation/RelationInfoPopup.vue'
+import { StationStaysStrategy } from '@/components/relation/stayStrategies.ts'
+import type { RelationEntry } from '@/components/relation/RelationStrategy.ts'
+import type { StationEvent, StationExternalRef } from '@/composables/useStationData.ts'
 
 const props = withDefaults(defineProps<{
   previewSections:   Section[]
   legacyDescription: string | null
   legacyLinksJson:   string | null
-  people:            StationPerson[]
+  /** STATIONED_AT stays at this Station. */
+  people:            RelationEntry[]
   events:            StationEvent[]
   externalRefs:      StationExternalRef[]
   galleryImages:     SlideImage[]
@@ -141,6 +145,8 @@ const props = withDefaults(defineProps<{
 }>(), {
   hideEditable: false,
 })
+
+const activeStay = ref<RelationEntry | null>(null)
 
 interface LegacyLink { title: string; link: string }
 

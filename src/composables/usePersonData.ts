@@ -22,6 +22,7 @@ import {
   MembershipStrategy, AttendanceStrategy,
   IncidentStrategy, OperationStrategy,
 } from '@/components/relation/strategies.ts'
+import { PersonStaysStrategy } from '@/components/relation/stayStrategies.ts'
 import type { HeldRank, RankOption, PersonType } from '@/components/person/types.ts'
 
 export interface Neo4jPerson {
@@ -102,6 +103,8 @@ export function usePersonData() {
   const incidentTargets    = ref<RelationTarget[]>([])
   const operationEntries   = ref<RelationEntry[]>([])
   const operationTargets   = ref<RelationTarget[]>([])
+  const stayEntries        = ref<RelationEntry[]>([])
+  const stayTargets        = ref<RelationTarget[]>([])
 
   /** Bundle the four entries/targets pairs so PersonRelations gets one prop. */
   const relationsData = computed(() => ({
@@ -109,6 +112,7 @@ export function usePersonData() {
     attendance: { entries: attendanceEntries.value, targets: attendanceTargets.value },
     operation:  { entries: operationEntries.value,  targets: operationTargets.value  },
     incident:   { entries: incidentEntries.value,   targets: incidentTargets.value   },
+    stay:       { entries: stayEntries.value,       targets: stayTargets.value       },
   }))
 
   function resetPerson() {
@@ -127,6 +131,8 @@ export function usePersonData() {
     incidentTargets.value   = []
     operationEntries.value  = []
     operationTargets.value  = []
+    stayEntries.value       = []
+    stayTargets.value       = []
   }
 
   async function loadPerson(slug: string) {
@@ -152,7 +158,7 @@ export function usePersonData() {
         personRows, heroRows, galleryRows, refRows,
         memberEntries, memberTargets, attendEntries, attendTargets,
         incidEntries, incidTargets, operEntries, operTargets,
-        rankRows, allRankRows, sectionRows,
+        rankRows, allRankRows, sectionRows, stayRows, stayTargetRows,
       ] = await Promise.all([
         neo4jQuery<Neo4jPerson>(
           `MATCH (p:Person {slug: $slug})
@@ -275,6 +281,8 @@ export function usePersonData() {
            ORDER BY order`,
           { slug },
         ),
+        PersonStaysStrategy.fetchEntries(slug),
+        PersonStaysStrategy.fetchTargets(),
       ])
       heroImage.value = heroRows[0] ?? null
       const seen = new Set<string>()
@@ -296,6 +304,8 @@ export function usePersonData() {
       incidentTargets.value   = incidTargets
       operationEntries.value  = operEntries
       operationTargets.value  = operTargets
+      stayEntries.value       = stayRows
+      stayTargets.value       = stayTargetRows
       heldRanks.value     = rankRows
       allRanks.value      = allRankRows
       savedSections.value = sectionRows.map(rowToSection)
@@ -318,6 +328,7 @@ export function usePersonData() {
     attendanceEntries, attendanceTargets,
     incidentEntries,   incidentTargets,
     operationEntries,  operationTargets,
+    stayEntries,       stayTargets,
     // Derived
     relationsData,
     // Lifecycle

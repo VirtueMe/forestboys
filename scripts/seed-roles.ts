@@ -42,6 +42,12 @@ const SEED: Array<{ key: string; name: string; scopes: string[] }> = [
   { key: 'operational',    name: 'operativt',        scopes: ['part-of'] },
   { key: 'sponsor',        name: 'sponsor',          scopes: ['part-of'] },
   { key: 'parent',         name: 'overordnet',       scopes: ['part-of'] },
+  // Person → Location / Station (docs/PERSON-STATIONED-AT.md, R4)
+  { key: 'stationed',      name: 'stasjonert',       scopes: ['stationed'] },
+  { key: 'hiding',         name: 'i skjul',          scopes: ['stationed'] },
+  { key: 'imprisoned',     name: 'fange',            scopes: ['stationed'] },
+  { key: 'training',       name: 'opplæring',        scopes: ['stationed'] },
+  { key: 'operating',      name: 'operatør',         scopes: ['stationed'] },
 ]
 
 async function main() {

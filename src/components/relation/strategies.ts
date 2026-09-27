@@ -17,7 +17,7 @@ interface CitationRow {
   sourceAuthor: string | null
 }
 
-interface SectionRow {
+export interface SectionRow {
   order:       number | null
   content:     string | null
   citations:   CitationRow[]
@@ -31,7 +31,7 @@ interface SectionRow {
   } | null
 }
 
-function rowToSection(r: SectionRow): Section {
+export function rowToSection(r: SectionRow): Section {
   return {
     order:   r.order ?? 1,
     content: r.content ?? '[]',

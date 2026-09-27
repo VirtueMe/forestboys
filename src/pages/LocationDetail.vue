@@ -34,6 +34,8 @@
         :slug="locationSlug"
         :location="location"
         :saved-sections="savedSections"
+        :stay-entries="people"
+        :stay-targets="stayTargets"
         :create-mode="isCreate"
         :pending-description="pendingDescription"
         @saved-scalar="onScalarSaved"
@@ -50,6 +52,7 @@
         :events="events"
         :external-refs="externalRefs"
         :gallery-images="galleryImages"
+        :people="people"
         :hide-editable="mode === 'edit'"
       />
     </template>
@@ -57,7 +60,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, useTemplateRef, inject } from 'vue'
+import { computed, ref, useTemplateRef, inject, watch } from 'vue'
 import { useLocationData, type LocationNode } from '../composables/useLocationData.ts'
 import { LocationDataKey } from '../composables/proposalDataInjection.ts'
 import { useDetailCreateMode } from '../composables/useDetailCreateMode.ts'
@@ -70,6 +73,8 @@ import type { Section } from '../components/SectionsEditor.vue'
 import LocationHeader   from '../components/location/LocationHeader.vue'
 import LocationEditPane from '../components/location/LocationEditPane.vue'
 import LocationViewPane from '../components/location/LocationViewPane.vue'
+import { LocationStaysStrategy } from '../components/relation/stayStrategies.ts'
+import type { RelationTarget } from '../components/relation/RelationStrategy.ts'
 import type { LocationDraft } from '../components/location/LocationScalarEditor.vue'
 
 const { user } = useAuth()
@@ -91,9 +96,16 @@ function onSectionsSaved(sections: Section[]) {
 
 const {
   location, savedSections,
-  events, externalRefs, galleryImages,
+  events, externalRefs, galleryImages, people,
   loadLocation, resetLocation,
 } = inject(LocationDataKey, () => useLocationData(), true)
+
+// Person picker for the Personer editor — admins only, loaded once.
+const stayTargets = ref<RelationTarget[]>([])
+watch(isAdmin, async (admin) => {
+  if (!admin || stayTargets.value.length) return
+  try { stayTargets.value = await LocationStaysStrategy.fetchTargets() } catch { /* picker stays empty */ }
+}, { immediate: true })
 
 const editPane = useTemplateRef<{
   scalarDraft: LocationDraft | null

@@ -23,34 +23,6 @@
     </div>
   </section>
 
-  <section v-if="person.locations?.length" class="section">
-    <h3 class="section-heading">Vært stasjonert på</h3>
-    <div class="link-list">
-      <RouterLink
-        v-for="loc in person.locations"
-        :key="loc.slug"
-        :to="placeRoute(loc.slug)"
-        class="section-link"
-      >
-        {{ loc.title }}
-      </RouterLink>
-    </div>
-  </section>
-
-  <section v-if="person.stations?.length" class="section">
-    <h3 class="section-heading">Gjennomgått trening på</h3>
-    <div class="link-list">
-      <RouterLink
-        v-for="s in person.stations"
-        :key="s.slug"
-        :to="`/station/${s.slug}`"
-        class="section-link"
-      >
-        {{ s.title }}
-      </RouterLink>
-    </div>
-  </section>
-
   <section v-if="outlines.length" class="section">
     <h3 class="section-heading">Annen informasjon</h3>
     <div class="link-list">
@@ -76,19 +48,16 @@
 <script setup lang="ts">
 /**
  * PersonExtraSections — read-only list/asset sections that hang below the
- * Beskrivelse + relation lists on a person page. Steder / Baser / Annen
- * informasjon / Video, plus the legacy Sanity-era Hendelser fallback when
+ * Beskrivelse + relation lists on a person page. Annen informasjon /
+ * Video, plus the legacy Sanity-era Hendelser fallback when
  * the Neo4j Incident list is empty.
  */
 import { ref, computed } from 'vue'
 import { RouterLink } from 'vue-router'
 import type { IdbEvent } from '@/types/idb.ts'
-import { usePlaceRoute } from '@/composables/usePlaceRoute.ts'
 
 interface PersonShape {
   events?:    IdbEvent[]
-  locations?: { slug: string; title: string }[]
-  stations?:  { slug: string; title: string }[]
   movie?:     string | null
 }
 
@@ -100,8 +69,6 @@ const props = defineProps<{
   /** Hide the legacy IDB events list when Neo4j incidents take precedence. */
   showLegacyEvents:  boolean
 }>()
-
-const placeRoute = usePlaceRoute()
 
 const eventSortAsc = ref(true)
 

@@ -149,6 +149,7 @@ import { computed, ref, watch, toRef } from 'vue'
 import SectionsEditor, { type Section } from '@/components/SectionsEditor.vue'
 import type { RelationEntry, RelationStrategy, RelationTarget } from './RelationStrategy.ts'
 import { useRoles, useRoleOptions } from '@/composables/useRoles.ts'
+import { formatPeriod } from '@/utils/period.ts'
 
 const props = withDefaults(defineProps<{
   parentSlug: string
@@ -316,7 +317,8 @@ function removeEntry(i: number) {
 function summaryOf(e: RelationEntry): string {
   const bits: string[] = []
   if (props.showRole && e.role) bits.push(roles.value.get(e.role)?.name ?? e.role)
-  if (e.startDate || e.endDate) bits.push(`${e.startDate ?? '?'}${e.endDate ? ` – ${e.endDate}` : ''}`)
+  const period = formatPeriod(e.startDate, e.endDate)
+  if (period) bits.push(period)
   if (props.showPassed && e.passed === true)  bits.push('Bestått')
   if (props.showPassed && e.passed === false) bits.push('Ikke bestått')
   if (props.summaryExtra) {
@@ -326,6 +328,11 @@ function summaryOf(e: RelationEntry): string {
   return bits.join(' · ')
 }
 
+/** Notes hang off the edge when the relation has edge ids, else off the target. */
+function noteKey(e: RelationEntry): string {
+  return e.edgeId ?? e.targetSlug
+}
+
 async function save() {
   if (!valid.value) return
   saving.value = true
@@ -333,14 +340,18 @@ async function save() {
   try {
     await props.strategy.saveEntries(props.parentSlug, props.entries)
 
-    const currentTargets  = new Set(props.entries.map(e => e.targetSlug).filter(Boolean))
-    const previousTargets = new Set(originalEntries.value.filter(e => e.sections.length).map(e => e.targetSlug))
-    const toSync          = new Set<string>([...currentTargets, ...previousTargets])
+    // saveEntries has assigned edgeIds to new rows by now.
+    const currentKeys  = new Set(props.entries.map(noteKey).filter(Boolean))
+    const previousKeys = new Set(originalEntries.value.filter(e => e.sections.length).map(noteKey))
+    const toSync       = new Set<string>([...currentKeys, ...previousKeys])
 
-    for (const targetSlug of toSync) {
-      const draft = props.entries.find(e => e.targetSlug === targetSlug)
+    const before       = new Map(originalEntries.value.map(e => [noteKey(e), sectionsSignature(e.sections)]))
+
+    for (const key of toSync) {
+      const draft = props.entries.find(e => noteKey(e) === key)
       const sections = draft?.sections ?? []
-      await props.strategy.saveNote(props.parentSlug, targetSlug, sections)
+      if ((before.get(key) ?? sectionsSignature([])) === sectionsSignature(sections)) continue
+      await props.strategy.saveNote(props.parentSlug, key, sections)
     }
 
     for (const e of props.entries) e.hasDescription = e.sections.length > 0

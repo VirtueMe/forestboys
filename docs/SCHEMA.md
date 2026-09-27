@@ -207,7 +207,7 @@ Vocabularies:
 | `HELD_RANK`           | `Rank`                                    | `startDate, endDate, sourceRef`                       |
 | `INVOLVED_IN`         | `Incident`                                | `role, outcome`                                       |
 | `PARTICIPATED_IN`     | `Operation`                               | `role, startDate, endDate`                            |
-| `STATIONED_AT`        | `Station`                                 | —                                                     |
+| `STATIONED_AT`        | `Location` \| `Station`                  | `id, role, startDate, endDate, state, sourceRef` — one edge per stay (docs/PERSON-STATIONED-AT.md) |
 | `CREW_OF`             | `Transport`                               | `role` (controlled vocab — RAF WWII + SOE dispatcher) |
 | `BORN_AT`             | `Location`                                | —                                                     |
 | `HOME_AT`             | `Location`                                | —                                                     |
@@ -215,6 +215,7 @@ Vocabularies:
 | `HAS_MEMBERSHIP_NOTE` | `Description`                             | relation-scoped — note then `ABOUT_UNIT` to the Unit  |
 | `HAS_INCIDENT_NOTE`   | `Description`                             | relation-scoped — note then `ABOUT_INCIDENT`          |
 | `HAS_OPERATION_NOTE`  | `Description`                             | relation-scoped — note then `ABOUT_OPERATION`         |
+| `HAS_STATIONED_NOTE`  | `Description`                             | per stay — `Description.stayId` = the edge's `id`, then `ABOUT_PLACE` |
 
 **Rules:**
 - Every `Person` MUST have at least one `HELD_RANK` edge. The default is `Rank{canonicalName:"Menig"}` (tier 1) with `sourceRef = 'default:menig-soldier-baseline'`.

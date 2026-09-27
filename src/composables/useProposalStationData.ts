@@ -2,8 +2,8 @@
  * Controller-view preview wrapper for Station. See useProposalPersonData.
  *
  * Implements modify-block + create-entity skeleton. Edge merge for
- * Station's bespoke StationPerson type is deferred until the
- * controller-view refactor consumes it.
+ * Station's stays (STATIONED_AT) is deferred until the controller-view
+ * refactor consumes it.
  */
 import { ref, computed } from 'vue'
 import { useStationData } from './useStationData.ts'

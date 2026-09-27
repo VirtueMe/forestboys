@@ -1,8 +1,9 @@
 # Person stationed at a place — requirements
 
 Requirements for recording **where a person was, and when**: a Person
-linked to a Location or Station for a period of time. Draft for review —
-the open questions at the end need answers before building.
+linked to a Location or Station for a period of time. Implemented
+2026-09-27 — see *Decisions* at the end for how the open questions were
+settled.
 
 ---
 
@@ -142,3 +143,37 @@ place reference and must run clean before commit (bulk-op rule).
 5. **Enemy posts** — should a link to a German post (the Luftwaffe
    example) be `STATIONED_AT` at all, or is it a different relation
    (e.g. surveillance, sabotage target)?
+
+---
+
+## Decisions (2026-09-27)
+
+1. **Several periods, one row each, note per row.** Every stay is its own
+   edge with a stable `id`; the editor keys rows and notes by it
+   (`RelationEntry.edgeId`). A relationship can't point at a
+   relationship, so the note carries the id:
+   `(Person)-[:HAS_STATIONED_NOTE]->(Description {stayId})-[:ABOUT_PLACE]->(place)`.
+   Sources (R5) are the note's citations, as on other relation notes.
+2. **Roles:** the R4 table, seeded as Role nodes in scope `stationed`
+   (`scripts/seed-roles.ts`). Born / lived / buried stay separate edges.
+3. **Open end:** plain "1943 –" (`src/utils/period.ts`, used by all
+   relation lists).
+4. **Migration:** everything imported as `stationed`, `state: 'candidate'`.
+   Places whose title suggests another role are listed by the script for
+   Jan's review.
+5. **Enemy posts:** imported like the rest, flagged for review.
+
+### Implementation
+
+| Piece | Where |
+|---|---|
+| Replace-all save, state + note bookkeeping | `functions/_lib/stays.ts` |
+| Person side | `PATCH /api/admin/person/:slug/stays` — places as `location:<slug>` / `station:<slug>` (15 slugs exist as both) |
+| Place side | `PATCH /api/admin/{location,station}/:slug/stays` |
+| Note | `PATCH /api/admin/stay-note/:stayId` |
+| Strategies | `src/components/relation/stayStrategies.ts` |
+| Migration | `scripts/migrate-stationed-at.ts` (dry run by default, `--write`) |
+
+**State:** a save keeps a stay's state when place, person, role and dates
+are unchanged; anything else (and every new stay) becomes `verified`.
+`sourceRef` survives edits. The editor marks candidates "ikke gjennomgått".

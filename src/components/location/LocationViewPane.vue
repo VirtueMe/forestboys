@@ -44,6 +44,23 @@
       </div>
     </details>
   
+    <details v-if="!hideEditable && people.length" class="section" open>
+      <summary class="section-summary">
+        <h3 class="section-heading">Personer ({{ people.length }})</h3>
+      </summary>
+      <div class="section-body">
+        <RelationListView
+          :entries="people"
+          :strategy="LocationStaysStrategy"
+          label="Personer"
+          show-role
+          headless
+          @open="e => activeStay = e"
+        />
+      </div>
+    </details>
+    <RelationInfoPopup :entry="activeStay" show-role @close="activeStay = null" />
+
     <details v-if="galleryImages.length" class="section" open>
       <summary class="section-summary">
         <h3 class="section-heading">Galleri ({{ galleryImages.length }})</h3>
@@ -93,6 +110,10 @@ import ImageSlider, { type SlideImage } from '@/components/ImageSlider.vue'
 import DescriptionPreview from '@/components/DescriptionPreview.vue'
 import type { Section } from '@/components/SectionsEditor.vue'
 import LocationMap from './LocationMap.vue'
+import RelationListView from '@/components/relation/RelationListView.vue'
+import RelationInfoPopup from '@/components/relation/RelationInfoPopup.vue'
+import { LocationStaysStrategy } from '@/components/relation/stayStrategies.ts'
+import type { RelationEntry } from '@/components/relation/RelationStrategy.ts'
 import type { LocationEvent, LocationExternalRef } from '@/composables/useLocationData.ts'
 
 const props = withDefaults(defineProps<{
@@ -104,10 +125,14 @@ const props = withDefaults(defineProps<{
   events:          LocationEvent[]
   externalRefs:    LocationExternalRef[]
   galleryImages:   SlideImage[]
+  /** STATIONED_AT stays at this Location. */
+  people:          RelationEntry[]
   hideEditable?:   boolean
 }>(), {
   hideEditable: false,
 })
+
+const activeStay = ref<RelationEntry | null>(null)
 
 const ROLE_LABEL: Record<LocationEvent['role'], string> = { at: 'Sted', from: 'Fra', to: 'Til' }
 

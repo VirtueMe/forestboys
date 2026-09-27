@@ -75,6 +75,7 @@ import { computed, onBeforeUnmount, onMounted } from 'vue'
 import RoleLabel from '@/components/role/RoleLabel.vue'
 import { blocksToHtml } from '@/utils/portableText.ts'
 import type { Section, Citation } from '@/components/SectionsEditor.vue'
+import { formatPeriod } from '@/utils/period.ts'
 import type { RelationEntry } from './RelationStrategy.ts'
 
 const props = withDefaults(defineProps<{
@@ -110,8 +111,7 @@ const footnotes = computed<(Citation & { footnoteNumber: number })[]>(() => {
 })
 
 function periodOf(e: RelationEntry): string {
-  if (!e.startDate && !e.endDate) return ''
-  return `${e.startDate ?? '?'}${e.endDate ? ` – ${e.endDate}` : ''}`
+  return formatPeriod(e.startDate, e.endDate)
 }
 
 function onKey(e: KeyboardEvent) {

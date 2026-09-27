@@ -1,10 +1,10 @@
 <template>
-  <section v-if="entries.length" class="section">
-    <h3 class="section-heading">{{ label }} ({{ entries.length }})</h3>
+  <component :is="headless ? 'div' : 'section'" v-if="entries.length" :class="{ section: !headless }">
+    <h3 v-if="!headless" class="section-heading">{{ label }} ({{ entries.length }})</h3>
     <div class="relation-list">
       <div
-        v-for="e in entries"
-        :key="e.targetSlug"
+        v-for="(e, i) in entries"
+        :key="e.edgeId ?? `${e.targetSlug}:${i}`"
         class="relation-row"
         :class="{
           'relation-row--ghost': !!e.pendingFromBundle,
@@ -31,12 +31,13 @@
         </button>
       </div>
     </div>
-  </section>
+  </component>
 </template>
 
 <script setup lang="ts">
 import { RouterLink } from 'vue-router'
 import RoleLabel from '@/components/role/RoleLabel.vue'
+import { formatPeriod } from '@/utils/period.ts'
 import type { RelationEntry, RelationStrategy } from './RelationStrategy.ts'
 
 withDefaults(defineProps<{
@@ -45,16 +46,18 @@ withDefaults(defineProps<{
   label:        string
   showRole?:    boolean
   showPassed?:  boolean
+  /** Rows only — the caller renders its own heading (e.g. a <details> summary). */
+  headless?:    boolean
 }>(), {
   showRole:    false,
   showPassed:  false,
+  headless:    false,
 })
 
 const emit = defineEmits<{ open: [entry: RelationEntry] }>()
 
 function periodOf(e: RelationEntry): string {
-  if (!e.startDate && !e.endDate) return ''
-  return `${e.startDate ?? '?'}${e.endDate ? ` – ${e.endDate}` : ''}`
+  return formatPeriod(e.startDate, e.endDate)
 }
 </script>
 

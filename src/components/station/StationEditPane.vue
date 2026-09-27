@@ -18,6 +18,24 @@
       :external-error="pendingDescription?.error ?? null"
       @saved="sections => emit('savedSections', sections)"
     />
+
+    <RelationListEditor
+      v-if="!createMode"
+      :parent-slug="slug"
+      :entries="stayEntries"
+      :targets="stayTargets"
+      :strategy="StationStaysStrategy"
+      label="Deltakere"
+      add-label="+ Legg til person"
+      empty-label="Ingen personer knyttet"
+      search-placeholder="Søk person…"
+      picker-chip-aria="Bytt person"
+      validation-empty="Velg person for alle opphold før du lagrer."
+      show-role
+      role-scope="stationed"
+      default-role="stationed"
+      :summary-extra="staySummaryExtra"
+    />
   </div>
 </template>
 
@@ -26,14 +44,16 @@
  * StationEditPane — admin "Rediger" pane for a Station. Bundles the
  * scalar editor and the Beskrivelse description editor (HAS_CONTENT).
  *
- * No relation editors yet — Station relations (STATIONED_AT,
- * DEPARTED/ARRIVED_FROM_STATION) are managed from the other side
- * (Person and Event detail pages). When that changes, add them here
- * as RelationListEditor instances mirroring the Org/Unit pattern.
+ * Deltakere edits the STATIONED_AT stays from the Station side (same
+ * edges as the Person page's "Stasjonert på"). DEPARTED/ARRIVED_FROM_STATION
+ * are managed from the Event side.
  */
 import { useTemplateRef } from 'vue'
 import StationScalarEditor, { type StationDraft } from './StationScalarEditor.vue'
 import DescriptionEditor from '@/components/DescriptionEditor.vue'
+import RelationListEditor from '@/components/relation/RelationListEditor.vue'
+import { StationStaysStrategy, staySummaryExtra } from '@/components/relation/stayStrategies.ts'
+import type { RelationEntry, RelationTarget } from '@/components/relation/RelationStrategy.ts'
 import type { Section } from '@/components/SectionsEditor.vue'
 import type { StationNode } from '@/composables/useStationData.ts'
 import { authFetch } from '@/composables/useAuth.ts'
@@ -43,6 +63,9 @@ defineProps<{
   slug:           string
   station:        StationNode
   savedSections:  Section[]
+  /** STATIONED_AT stays at this place — mutated in place on save. */
+  stayEntries:    RelationEntry[]
+  stayTargets:    RelationTarget[]
   createMode?:    boolean
   pendingDescription?: PendingDescription | null
 }>()

@@ -9,6 +9,7 @@
  *
  * Relations:
  *  - (e:Incident|Operation)-[:AT|FROM|TO]->(l) — Hendelser
+ *  - (:Person)-[:STATIONED_AT]->(l)            — Personer
  *  - (l)-[:HAS_IMAGE]->(:Source)               — Galleri
  *  - (l)-[:REFERENCED_IN]->(:Source)           — Lenker
  */
@@ -16,6 +17,8 @@ import { ref } from 'vue'
 import { neo4jQuery } from './useNeo4j.ts'
 import type { SlideImage } from '@/components/ImageSlider.vue'
 import type { Section } from '@/components/SectionsEditor.vue'
+import type { RelationEntry } from '@/components/relation/RelationStrategy.ts'
+import { LocationStaysStrategy } from '@/components/relation/stayStrategies.ts'
 
 export interface LocationNode {
   slug:          string
@@ -80,6 +83,7 @@ export function useLocationData() {
   const events        = ref<LocationEvent[]>([])
   const externalRefs  = ref<LocationExternalRef[]>([])
   const galleryImages = ref<SlideImage[]>([])
+  const people        = ref<RelationEntry[]>([])
 
   function resetLocation() {
     location.value      = null
@@ -87,6 +91,7 @@ export function useLocationData() {
     events.value        = []
     externalRefs.value  = []
     galleryImages.value = []
+    people.value        = []
   }
 
   async function loadLocation(slug: string): Promise<void> {
@@ -95,7 +100,7 @@ export function useLocationData() {
       return
     }
     try {
-      const [rows, sectionRows, eventRows, refRows, galleryRows] = await Promise.all([
+      const [rows, sectionRows, eventRows, refRows, galleryRows, stayRows] = await Promise.all([
         neo4jQuery<LocationNode>(
           `MATCH (l:Location {slug: $slug})
            RETURN l.slug AS slug,
@@ -159,11 +164,13 @@ export function useLocationData() {
            LIMIT 200`,
           { slug },
         ),
+        LocationStaysStrategy.fetchEntries(slug),
       ])
 
       location.value      = rows[0] ?? null
       savedSections.value = sectionRows.map(rowToSection)
       events.value        = eventRows
+      people.value        = stayRows
       externalRefs.value  = refRows
 
       const seen = new Set<string>()
@@ -188,6 +195,7 @@ export function useLocationData() {
     events,
     externalRefs,
     galleryImages,
+    people,
     loadLocation,
     resetLocation,
   }

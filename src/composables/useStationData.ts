@@ -19,6 +19,8 @@ import { ref } from 'vue'
 import { neo4jQuery } from './useNeo4j.ts'
 import type { SlideImage } from '@/components/ImageSlider.vue'
 import type { Section } from '@/components/SectionsEditor.vue'
+import type { RelationEntry } from '@/components/relation/RelationStrategy.ts'
+import { StationStaysStrategy } from '@/components/relation/stayStrategies.ts'
 
 export interface StationNode {
   name:        string
@@ -33,7 +35,6 @@ export interface StationNode {
   links:       string | null
 }
 
-export interface StationPerson { slug: string; name: string }
 export interface StationEvent { slug: string; title: string; date: string | null; direction: 'departed' | 'arrived' }
 export interface StationExternalRef {
   id: string; title: string | null; url: string;
@@ -82,7 +83,7 @@ function rowToSection(r: SectionRow): Section {
 export function useStationData() {
   const station       = ref<StationNode | null>(null)
   const savedSections = ref<Section[]>([])
-  const people        = ref<StationPerson[]>([])
+  const people        = ref<RelationEntry[]>([])
   const events        = ref<StationEvent[]>([])
   const externalRefs  = ref<StationExternalRef[]>([])
   const galleryImages = ref<SlideImage[]>([])
@@ -149,13 +150,7 @@ export function useStationData() {
            ORDER BY \`order\``,
           { slug },
         ),
-        neo4jQuery<StationPerson>(
-          `MATCH (p:Person)-[:STATIONED_AT]->(:Station {slug: $slug})
-           WHERE p.slug IS NOT NULL
-           RETURN DISTINCT p.slug AS slug, p.canonicalName AS name
-           ORDER BY name`,
-          { slug },
-        ),
+        StationStaysStrategy.fetchEntries(slug),
         // Direction marks departures vs arrivals; both surface in the
         // same Hendelser list, separately labelled.
         neo4jQuery<StationEvent>(

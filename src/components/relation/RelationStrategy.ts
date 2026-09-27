@@ -29,6 +29,15 @@ export interface RelationEntry {
   sections:       Section[]
   hasDescription: boolean
   /**
+   * Stable id of the edge, for relations that allow several edges to the
+   * same target (STATIONED_AT: several stays at one place). When set, the
+   * editor keys notes by it instead of by target. saveEntries fills it in
+   * for new rows.
+   */
+  edgeId?:        string | null
+  /** Claim state of the edge ('candidate' = migrated, not yet reviewed). */
+  state?:         string | null
+  /**
    * Proposal-preview sidecar (live consumers ignore both):
    *   - `pendingFromBundle` — set on entries fabricated from an `add-edge`
    *     op; the value is the bundle id so the chip can deep-link to the
@@ -45,6 +54,7 @@ export interface RelationStrategy {
   fetchTargets(): Promise<RelationTarget[]>
   fetchEntries(parentSlug: string): Promise<RelationEntry[]>
   saveEntries(parentSlug: string, entries: RelationEntry[]): Promise<void>
-  saveNote(parentSlug: string, targetSlug: string, sections: Section[]): Promise<void>
+  /** `noteKey` is the entry's edgeId when the strategy uses edge ids, else its targetSlug. */
+  saveNote(parentSlug: string, noteKey: string, sections: Section[]): Promise<void>
   targetRoute(entry: RelationEntry): string
 }

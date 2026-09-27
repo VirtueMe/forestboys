@@ -64,6 +64,23 @@
       :create-href="createEventHref?.('incident')"
       :expand-slug="pendingExpandEvent"
     />
+
+    <RelationListEditor
+      :parent-slug="slug"
+      :entries="data.stay.entries"
+      :targets="data.stay.targets"
+      :strategy="PersonStaysStrategy"
+      label="Stasjonert på"
+      add-label="+ Legg til opphold"
+      empty-label="Ingen opphold"
+      search-placeholder="Søk sted eller stasjon…"
+      picker-chip-aria="Bytt sted"
+      validation-empty="Velg sted for alle opphold før du lagrer."
+      show-role
+      role-scope="stationed"
+      default-role="stationed"
+      :summary-extra="staySummaryExtra"
+    />
   </template>
 
   <!-- Preview mode: read-only views + shared info popup -->
@@ -94,6 +111,13 @@
       label="Hendelser"
       @open="openIncident"
     />
+    <RelationListView
+      :entries="data.stay.entries"
+      :strategy="PersonStaysStrategy"
+      label="Vært stasjonert på"
+      show-role
+      @open="openMembership"
+    />
     <RelationInfoPopup
       :entry="activeEntry"
       :show-role="activeShowsRole"
@@ -105,12 +129,12 @@
 
 <script setup lang="ts">
 /**
- * PersonRelations — composite of the four relation slots on a Person page
- * (Medlemskap, Kurs, Operasjoner, Hendelser).
+ * PersonRelations — composite of the relation slots on a Person page
+ * (Medlemskap, Kurs, Operasjoner, Hendelser, Stasjonert på).
  *
- * - `mode === 'edit'`: four RelationListEditor instances wired to the
+ * - `mode === 'edit'`: RelationListEditor instances wired to the
  *   matching strategies + labels.
- * - `mode !== 'edit'`: four RelationListView instances + shared
+ * - `mode !== 'edit'`: RelationListView instances + shared
  *   RelationInfoPopup. Component owns the activeEntry/role/passed flags.
  *
  * The parent loads entries/targets via the strategies and passes them in
@@ -125,6 +149,7 @@ import {
   MembershipStrategy, AttendanceStrategy,
   IncidentStrategy, OperationStrategy,
 } from '@/components/relation/strategies.ts'
+import { PersonStaysStrategy, staySummaryExtra } from '@/components/relation/stayStrategies.ts'
 import type { RelationEntry, RelationTarget } from '@/components/relation/RelationStrategy.ts'
 import type { AdminViewMode } from '@/components/AdminViewTabs.vue'
 
@@ -133,6 +158,7 @@ export interface PersonRelationsData {
   attendance: { entries: RelationEntry[]; targets: RelationTarget[] }
   operation:  { entries: RelationEntry[]; targets: RelationTarget[] }
   incident:   { entries: RelationEntry[]; targets: RelationTarget[] }
+  stay:       { entries: RelationEntry[]; targets: RelationTarget[] }
 }
 
 defineProps<{

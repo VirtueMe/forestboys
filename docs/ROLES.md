@@ -15,7 +15,7 @@ Roles are hard-coded today, in several places, some duplicated:
 | `ROLE_LABEL` | Membership (Person → Unit): operatør, kurér, radiotelegrafist, vert, informant, medlem, … | `relation/strategies.ts`, copied in `UnitEditPane.vue` and `UnitViewPane.vue` |
 | `PART_OF_ROLE_LABEL` | Unit in organization: administrativt, operativt, sponsor, overordnet | `relation/strategies.ts`, mirrored by hand in the backend's `VALID_ROLES` |
 | Crew roles | Transport participants (pilot, navigatør, dispatcher, …) | planned |
-| Stationed-at roles | Stasjonert, I skjul, Fange, … | planned — see `PERSON-STATIONED-AT.md` |
+| Stationed-at roles | Stasjonert, I skjul, Fange, … | seeded — see `PERSON-STATIONED-AT.md` |
 
 Changing or explaining a role means a code change in several files, and
 visitors see a bare word ("vert", "sponsor") with no explanation of what

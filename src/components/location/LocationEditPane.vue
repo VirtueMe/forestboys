@@ -18,6 +18,24 @@
       :external-error="pendingDescription?.error ?? null"
       @saved="sections => emit('savedSections', sections)"
     />
+
+    <RelationListEditor
+      v-if="!createMode"
+      :parent-slug="slug"
+      :entries="stayEntries"
+      :targets="stayTargets"
+      :strategy="LocationStaysStrategy"
+      label="Personer"
+      add-label="+ Legg til person"
+      empty-label="Ingen personer knyttet"
+      search-placeholder="Søk person…"
+      picker-chip-aria="Bytt person"
+      validation-empty="Velg person for alle opphold før du lagrer."
+      show-role
+      role-scope="stationed"
+      default-role="stationed"
+      :summary-extra="staySummaryExtra"
+    />
   </div>
 </template>
 
@@ -27,12 +45,16 @@
  * scalar editor (name + coordinates + map picker) and the Beskrivelse
  * description editor (HAS_CONTENT).
  *
- * No relation editors — events attach to a Location from the Event
- * side (AT / FROM / TO slots).
+ * Personer edits the STATIONED_AT stays from the place side (same edges
+ * as the Person page's "Stasjonert på"). Events attach to a Location
+ * from the Event side (AT / FROM / TO slots).
  */
 import { useTemplateRef } from 'vue'
 import LocationScalarEditor, { type LocationDraft } from './LocationScalarEditor.vue'
 import DescriptionEditor from '@/components/DescriptionEditor.vue'
+import RelationListEditor from '@/components/relation/RelationListEditor.vue'
+import { LocationStaysStrategy, staySummaryExtra } from '@/components/relation/stayStrategies.ts'
+import type { RelationEntry, RelationTarget } from '@/components/relation/RelationStrategy.ts'
 import type { Section } from '@/components/SectionsEditor.vue'
 import type { LocationNode } from '@/composables/useLocationData.ts'
 import { authFetch } from '@/composables/useAuth.ts'
@@ -42,6 +64,9 @@ defineProps<{
   slug:           string
   location:       LocationNode
   savedSections:  Section[]
+  /** STATIONED_AT stays at this place — mutated in place on save. */
+  stayEntries:    RelationEntry[]
+  stayTargets:    RelationTarget[]
   createMode?:    boolean
   pendingDescription?: PendingDescription | null
 }>()

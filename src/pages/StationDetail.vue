@@ -35,6 +35,8 @@
         :slug="stationSlug"
         :station="station"
         :saved-sections="savedSections"
+        :stay-entries="people"
+        :stay-targets="stayTargets"
         :create-mode="isCreate"
         :pending-description="pendingDescription"
         @saved-scalar="onScalarSaved"
@@ -58,7 +60,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, useTemplateRef, inject } from 'vue'
+import { computed, ref, useTemplateRef, inject, watch } from 'vue'
 import { useStationData, type StationNode } from '../composables/useStationData.ts'
 import { StationDataKey } from '../composables/proposalDataInjection.ts'
 import { useDetailCreateMode } from '../composables/useDetailCreateMode.ts'
@@ -72,6 +74,8 @@ import StationHeader   from '../components/station/StationHeader.vue'
 import StationEditPane from '../components/station/StationEditPane.vue'
 import StationViewPane from '../components/station/StationViewPane.vue'
 import type { StationDraft } from '../components/station/StationScalarEditor.vue'
+import { StationStaysStrategy } from '../components/relation/stayStrategies.ts'
+import type { RelationTarget } from '../components/relation/RelationStrategy.ts'
 
 const { user } = useAuth()
 const isAdminStation = computed(() => user.value?.role === 'admin')
@@ -95,6 +99,13 @@ const {
   people, events, externalRefs, galleryImages,
   loadStation, resetStation,
 } = inject(StationDataKey, () => useStationData(), true)
+
+// Person picker for the Deltakere editor — admins only, loaded once.
+const stayTargets = ref<RelationTarget[]>([])
+watch(isAdminStation, async (admin) => {
+  if (!admin || stayTargets.value.length) return
+  try { stayTargets.value = await StationStaysStrategy.fetchTargets() } catch { /* picker stays empty */ }
+}, { immediate: true })
 
 const editPane = useTemplateRef<{
   scalarDraft: StationDraft | null
