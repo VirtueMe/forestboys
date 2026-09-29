@@ -135,7 +135,7 @@ const RELATION_LABELS: Record<string, string> = {
   PART_OF: 'tilhører', MEMBER_OF: 'medlem', ATTENDED: 'deltok',
   PARTICIPATED_IN: 'deltok i', INVOLVED_IN: 'involvert i',
   ORCHESTRATED_BY: 'ledet av', MENTIONS: 'omtaler', USES_OUTLINE: 'kilde',
-  HELD_RANK: 'rang', HAS_CONTENT: 'beskrivelse',
+  RANK: 'grad', HELD_RANK: 'gradshistorikk', HAS_CONTENT: 'beskrivelse',
 }
 function kindLabel(k: string): string     { return KIND_LABELS[k]     ?? k.toLowerCase() }
 function relationLabel(t: string): string { return RELATION_LABELS[t] ?? t }

@@ -99,7 +99,7 @@ export function slugify(s: string): string {
 export const sanMigRef = (type: string, sanityId: string, field: string) =>
   `sanity-migration:${type}:${sanityId}:${field}`
 
-/** HELD_RANK target + sourceRef: the parsed rank, or Menig by default. */
+/** The known rank (RANK edge) + sourceRef: the parsed rank, or Menig by default. */
 export function rankEdge(sanityId: string, parsed: ParsedPerson): { rankSlug: string; sourceRef: string } {
   return parsed.rank
     ? { rankSlug: slugify(parsed.rank.canonical), sourceRef: sanMigRef('person', sanityId, 'name:rank-token') }

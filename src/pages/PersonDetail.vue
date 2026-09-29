@@ -17,7 +17,7 @@
         :birth-year="person.birthYear ?? null"
         :home="person.home"
       />
-      <PersonRanksPreview v-if="person.type === 'soldier'" :ranks="heldRanks" />
+      <PersonRanksPreview v-if="person.type === 'soldier'" :known="knownRank" :history="rankHistory" />
 
       <AdminViewTabs v-model="mode" :proposal-count="bundlesPanel.openBundles.value.length" />
 
@@ -36,7 +36,8 @@
         v-show="mode === 'edit'"
         ref="editPane"
         :person="neo4jPerson"
-        :held-ranks="heldRanks"
+        :known-rank="knownRank"
+        :rank-history="rankHistory"
         :rank-options="allRanks"
         :saved-sections="savedSections"
         :data="relationsData"
@@ -45,7 +46,7 @@
         :pending-description="pendingDescription"
         :create-event-href="createEventHref"
         @saved-scalar="onScalarSaved"
-        @saved-ranks="ranks => heldRanks = ranks"
+        @saved-rank="rank => knownRank = rank"
         @saved-sections="onSectionsSaved"
         @created="onCreated"
       />
@@ -94,7 +95,7 @@ const router = useRouter()
 const {
   neo4jPerson,
   heroImage, galleryImages, externalRefs,
-  heldRanks, allRanks, savedSections,
+  knownRank, rankHistory, allRanks, savedSections,
   incidentEntries,
   relationsData,
   loadPerson, resetPerson,

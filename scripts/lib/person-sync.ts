@@ -41,7 +41,8 @@ export interface GraphPerson {
   linkIds:         string[]
   images:          string[]
   imageIds:        string[]
-  heldRanks:       { rankSlug: string; sourceRef: string | null }[]
+  /** The known rank — `(Person)-[:RANK]->(Rank)`, docs/PERSON-RANKS.md. The history is not synced. */
+  knownRank:       { rankSlug: string; sourceRef: string | null } | null
   content:         string[]
   stamps:          Record<string, string>
   rels:            number
@@ -182,11 +183,11 @@ export function calibrate(graph: Map<string, GraphPerson>, sanity: Map<string, D
 
     // Derived by the rule, not compared field by field.
     const parsed = parsePerson(str(b.name))
-    const migrated = g.heldRanks.filter(h => h.sourceRef?.startsWith('sanity-migration:'))
-    if (migrated.length === 1 && g.heldRanks.length === 1) {
+    if (g.knownRank?.sourceRef?.startsWith('sanity-migration:')) {
       const want = rankEdge(g.sanityId, parsed)
-      check('rank', migrated[0].rankSlug === want.rankSlug && migrated[0].sourceRef === want.sourceRef,
-        () => ({ slug: g.slug, graph: migrated[0], rule: want }))
+      const have = g.knownRank
+      check('rank', have.rankSlug === want.rankSlug && have.sourceRef === want.sourceRef,
+        () => ({ slug: g.slug, graph: have, rule: want }))
     }
     if (g.statusSourceRef?.startsWith('sanity-migration:')) {
       check('status', g.status === parsed.status?.value, () => ({ slug: g.slug, graph: g.status, rule: parsed.status }))
@@ -250,8 +251,8 @@ export async function fetchGraphPeople(): Promise<Map<string, GraphPerson>> {
       }
       CALL {
         WITH p
-        OPTIONAL MATCH (p)-[h:HELD_RANK]->(rk:Rank)
-        RETURN [x IN collect(CASE WHEN rk IS NULL THEN NULL ELSE {rankSlug: rk.slug, sourceRef: h.sourceRef} END) WHERE x IS NOT NULL] AS heldRanks
+        OPTIONAL MATCH (p)-[k:RANK]->(rk:Rank)
+        RETURN head(collect(CASE WHEN rk IS NULL THEN NULL ELSE {rankSlug: rk.slug, sourceRef: k.sourceRef} END)) AS knownRank
       }
       CALL {
         WITH p
@@ -270,7 +271,7 @@ export async function fetchGraphPeople(): Promise<Map<string, GraphPerson>> {
              p.birthYear AS birthYear, p.status AS status, p.status_sourceRef AS statusSourceRef,
              p.serviceClass AS serviceClass, p.serviceClass_sourceRef AS serviceClassSourceRef,
              [k IN keys(p) WHERE k ENDS WITH '_sha' OR k ENDS WITH '_graphSha' | [k, p[k]]] AS stampPairs,
-             links, linkIds, images, imageIds, heldRanks, content, rels, graphOnlyRels
+             links, linkIds, images, imageIds, knownRank, content, rels, graphOnlyRels
     `)
     return new Map(r.records.map(rec => {
       const { stampPairs, ...rest } = rec.toObject() as Omit<GraphPerson, 'stamps'> & { stampPairs: [string, string][] }

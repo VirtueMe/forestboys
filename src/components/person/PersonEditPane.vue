@@ -23,9 +23,10 @@
       <PersonRanksEditor
         v-if="person.type === 'soldier'"
         :slug="person.slug"
-        :saved="heldRanks"
+        :known="knownRank"
         :options="rankOptions"
-        @saved="ranks => emit('savedRanks', ranks)"
+        :history="rankHistory"
+        @saved="rank => emit('savedRank', rank)"
       />
 
       <PersonRelations
@@ -59,7 +60,8 @@ import DescriptionEditor from '@/components/DescriptionEditor.vue'
 import PersonRelations, { type PersonRelationsData } from './PersonRelations.vue'
 import type { Section } from '@/components/SectionsEditor.vue'
 import type { Neo4jPerson } from '@/composables/usePersonData.ts'
-import type { HeldRank, RankOption, PersonType } from './types.ts'
+import type { KnownRank, RankOption, PersonType } from './types.ts'
+import type { RelationEntry } from '@/components/relation/RelationStrategy.ts'
 import { authFetch } from '@/composables/useAuth.ts'
 import { stashPendingDescription, type PendingDescription } from '@/composables/usePendingDescription.ts'
 
@@ -73,7 +75,9 @@ interface ScalarSaved {
 
 defineProps<{
   person:               Neo4jPerson
-  heldRanks:            HeldRank[]
+  knownRank:            KnownRank | null
+  /** HELD_RANK entries — the history editor mutates them in place. */
+  rankHistory:          RelationEntry[]
   rankOptions:          RankOption[]
   savedSections:        Section[]
   data:                 PersonRelationsData
@@ -91,7 +95,7 @@ defineProps<{
 
 const emit = defineEmits<{
   savedScalar:   [out: ScalarSaved]
-  savedRanks:    [ranks: HeldRank[]]
+  savedRank:     [rank: KnownRank]
   savedSections: [sections: Section[]]
   created:       [slug: string]
 }>()

@@ -37,6 +37,8 @@ export interface RelationEntry {
   edgeId?:        string | null
   /** Claim state of the edge ('candidate' = migrated, not yet reviewed). */
   state?:         string | null
+  /** Rank history only: held in an acting capacity (docs/PERSON-RANKS.md). */
+  acting?:        boolean
   /**
    * Proposal-preview sidecar (live consumers ignore both):
    *   - `pendingFromBundle` — set on entries fabricated from an `add-edge`

@@ -234,7 +234,7 @@ export function useUnitData() {
         // Members — with rank (skip Menig baseline) + status + edge meta.
         neo4jQuery<UnitMember>(
           `MATCH (p:Person)-[m:MEMBER_OF]->(:Unit)-[:PART_OF*0..]->(u:Unit {slug: $slug})
-           OPTIONAL MATCH (p)-[:HELD_RANK]->(r:Rank)
+           OPTIONAL MATCH (p)-[:RANK]->(r:Rank)
            WHERE r.canonicalName <> 'Menig'
            WITH p, r, collect(m) AS edges
            WITH p, r,

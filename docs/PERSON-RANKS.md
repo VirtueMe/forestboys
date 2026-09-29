@@ -1,8 +1,9 @@
 # Person ranks — requirements
 
 Requirements for recording a person's **rank**, and optionally the
-**history** of ranks they held: when, whether acting, and why. Draft for
-review — questions settled 2026-09-28 (see *Decided*); ready to build.
+**history** of ranks they held: when, whether acting, and why. Implemented
+2026-09-29 on the local graph (production has none of this yet — see
+`SANITY-SYNC.md`, *Where it has run*); decisions under *Decided*.
 
 ---
 
@@ -127,6 +128,18 @@ entry as history. Zero errors, and every person ends with exactly one
 `RANK`.
 
 ---
+
+## Implementation
+
+| Piece | Where |
+|---|---|
+| Known rank | `PATCH /api/admin/person/:slug/rank` — `verified`, sourceRef `admin-edit` |
+| History | `PATCH /api/admin/person/:slug/ranks` — ids, partial dates, acting |
+| Entry note | `PATCH /api/admin/rank-note/:entryId` (`functions/_lib/edge-note.ts`, shared with stay notes) |
+| Editor | `PersonRanksEditor.vue` (known rank + hint), `PersonRankHistoryEditor.vue` (R7 closing) |
+| Pill + history popup | `PersonRanksPreview.vue` |
+| Sync | `scripts/sync-person.ts` feeds `RANK` only; updates it only while its sourceRef is the migration's |
+| Migration | `scripts/migrate-rank-split.ts` — local run: 3 963 migration ranks → `RANK`; Martin Linge → `RANK` Kaptein + 1 history entry |
 
 ## Decided (2026-09-28)
 

@@ -23,7 +23,8 @@ import {
   IncidentStrategy, OperationStrategy,
 } from '@/components/relation/strategies.ts'
 import { PersonStaysStrategy } from '@/components/relation/stayStrategies.ts'
-import type { HeldRank, RankOption, PersonType } from '@/components/person/types.ts'
+import type { KnownRank, RankOption, PersonType } from '@/components/person/types.ts'
+import { RankHistoryStrategy } from '@/components/relation/rankStrategies.ts'
 
 export interface Neo4jPerson {
   slug: string
@@ -91,7 +92,8 @@ export function usePersonData() {
   const heroImage     = ref<{ url: string; caption: string | null } | null>(null)
   const galleryImages = ref<SlideImage[]>([])
   const externalRefs  = ref<ExternalRef[]>([])
-  const heldRanks     = ref<HeldRank[]>([])
+  const knownRank     = ref<KnownRank | null>(null)
+  const rankHistory   = ref<RelationEntry[]>([])
   const allRanks      = ref<RankOption[]>([])
   const savedSections = ref<Section[]>([])
 
@@ -120,7 +122,8 @@ export function usePersonData() {
     heroImage.value     = null
     galleryImages.value = []
     externalRefs.value  = []
-    heldRanks.value     = []
+    knownRank.value     = null
+    rankHistory.value   = []
     allRanks.value      = []
     savedSections.value = []
     membershipEntries.value = []
@@ -158,7 +161,7 @@ export function usePersonData() {
         personRows, heroRows, galleryRows, refRows,
         memberEntries, memberTargets, attendEntries, attendTargets,
         incidEntries, incidTargets, operEntries, operTargets,
-        rankRows, allRankRows, sectionRows, stayRows, stayTargetRows,
+        rankRows, allRankRows, sectionRows, stayRows, stayTargetRows, historyRows,
       ] = await Promise.all([
         neo4jQuery<Neo4jPerson>(
           `MATCH (p:Person {slug: $slug})
@@ -243,11 +246,10 @@ export function usePersonData() {
         IncidentStrategy.fetchTargets(),
         OperationStrategy.fetchEntries(slug),
         OperationStrategy.fetchTargets(),
-        neo4jQuery<HeldRank>(
-          `MATCH (p:Person {slug: $slug})-[h:HELD_RANK]->(r:Rank)
+        neo4jQuery<KnownRank>(
+          `MATCH (p:Person {slug: $slug})-[k:RANK]->(r:Rank)
            RETURN r.slug AS rankSlug, r.canonicalName AS rankName, r.tier AS tier,
-                  h.from AS from, h.to AS to
-           ORDER BY coalesce(h.from, 0), r.tier`,
+                  k.state AS state, k.sourceRef AS sourceRef`,
           { slug },
         ),
         neo4jQuery<RankOption>(
@@ -283,6 +285,7 @@ export function usePersonData() {
         ),
         PersonStaysStrategy.fetchEntries(slug),
         PersonStaysStrategy.fetchTargets(),
+        RankHistoryStrategy.fetchEntries(slug),
       ])
       heroImage.value = heroRows[0] ?? null
       const seen = new Set<string>()
@@ -306,7 +309,8 @@ export function usePersonData() {
       operationTargets.value  = operTargets
       stayEntries.value       = stayRows
       stayTargets.value       = stayTargetRows
-      heldRanks.value     = rankRows
+      knownRank.value     = rankRows[0] ?? null
+      rankHistory.value   = historyRows
       allRanks.value      = allRankRows
       savedSections.value = sectionRows.map(rowToSection)
       neo4jPerson.value   = personRows[0] ?? null
@@ -321,7 +325,8 @@ export function usePersonData() {
     heroImage,
     galleryImages,
     externalRefs,
-    heldRanks,
+    knownRank,
+    rankHistory,
     allRanks,
     savedSections,
     membershipEntries, membershipTargets,

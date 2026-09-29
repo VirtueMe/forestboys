@@ -181,7 +181,7 @@ proposal-flow design and the durable history log.
 
 **Anything with its own source or lifecycle is a node. Pure scalar values stay as properties.**
 
-A person's `birthDate` is a property. A person's *rank* is a node (`(:Person)-[:HELD_RANK]->(:Rank)`) because it has its own source and time bounds.
+A person's `birthDate` is a property. A person's *rank* is a node (`(:Person)-[:RANK]->(:Rank)`, with an optional `HELD_RANK` history) because it has its own source and time bounds.
 
 ---
 
@@ -204,7 +204,9 @@ Vocabularies:
 | Edge                  | To                                        | Properties                                            |
 |-----------------------|-------------------------------------------|-------------------------------------------------------|
 | `MEMBER_OF`           | `Unit` \| `Organization`                  | `role, description, sourceRefs[], startDate, endDate` |
-| `HELD_RANK`           | `Rank`                                    | `state, sourceRef, from, to` (years) — to be split into `RANK` + history, see PERSON-RANKS.md |
+| `RANK`                | `Rank`                                    | `state, sourceRef` — exactly one: the rank the person is known by (PERSON-RANKS.md) |
+| `HELD_RANK`           | `Rank`                                    | `id, from, to, acting, state` — rank history, 0..n; partial dates |
+| `HAS_RANK_NOTE`       | `Description`                             | per history entry — `Description.rankEntryId` = the edge's `id`, then `ABOUT_RANK` |
 | `INVOLVED_IN`         | `Incident`                                | `role, outcome`                                       |
 | `PARTICIPATED_IN`     | `Operation`                               | `role, startDate, endDate`                            |
 | `STATIONED_AT`        | `Location` \| `Station`                  | `id, role, startDate, endDate, state, sourceRef` — one edge per stay (docs/PERSON-STATIONED-AT.md) |
@@ -218,7 +220,7 @@ Vocabularies:
 | `HAS_STATIONED_NOTE`  | `Description`                             | per stay — `Description.stayId` = the edge's `id`, then `ABOUT_PLACE` |
 
 **Rules:**
-- Every `Person` MUST have at least one `HELD_RANK` edge. The default is `Rank{canonicalName:"Menig"}` (tier 1) with `sourceRef = 'default:menig-soldier-baseline'`.
+- Every `Person` MUST have exactly one `RANK` edge (the rank they are known by). The default is `Rank{canonicalName:"Menig"}` (tier 1) with `sourceRef = 'sanity-migration:person:<id>:default:menig-soldier-baseline'`. The `HELD_RANK` history is optional.
 - `MEMBER_OF` typically points at the most-specific Unit; parent Units/Orgs are reached via `PART_OF` traversal.
 
 ---
@@ -630,7 +632,8 @@ A full source document — OSS memos, SOE reports, articles, scanned corresponde
 | `DEPICTED_IN`   | `Source`       | insignia photos                                 |
 
 **Inbound:**
-- `(:Person)-[:HELD_RANK]->(r)` `{startDate, endDate, sourceRef}`
+- `(:Person)-[:RANK]->(r)` `{state, sourceRef}` — the known rank
+- `(:Person)-[:HELD_RANK]->(r)` `{id, from, to, acting, state}` — history
 
 **Rule:** `Menig` (tier 1) is the default issued to every Person without an observed rank.
 

@@ -14,7 +14,8 @@
  * slugs so chains can't trip the unique constraint; description ids follow.
  *
  * New people — created with the original rule (scripts/lib/person-rule.ts):
- * node + claims, HELD_RANK, type, links, gallery, description.
+ * node + claims, RANK (the known rank), type, links, gallery, description.
+ * The rank history (HELD_RANK) is Jan's and never synced (docs/PERSON-RANKS.md).
  *
  * Every applied field is stamped (`<field>_sha`, `<field>_graphSha`) so it
  * is compared against what was applied from now on, not the April export.
@@ -24,7 +25,7 @@
  * Refuses to write unless calibration is 100% (the rule still reproduces
  * the graph) and every new person resolves (slug free, rank exists).
  * One transaction per person. Before writing, the affected people's
- * properties and HELD_RANK / REFERENCED_IN / HAS_IMAGE / HAS_CONTENT edges
+ * properties and RANK / HELD_RANK / REFERENCED_IN / HAS_IMAGE / HAS_CONTENT edges
  * are saved to data/sanity-delta/person-before-<time>.json, so the run can
  * be undone.
  *
@@ -71,25 +72,25 @@ function scalarStmt(id: string, field: 'home' | 'secretName' | 'birthYear', valu
 }
 
 /** Name: canonicalName (when clean), and the parts the rule derives from it — each only
- *  while it is still the migration's own claim, so graph edits (Grader, status) survive. */
+ *  while it is still the migration's own claim, so graph edits (known rank, status) survive. */
 function nameStmts(id: string, name: string, setCanonical: boolean, g: GraphPerson, summary: string[]): Stmt[] {
   const parsed = parsePerson(name)
   const out: Stmt[] = []
   if (setCanonical) out.push({ text: `${P} SET p.canonicalName = $v`, params: { id, v: parsed.canonicalName } })
 
-  const onlyMigrationRank = g.heldRanks.length === 1 && !!g.heldRanks[0].sourceRef?.startsWith('sanity-migration:')
+  const migrationRank = !!g.knownRank?.sourceRef?.startsWith('sanity-migration:')
   const want = rankEdge(id, parsed)
-  if (onlyMigrationRank && g.heldRanks[0].rankSlug !== want.rankSlug) {
+  if (migrationRank && g.knownRank?.rankSlug !== want.rankSlug) {
     out.push({
       text: `${P}
-             MATCH (p)-[h:HELD_RANK]->() WHERE h.sourceRef STARTS WITH 'sanity-migration:' DELETE h
+             MATCH (p)-[k:RANK]->() DELETE k
              WITH p MATCH (rk:Rank {slug: $rank})
-             CREATE (p)-[:HELD_RANK {state: 'candidate', sourceRef: $ref}]->(rk)`,
+             CREATE (p)-[:RANK {state: 'candidate', sourceRef: $ref}]->(rk)`,
       params: { id, rank: want.rankSlug, ref: want.sourceRef },
     })
-    summary.push(`rank ${g.heldRanks[0].rankSlug} → ${want.rankSlug}`)
-  } else if (!onlyMigrationRank && g.heldRanks[0]?.rankSlug !== want.rankSlug) {
-    summary.push(`rank kept (edited in graph; name suggests ${want.rankSlug})`)
+    summary.push(`rank ${g.knownRank?.rankSlug} → ${want.rankSlug}`)
+  } else if (!migrationRank && g.knownRank?.rankSlug !== want.rankSlug) {
+    summary.push(`rank kept (set in the editor; name suggests ${want.rankSlug})`)
   }
 
   if (!g.statusSourceRef || g.statusSourceRef.startsWith('sanity-migration:')) {
@@ -237,7 +238,7 @@ function planNew(s: Doc): Plan {
     {
       text: `CREATE (p:Person {sanityId: $id}) SET p += $props
              WITH p MATCH (rk:Rank {slug: $rank})
-             CREATE (p)-[:HELD_RANK {state: 'candidate', sourceRef: $rankRef}]->(rk)`,
+             CREATE (p)-[:RANK {state: 'candidate', sourceRef: $rankRef}]->(rk)`,
       params: {
         id, rank: rank.rankSlug, rankRef: rank.sourceRef,
         props: {
@@ -325,7 +326,7 @@ async function main() {
       UNWIND $ids AS id
       MATCH (p:Person {sanityId: id})
       RETURN id, properties(p) AS props,
-             [(p)-[h:HELD_RANK]->(k) | {rank: k.slug, props: properties(h)}] AS ranks,
+             [(p)-[h:RANK|HELD_RANK]->(k) | {type: type(h), rank: k.slug, props: properties(h)}] AS ranks,
              [(p)-[:REFERENCED_IN]->(s) | s.id] AS links,
              [(p)-[h:HAS_IMAGE]->(s) | {id: s.id, props: properties(h)}] AS images,
              [(p)-[:HAS_CONTENT]->(d) | properties(d)] AS descriptions`,

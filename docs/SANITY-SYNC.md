@@ -163,6 +163,7 @@ The scripts use `.env`, which is the **local** Neo4j. Production Aura
 | Stationed roles | `scripts/seed-roles.ts` | 5 roles |
 | Person descriptions | `scripts/import-person-descriptions.ts --write` | 3 462 |
 | Person sync | `scripts/sync-person.ts --write` | 259 changed (20 slug renames), 173 new; 37 left for review |
+| Rank split | `scripts/migrate-rank-split.ts --write` | 3 964 `RANK` edges; 1 history entry (PERSON-RANKS.md) |
 
 Production gets the same steps in the same order, behind an explicit
 opt-in that doesn't exist yet.

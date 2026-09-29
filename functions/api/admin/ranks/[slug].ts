@@ -4,7 +4,7 @@
  *   PATCH  — update canonicalName / abbreviation / tier / countries, and/or move the
  *            rank to another branch (`branchSlug`, null detaches).
  *   DELETE — remove the Rank, but only if no Person holds it
- *            (HELD_RANK). Returns 409 with the holder count otherwise.
+ *            (RANK or HELD_RANK). Returns 409 with the holder count otherwise.
  *
  * Slug is immutable — Person rank editors reference ranks by slug.
  */
@@ -83,7 +83,7 @@ export const onRequestDelete: PagesFunction<Env> = async ({ request, env, params
   try {
     const [usage] = await runCypher<{ holders: number }>(env, `
       MATCH (r:Rank {slug: $slug})
-      OPTIONAL MATCH (:Person)-[h:HELD_RANK]->(r)
+      OPTIONAL MATCH (:Person)-[h:RANK|HELD_RANK]->(r)
       RETURN count(h) AS holders
     `, { slug })
 

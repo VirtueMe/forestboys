@@ -1,12 +1,12 @@
 /**
- * PATCH /api/admin/stay-note/:stayId
+ * PATCH /api/admin/rank-note/:entryId
  *
- * Replace-all the note sections for one stay (one STATIONED_AT edge):
+ * Replace-all the note sections for one rank history entry (one HELD_RANK edge):
  *
- *   (Person)-[:HAS_STATIONED_NOTE]->(Description {stayId})-[:ABOUT_PLACE]->(place)
+ *   (Person)-[:HAS_RANK_NOTE]->(Description {rankEntryId})-[:ABOUT_RANK]->(Rank)
  *
- * Keyed by the edge's `id`, not the place, so two stays at the same place
- * keep separate notes. See functions/_lib/edge-note.ts.
+ * Keyed by the edge's `id`, not the rank, so holding the same rank twice
+ * keeps separate notes (why it was awarded, acting circumstances). See functions/_lib/edge-note.ts.
  *
  * Body: { sections: [{ order, content, citations?, sourcedFromId? }, ...] }
  * Empty sections clears the note.
@@ -14,7 +14,7 @@
 
 import { requireAdmin } from '~/_lib/require-admin.ts'
 import type { Neo4jEnv } from '~/_lib/neo4j.ts'
-import { STAY_NOTE, parseSections, writeEdgeNote } from '~/_lib/edge-note.ts'
+import { RANK_NOTE, parseSections, writeEdgeNote } from '~/_lib/edge-note.ts'
 
 interface Env extends Neo4jEnv {
   SESSION_SECRET: string
@@ -28,7 +28,7 @@ export const onRequestPatch: PagesFunction<Env> = async ({ request, env, params 
   if (typeof sections === 'string') return json({ error: sections }, 400)
 
   try {
-    const out = await writeEdgeNote(env, STAY_NOTE, String(params.stayId), sections)
+    const out = await writeEdgeNote(env, RANK_NOTE, String(params.entryId), sections)
     return 'error' in out ? json({ error: out.error }, out.status) : json(out)
   } catch (e) {
     return json({ error: (e as Error).message }, 502)

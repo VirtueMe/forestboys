@@ -90,10 +90,10 @@ async function load() {
       neo4jQuery<Row>(
         `MATCH (r:Rank)
          OPTIONAL MATCH (r)-[:IN]->(b:Organization)
-         OPTIONAL MATCH (:Person)-[h:HELD_RANK]->(r)
+         OPTIONAL MATCH (holder:Person)-[:RANK|HELD_RANK]->(r)
          RETURN r.slug AS slug, r.canonicalName AS name, r.abbreviation AS abbreviation,
                 r.tier AS tier, r.countries AS countries,
-                b.slug AS branchSlug, count(h) AS holders`,
+                b.slug AS branchSlug, count(DISTINCT holder) AS holders`,
       ),
       // Branch candidates: top-level organizations (Hæren, RAF, Marinen, …).
       neo4jQuery<BranchOption>(

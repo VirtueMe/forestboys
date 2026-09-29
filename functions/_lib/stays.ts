@@ -18,6 +18,8 @@
 
 import { runCypher, runCypherTx, type Neo4jEnv } from './neo4j.ts'
 import { findInvalidRole } from './role-scopes.ts'
+import { periodError } from './period.ts'
+import { STAY_NOTE, repointNoteStatements } from './edge-note.ts'
 
 export type PlaceKind = 'location' | 'station'
 
@@ -41,8 +43,6 @@ export interface Stay {
   endDate:    string | null
 }
 
-const DATE_RE = /^\d{4}(-\d{2}(-\d{2})?)?$/
-
 export function parsePlace(v: unknown): { kind: PlaceKind; slug: string } | null {
   if (typeof v !== 'string') return null
   const i = v.indexOf(':')
@@ -57,17 +57,8 @@ export function parsePlace(v: unknown): { kind: PlaceKind; slug: string } | null
  * part: 1943 – 1943-05 is fine, 1944 – 1943-05 is not.
  */
 export function stayFieldError(s: StayInput): string | null {
-  for (const [k, v] of [['startDate', s.startDate], ['endDate', s.endDate]] as const) {
-    if (v !== null && v !== undefined && (typeof v !== 'string' || !DATE_RE.test(v))) {
-      return `Ugyldig ${k === 'startDate' ? 'startdato' : 'sluttdato'}: ${String(v)} — bruk ÅÅÅÅ, ÅÅÅÅ-MM eller ÅÅÅÅ-MM-DD`
-    }
-  }
-  if (s.startDate && s.endDate) {
-    const n = Math.min(s.startDate.length, s.endDate.length)
-    if (s.endDate.slice(0, n) < s.startDate.slice(0, n)) {
-      return `Sluttdato ${s.endDate} er før startdato ${s.startDate}`
-    }
-  }
+  const period = periodError(s.startDate, s.endDate)
+  if (period) return period
   if (s.id !== null && s.id !== undefined && (typeof s.id !== 'string' || !s.id)) return 'Ugyldig id'
   return null
 }
@@ -176,27 +167,13 @@ export async function replaceStays(
     : `MATCH (:Person)-[:HAS_STATIONED_NOTE]->(d:Description)-[:ABOUT_PLACE]->(:${PLACE_LABEL[scope.placeKind]} {slug: $placeSlug})
        WHERE NOT d.stayId IN $ids DETACH DELETE d`
 
-  // A kept stay may have changed person or place; its note follows the edge.
-  const repointPerson = `
-    UNWIND $ids AS id
-    MATCH (p:Person)-[:STATIONED_AT {id: id}]->()
-    MATCH (op:Person)-[h:HAS_STATIONED_NOTE]->(d:Description {stayId: id}) WHERE op <> p
-    DELETE h CREATE (p)-[:HAS_STATIONED_NOTE]->(d)
-  `
-  const repointPlace = `
-    UNWIND $ids AS id
-    MATCH (:Person)-[:STATIONED_AT {id: id}]->(pl)
-    MATCH (d:Description {stayId: id})-[a:ABOUT_PLACE]->(opl) WHERE opl <> pl
-    DELETE a CREATE (d)-[:ABOUT_PLACE]->(pl)
-  `
-
   const params = { ...scopeParams(scope), items, ids }
   await runCypherTx(env, [
     { statement: `MATCH ${scopeMatch(scope)} DELETE r`, parameters: params },
     { statement: create('location'), parameters: params },
     { statement: create('station'),  parameters: params },
-    { statement: repointPerson,      parameters: params },
-    { statement: repointPlace,       parameters: params },
+    // A kept stay may have changed person or place; its note follows the edge.
+    ...repointNoteStatements(STAY_NOTE).map(statement => ({ statement, parameters: params })),
     { statement: pruneNotes,         parameters: params },
   ])
   return { ids }
