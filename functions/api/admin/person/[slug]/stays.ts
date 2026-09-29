@@ -1,7 +1,7 @@
 /**
  * PATCH /api/admin/person/:slug/stays — replace a Person's STATIONED_AT edges.
  *
- * Body: { stays: [{ id?, place: 'location:<slug>' | 'station:<slug>', role?, startDate?, endDate? }] }
+ * Body: { stays: [{ id?, place: 'location:<slug>' | 'station:<slug>', role?, startDate?, endDate?, sourceRefs? }] }
  * Returns: { ok, ids } — stay ids in input order (new stays get fresh ids).
  *
  * See functions/_lib/stays.ts for state / note handling.
@@ -9,7 +9,7 @@
 
 import { requireAdmin } from '~/_lib/require-admin.ts'
 import type { Neo4jEnv } from '~/_lib/neo4j.ts'
-import { parsePlace, replaceStays, stayFieldError, type StayInput } from '~/_lib/stays.ts'
+import { parsePlace, replaceStays, stayFieldError, stayRefs, type StayInput } from '~/_lib/stays.ts'
 
 interface Env extends Neo4jEnv {
   SESSION_SECRET: string
@@ -42,6 +42,7 @@ export const onRequestPatch: PagesFunction<Env> = async ({ request, env, params 
       role:       s.role ?? null,
       startDate:  s.startDate ?? null,
       endDate:    s.endDate ?? null,
+      sourceRefs: stayRefs(s),
     })
   }
 

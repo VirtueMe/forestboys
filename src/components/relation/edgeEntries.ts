@@ -45,7 +45,7 @@ export function edgeEntriesCypher(opts: { match: string; noteEdge: string; keyPr
            } END
          } END AS section
     WITH p, r, t, collect(section) AS rawSections
-    RETURN r.id AS edgeId, r.state AS state, ${opts.returns},
+    RETURN r.id AS edgeId, r.state AS state, coalesce(r.sourceRefs, []) AS sourceRefs, ${opts.returns},
            [x IN rawSections WHERE x IS NOT NULL] AS sections
     ORDER BY startDate, targetName
   `
@@ -58,6 +58,7 @@ export interface EdgeEntryRow {
   targetName: string
   startDate:  string | null
   endDate:    string | null
+  sourceRefs: string[]
   sections:   SectionRow[]
 }
 
@@ -69,6 +70,7 @@ export function edgeRowToEntry(r: EdgeEntryRow): RelationEntry {
     targetName:     r.targetName,
     startDate:      r.startDate,
     endDate:        r.endDate,
+    sourceRefs:     r.sourceRefs ?? [],
     sections:       (r.sections ?? []).map(rowToSection),
     hasDescription: (r.sections ?? []).length > 0,
   }

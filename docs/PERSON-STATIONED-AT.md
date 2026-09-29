@@ -153,7 +153,10 @@ place reference and must run clean before commit (bulk-op rule).
    (`RelationEntry.edgeId`). A relationship can't point at a
    relationship, so the note carries the id:
    `(Person)-[:HAS_STATIONED_NOTE]->(Description {stayId})-[:ABOUT_PLACE]->(place)`.
-   Sources (R5) are the note's citations, as on other relation notes.
+   Sources (R5) — revised 2026-09-29: the evidence for a stay is its own
+   item, `sourceRefs` on the edge (SourceRef strings, "Kilder" in the
+   editor), as R5 originally said; the note's citations back the note's
+   text only.
 2. **Roles:** the R4 table, seeded as Role nodes in scope `stationed`
    (`scripts/seed-roles.ts`). Born / lived / buried stay separate edges.
 3. **Open end:** plain "1943 –" (`src/utils/period.ts`, used by all

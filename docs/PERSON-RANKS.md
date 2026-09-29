@@ -49,7 +49,7 @@ where it came from (`sanity-migration:person:<id>:name:rank-token`, the
 Menig default, or an editor save).
 
 **R2 — History: zero or more entries.**
-`(Person)-[:HELD_RANK {id, from, to, acting, state}]->(Rank)`.
+`(Person)-[:HELD_RANK {id, from, to, acting, sourceRefs, state}]->(Rank)`.
 
 - `id` — stable, so notes attach to an entry and a person can hold the
   same rank twice (acting, then substantive; or after a demotion).
@@ -61,6 +61,11 @@ Menig default, or an editor save).
   runs **alongside** the real rank, not instead of it: a Løytnant acting
   as Kaptein is still a Løytnant.
 - An empty `to` means *open* — still held, or the end is unknown.
+- `sourceRefs` — what **proves** the entry: a document, a page. SourceRef
+  strings (`<source-id>#page:47..52`, see `SCHEMA.md`), edited in the
+  entry's "Kilder" field. Distinct from the note's citations, which back
+  the note's *text* — an entry can be fully sourced with no note at all,
+  and a note may quote a different source than the one proving the rank.
 
 **R3 — Why: a note per entry.**
 `(Person)-[:HAS_RANK_NOTE]->(Description {rankEntryId})-[:ABOUT_RANK]->(Rank)`,
@@ -111,7 +116,8 @@ real rank in brackets — *fungerende Kaptein (Løytnant)*.
 
 When the person has history, the pill is **clickable** and opens the
 history: entries sorted by `from` (undated last), each with period,
-"fungerende" for acting, and its note (why it was awarded, with sources).
+"fungerende" for acting, its sources as chips (title, page, link), and its
+note (why it was awarded).
 Without history, the pill is plain text.
 
 **R10 — Other readers use the known rank.** Everything that shows "a
@@ -135,6 +141,7 @@ entry as history. Zero errors, and every person ends with exactly one
 |---|---|
 | Known rank | `PATCH /api/admin/person/:slug/rank` — `verified`, sourceRef `admin-edit` |
 | History | `PATCH /api/admin/person/:slug/ranks` — ids, partial dates, acting |
+| Entry sources | `sourceRefs` on the entry, validated by `functions/_lib/source-refs.ts`; edited with `SourceRefsEditor.vue` ("Kilder"), shown with `SourceRef.vue` |
 | Entry note | `PATCH /api/admin/rank-note/:entryId` (`functions/_lib/edge-note.ts`, shared with stay notes) |
 | Editor | `PersonRanksEditor.vue` (known rank + hint), `PersonRankHistoryEditor.vue` (R7 closing) |
 | Pill + history popup | `PersonRanksPreview.vue` |
@@ -152,3 +159,5 @@ entry as history. Zero errors, and every person ends with exactly one
   (R1, R9).
 - **Visitors** — the rank pill opens the history, with notes, when there
   is one (R9).
+- **Sources are their own item** (2026-09-29) — the evidence for an entry
+  (`sourceRefs`) is separate from the note's citations (R2).

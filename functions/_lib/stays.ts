@@ -6,7 +6,8 @@
  * Edge properties: `id` (stable across saves — the stay's note hangs off
  * it), `role`, `startDate`, `endDate`, `state` ('candidate' for migrated
  * links nobody has reviewed, 'verified' once edited), `sourceRef`
- * (provenance of migrated links, kept through edits).
+ * (provenance of migrated links, kept through edits), `sourceRefs`
+ * (evidence for the stay — a document, a page; ./source-refs.ts).
  *
  * Notes: `(Person)-[:HAS_STATIONED_NOTE]->(Description {stayId})-[:ABOUT_PLACE]->(place)`.
  * A relationship can't point at a relationship, so the note carries the
@@ -20,6 +21,7 @@ import { runCypher, runCypherTx, type Neo4jEnv } from './neo4j.ts'
 import { findInvalidRole } from './role-scopes.ts'
 import { periodError } from './period.ts'
 import { STAY_NOTE, repointNoteStatements } from './edge-note.ts'
+import { parseSourceRefs, unknownSources } from './source-refs.ts'
 
 export type PlaceKind = 'location' | 'station'
 
@@ -30,6 +32,7 @@ export interface StayInput {
   role?:      string | null
   startDate?: string | null
   endDate?:   string | null
+  sourceRefs?: unknown
 }
 
 /** One stay after validation, with both ends resolved. */
@@ -41,6 +44,7 @@ export interface Stay {
   role:       string | null
   startDate:  string | null
   endDate:    string | null
+  sourceRefs: string[]
 }
 
 export function parsePlace(v: unknown): { kind: PlaceKind; slug: string } | null {
@@ -59,8 +63,16 @@ export function parsePlace(v: unknown): { kind: PlaceKind; slug: string } | null
 export function stayFieldError(s: StayInput): string | null {
   const period = periodError(s.startDate, s.endDate)
   if (period) return period
+  const refs = parseSourceRefs(s.sourceRefs)
+  if ('error' in refs) return refs.error
   if (s.id !== null && s.id !== undefined && (typeof s.id !== 'string' || !s.id)) return 'Ugyldig id'
   return null
+}
+
+/** The stay's sourceRefs, after stayFieldError has passed. */
+export function stayRefs(s: StayInput): string[] {
+  const refs = parseSourceRefs(s.sourceRefs)
+  return 'refs' in refs ? refs.refs : []
 }
 
 interface OldStay {
@@ -73,6 +85,7 @@ interface OldStay {
   endDate:   string | null
   state:     string | null
   sourceRef: string | null
+  sourceRefs: string[] | null
 }
 
 /** Which existing stays a save replaces: all of one person's, or all at one place. */
@@ -124,6 +137,8 @@ export async function replaceStays(
     ],
   })
   if (missing.length) return { error: `Finnes ikke: ${missing.map(m => m.ref).join(', ')}`, status: 400 }
+  const missingSources = await unknownSources(env, stays.flatMap(s => s.sourceRefs))
+  if (missingSources.length) return { error: `Kilden finnes ikke: ${missingSources.join(', ')}`, status: 400 }
 
   const old = await runCypher<OldStay>(env, `
     MATCH ${scopeMatch(scope)}
@@ -131,7 +146,7 @@ export async function replaceStays(
            CASE WHEN pl:Station THEN 'station' ELSE 'location' END AS placeKind,
            pl.slug AS placeSlug, r.role AS role,
            r.startDate AS startDate, r.endDate AS endDate,
-           r.state AS state, r.sourceRef AS sourceRef
+           r.state AS state, r.sourceRef AS sourceRef, r.sourceRefs AS sourceRefs
   `, scopeParams(scope))
   const oldById = new Map(old.filter(o => o.id).map(o => [o.id, o]))
 
@@ -142,6 +157,7 @@ export async function replaceStays(
       && prev.placeKind  === s.placeKind && prev.placeSlug === s.placeSlug
       && prev.role       === s.role
       && prev.startDate  === s.startDate && prev.endDate === s.endDate
+      && JSON.stringify(prev.sourceRefs ?? []) === JSON.stringify(s.sourceRefs)
     return {
       ...s,
       // An id not in this scope (stale client, or moved elsewhere) is not reused.
@@ -158,7 +174,7 @@ export async function replaceStays(
     MATCH (pl:${PLACE_LABEL[kind]} {slug: s.placeSlug})
     CREATE (p)-[:STATIONED_AT {
       id: s.id, role: s.role, startDate: s.startDate, endDate: s.endDate,
-      state: s.state, sourceRef: s.sourceRef
+      state: s.state, sourceRef: s.sourceRef, sourceRefs: s.sourceRefs
     }]->(pl)
   `
   const pruneNotes = scope.side === 'person'

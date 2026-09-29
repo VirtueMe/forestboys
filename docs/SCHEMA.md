@@ -205,11 +205,11 @@ Vocabularies:
 |-----------------------|-------------------------------------------|-------------------------------------------------------|
 | `MEMBER_OF`           | `Unit` \| `Organization`                  | `role, description, sourceRefs[], startDate, endDate` |
 | `RANK`                | `Rank`                                    | `state, sourceRef` — exactly one: the rank the person is known by (PERSON-RANKS.md) |
-| `HELD_RANK`           | `Rank`                                    | `id, from, to, acting, state` — rank history, 0..n; partial dates |
+| `HELD_RANK`           | `Rank`                                    | `id, from, to, acting, sourceRefs, state` — rank history, 0..n; partial dates |
 | `HAS_RANK_NOTE`       | `Description`                             | per history entry — `Description.rankEntryId` = the edge's `id`, then `ABOUT_RANK` |
 | `INVOLVED_IN`         | `Incident`                                | `role, outcome`                                       |
 | `PARTICIPATED_IN`     | `Operation`                               | `role, startDate, endDate`                            |
-| `STATIONED_AT`        | `Location` \| `Station`                  | `id, role, startDate, endDate, state, sourceRef` — one edge per stay (docs/PERSON-STATIONED-AT.md) |
+| `STATIONED_AT`        | `Location` \| `Station`                  | `id, role, startDate, endDate, state, sourceRef, sourceRefs` — one edge per stay (docs/PERSON-STATIONED-AT.md) |
 | `CREW_OF`             | `Transport`                               | `role` (controlled vocab — RAF WWII + SOE dispatcher) |
 | `BORN_AT`             | `Location`                                | —                                                     |
 | `HOME_AT`             | `Location`                                | —                                                     |
@@ -633,7 +633,7 @@ A full source document — OSS memos, SOE reports, articles, scanned corresponde
 
 **Inbound:**
 - `(:Person)-[:RANK]->(r)` `{state, sourceRef}` — the known rank
-- `(:Person)-[:HELD_RANK]->(r)` `{id, from, to, acting, state}` — history
+- `(:Person)-[:HELD_RANK]->(r)` `{id, from, to, acting, sourceRefs, state}` — history
 
 **Rule:** `Menig` (tier 1) is the default issued to every Person without an observed rank.
 

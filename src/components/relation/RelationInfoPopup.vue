@@ -12,6 +12,7 @@
         <span v-if="periodOf(entry)" class="member-period">{{ periodOf(entry) }}</span>
         <span v-if="showPassed && entry.passed === true" class="passed-chip passed-chip--ok">Bestått</span>
         <span v-if="showPassed && entry.passed === false" class="passed-chip passed-chip--no">Ikke bestått</span>
+        <SourceRef v-if="entry.sourceRefs?.length" :refs="entry.sourceRefs" inline />
       </div>
       <template v-for="s in sortedSections" :key="s.order">
         <!-- eslint-disable vue/no-v-html -->
@@ -76,6 +77,7 @@ import RoleLabel from '@/components/role/RoleLabel.vue'
 import { blocksToHtml } from '@/utils/portableText.ts'
 import type { Section, Citation } from '@/components/SectionsEditor.vue'
 import { formatPeriod } from '@/utils/period.ts'
+import SourceRef from '@/components/SourceRef.vue'
 import type { RelationEntry } from './RelationStrategy.ts'
 
 const props = withDefaults(defineProps<{

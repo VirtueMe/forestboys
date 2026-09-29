@@ -34,6 +34,7 @@
       show-role
       role-scope="stationed"
       default-role="stationed"
+      show-sources
       :summary-extra="staySummaryExtra"
     />
   </div>

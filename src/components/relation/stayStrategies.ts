@@ -35,6 +35,7 @@ function stayFields(e: RelationEntry) {
     role:      e.role ?? null,
     startDate: e.startDate,
     endDate:   e.endDate,
+    sourceRefs: e.sourceRefs ?? [],
   }
 }
 

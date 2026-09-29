@@ -39,6 +39,9 @@ export interface RelationEntry {
   state?:         string | null
   /** Rank history only: held in an acting capacity (docs/PERSON-RANKS.md). */
   acting?:        boolean
+  /** Evidence for the edge's claim — SourceRef strings (`<source-id>#page:47`),
+   *  distinct from the note's citations. Only relations with `show-sources`. */
+  sourceRefs?:    string[]
   /**
    * Proposal-preview sidecar (live consumers ignore both):
    *   - `pendingFromBundle` — set on entries fabricated from an `add-edge`

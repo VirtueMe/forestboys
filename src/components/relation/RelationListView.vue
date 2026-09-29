@@ -20,6 +20,7 @@
         <span v-if="periodOf(e)" class="member-period">{{ periodOf(e) }}</span>
         <span v-if="showPassed && e.passed === true" class="passed-chip passed-chip--ok">Bestått</span>
         <span v-if="showPassed && e.passed === false" class="passed-chip passed-chip--no">Ikke bestått</span>
+        <SourceRef v-if="e.sourceRefs?.length" :refs="e.sourceRefs" />
         <button
           v-if="e.hasDescription"
           class="info-marker"
@@ -37,6 +38,7 @@
 <script setup lang="ts">
 import { RouterLink } from 'vue-router'
 import RoleLabel from '@/components/role/RoleLabel.vue'
+import SourceRef from '@/components/SourceRef.vue'
 import { formatPeriod } from '@/utils/period.ts'
 import type { RelationEntry, RelationStrategy } from './RelationStrategy.ts'
 

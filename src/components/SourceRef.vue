@@ -1,5 +1,5 @@
 <template>
-  <span v-if="refs?.length" class="source-refs">
+  <span v-if="refs?.length" class="source-refs" :class="{ 'source-refs--inline': inline }">
     <span
       v-for="(r, i) in parsedRefs"
       :key="r.raw"
@@ -16,34 +16,29 @@
         <span class="source-chip-title">{{ chipLabel(r) }}</span>
         <span v-if="r.fragmentLabel" class="source-chip-fragment">{{ r.fragmentLabel }}</span>
       </button>
-      <div v-if="openIndex === i" class="source-popover" role="dialog">
-        <header class="source-popover-header">
-          <span v-if="resolved(r.id)?.type" class="source-popover-type">{{ typeLabel(resolved(r.id)!.type) }}</span>
-          <button class="source-popover-close" type="button" aria-label="Lukk" @click="openIndex = null">×</button>
-        </header>
-        <p class="source-popover-title">{{ chipLabel(r) }}</p>
-        <p v-if="r.fragmentLabel" class="source-popover-meta">Referanse: {{ r.fragmentLabel }}</p>
-        <p v-if="resolved(r.id)?.domain" class="source-popover-meta">{{ resolved(r.id)!.domain }}</p>
-        <a
-          v-if="resolved(r.id)?.url"
-          :href="resolved(r.id)!.url!"
-          target="_blank"
-          rel="noopener noreferrer"
-          class="source-popover-link"
-        >Åpne kilde ↗</a>
-        <p v-else-if="!resolved(r.id)" class="source-popover-meta source-popover-missing">
-          Kilden finnes ikke i grafen ennå ({{ r.id }}).
-        </p>
+      <div v-if="!inline && openIndex === i" class="source-popover" role="dialog">
+        <SourceRefDetails :id="r.id" :title="chipLabel(r)" :fragment-label="r.fragmentLabel" :source="resolved(r.id)" @close="openIndex = null" />
       </div>
     </span>
+    <!-- Inline: details open in the flow under the chips, so they grow a
+         dialog instead of being clipped by its scroll area. -->
+    <div v-if="inline && openRef" class="source-popover source-popover--inline source-ref-wrap" role="region">
+      <SourceRefDetails :id="openRef.id" :title="chipLabel(openRef)" :fragment-label="openRef.fragmentLabel" :source="resolved(openRef.id)" @close="openIndex = null" />
+    </div>
   </span>
 </template>
 
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { resolveSources, getCachedSource, type ResolvedSource } from '../composables/useSourceRefs.ts'
+import SourceRefDetails from './SourceRefDetails.vue'
 
-const props = defineProps<{ refs: string[] | null | undefined }>()
+const props = withDefaults(defineProps<{
+  refs: string[] | null | undefined
+  /** Open details in the flow under the chips instead of as a floating
+   *  popover — for chips inside dialogs and other scroll containers. */
+  inline?: boolean
+}>(), { inline: false })
 
 const openIndex = ref<number | null>(null)
 
@@ -81,6 +76,7 @@ function formatFragment(fragment: string): string | null {
 }
 
 const parsedRefs = computed<ParsedRef[]>(() => (props.refs ?? []).map(parseRef))
+const openRef = computed(() => (openIndex.value === null ? null : parsedRefs.value[openIndex.value] ?? null))
 
 function resolved(id: string): ResolvedSource | null {
   return getCachedSource(id)
@@ -94,26 +90,6 @@ function chipLabel(ref: ParsedRef): string {
 
 function truncate(s: string, n: number): string {
   return s.length <= n ? s : s.slice(0, n - 1) + '…'
-}
-
-const TYPE_LABELS: Record<string, string> = {
-  book:         'Bok',
-  website:      'Nettside',
-  registry:     'Register',
-  encyclopedia: 'Leksikon',
-  reference:    'Oppslagsverk',
-  newspaper:    'Avis',
-  map:          'Kart',
-  archive:      'Arkiv',
-  video:        'Video',
-  academic:     'Akademisk',
-  report:       'Rapport',
-  editorial:    'Redaksjonell vurdering',
-  photograph:   'Fotografi',
-}
-function typeLabel(type: string | null): string {
-  if (!type) return ''
-  return TYPE_LABELS[type] ?? type
 }
 
 function toggle(i: number) {
@@ -220,71 +196,18 @@ watch(() => props.refs, refs => {
   color: var(--ink);
 }
 
-.source-popover-header {
+.source-refs--inline {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-sm);
-  margin-bottom: var(--space-xs);
+  flex-basis: 100%;
+  width: 100%;
+  margin-left: 0;
 }
-
-.source-popover-type {
-  font-family: var(--font-sans);
-  font-size: var(--size-caps);
-  font-weight: 600;
-  letter-spacing: var(--tracking-caps);
-  text-transform: uppercase;
-  color: var(--muted);
-}
-
-.source-popover-close {
-  width: 22px;
-  height: 22px;
-  background: none;
-  border: 0;
-  color: var(--muted);
-  font-size: var(--size-h3);
-  line-height: 1;
-  cursor: pointer;
-  padding: 0;
-  border-radius: var(--radius-md);
-  -webkit-tap-highlight-color: transparent;
-}
-.source-popover-close:hover {
+.source-popover--inline {
+  position: static;
+  flex-basis: 100%;
+  min-width: 0;
+  max-width: none;
+  box-shadow: none;
   background: var(--paper-sunken);
-  color: var(--faded-red);
 }
-
-.source-popover-title {
-  margin: 0 0 var(--space-xs);
-  font-family: var(--font-sans);
-  font-size: var(--size-body-ui);
-  font-weight: 600;
-  color: var(--ink);
-  line-height: var(--leading-snug);
-}
-
-.source-popover-meta {
-  margin: 0 0 var(--space-xs);
-  font-family: var(--font-sans);
-  font-size: var(--size-label);
-  color: var(--muted);
-}
-
-.source-popover-missing {
-  font-style: italic;
-}
-
-.source-popover-link {
-  display: inline-block;
-  margin-top: var(--space-sm);
-  font-family: var(--font-sans);
-  font-size: var(--size-label);
-  font-weight: 500;
-  color: var(--ink);
-  text-decoration: underline;
-  text-decoration-color: var(--rule);
-  text-underline-offset: 3px;
-}
-.source-popover-link:hover { color: var(--faded-red); text-decoration-color: var(--faded-red); }
 </style>

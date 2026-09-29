@@ -2,7 +2,7 @@
  * PATCH /api/admin/station/:slug/stays — replace the STATIONED_AT edges into
  * this Station, from the place side (e.g. a whole camp roster at once).
  *
- * Body: { stays: [{ id?, personSlug, role?, startDate?, endDate? }] }
+ * Body: { stays: [{ id?, personSlug, role?, startDate?, endDate?, sourceRefs? }] }
  * Returns: { ok, ids } — stay ids in input order (new stays get fresh ids).
  *
  * See functions/_lib/stays.ts for state / note handling.
@@ -10,7 +10,7 @@
 
 import { requireAdmin } from '~/_lib/require-admin.ts'
 import type { Neo4jEnv } from '~/_lib/neo4j.ts'
-import { replaceStays, stayFieldError, type StayInput } from '~/_lib/stays.ts'
+import { replaceStays, stayFieldError, stayRefs, type StayInput } from '~/_lib/stays.ts'
 
 interface Env extends Neo4jEnv {
   SESSION_SECRET: string
@@ -42,6 +42,7 @@ export const onRequestPatch: PagesFunction<Env> = async ({ request, env, params 
       role:       s.role ?? null,
       startDate:  s.startDate ?? null,
       endDate:    s.endDate ?? null,
+      sourceRefs: stayRefs(s),
     })
   }
 

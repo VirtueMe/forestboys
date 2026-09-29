@@ -116,6 +116,10 @@
             </label>
           </div>
           <slot name="extra-fields" :entry="e"></slot>
+          <div v-if="showSources" class="membership-sources">
+            <label class="membership-desc-label">Kilder</label>
+            <SourceRefsEditor :model-value="e.sourceRefs ?? []" @update:model-value="v => e.sourceRefs = v" />
+          </div>
           <div v-if="showDescription" class="membership-desc-wrap">
             <label class="membership-desc-label">Beskrivelse</label>
             <SectionsEditor :sections="e.sections" />
@@ -147,6 +151,7 @@
 /* eslint-disable vue/no-mutating-props */
 import { computed, ref, watch, toRef } from 'vue'
 import SectionsEditor, { type Section } from '@/components/SectionsEditor.vue'
+import SourceRefsEditor from '@/components/SourceRefsEditor.vue'
 import type { RelationEntry, RelationStrategy, RelationTarget } from './RelationStrategy.ts'
 import { useRoles, useRoleOptions } from '@/composables/useRoles.ts'
 import { formatPeriod } from '@/utils/period.ts'
@@ -168,6 +173,9 @@ const props = withDefaults(defineProps<{
   showDates?:       boolean
   showPassed?:      boolean
   showDescription?: boolean
+  /** "Kilder" — evidence for the edge's claim (`sourceRefs`), separate from
+   *  the note's citations. For relations whose strategy saves sourceRefs. */
+  showSources?:     boolean
   /** Role group (docs/ROLES.md) the picker offers, e.g. 'membership'.
    *  Options and help text come from the Role nodes. */
   roleScope?:       string
@@ -188,6 +196,7 @@ const props = withDefaults(defineProps<{
   showDates:       true,
   showPassed:      false,
   showDescription: true,
+  showSources:     false,
   roleScope:       undefined,
   defaultRole:     null,
   createLabel:     undefined,
@@ -235,7 +244,7 @@ function entrySignature(arr: RelationEntry[]): string {
   return JSON.stringify(
     arr.map(e => [
       e.targetSlug, e.role ?? null, e.passed ?? null,
-      e.startDate, e.endDate, sectionsSignature(e.sections),
+      e.startDate, e.endDate, e.sourceRefs ?? [], sectionsSignature(e.sections),
       props.signatureExtra ? props.signatureExtra(e) : '',
     ]),
   )
@@ -595,7 +604,8 @@ function revert() {
 }
 .rank-remove-btn:hover { background: var(--paper-sunken); border-color: var(--danger); }
 
-.membership-desc-wrap { display: flex; flex-direction: column; gap: var(--space-xs); }
+.membership-desc-wrap,
+.membership-sources { display: flex; flex-direction: column; gap: var(--space-xs); }
 .membership-desc-label {
   font-family: var(--font-sans);
   font-size: var(--size-caps);

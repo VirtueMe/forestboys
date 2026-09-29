@@ -10,6 +10,7 @@
     search-placeholder="Søk grad…"
     picker-chip-aria="Bytt grad"
     validation-empty="Velg grad for alle oppføringer før du lagrer."
+    show-sources
     :signature-extra="e => String(!!e.acting)"
     :summary-extra="actingLabel"
     @saved="emit('saved')"
@@ -26,7 +27,8 @@
 <script setup lang="ts">
 /**
  * PersonRankHistoryEditor — the person's rank history (docs/PERSON-RANKS.md
- * R2, R3, R7): rank, from / to, acting, and a note per entry.
+ * R2, R3, R7): rank, from / to, acting, sources (what proves it — a
+ * document, a page) and a note per entry.
  *
  * R7 — a new rank closes the open one. When a row added in this editing
  * session gets a `from` date and is the latest of its kind (real or

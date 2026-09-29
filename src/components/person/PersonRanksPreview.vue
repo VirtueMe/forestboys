@@ -30,6 +30,7 @@
             <span v-if="e.acting" class="history-acting">fungerende</span>
             <span v-if="formatPeriod(e.startDate, e.endDate)" class="history-period">{{ formatPeriod(e.startDate, e.endDate) }}</span>
           </div>
+          <SourceRef v-if="e.sourceRefs?.length" :refs="e.sourceRefs" inline class="history-sources" />
           <DescriptionPreview v-if="e.sections.length" :sections="e.sections" class="history-note" />
         </li>
       </ol>
@@ -45,10 +46,11 @@
  * Shows the rank the person is known by. When the latest history entry
  * is an open acting rank: "fungerende Kaptein (Løytnant)". With history,
  * the pill opens it — entries by date (undated last), acting marked, each
- * with its note (why it was awarded, with sources).
+ * with the sources that prove it and its note (why it was awarded).
  */
 import { computed, ref } from 'vue'
 import DescriptionPreview from '@/components/DescriptionPreview.vue'
+import SourceRef from '@/components/SourceRef.vue'
 import { latestOpen } from '@/components/relation/rankStrategies.ts'
 import type { RelationEntry } from '@/components/relation/RelationStrategy.ts'
 import { comparePartial, formatPeriod } from '@/utils/period.ts'
@@ -108,7 +110,7 @@ const sortedHistory = computed(() =>
   z-index: 200;
 }
 .popup-card {
-  max-width: 560px;
+  max-width: 640px;
   width: 100%;
   max-height: 85vh;
   overflow-y: auto;
@@ -159,5 +161,6 @@ const sortedHistory = computed(() =>
 .history-rank   { font-family: var(--font-sans); font-size: var(--size-body-ui); font-weight: 600; color: var(--ink); }
 .history-acting { font-family: var(--font-sans); font-size: var(--size-caps); letter-spacing: var(--tracking-caps); text-transform: uppercase; color: var(--ink-soft); }
 .history-period { font-family: var(--font-sans); font-size: var(--size-label); color: var(--muted); font-variant-numeric: tabular-nums; }
+.history-sources { margin-top: var(--space-xs); }
 .history-note   { margin-top: var(--space-xs); }
 </style>

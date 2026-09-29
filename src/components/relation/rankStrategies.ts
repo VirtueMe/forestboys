@@ -42,6 +42,7 @@ export const RankHistoryStrategy: RelationStrategy = {
       entries.map(e => ({
         id: e.edgeId ?? null, rankSlug: e.targetSlug,
         from: e.startDate, to: e.endDate, acting: e.acting === true,
+        sourceRefs: e.sourceRefs ?? [],
       })),
     )
   },
