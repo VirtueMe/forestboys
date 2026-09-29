@@ -153,10 +153,34 @@ split: the old person became `reidulf-larsen-wt`, a new one took
 `reidulf-larsen`). Renames run first, in one transaction, via temporary
 slugs; description ids follow the slug.
 
+### Review — no baseline
+
+Some people were imported from a Sanity state older than the April export
+(the node's `sanityUpdatedAt` predates it), so there is no baseline and a
+changed field can't be told apart from a graph edit. These go to review.
+
+`--accept-review=<slug>,…` applies Sanity's value for the named people as
+if clean. The editors write no sourceRef, so graph edits to name, cover
+names, home or birth year can't be detected — naming a person is the
+judgement that the graph holds no edits of its own. What can be detected
+still blocks the field: gallery edges with editor props, or graph links
+Sanity doesn't have.
+
+Accepted on 2026-09-29 (graph slugs before the run; all 37 were checked
+side by side, and the graph values were older Sanity states, never edits):
+
+```
+aksel-edvin-larsen,bjarne-iversen,claus-urbye-helberg,erling-jensen,harald-svindseth,henning-kofoed,ivar-naess,kjell-engelsen,knut-aarsaether,konrad-anker-hennum,lars-dalland,nils-eliassen-fjeld,ole-baarnes,per-blindheim,ragnar-ulstein,arvid-fossum,knut-mostue,finn-scheldrup-johansen,harald-storvik,peter-graben,nils-kristoffer-o-torsvik,sissel,johan-p-bjelland-thu,johan-hagemann,bjorn-norderhaug,frick,tor-jorgen-falkevik,o-berentsen,hugo-munthe-kaas,golda-goldstein,torvald-olai-lien,per-andreas-larsen,paul-magnussen-strande,ole-berg-lt
+```
+
+Held for Jan: `kare-helland` (Sanity name "Kåre Hellan"),
+`2lt-polansky-henry-l` (Sanity slug `s-lt-polansky-henry-l`), `na` (a
+person named "N/A").
+
 ### Where it has run
 
 The scripts use `.env`, which is the **local** Neo4j. Production Aura
-(`.env.production`) has had none of this. Status on 2026-09-28, local only:
+(`.env.production`) has had none of this. Status on 2026-09-29, local only:
 
 | Step | Script | Result |
 |---|---|---|
@@ -164,6 +188,8 @@ The scripts use `.env`, which is the **local** Neo4j. Production Aura
 | Person descriptions | `scripts/import-person-descriptions.ts --write` | 3 462 |
 | Person sync | `scripts/sync-person.ts --write` | 259 changed (20 slug renames), 173 new; 37 left for review |
 | Rank split | `scripts/migrate-rank-split.ts --write` | 3 964 `RANK` edges; 1 history entry (PERSON-RANKS.md) |
+| Person sync | `scripts/sync-person.ts --write` | 3 changed |
+| Person sync, review | `scripts/sync-person.ts --write --accept-review=…` (list above) | 34 changed (5 slug renames); 3 held |
 
 Production gets the same steps in the same order, behind an explicit
 opt-in that doesn't exist yet.

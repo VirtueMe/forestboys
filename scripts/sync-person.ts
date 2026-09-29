@@ -29,7 +29,15 @@
  * are saved to data/sanity-delta/person-before-<time>.json, so the run can
  * be undone.
  *
- * Usage: npx tsx scripts/sync-person.ts [--write]
+ * Review fields (no baseline — the graph was imported from a Sanity state
+ * older than the April export) are left alone unless the person is named in
+ * --accept-review: then Sanity's value applies as if clean. Graph edits to
+ * the scalar fields can't be detected (the editor writes no sourceRef), so
+ * naming a person is the judgement that the graph holds no edits of its
+ * own. What can be detected still blocks the field: gallery edges with
+ * editor props (hero, scope…), graph links Sanity doesn't have.
+ *
+ * Usage: npx tsx scripts/sync-person.ts [--write] [--accept-review=<slug>,<slug>…]
  */
 
 import { writeFileSync, mkdirSync } from 'node:fs'
@@ -44,6 +52,9 @@ import { imageSources, linkSource, parsePerson, personClaims, rankEdge, sanMigRe
 dotenv.config()
 
 const write = process.argv.includes('--write')
+const acceptReview = new Set(
+  (process.argv.find(a => a.startsWith('--accept-review='))?.slice('--accept-review='.length) ?? '')
+    .split(',').map(x => x.trim()).filter(Boolean))
 const OUT   = resolve(process.cwd(), 'data', 'sanity-delta', 'person-apply-plan.json')
 
 type Stmt = { text: string; params: Record<string, unknown> }
@@ -168,8 +179,13 @@ function stampStmt(id: string, stamps: Record<string, string>): Stmt {
 
 // ── Plans ──
 
-function planChanged(g: GraphPerson, s: Doc, april: Doc | undefined, skipped: string[], renames: Rename[]): Plan | null {
-  const verdicts = classify(g, s, april)
+/** Graph edits the sync can see on an accepted-review person, per field. */
+type Blocked = Map<string, Set<string>>
+
+function planChanged(g: GraphPerson, s: Doc, april: Doc | undefined, skipped: string[], renames: Rename[], blocked: Blocked): Plan | null {
+  const verdicts = classify(g, s, april).map(v =>
+    v.verdict === 'review' && acceptReview.has(g.slug) && !blocked.get(g.sanityId)?.has(v.field)
+      ? { ...v, verdict: 'clean' as const } : v)
   if (!verdicts.length) return null
   const plan: Plan = { sanityId: g.sanityId, slug: g.slug, summary: [], stmts: [] }
   const stamps: Record<string, string> = {}
@@ -268,17 +284,45 @@ async function main() {
   const off = Object.entries(calib).filter(([, c]) => c.agree !== c.total)
   console.log(`Calibration: ${off.length ? off.map(([n, c]) => `${n} ${c.total - c.agree} differ`).join(', ') : 'rule reproduces the graph (100%)'}`)
 
-  const skipped: string[] = []
-  const renames: Rename[] = []
-  const changed = [...graph.values()]
-    .map(g => sanity.get(g.sanityId) ? planChanged(g, sanity.get(g.sanityId)!, april.get(g.sanityId), skipped, renames) : null)
-    .filter((p): p is Plan => !!p)
-  const created = sanityDocs.filter(d => !graph.has(d._id)).map(planNew)
-
-  // New people must resolve.
   const driver = neo4jDriver()
   const errors: string[] = []
   try {
+    // Accepted review people: every slug must have review fields; detectable graph edits block their field.
+    const blocked: Blocked = new Map()
+    const bySlug = new Map([...graph.values()].map(g => [g.slug, g]))
+    for (const slug of acceptReview) {
+      const g = bySlug.get(slug)
+      const s = g && sanity.get(g.sanityId)
+      if (!g || !s || !classify(g, s, april.get(g.sanityId)).some(v => v.verdict === 'review')) {
+        errors.push(`--accept-review: ${slug} has no review fields`)
+        continue
+      }
+      const keep = new Set(sanityLinks(s))
+      if (g.links.some(l => !keep.has(l))) (blocked.get(g.sanityId) ?? blocked.set(g.sanityId, new Set()).get(g.sanityId)!).add('links')
+    }
+    if (acceptReview.size) {
+      const rs = driver.session({ defaultAccessMode: neo4j.session.READ })
+      const edited = await rs.run(`
+        UNWIND $slugs AS slug
+        MATCH (p:Person {slug: slug})-[h:HAS_IMAGE]->(s:Source)
+        WHERE s.url STARTS WITH 'https://cdn.sanity.io/' AND any(k IN keys(h) WHERE NOT k IN ['order', 'caption'])
+        RETURN DISTINCT p.sanityId AS id`, { slugs: [...acceptReview] })
+      await rs.close()
+      for (const rec of edited.records) {
+        const id = rec.get('id') as string
+        ;(blocked.get(id) ?? blocked.set(id, new Set()).get(id)!).add('gallery')
+      }
+    }
+
+    const skipped: string[] = []
+    const renames: Rename[] = []
+    const changed = [...graph.values()]
+      .map(g => sanity.get(g.sanityId) ? planChanged(g, sanity.get(g.sanityId)!, april.get(g.sanityId), skipped, renames, blocked) : null)
+      .filter((p): p is Plan => !!p)
+    const created = sanityDocs.filter(d => !graph.has(d._id)).map(planNew)
+    for (const [id, fields] of blocked) skipped.push(`${graph.get(id)!.slug}: ${[...fields].join(', ')} (graph edits — accept-review blocked)`)
+
+    // New people must resolve.
     const session = driver.session({ defaultAccessMode: neo4j.session.READ })
     // Every Person slug after the renames, plus the new people, must be unique.
     const all = await session.run(`MATCH (p:Person) RETURN p.slug AS slug, coalesce(p.sanityId, elementId(p)) AS id`)
