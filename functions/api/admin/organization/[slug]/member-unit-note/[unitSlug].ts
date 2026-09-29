@@ -71,8 +71,10 @@ export const onRequestPatch: PagesFunction<Env> = async ({ request, env, params 
 
   try {
     await runCypher(env, `
-      MATCH (o:Organization {slug: $orgSlug})-[r:HAS_MEMBER_UNIT_NOTE]->(d:Description)-[a:ABOUT_UNIT]->(u:Unit {slug: $unitSlug})
-      DELETE r, a, d
+      MATCH (o:Organization {slug: $orgSlug})-[:HAS_MEMBER_UNIT_NOTE]->(d:Description)-[:ABOUT_UNIT]->(u:Unit {slug: $unitSlug})
+      // DETACH: the note may CITE / be SOURCED_FROM Sources — a plain DELETE of
+      // d fails while those edges exist.
+      DETACH DELETE d
     `, { orgSlug, unitSlug })
 
     if (!payload.length) return json({ ok: true, count: 0 })
