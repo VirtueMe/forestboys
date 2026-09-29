@@ -204,7 +204,7 @@ Vocabularies:
 | Edge                  | To                                        | Properties                                            |
 |-----------------------|-------------------------------------------|-------------------------------------------------------|
 | `MEMBER_OF`           | `Unit` \| `Organization`                  | `role, description, sourceRefs[], startDate, endDate` |
-| `HELD_RANK`           | `Rank`                                    | `startDate, endDate, sourceRef`                       |
+| `HELD_RANK`           | `Rank`                                    | `state, sourceRef, from, to` (years) — to be split into `RANK` + history, see PERSON-RANKS.md |
 | `INVOLVED_IN`         | `Incident`                                | `role, outcome`                                       |
 | `PARTICIPATED_IN`     | `Operation`                               | `role, startDate, endDate`                            |
 | `STATIONED_AT`        | `Location` \| `Station`                  | `id, role, startDate, endDate, state, sourceRef` — one edge per stay (docs/PERSON-STATIONED-AT.md) |
