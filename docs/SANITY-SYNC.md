@@ -126,6 +126,47 @@ narrows which documents to look at.
 the graph value differs from what the import rule produces from the
 baseline. That keeps the editors untouched.
 
+### The rule, ported
+
+The person import rule lives in the Clojure migration (`migration/src/linge/`).
+The sync uses a TypeScript port, `scripts/lib/person-rule.ts`, so the sync
+tooling stays in one language. Calibration holds the port to the original:
+applied to the April baseline it must reproduce the graph for every
+unchanged person — canonical name, rank edge, status, serviceClass, link
+and image Source ids. It did, 100 % over 3 435 people.
+`scripts/sync-person.ts` refuses to write when it doesn't.
+
+### Stamps
+
+When a field is applied (or imported after April), the Person gets
+`<field>_sha` — hash of the Sanity value taken in — and, where the rule
+reshapes it (name → canonicalName), `<field>_graphSha` — hash of what the
+graph got. From then on that stamp is the field's baseline, not the April
+export. `scripts/lib/person-sync.ts` holds the comparison for both the
+report and the apply step.
+
+### Slugs
+
+Slug changes follow Sanity. The graph app isn't live, while the live site
+already uses Sanity's slugs, and Jan reuses freed slugs (the Reidulf Larsen
+split: the old person became `reidulf-larsen-wt`, a new one took
+`reidulf-larsen`). Renames run first, in one transaction, via temporary
+slugs; description ids follow the slug.
+
+### Where it has run
+
+The scripts use `.env`, which is the **local** Neo4j. Production Aura
+(`.env.production`) has had none of this. Status on 2026-09-28, local only:
+
+| Step | Script | Result |
+|---|---|---|
+| Stationed roles | `scripts/seed-roles.ts` | 5 roles |
+| Person descriptions | `scripts/import-person-descriptions.ts --write` | 3 462 |
+| Person sync | `scripts/sync-person.ts --write` | 259 changed (20 slug renames), 173 new; 37 left for review |
+
+Production gets the same steps in the same order, behind an explicit
+opt-in that doesn't exist yet.
+
 ### Reshaped documents — curated mappings
 
 Where the import did more than copy fields, the three-way compare has
@@ -173,12 +214,10 @@ it is worth agreeing that that type is edited only in the graph.
 
 ## Suggested order
 
-1. **Commit the report script; keep the baseline safe.**
-2. **Field-level compare for `person`** — report only: per changed
-   person, which fields changed and whether each is a clean apply or a
-   conflict. Tells us the real size of the review work before anything
-   writes.
-3. **Apply for clean changes + new documents**, with `SyncState`.
+1. ~~Commit the report script; keep the baseline safe.~~
+2. ~~Field-level compare for `person`.~~
+3. ~~Apply for clean changes + new documents, with `SyncState`~~ — person,
+   local only. Left: 37 people for review, 7 deleted in Sanity.
 4. **Curated mapping for STATIONED_AT**, then run that migration.
 5. Remaining types; conflicts and deletions through review bundles.
 
