@@ -1,38 +1,26 @@
 /**
- * Read-only Neo4j connection for browser queries.
- * Uses the VITE_NEO4J_* env vars (read-only user, never admin credentials).
+ * Read-only graph queries from the browser.
  *
- * Write operations (e.g. review approve/reject) go through
- * /api/review-item — a Cloudflare Pages Function that holds write credentials.
+ * Runs through POST /api/neo4j/query — a Pages Function that holds the
+ * credentials and executes in a READ transaction, so Neo4j refuses any
+ * write. The browser has no database credentials (Aura Free has a single,
+ * admin user — it can't ship in the bundle).
+ *
+ * Writes (editors, review approve/reject) go through the /api/admin/*
+ * Pages Functions.
  */
 
-import neo4j, { type Driver, type RecordShape } from 'neo4j-driver'
-
-let driver: Driver | null = null
-
-function getDriver(): Driver {
-  if (!driver) {
-    driver = neo4j.driver(
-      import.meta.env['VITE_NEO4J_URI'] as string,
-      neo4j.auth.basic(
-        import.meta.env['VITE_NEO4J_READER'] as string,
-        import.meta.env['VITE_NEO4J_READER_PASSWORD'] as string,
-      ),
-      { disableLosslessIntegers: true },
-    )
-  }
-  return driver
-}
-
-export async function neo4jQuery<T extends RecordShape>(
+/** T describes the rows the query returns — as the driver's generic did, it is not checked. */
+export async function neo4jQuery<T = Record<string, unknown>>(
   cypher: string,
   params: Record<string, unknown> = {},
 ): Promise<T[]> {
-  const session = getDriver().session({ defaultAccessMode: neo4j.session.READ })
-  try {
-    const result = await session.run(cypher, params)
-    return result.records.map(r => r.toObject() as T)
-  } finally {
-    await session.close()
-  }
+  const res = await fetch('/api/neo4j/query', {
+    method:  'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body:    JSON.stringify({ query: cypher, params }),
+  })
+  const body = await res.json().catch(() => ({})) as { rows?: T[]; error?: string }
+  if (!res.ok || !body.rows) throw new Error(body.error ?? `Neo4j query failed (HTTP ${res.status})`)
+  return body.rows
 }
