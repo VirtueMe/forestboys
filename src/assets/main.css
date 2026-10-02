@@ -74,7 +74,18 @@
   --prose-max-width:   68ch;
   --drawer-height:     420px;
   --sidebar-width:     360px;
+
+  /* Large screens: the whole page scales (px and rem alike — half the
+     components size text in px), so text grows and the content column
+     takes a proportionate share of the screen. See DESIGN.md "Layout". */
+  --page-zoom:         1;
 }
+
+@media (min-width: 1600px) { :root { --page-zoom: 1.125; } }
+@media (min-width: 1920px) { :root { --page-zoom: 1.25; } }
+@media (min-width: 2400px) { :root { --page-zoom: 1.5; } }
+/* 4K: prose a step larger too — 68ch then spans more of the column. */
+@media (min-width: 3200px) { :root { --page-zoom: 2; --size-body: 1.2rem; } }
 
 @media (prefers-color-scheme: dark) {
   :root {
@@ -114,6 +125,11 @@ html, body, #app {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
+
+/* MapLibre reads pointer positions against an unzoomed canvas — a map
+   inside a zoomed page is zoomed back to 1:1. The map page itself is not
+   zoomed at all (App.vue). */
+.shell.zoomed .maplibregl-map { zoom: calc(1 / var(--page-zoom)); }
 
 /* ── Global section primitive ──────────────────────────────────
  * Detail-page card section. Targets <section class="section"> so the

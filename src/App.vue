@@ -1,5 +1,5 @@
 <template>
-  <div class="shell">
+  <div class="shell" :class="{ zoomed: !isMap }">
     <AppNav />
     <main class="page-content">
       <RouterView v-slot="{ Component }">
@@ -31,6 +31,9 @@ useLocationCache()
   height: 100%;
   display: flex;
   flex-direction: column;
+}
+.shell.zoomed {
+  zoom: var(--page-zoom);
 }
 
 .page-content {

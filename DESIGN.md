@@ -82,6 +82,7 @@ layout:
   nav-height: 48px
   content-max-width: 1320px
   prose-max-width: 68ch
+  page-zoom: "1 · 1.125 ≥1600px · 1.25 ≥1920px · 1.5 ≥2400px · 2 ≥3200px"
   breakpoint-sm: 640px
   breakpoint-md: 900px
   breakpoint-lg: 1200px
@@ -234,6 +235,14 @@ Breakpoints:
 - `640–899px` — optional two-column card grid
 - `≥900px` — sidebar drawer, three-column archive grids
 - `≥1200px` — content reaches `content-max-width`
+- `≥1600px` / `≥1920px` / `≥2400px` / `≥3200px` — the whole page scales
+  by `page-zoom` 1.125 / 1.25 / 1.5 / 2 (CSS `zoom` on `.shell`), so text
+  grows and the content column keeps a proportionate share of the screen;
+  a 4K screen at 2 reads like a 1920 one. From `≥3200px` the prose size
+  (`body`) is also 1.2rem, so the 68ch measure spans more of the column.
+  `zoom`, not a larger root font size: half the components size text in
+  px. The map page is not zoomed, and maps inside pages are zoomed back to
+  1:1 — MapLibre reads pointer positions against an unzoomed canvas.
 
 ## Components
 
