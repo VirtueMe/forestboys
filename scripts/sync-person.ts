@@ -125,6 +125,13 @@ function nameStmts(id: string, name: string, setCanonical: boolean, g: GraphPers
     }
   }
 
+  // Type follows the migration's rank: a parsed rank makes a soldier, the Menig default a civilian.
+  const wantType = parsed.rank ? 'soldier' : 'civilian'
+  if (migrationRank && !g.adminEdited.includes('type') && g.type !== wantType) {
+    out.push({ text: `${P} SET p.type = $v`, params: { id, v: wantType } })
+    summary.push(`type → ${wantType}`)
+  }
+
   if (!g.serviceClassSourceRef || g.serviceClassSourceRef.endsWith(':rank-parsed-from-name')) {
     if (parsed.rank && !g.serviceClassSourceRef) {
       out.push({ text: `${P} SET p.serviceClass = 'military', p.serviceClass_state = 'candidate', p.serviceClass_sourceRef = $ref`,

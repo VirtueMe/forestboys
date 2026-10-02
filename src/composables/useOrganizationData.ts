@@ -167,7 +167,7 @@ export function useOrganizationData() {
         OrgIncidentsStrategy.fetchTargets(),
         // Participants reached via Incidents (empty until round 3).
         neo4jQuery<DeltakerLink>(
-          `MATCH (o:Organization {slug: $slug})<-[:ORCHESTRATED_BY]-(i:Incident)<-[:INVOLVED_IN]-(p:Person)
+          `MATCH (o:Organization {slug: $slug})<-[:ORCHESTRATED_BY]-(i:Incident|Operation)<-[:INVOLVED_IN|PARTICIPATED_IN]-(p:Person)
            RETURN DISTINCT p.slug AS slug, p.canonicalName AS name, count(i) AS eventCount
            ORDER BY eventCount DESC`,
           { slug },

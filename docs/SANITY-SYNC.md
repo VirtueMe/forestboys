@@ -172,6 +172,9 @@ what can be detected. What can be detected still blocks the field:
   `<field>_state: 'verified'` (`unknown` when cleared), and a marked field
   without baseline is a conflict, not review. Saves before 2026-10-02 carry
   no marker;
+- the person type (civilian / soldier), which otherwise follows the known
+  rank — a parsed or editor-set rank makes a soldier, the Menig default a
+  civilian — unless chosen in the editor (`type_sourceRef: 'admin-edit'`);
 - gallery edges with editor props;
 - graph links Sanity doesn't have (links added with `sourceRef: 'admin-edit'` are a conflict, not review).
 
@@ -236,9 +239,31 @@ The scripts use `.env`, which is the **local** Neo4j. Production Aura
 | Person sync, review | `scripts/sync-person.ts --write --accept-review=2lt-polansky-henry-l` (2026-10-02, after his rank was set in the editor) | 1 changed (1 slug rename); 0 held |
 | Rank table | `scripts/migrate-rank-table.ts --write` (2026-10-02, S/Lt by position) | 9 people: 7 Second Lieutenant, 2 Sub Lieutenant |
 | Person sync, deleted | `scripts/sync-person.ts --write --accept-delete=…` (2026-10-02, all 7) | 7 deleted; 5 event edges moved to the survivor (Aksdal ×3, Øygard, Vestrheim) |
+| Events → Operation | `scripts/migrate-events-to-operation.ts --write` (2026-10-02) | 2 195 Incidents → Operation; 7 974 PARTICIPATED_IN |
+| Rank table, type | `scripts/migrate-rank-table.ts --write` (2026-10-02) | 18 people civilian → soldier (ranks set by sync, rank table or editor without the type) |
 
 Production gets the same steps in the same order, behind an explicit
 opt-in that doesn't exist yet.
+
+### Events
+
+A Sanity event is closest to an **Operation**: organization, from/to
+locations and stations map one-to-one (`ORCHESTRATED_BY`, `FROM`/`TO`,
+`FROM_STATION`/`TO_STATION`), people become `PARTICIPATED_IN`. An Incident
+is a reshaping — one place, no organisation of its own — so it is
+proposed, never applied by the sync.
+
+- 2026-10-02: every Sanity event in the graph became an Operation
+  (`scripts/migrate-events-to-operation.ts`, local: 2 195 flipped, 7 974
+  person edges kept with their properties). The flip is the shared rewrite
+  in `functions/_lib/event-kind.ts`, also used by the kind endpoint.
+- New events come in as Operations; changed fields apply to the node with
+  that `sanityId`, whatever its label.
+- Classification proposes Operation → Incident per event as a bundle;
+  accepting it demotes (and drops `ORCHESTRATED_BY`).
+
+Planned: source-neutral bundles (not tied to an outline), `set-props` and
+`set-kind` ops, then `scripts/sync-event.ts` with the classification.
 
 ### Reshaped documents — curated mappings
 

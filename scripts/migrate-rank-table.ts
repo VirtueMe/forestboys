@@ -14,6 +14,9 @@
  *   serviceClass military when a rank is now parsed and there is none.
  *   A name stamp (`name_graphSha`) follows the new canonicalName. People
  *   without a baseline are left to the sync's review.
+ * - Person.type follows the known rank for everyone whose type wasn't
+ *   chosen in the editor: a parsed or editor-set rank makes a soldier, the
+ *   Menig default a civilian.
  *
  * Afterwards scripts/sync-person.ts must calibrate at 100 % again.
  * Before writing, the affected people are saved to
@@ -79,6 +82,15 @@ async function main() {
       }]
     })
 
+    const wantType = (rankRef: string | null | undefined) =>
+      !rankRef ? null : rankRef.endsWith(':default:menig-soldier-baseline') ? 'civilian' : 'soldier'
+    const types = [...graph.values()].flatMap(g => {
+      if (g.adminEdited.includes('type')) return []
+      const moved = people.find(p => p.sanityId === g.sanityId)
+      const want = wantType(moved?.rankRef ?? g.knownRank?.sourceRef)
+      return want && want !== g.type ? [{ sanityId: g.sanityId, slug: g.slug, from: g.type, to: want }] : []
+    })
+
     console.log(`New ranks: ${newRanks.length ? newRanks.map(r => `${r.slug} (${r.org}, tier ${r.tier})`).join(', ') : 'none'}`)
     console.log(`People: ${people.length}`)
     for (const p of people) console.log(`  ${p.slug}: ${[
@@ -86,12 +98,14 @@ async function main() {
       p.newRank && `${p.rank} → ${p.newRank}`,
       p.serviceClassRef && 'serviceClass military',
     ].filter(Boolean).join(', ')}`)
+    console.log(`Type: ${types.length}`)
+    for (const t of types) console.log(`  ${t.slug}: ${t.from} → ${t.to}`)
     if (!write) { console.log('\n(dry run — pass --write to apply)'); return }
 
     const before = await session.run(`
       UNWIND $ids AS id MATCH (p:Person {sanityId: id})
       RETURN id, properties(p) AS props, [(p)-[k:RANK]->(r) | {rank: r.slug, props: properties(k)}] AS rank`,
-      { ids: people.map(p => p.sanityId) })
+      { ids: [...new Set([...people, ...types].map(p => p.sanityId))] })
     const dir = resolve(process.cwd(), 'data', 'sanity-delta')
     mkdirSync(dir, { recursive: true })
     const file = resolve(dir, `rank-table-before-${new Date().toISOString().replace(/[:.]/g, '-')}.json`)
@@ -118,11 +132,12 @@ async function main() {
           MATCH (p)-[k:RANK]->() DELETE k
           WITH p, x MATCH (rk:Rank {slug: x.newRank})
           CREATE (p)-[:RANK {state: 'candidate', sourceRef: x.rankRef}]->(rk)`, { people })
+        await tx.run(`UNWIND $types AS t MATCH (p:Person {sanityId: t.sanityId}) SET p.type = t.to`, { types })
       })
     } finally {
       await ws.close()
     }
-    console.log(`Applied: ${newRanks.length} rank(s), ${people.length} people.`)
+    console.log(`Applied: ${newRanks.length} rank(s), ${people.length} people, ${types.length} types.`)
   } finally {
     await session.close()
     await driver.close()

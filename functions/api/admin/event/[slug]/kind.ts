@@ -3,19 +3,14 @@
  *
  * Body: { kind: 'incident' | 'operation' }
  *
- * Runs the rewrite in one transaction:
- *   • label           Incident ↔ Operation
- *   • name property   title ↔ codeName
- *   • person edges    INVOLVED_IN ↔ PARTICIPATED_IN
- *   • desc notes      HAS_INCIDENT_NOTE ↔ HAS_OPERATION_NOTE
- *   • desc about      ABOUT_INCIDENT ↔ ABOUT_OPERATION
- *
- * Hierarchy edges (RELATED_TO {kind:'contains'}) survive the flip
- * unchanged — direction is container→child regardless of node kind.
+ * The rewrite is functions/_lib/event-kind.ts (one transaction). Demotion
+ * refuses with the blocker list (ORCHESTRATED_BY orgs, participating units)
+ * unless `force` — then those edges are stripped.
  */
 
 import { requireAdmin } from '~/_lib/require-admin.ts'
 import { runCypher, type Neo4jEnv } from '~/_lib/neo4j.ts'
+import { DEMOTE_BLOCKERS, DEMOTE_TO_INCIDENT, PROMOTE_TO_OPERATION } from '~/_lib/event-kind.ts'
 
 interface Env extends Neo4jEnv {
   SESSION_SECRET: string
@@ -26,6 +21,8 @@ interface Body {
   /** Skip blocker check + auto-strip blocking edges. Demote-only. */
   force?: boolean
 }
+
+interface Blockers { orgs: { slug: string; name: string }[]; units: { slug: string; name: string }[] }
 
 export const onRequestPatch: PagesFunction<Env> = async ({ request, env, params }) => {
   const guard = await requireAdmin(request, env)
@@ -51,103 +48,22 @@ export const onRequestPatch: PagesFunction<Env> = async ({ request, env, params 
     if (!current?.kind) return json({ error: 'Node not found or not an Incident/Operation' }, 404)
     if (current.kind === target) return json({ ok: true, kind: target, unchanged: true })
 
+    const slugs = [slug]
     if (target === 'operation') {
-      // Promote Incident → Operation.
-      await runCypher(env, `
-        MATCH (x:Incident {slug: $slug})
-        REMOVE x:Incident
-        SET x:Operation
-        SET x.codeName = coalesce(x.codeName, x.title)
-        REMOVE x.title
-        WITH x
-        // Incoming INVOLVED_IN → PARTICIPATED_IN
-        CALL {
-          WITH x
-          MATCH (p:Person)-[r:INVOLVED_IN]->(x)
-          CREATE (p)-[:PARTICIPATED_IN]->(x)
-          DELETE r
-          RETURN count(*) AS personEdges
-        }
-        // Incoming ABOUT_INCIDENT → ABOUT_OPERATION (+ rename the note edge on Person→Description)
-        CALL {
-          WITH x
-          MATCH (p:Person)-[noteR:HAS_INCIDENT_NOTE]->(d:Description)-[aboutR:ABOUT_INCIDENT]->(x)
-          CREATE (p)-[:HAS_OPERATION_NOTE]->(d)
-          CREATE (d)-[:ABOUT_OPERATION]->(x)
-          DELETE noteR, aboutR
-          RETURN count(*) AS noteEdges
-        }
-        RETURN x.slug AS slug
-      `, { slug })
-
+      await runCypher(env, PROMOTE_TO_OPERATION, { slugs })
       return json({ ok: true, kind: 'operation' })
     }
 
-    // Demote Operation → Incident.
-    // Incidents don't carry direct ORCHESTRATED_BY / PARTICIPATED_IN edges
-    // (org/unit context is inherited via parent operation, people, etc.).
-    // If any such edges exist, refuse with the blocker list — admin can
-    // either detach explicitly or retry with `force: true` to auto-strip.
     if (!body.force) {
-      const [orgs, units] = await Promise.all([
-        runCypher<{ slug: string; name: string }>(env, `
-          MATCH (x:Operation {slug: $slug})-[:ORCHESTRATED_BY]->(o:Organization)
-          RETURN o.slug AS slug, o.canonicalName AS name
-          ORDER BY name
-        `, { slug }),
-        runCypher<{ slug: string; name: string }>(env, `
-          MATCH (u:Unit)-[:PARTICIPATED_IN]->(x:Operation {slug: $slug})
-          RETURN u.slug AS slug, u.canonicalName AS name
-          ORDER BY name
-        `, { slug }),
-      ])
-      if (orgs.length || units.length) {
+      const [b] = await runCypher<Blockers>(env, DEMOTE_BLOCKERS, { slugs })
+      if (b && (b.orgs.length || b.units.length)) {
         return json({
           error: "Kan ikke endre til hendelse — fjern eller bekreft først.",
-          blockers: { orgs, units },
+          blockers: { orgs: b.orgs, units: b.units },
         }, 409)
       }
     }
-
-    await runCypher(env, `
-      MATCH (x:Operation {slug: $slug})
-      REMOVE x:Operation
-      SET x:Incident
-      SET x.title = coalesce(x.title, x.codeName)
-      REMOVE x.codeName
-      WITH x
-      // Incoming PARTICIPATED_IN from Person → INVOLVED_IN
-      CALL {
-        WITH x
-        MATCH (p:Person)-[r:PARTICIPATED_IN]->(x)
-        CREATE (p)-[:INVOLVED_IN]->(x)
-        DELETE r
-        RETURN count(*) AS personEdges
-      }
-      // Strip orchestrating-org edges (incidents don't carry these).
-      CALL {
-        WITH x
-        MATCH (x)-[r:ORCHESTRATED_BY]->(:Organization) DELETE r
-        RETURN count(*) AS orgEdges
-      }
-      // Strip unit-participation edges (incidents don't carry these).
-      CALL {
-        WITH x
-        MATCH (:Unit)-[r:PARTICIPATED_IN]->(x) DELETE r
-        RETURN count(*) AS unitEdges
-      }
-      // Incoming ABOUT_OPERATION → ABOUT_INCIDENT
-      CALL {
-        WITH x
-        MATCH (p:Person)-[noteR:HAS_OPERATION_NOTE]->(d:Description)-[aboutR:ABOUT_OPERATION]->(x)
-        CREATE (p)-[:HAS_INCIDENT_NOTE]->(d)
-        CREATE (d)-[:ABOUT_INCIDENT]->(x)
-        DELETE noteR, aboutR
-        RETURN count(*) AS noteEdges
-      }
-      RETURN x.slug AS slug
-    `, { slug })
-
+    await runCypher(env, DEMOTE_TO_INCIDENT, { slugs })
     return json({ ok: true, kind: 'incident' })
   } catch (e) {
     return json({ error: (e as Error).message }, 502)

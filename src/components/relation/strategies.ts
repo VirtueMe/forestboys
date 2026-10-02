@@ -377,7 +377,7 @@ export const OperationStrategy: RelationStrategy = {
   saveNote(personSlug, targetSlug, sections) {
     return saveNoteForPair(personSlug, targetSlug, 'operation-note', sections)
   },
-  targetRoute(entry) { return `/outlines/${entry.targetSlug}` },
+  targetRoute(entry) { return `/events/${entry.targetSlug}` },
 }
 
 /**

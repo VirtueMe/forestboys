@@ -104,7 +104,7 @@ export interface SlideImage {
   caption?: string | null
   subjectName?: string | null
   subjectSlug?: string | null
-  subjectType?: 'unit' | 'person' | 'incident' | 'station' | 'location' | 'transport' | 'organization'
+  subjectType?: 'unit' | 'person' | 'incident' | 'operation' | 'station' | 'location' | 'transport' | 'organization'
 }
 
 const props = defineProps<{ images: SlideImage[] }>()
@@ -209,6 +209,7 @@ function subjectRoute(img: SlideImage): string {
     case 'organization': return `/organization/${img.subjectSlug}`
     case 'person':       return `/person/${img.subjectSlug}`
     case 'incident':     return `/events/${img.subjectSlug}`
+    case 'operation':    return `/events/${img.subjectSlug}`
     case 'station':      return `/station/${img.subjectSlug}`
     case 'location':     return `/location/${img.subjectSlug}`
     case 'transport':    return `/transport/${img.subjectSlug}`

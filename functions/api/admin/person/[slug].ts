@@ -36,8 +36,9 @@ interface PersonRow {
 
 const PERSON_TYPES = new Set(['civilian', 'soldier'])
 
-/** Fields carrying claim provenance. `type` is the editor's own, never synced. */
-const CLAIM_FIELDS = ['canonicalName', 'secretName', 'birthYear', 'home'] as const
+/** Fields carrying claim provenance. `type` too: the sync and the rank editor derive it
+ *  from the rank, and a type chosen here must win (`type_sourceRef: 'admin-edit'`). */
+const CLAIM_FIELDS = ['canonicalName', 'secretName', 'birthYear', 'home', 'type'] as const
 
 /**
  * POST /api/admin/person/new — create a new Person with all scalar fields

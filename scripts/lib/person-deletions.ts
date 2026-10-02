@@ -7,8 +7,8 @@
  * where the deleted person was, the Sanity event now names the survivor.
  *
  * - Edges the import made — known rank, links, Sanity gallery images, the
- *   imported description, event edges with a `sanity…` sourceRef — go with
- *   the person.
+ *   imported description, event edges (INVOLVED_IN / PARTICIPATED_IN) with a
+ *   `sanity…` sourceRef — go with the person.
  * - An event edge moves to the survivor when the Sanity event now names
  *   exactly one person the graph doesn't have on it yet. Otherwise it is
  *   dropped, as Sanity no longer has it.
@@ -22,7 +22,10 @@
 import { type Driver } from 'neo4j-driver'
 import { API, type Doc } from './person-sync.ts'
 
-export interface DeletionMove { event: string; eventSanityId: string; survivorId: string; survivorSlug: string }
+export interface DeletionMove { type: string; event: string; eventSanityId: string; survivorId: string; survivorSlug: string }
+
+/** Person → event edges: INVOLVED_IN (Incident), PARTICIPATED_IN (Operation). */
+const EVENT_EDGES = new Set(['INVOLVED_IN', 'PARTICIPATED_IN'])
 
 export interface DeletionPlan {
   sanityId: string
@@ -84,26 +87,26 @@ export async function planDeletions(driver: Driver, graphIds: Map<string, string
           (e.type === 'HAS_IMAGE' && e.out && !!e.url?.startsWith('https://cdn.sanity.io/')
             && Object.keys(e.props).every(k => k === 'order' || k === 'caption')) ||
           (e.type === 'HAS_CONTENT' && e.out && isSanityRef(descRef)) ||
-          (e.type === 'INVOLVED_IN' && e.out && isSanityRef(e.props.sourceRef)) ||
+          (EVENT_EDGES.has(e.type) && e.out && isSanityRef(e.props.sourceRef)) ||
           (e.type !== 'MENTIONS' && isSanityRef(e.props.sourceRef))
         if (!derived) plan.blockers.push(what)
-        else if (e.type !== 'INVOLVED_IN') plan.drops.push(what)
+        else if (!EVENT_EDGES.has(e.type)) plan.drops.push(what)
       }
       plans.push(plan)
 
       // Event edges: move to the survivor where Sanity shows one.
-      const involved = plan.blockers.length ? [] : edges.filter(e => e.type === 'INVOLVED_IN' && e.out)
+      const involved = plan.blockers.length ? [] : edges.filter(e => EVENT_EDGES.has(e.type) && e.out)
       const events = await fetchEvents(involved.map(e => e.otherSanityId).filter((x): x is string => !!x))
       for (const e of involved) {
         const now = e.otherSanityId ? events.get(e.otherSanityId) : undefined
         const onEvent = new Set((await session.run(`
-          MATCH (q:Person)-[:INVOLVED_IN]->(x {sanityId: $eid}) RETURN collect(q.sanityId) AS ids`,
+          MATCH (q:Person)-[:INVOLVED_IN|PARTICIPATED_IN]->(x {sanityId: $eid}) RETURN collect(q.sanityId) AS ids`,
           { eid: e.otherSanityId })).records[0].get('ids') as string[])
         const candidates = (now ?? []).filter(id => graphIds.has(id) && sanity.has(id) && !onEvent.has(id))
         if (candidates.length === 1) {
-          plan.moves.push({ event: e.other!, eventSanityId: e.otherSanityId!, survivorId: candidates[0], survivorSlug: graphIds.get(candidates[0])! })
+          plan.moves.push({ type: e.type, event: e.other!, eventSanityId: e.otherSanityId!, survivorId: candidates[0], survivorSlug: graphIds.get(candidates[0])! })
         } else {
-          plan.drops.push(`→ INVOLVED_IN ${e.label} ${e.other}${now ? (candidates.length ? ` (${candidates.length} candidates)` : '') : ' (event gone in Sanity)'}`)
+          plan.drops.push(`→ ${e.type} ${e.label} ${e.other}${now ? (candidates.length ? ` (${candidates.length} candidates)` : '') : ' (event gone in Sanity)'}`)
         }
       }
     }
@@ -117,12 +120,21 @@ export async function planDeletions(driver: Driver, graphIds: Map<string, string
 export function deletionStmts(plan: DeletionPlan): { text: string; params: Record<string, unknown> }[] {
   return [
     {
+      // One statement per edge type — Cypher can't parameterise a relationship type.
       text: `UNWIND $moves AS m
              MATCH (p:Person {sanityId: $id})-[r:INVOLVED_IN]->(e {sanityId: m.eventSanityId})
              MATCH (s:Person {sanityId: m.survivorId})
              WHERE NOT (s)-[:INVOLVED_IN]->(e)
              CREATE (s)-[n:INVOLVED_IN]->(e) SET n = properties(r)`,
-      params: { id: plan.sanityId, moves: plan.moves },
+      params: { id: plan.sanityId, moves: plan.moves.filter(m => m.type === 'INVOLVED_IN') },
+    },
+    {
+      text: `UNWIND $moves AS m
+             MATCH (p:Person {sanityId: $id})-[r:PARTICIPATED_IN]->(e {sanityId: m.eventSanityId})
+             MATCH (s:Person {sanityId: m.survivorId})
+             WHERE NOT (s)-[:PARTICIPATED_IN]->(e)
+             CREATE (s)-[n:PARTICIPATED_IN]->(e) SET n = properties(r)`,
+      params: { id: plan.sanityId, moves: plan.moves.filter(m => m.type === 'PARTICIPATED_IN') },
     },
     {
       text: `MATCH (p:Person {sanityId: $id})

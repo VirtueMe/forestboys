@@ -155,12 +155,12 @@ async function fetchFromNeo4j(): Promise<IdbCache> {
   ] = await Promise.all([
     neo4jQuery<{ _id: string; slug: string; title: string; lat: number; lng: number; events: IncidentRow[] }>(
       `MATCH (l:Location)
-       OPTIONAL MATCH (l)<-[:FROM|TO]-(i:Incident)
+       OPTIONAL MATCH (l)<-[:FROM|TO]-(i:Incident|Operation)
        OPTIONAL MATCH (i)-[:ORCHESTRATED_BY]->(org:Organization)
        OPTIONAL MATCH (i)-[:IN_DISTRICT]->(dist:Unit)
        WITH l,
             collect(CASE WHEN i IS NOT NULL THEN
-              {_id: i.sanityId, slug: i.slug, title: i.title, date: i.date,
+              {_id: i.sanityId, slug: i.slug, title: coalesce(i.title, i.codeName), date: i.date,
                organization: org.canonicalName, district: dist.canonicalName}
             END) AS events
        RETURN l.sanityId AS _id, l.slug AS slug, l.canonicalName AS title,
@@ -169,12 +169,12 @@ async function fetchFromNeo4j(): Promise<IdbCache> {
 
     neo4jQuery<{ _id: string; slug: string; title: string; type: string | null; lat: number; lng: number; events: IncidentRow[] }>(
       `MATCH (s:Station)
-       OPTIONAL MATCH (s)<-[:FROM_STATION|TO_STATION]-(i:Incident)
+       OPTIONAL MATCH (s)<-[:FROM_STATION|TO_STATION]-(i:Incident|Operation)
        OPTIONAL MATCH (i)-[:ORCHESTRATED_BY]->(org:Organization)
        OPTIONAL MATCH (i)-[:IN_DISTRICT]->(dist:Unit)
        WITH s,
             collect(CASE WHEN i IS NOT NULL THEN
-              {_id: i.sanityId, slug: i.slug, title: i.title, date: i.date,
+              {_id: i.sanityId, slug: i.slug, title: coalesce(i.title, i.codeName), date: i.date,
                organization: org.canonicalName, district: dist.canonicalName}
             END) AS events
        RETURN s.sanityId AS _id, s.slug AS slug, s.canonicalName AS title,
@@ -183,12 +183,12 @@ async function fetchFromNeo4j(): Promise<IdbCache> {
 
     neo4jQuery<{ _id: string; slug: string; name: string; secretName: string | null; home: string | null; birthYear: number | null; events: IncidentRow[] }>(
       `MATCH (p:Person)
-       OPTIONAL MATCH (p)-[:INVOLVED_IN]->(i:Incident)
+       OPTIONAL MATCH (p)-[:INVOLVED_IN|PARTICIPATED_IN]->(i:Incident|Operation)
        OPTIONAL MATCH (i)-[:ORCHESTRATED_BY]->(org:Organization)
        OPTIONAL MATCH (i)-[:IN_DISTRICT]->(dist:Unit)
        WITH p,
             collect(CASE WHEN i IS NOT NULL THEN
-              {_id: i.sanityId, slug: i.slug, title: i.title, date: i.date,
+              {_id: i.sanityId, slug: i.slug, title: coalesce(i.title, i.codeName), date: i.date,
                organization: org.canonicalName, district: dist.canonicalName}
             END) AS events
        RETURN p.sanityId AS _id, p.slug AS slug, p.canonicalName AS name,
@@ -197,12 +197,12 @@ async function fetchFromNeo4j(): Promise<IdbCache> {
 
     neo4jQuery<{ _id: string; slug: string; name: string; type: string | null; unit: string | null; regser: string | null; reserve: string | null; events: IncidentRow[] }>(
       `MATCH (t:Transport)
-       OPTIONAL MATCH (t)<-[:USED]-(i:Incident)
+       OPTIONAL MATCH (t)<-[:USED]-(i:Incident|Operation)
        OPTIONAL MATCH (i)-[:ORCHESTRATED_BY]->(org:Organization)
        OPTIONAL MATCH (i)-[:IN_DISTRICT]->(dist:Unit)
        WITH t,
             collect(CASE WHEN i IS NOT NULL THEN
-              {_id: i.sanityId, slug: i.slug, title: i.title, date: i.date,
+              {_id: i.sanityId, slug: i.slug, title: coalesce(i.title, i.codeName), date: i.date,
                organization: org.canonicalName, district: dist.canonicalName}
             END) AS events
        RETURN t.sanityId AS _id, t.slug AS slug, t.canonicalName AS name,
@@ -211,10 +211,10 @@ async function fetchFromNeo4j(): Promise<IdbCache> {
 
     // Lean events — for the global event list (timeline, filters, etc.).
     neo4jQuery<IncidentRow>(
-      `MATCH (i:Incident)
+      `MATCH (i:Incident|Operation)
        OPTIONAL MATCH (i)-[:ORCHESTRATED_BY]->(org:Organization)
        OPTIONAL MATCH (i)-[:IN_DISTRICT]->(dist:Unit)
-       RETURN i.sanityId AS _id, i.slug AS slug, i.title AS title, i.date AS date,
+       RETURN i.sanityId AS _id, i.slug AS slug, coalesce(i.title, i.codeName) AS title, i.date AS date,
               org.canonicalName AS organization, dist.canonicalName AS district
        ORDER BY i.date`),
 
@@ -224,7 +224,7 @@ async function fetchFromNeo4j(): Promise<IdbCache> {
 
     // District colours: for each district, take its most-frequent org's colour.
     neo4jQuery<{ district: string; color: string }>(
-      `MATCH (i:Incident)-[:IN_DISTRICT]->(d:Unit)
+      `MATCH (i:Incident|Operation)-[:IN_DISTRICT]->(d:Unit)
        MATCH (i)-[:ORCHESTRATED_BY]->(o:Organization)
        WHERE d.canonicalName IS NOT NULL AND o.color IS NOT NULL
        WITH d.canonicalName AS district, o.color AS color, count(*) AS n

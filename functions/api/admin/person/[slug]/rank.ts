@@ -7,6 +7,8 @@
  * An editor save is `verified` with sourceRef 'admin-edit'; the Sanity sync
  * only updates a RANK whose sourceRef is still the migration's, so this
  * takes precedence over later name changes in Sanity (they go to review).
+ * A known rank makes the person a soldier, unless the type was chosen in
+ * the editor (`type_sourceRef: 'admin-edit'`).
  */
 
 import { requireAdmin } from '~/_lib/require-admin.ts'
@@ -32,6 +34,7 @@ export const onRequestPatch: PagesFunction<Env> = async ({ request, env, params 
       DELETE old
       WITH DISTINCT p, rk
       CREATE (p)-[:RANK {state: 'verified', sourceRef: 'admin-edit'}]->(rk)
+      SET p.type = CASE WHEN p.type_sourceRef = 'admin-edit' THEN p.type ELSE 'soldier' END
       RETURN true AS ok
     `, { slug, rankSlug: body.rankSlug })
     if (!rows.length) return json({ error: `Finnes ikke: person ${slug} eller grad ${body.rankSlug}` }, 404)

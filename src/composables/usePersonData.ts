@@ -196,18 +196,18 @@ export function usePersonData() {
                     'person' AS subjectType, 0 AS sortKey
              UNION
              WITH person
-             MATCH (person)-[:INVOLVED_IN]->(:Incident)<-[:RELATED_TO {kind:'contains'}]-(op:Operation)-[h:HAS_IMAGE]->(s:Source)
+             MATCH (person)-[:INVOLVED_IN|PARTICIPATED_IN]->(:Incident|Operation)<-[:RELATED_TO {kind:'contains'}]-(op:Operation)-[h:HAS_IMAGE]->(s:Source)
              WHERE coalesce(h.scope, 'propagate') <> 'entity'
              RETURN s.url AS url, h.caption AS caption,
                     op.codeName AS subjectName, op.slug AS subjectSlug,
                     'operation' AS subjectType, 1 AS sortKey
              UNION
              WITH person
-             MATCH (person)-[:INVOLVED_IN]->(i:Incident)-[h:HAS_IMAGE]->(s:Source)
+             MATCH (person)-[:INVOLVED_IN|PARTICIPATED_IN]->(i:Incident|Operation)-[h:HAS_IMAGE]->(s:Source)
              WHERE coalesce(h.scope, 'propagate') <> 'entity'
              RETURN s.url AS url, h.caption AS caption,
-                    i.title AS subjectName, i.slug AS subjectSlug,
-                    'incident' AS subjectType, 2 AS sortKey
+                    coalesce(i.title, i.codeName) AS subjectName, i.slug AS subjectSlug,
+                    CASE WHEN i:Operation THEN 'operation' ELSE 'incident' END AS subjectType, 2 AS sortKey
              UNION
              WITH person
              MATCH (person)-[:MEMBER_OF]->(u:Unit)-[h:HAS_IMAGE]->(s:Source)

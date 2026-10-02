@@ -38,6 +38,8 @@ export interface GraphPerson {
   statusSourceRef: string | null
   serviceClass:    string | null
   serviceClassSourceRef: string | null
+  /** civilian | soldier — follows the known rank unless chosen in the editor (adminEdited 'type'). */
+  type:            string | null
   links:           string[]
   linkIds:         string[]
   images:          string[]
@@ -272,7 +274,7 @@ export async function fetchGraphPeople(): Promise<Map<string, GraphPerson>> {
       RETURN p.sanityId AS sanityId, p.sanityUpdatedAt AS sanityUpdatedAt, p.slug AS slug,
              p.canonicalName AS canonicalName, p.secretName AS secretName, p.home AS home,
              p.birthYear AS birthYear, p.status AS status, p.status_sourceRef AS statusSourceRef,
-             p.serviceClass AS serviceClass, p.serviceClass_sourceRef AS serviceClassSourceRef,
+             p.serviceClass AS serviceClass, p.serviceClass_sourceRef AS serviceClassSourceRef, p.type AS type,
              [k IN keys(p) WHERE k ENDS WITH '_sha' OR k ENDS WITH '_graphSha' | [k, p[k]]] AS stampPairs,
              [k IN keys(p) WHERE k ENDS WITH '_sourceRef' AND p[k] = 'admin-edit' | k]
                + CASE WHEN exists { (p)-[:REFERENCED_IN {sourceRef: 'admin-edit'}]->() } THEN ['links_sourceRef'] ELSE [] END AS adminRefs,

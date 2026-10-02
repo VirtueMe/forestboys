@@ -250,13 +250,13 @@ export function useUnitData() {
         ),
         // Incidents — filtered by unit lifetime.
         neo4jQuery<UnitEvent>(
-          `MATCH (u:Unit {slug: $slug})<-[:MEMBER_OF]-(p:Person)-[:INVOLVED_IN]->(i:Incident)
+          `MATCH (u:Unit {slug: $slug})<-[:MEMBER_OF]-(p:Person)-[:INVOLVED_IN|PARTICIPATED_IN]->(i:Incident|Operation)
            WHERE i.date IS NULL
               OR (
                 (u.foundedDate   IS NULL OR i.date >= u.foundedDate) AND
                 (u.dissolvedDate IS NULL OR i.date <= u.dissolvedDate)
               )
-           RETURN DISTINCT i.slug AS slug, i.title AS title, i.date AS date
+           RETURN DISTINCT i.slug AS slug, coalesce(i.title, i.codeName) AS title, i.date AS date
            ORDER BY date`,
           { slug },
         ),
@@ -289,7 +289,7 @@ export function useUnitData() {
                     'unit' AS subjectType, 0 AS sortKey
              UNION
              WITH unit
-             MATCH (unit)<-[:MEMBER_OF]-(:Person)-[:INVOLVED_IN]->(i:Incident)<-[:RELATED_TO {kind:'contains'}]-(op:Operation)-[h:HAS_IMAGE]->(s:Source)
+             MATCH (unit)<-[:MEMBER_OF]-(:Person)-[:INVOLVED_IN|PARTICIPATED_IN]->(i:Incident|Operation)<-[:RELATED_TO {kind:'contains'}]-(op:Operation)-[h:HAS_IMAGE]->(s:Source)
              WHERE coalesce(h.scope, 'propagate') <> 'entity'
                AND (i.date IS NULL OR (
                  (unit.foundedDate   IS NULL OR i.date >= unit.foundedDate) AND
@@ -307,15 +307,15 @@ export function useUnitData() {
                     'organization' AS subjectType, 2 AS sortKey
              UNION
              WITH unit
-             MATCH (unit)<-[:MEMBER_OF]-(:Person)-[:INVOLVED_IN]->(i:Incident)-[h:HAS_IMAGE]->(s:Source)
+             MATCH (unit)<-[:MEMBER_OF]-(:Person)-[:INVOLVED_IN|PARTICIPATED_IN]->(i:Incident|Operation)-[h:HAS_IMAGE]->(s:Source)
              WHERE coalesce(h.scope, 'propagate') <> 'entity'
                AND (i.date IS NULL OR (
                  (unit.foundedDate   IS NULL OR i.date >= unit.foundedDate) AND
                  (unit.dissolvedDate IS NULL OR i.date <= unit.dissolvedDate)
                ))
              RETURN s.url AS url, h.caption AS caption,
-                    i.title AS subjectName, i.slug AS subjectSlug,
-                    'incident' AS subjectType, 3 AS sortKey
+                    coalesce(i.title, i.codeName) AS subjectName, i.slug AS subjectSlug,
+                    CASE WHEN i:Operation THEN 'operation' ELSE 'incident' END AS subjectType, 3 AS sortKey
              UNION
              WITH unit
              MATCH (unit)<-[:MEMBER_OF]-(p:Person)-[h:HAS_IMAGE]->(s:Source)
