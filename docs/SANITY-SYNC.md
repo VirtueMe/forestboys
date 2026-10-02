@@ -178,14 +178,36 @@ side by side, and the graph values were older Sanity states, never edits):
 aksel-edvin-larsen,bjarne-iversen,claus-urbye-helberg,erling-jensen,harald-svindseth,henning-kofoed,ivar-naess,kjell-engelsen,knut-aarsaether,konrad-anker-hennum,lars-dalland,nils-eliassen-fjeld,ole-baarnes,per-blindheim,ragnar-ulstein,arvid-fossum,knut-mostue,finn-scheldrup-johansen,harald-storvik,peter-graben,nils-kristoffer-o-torsvik,sissel,johan-p-bjelland-thu,johan-hagemann,bjorn-norderhaug,frick,tor-jorgen-falkevik,o-berentsen,hugo-munthe-kaas,golda-goldstein,torvald-olai-lien,per-andreas-larsen,paul-magnussen-strande,ole-berg-lt
 ```
 
-Held for Jan: `kare-helland` (Sanity name "Kåre Hellan"),
-`2lt-polansky-henry-l` (Sanity slug `s-lt-polansky-henry-l`), `na` (a
-person named "N/A").
+Accepted on 2026-10-02: `na` → `n-a`, name "-NA-" → "N/A". A deliberate
+placeholder — the description reads "Unknown pilot" (Tirpitz 14).
+
+Accepted on 2026-10-02, answered from their descriptions:
+
+- `kare-helland` — "Kåre Hellan" is right (no.wikipedia.org/wiki/Grebe,
+  now a source on the person). Løytnant, "Y.3", Trondheim and the
+  three-image gallery as Sanity has them. Rank history entered from the
+  description: Sersjant 1940-04-09 → Fenrik 1943-11-01 → Løytnant
+  1944-11-01.
+- `2lt-polansky-henry-l` → `s-lt-polansky-henry-l` — the description reads
+  "Rank: Second Lieutenant" (USAAF, 492nd BG). Jan's "S/Lt" here means
+  Second Lieutenant, while the rule maps S/Lt to Sub Lieutenant (navy), so
+  the known rank is set as an editor save (`admin-edit`) before the accept;
+  the sync keeps it. Order mattered: `scripts/migrate-rank-table.ts` had
+  already stripped "2Lt" from the graph name, so the name compared equal
+  and the sync skipped the ✝ status — set by hand with the name stamp.
+
+None held.
+
+S/Lt is ambiguous in Sanity: Norwegian navy officers (Sub Lieutenant —
+Leif Andreas Larsen, Søreide, Gundersen) and American airmen written
+"S/Lt. Surname Given" (Second Lieutenant — Davis, Sidorek, Durham,
+Polansky). "S/Lt." with a trailing period isn't parsed at all, so several
+of them still have Menig and the token in their name. Open.
 
 ### Where it has run
 
 The scripts use `.env`, which is the **local** Neo4j. Production Aura
-(`.env.production`) has had none of this. Status on 2026-09-29, local only:
+(`.env.production`) has had none of this. Status on 2026-10-02, local only:
 
 | Step | Script | Result |
 |---|---|---|
@@ -195,6 +217,10 @@ The scripts use `.env`, which is the **local** Neo4j. Production Aura
 | Rank split | `scripts/migrate-rank-split.ts --write` | 3 964 `RANK` edges; 1 history entry (PERSON-RANKS.md) |
 | Person sync | `scripts/sync-person.ts --write` | 3 changed |
 | Person sync, review | `scripts/sync-person.ts --write --accept-review=…` (list above) | 34 changed (5 slug renames); 3 held |
+| Person sync, review | `scripts/sync-person.ts --write --accept-review=na` (2026-10-02) | 1 changed (1 slug rename); 2 held |
+| Person sync, review | `scripts/sync-person.ts --write --accept-review=kare-helland` (2026-10-02) | 1 changed |
+| Rank table | `scripts/migrate-rank-table.ts --write` (2026-10-02) | Second Lieutenant (USAAF); 2 people: Prilliman, Polansky |
+| Person sync, review | `scripts/sync-person.ts --write --accept-review=2lt-polansky-henry-l` (2026-10-02, after his rank was set in the editor) | 1 changed (1 slug rename); 0 held |
 
 Production gets the same steps in the same order, behind an explicit
 opt-in that doesn't exist yet.

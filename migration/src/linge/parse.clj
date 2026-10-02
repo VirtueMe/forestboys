@@ -25,7 +25,8 @@
    "Flying Officer"     {:abbrs ["F/O"]                                             :tier 4 :org "raf"}
    "Flight Lieutenant"  {:abbrs ["F/Lt" "Flt"]                                      :tier 5 :org "raf"}
    "Warrant Officer"    {:abbrs ["W/O"]                                             :tier 3 :org "raf"}
-   "Sub Lieutenant"     {:abbrs ["S/Lt"]                                            :tier 4 :org "marinen"}})
+   "Sub Lieutenant"     {:abbrs ["S/Lt"]                                            :tier 4 :org "marinen"}
+   "Second Lieutenant"  {:abbrs ["2Lt" "2/Lt"]                                      :tier 4 :org "usaaf"}})
 
 (def abbr->canonical
   (into {} (for [[canonical {:keys [abbrs]}] ranks, a abbrs]
