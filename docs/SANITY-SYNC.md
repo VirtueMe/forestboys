@@ -240,6 +240,8 @@ The scripts use `.env`, which is the **local** Neo4j. Production Aura
 | Rank table | `scripts/migrate-rank-table.ts --write` (2026-10-02, S/Lt by position) | 9 people: 7 Second Lieutenant, 2 Sub Lieutenant |
 | Person sync, deleted | `scripts/sync-person.ts --write --accept-delete=…` (2026-10-02, all 7) | 7 deleted; 5 event edges moved to the survivor (Aksdal ×3, Øygard, Vestrheim) |
 | Events → Operation | `scripts/migrate-events-to-operation.ts --write` (2026-10-02) | 2 195 Incidents → Operation; 7 974 PARTICIPATED_IN |
+| Missing references | `scripts/import-missing-refs.ts --write` (2026-10-02) | 51 Location, 2 Station, 58 Transport |
+| Event re-import | `scripts/reimport-events.ts --write` (2026-10-02) | 2 196 deleted, 2 279 Operations, 8 graph additions re-attached; new baseline |
 | Rank table, type | `scripts/migrate-rank-table.ts --write` (2026-10-02) | 18 people civilian → soldier (ranks set by sync, rank table or editor without the type) |
 
 Production gets the same steps in the same order, behind an explicit
@@ -262,8 +264,36 @@ proposed, never applied by the sync.
 - Classification proposes Operation → Incident per event as a bundle;
   accepting it demotes (and drops `ORCHESTRATED_BY`).
 
-Planned: source-neutral bundles (not tied to an outline), `set-props` and
-`set-kind` ops, then `scripts/sync-event.ts` with the classification.
+Bundles can come from the sync (`origin: {type: 'sanity'}`) and carry
+`set-props` and `set-kind` (PROPOSALS.md, "Bundle origin").
+
+**Re-import, 2026-10-02.** The field report (`scripts/sanity-event-fields.ts`)
+showed the graph's events still matched the April import on every field
+but one — and Sanity had moved on: 379 changed, 104 new (31 of them Jan's
+new "WT Station …" events), 20 deleted. Syncing that event by event would
+have been slower than taking Sanity in again, so:
+
+1. `scripts/import-missing-refs.ts --write` — the 51 Locations, 2 Stations
+   and 58 Transports events refer to that were new in Sanity since April
+   (round_one.clj's rule). The organizations "Avd D. Mi IV" and "COHQ" and
+   the district "D41-Finnmark" are shaped by hand and left for that.
+2. `scripts/reimport-events.ts --write` — backup, delete the 2 196 events,
+   create 2 279 Operations from Sanity (the WT station template
+   `wt-stationmal` excluded: `EXCLUDED_EVENT_SLUGS`), re-attach the 8 graph
+   additions (Martin Linge's editor links and note, the Haslund pair on
+   Gulltransporten, `AT hovann`). Martin Linge's link to "Første møte om
+   motstandsbevegelse i London", lost in a relation-editor save, is back.
+3. The Sanity events taken in are the new baseline:
+   `data/sanity-baseline-2026-10/sanity-event.json` (`EVENT_BASELINE`). The
+   field report then shows 0 changed, 0 new, 0 deleted, every field agreeing
+   but the three hand-shaped references.
+
+For Jan: location "Sander - Skarnes bro" has the slug `60.2314300 ` and
+lat = lng = 11.81378; transport "Handley Page Halifax II" has no serial
+(slug `handley-page-halifax-ii-`).
+
+Next: `scripts/sync-event.ts` — changes after the baseline as bundles, and
+the classification (Operation → Incident).
 
 ### Reshaped documents — curated mappings
 
