@@ -10,7 +10,8 @@
  */
 
 import { requireAdmin } from '~/_lib/require-admin.ts'
-import { runCypher, type Neo4jEnv } from '~/_lib/neo4j.ts'
+import type { Neo4jEnv } from '~/_lib/neo4j.ts'
+import { saveEdgeSet } from '~/_lib/edge-set.ts'
 
 interface Env extends Neo4jEnv {
   SESSION_SECRET: string
@@ -41,24 +42,10 @@ export const onRequestPatch: PagesFunction<Env> = async ({ request, env, params 
   }
 
   try {
-    await runCypher(env, `
-      MATCH (p:Person {slug: $slug})-[r:INVOLVED_IN]->()
-      DELETE r
-    `, { slug })
-
-    if (incidents.length) {
-      await runCypher(env, `
-        MATCH (p:Person {slug: $slug})
-        UNWIND $items AS x
-        OPTIONAL MATCH (i:Incident {slug: x.incidentSlug})
-        FOREACH (_ IN CASE WHEN i IS NOT NULL THEN [1] ELSE [] END |
-          CREATE (p)-[:INVOLVED_IN]->(i)
-        )
-      `, {
-        slug,
-        items: incidents.map(i => ({ incidentSlug: i.incidentSlug })),
-      })
-    }
+    await saveEdgeSet(env, {
+      anchor: { label: 'Person', slug }, rel: 'INVOLVED_IN', direction: 'out', targetLabel: 'Incident',
+      items: incidents.map(i => ({ slug: i.incidentSlug })),
+    })
 
     return json({ ok: true, count: incidents.length })
   } catch (e) {

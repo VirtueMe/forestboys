@@ -4,7 +4,8 @@
  */
 
 import { requireAdmin } from '~/_lib/require-admin.ts'
-import { runCypher, type Neo4jEnv } from '~/_lib/neo4j.ts'
+import type { Neo4jEnv } from '~/_lib/neo4j.ts'
+import { saveEdgeSet } from '~/_lib/edge-set.ts'
 import { findInvalidRole } from '~/_lib/role-scopes.ts'
 
 interface Env extends Neo4jEnv {
@@ -48,32 +49,18 @@ export const onRequestPatch: PagesFunction<Env> = async ({ request, env, params 
   }
 
   try {
-    await runCypher(env, `
-      MATCH ()-[r:MEMBER_OF]->(u:Unit {slug: $slug}) DELETE r
-    `, { slug })
+    await saveEdgeSet(env, {
+      anchor: { label: 'Unit', slug }, rel: 'MEMBER_OF', direction: 'in', targetLabel: 'Person',
+      items: members.map(m => ({
+        slug:  m.personSlug,
+        props: {
+          role:      typeof m.role      === 'string' ? m.role      : null,
+          startDate: typeof m.startDate === 'string' ? m.startDate : null,
+          endDate:   typeof m.endDate   === 'string' ? m.endDate   : null,
+        },
+      })),
+    })
 
-    if (members.length) {
-      await runCypher(env, `
-        MATCH (u:Unit {slug: $slug})
-        UNWIND $items AS x
-        OPTIONAL MATCH (p:Person {slug: x.personSlug})
-        FOREACH (_ IN CASE WHEN p IS NOT NULL THEN [1] ELSE [] END |
-          CREATE (p)-[:MEMBER_OF {
-            role:      x.role,
-            startDate: x.startDate,
-            endDate:   x.endDate
-          }]->(u)
-        )
-      `, {
-        slug,
-        items: members.map(m => ({
-          personSlug: m.personSlug,
-          role:       typeof m.role === 'string' ? m.role : null,
-          startDate:  typeof m.startDate === 'string' ? m.startDate : null,
-          endDate:    typeof m.endDate   === 'string' ? m.endDate   : null,
-        })),
-      })
-    }
     return json({ ok: true, count: members.length })
   } catch (e) {
     return json({ error: (e as Error).message }, 502)

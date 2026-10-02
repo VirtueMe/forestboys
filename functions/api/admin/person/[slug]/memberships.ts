@@ -7,7 +7,8 @@
  */
 
 import { requireAdmin } from '~/_lib/require-admin.ts'
-import { runCypher, type Neo4jEnv } from '~/_lib/neo4j.ts'
+import type { Neo4jEnv } from '~/_lib/neo4j.ts'
+import { saveEdgeSet } from '~/_lib/edge-set.ts'
 import { findInvalidRole } from '~/_lib/role-scopes.ts'
 
 interface Env extends Neo4jEnv {
@@ -55,37 +56,18 @@ export const onRequestPatch: PagesFunction<Env> = async ({ request, env, params 
   }
 
   try {
-    // Replace only non-course MEMBER_OF edges; course attendance is a
-    // separate concern and lives untouched until a dedicated Kurs editor
-    // exists.
-    await runCypher(env, `
-      MATCH (p:Person {slug: $slug})-[r:MEMBER_OF]->(u:Unit)
-      WHERE coalesce(u.type, '') <> 'course'
-      DELETE r
-    `, { slug })
-
-    if (memberships.length) {
-      await runCypher(env, `
-        MATCH (p:Person {slug: $slug})
-        UNWIND $items AS m
-        OPTIONAL MATCH (u:Unit {slug: m.unitSlug})
-        FOREACH (_ IN CASE WHEN u IS NOT NULL THEN [1] ELSE [] END |
-          CREATE (p)-[:MEMBER_OF {
-            role:      m.role,
-            startDate: m.startDate,
-            endDate:   m.endDate
-          }]->(u)
-        )
-      `, {
-        slug,
-        items: memberships.map(m => ({
-          unitSlug:  m.unitSlug,
+    await saveEdgeSet(env, {
+      anchor: { label: 'Person', slug }, rel: 'MEMBER_OF', direction: 'out', targetLabel: 'Unit',
+      targetWhere: "coalesce(t.type, '') <> 'course'",
+      items: memberships.map(m => ({
+        slug:  m.unitSlug,
+        props: {
           role:      typeof m.role      === 'string' ? m.role      : null,
           startDate: typeof m.startDate === 'string' ? m.startDate : null,
           endDate:   typeof m.endDate   === 'string' ? m.endDate   : null,
-        })),
-      })
-    }
+        },
+      })),
+    })
 
     return json({ ok: true, count: memberships.length })
   } catch (e) {
