@@ -1,16 +1,19 @@
 /**
- * Bring the graph in line after a rank is added to the rule's table
- * (RANKS in scripts/lib/person-rule.ts, kept in step with parse.clj).
+ * Bring the graph in line after the rank rule changes (RANKS or the
+ * leading-token table in scripts/lib/person-rule.ts, kept in step with
+ * parse.clj).
  *
  * - Rank nodes the table has and the graph doesn't are created, with
  *   `(Rank)-[:IN]->(Organization)` — as round_one.clj does.
- * - People whose known rank is still the migration's and whose
- *   canonicalName now parses to one of those new ranks (the token the old
- *   table didn't know is still in the name, "2Lt Prilliman Dale") get what the rule
- *   makes of it today: canonicalName without the token, RANK to the
- *   parsed rank, serviceClass military when there is none. A name stamp
- *   (`name_graphSha`) follows the new canonicalName. Editor-set ranks are
- *   left alone.
+ * - People are re-mapped from the Sanity name the graph was built from —
+ *   the same baseline the sync's calibration uses: the name stamp when it
+ *   still matches Sanity, else the April export when the node's
+ *   sanityUpdatedAt equals it. Calibration held at 100 % before the rule
+ *   changed, so any difference now is the rule's: canonicalName (unless
+ *   saved in the editor), the known rank (unless set in the editor),
+ *   serviceClass military when a rank is now parsed and there is none.
+ *   A name stamp (`name_graphSha`) follows the new canonicalName. People
+ *   without a baseline are left to the sync's review.
  *
  * Afterwards scripts/sync-person.ts must calibrate at 100 % again.
  * Before writing, the affected people are saved to
@@ -24,20 +27,11 @@ import { resolve } from 'node:path'
 import neo4j from 'neo4j-driver'
 import * as dotenv from 'dotenv'
 import { RANKS, parsePerson, rankEdge, sanMigRef, slugify } from './lib/person-rule.ts'
-import { neo4jDriver, sha } from './lib/person-sync.ts'
+import { FIELDS, fetchGraphPeople, fetchSanityPeople, loadApril, neo4jDriver, sha, str, type Doc } from './lib/person-sync.ts'
 dotenv.config()
 
 const write = process.argv.includes('--write')
-
-interface Row {
-  sanityId: string
-  slug: string
-  canonicalName: string
-  rank: string
-  serviceClass: string | null
-  nameSha: string | null
-  nameGraphSha: string | null
-}
+const nameField = FIELDS.find(f => f.name === 'name')!
 
 async function main() {
   const driver = neo4jDriver()
@@ -48,40 +42,50 @@ async function main() {
       .filter(([canonical]) => !have.has(slugify(canonical)))
       .map(([canonical, { abbrs, tier, org }]) => ({ slug: slugify(canonical), canonicalName: canonical, abbreviation: abbrs[0], tier, org }))
 
-    const added = new Set(newRanks.map(r => r.slug))
-
     const orgs = new Set((await session.run(`MATCH (o:Organization) WHERE o.slug IN $slugs RETURN o.slug AS slug`,
       { slugs: newRanks.map(r => r.org) })).records.map(r => r.get('slug') as string))
     const missingOrgs = newRanks.filter(r => !orgs.has(r.org)).map(r => `${r.slug} → ${r.org}`)
     if (missingOrgs.length) throw new Error(`Organization missing: ${missingOrgs.join(', ')}`)
 
-    const rows = (await session.run(`
-      MATCH (p:Person)-[k:RANK]->(rk:Rank)
-      WHERE p.sanityId IS NOT NULL AND k.sourceRef STARTS WITH 'sanity-migration:'
-      RETURN p.sanityId AS sanityId, p.slug AS slug, p.canonicalName AS canonicalName, rk.slug AS rank,
-             p.serviceClass AS serviceClass, p.name_sha AS nameSha, p.name_graphSha AS nameGraphSha
-    `)).records.map(r => r.toObject() as Row)
+    const april = loadApril()
+    const [graph, sanity] = await Promise.all([
+      fetchGraphPeople(),
+      fetchSanityPeople().then(ds => new Map(ds.map(d => [d._id, d]))),
+    ])
 
-    const people = rows.flatMap(r => {
-      const parsed = parsePerson(r.canonicalName ?? '')
-      // Only ranks new to the graph: a name can carry a second rank word the
-      // original parse left in on purpose ("Anton Tviberg (senere Løytnant og Kaptein)").
-      if (!parsed.rank || !added.has(slugify(parsed.rank.canonical))) return []
-      const edge = rankEdge(r.sanityId, parsed)
-      const graphSha = r.nameSha ? sha(parsed.canonicalName) : null
+    const people = [...graph.values()].flatMap(g => {
+      const stamp = g.stamps['name_sha']
+      const current = sanity.get(g.sanityId)
+      const a = april.get(g.sanityId)
+      const base: Doc | undefined = stamp
+        ? (current && sha(nameField.fromSanity(current)) === stamp ? current : undefined)
+        : (a && a._updatedAt === g.sanityUpdatedAt ? a : undefined)
+      if (!base) return []
+
+      const parsed = parsePerson(str(base.name))
+      const edge = rankEdge(g.sanityId, parsed)
+      const newName = !g.adminEdited.includes('name') && g.canonicalName !== parsed.canonicalName ? parsed.canonicalName : null
+      const migrationRank = !!g.knownRank?.sourceRef?.startsWith('sanity-migration:')
+      const newRank = migrationRank && (g.knownRank!.rankSlug !== edge.rankSlug || g.knownRank!.sourceRef !== edge.sourceRef) ? edge : null
+      const serviceClassRef = parsed.rank && !g.serviceClassSourceRef ? sanMigRef('person', g.sanityId, 'rank-parsed-from-name') : null
+      if (!newName && !newRank && !serviceClassRef) return []
+      const graphSha = stamp && newName ? sha(newName) : null
       return [{
-        ...r,
-        newName: parsed.canonicalName,
-        newRank: edge.rankSlug,
-        rankRef: edge.sourceRef,
-        serviceClassRef: r.serviceClass ? null : sanMigRef('person', r.sanityId, 'rank-parsed-from-name'),
-        nameGraphSha: graphSha && graphSha !== r.nameSha ? graphSha : null,
+        sanityId: g.sanityId, slug: g.slug,
+        canonicalName: g.canonicalName, newName,
+        rank: g.knownRank?.rankSlug ?? null, newRank: newRank?.rankSlug ?? null, rankRef: newRank?.sourceRef ?? null,
+        serviceClassRef,
+        setGraphSha: !!graphSha, nameGraphSha: graphSha && graphSha !== stamp ? graphSha : null,
       }]
     })
 
     console.log(`New ranks: ${newRanks.length ? newRanks.map(r => `${r.slug} (${r.org}, tier ${r.tier})`).join(', ') : 'none'}`)
     console.log(`People: ${people.length}`)
-    for (const p of people) console.log(`  ${p.slug}: "${p.canonicalName}" → "${p.newName}", ${p.rank} → ${p.newRank}${p.serviceClassRef ? ', serviceClass military' : ''}`)
+    for (const p of people) console.log(`  ${p.slug}: ${[
+      p.newName && `"${p.canonicalName}" → "${p.newName}"`,
+      p.newRank && `${p.rank} → ${p.newRank}`,
+      p.serviceClassRef && 'serviceClass military',
+    ].filter(Boolean).join(', ')}`)
     if (!write) { console.log('\n(dry run — pass --write to apply)'); return }
 
     const before = await session.run(`
@@ -105,15 +109,15 @@ async function main() {
           MERGE (rk)-[:IN]->(o)`, { ranks: newRanks })
         await tx.run(`
           UNWIND $people AS x
-          MATCH (p:Person {sanityId: x.sanityId})-[k:RANK]->()
-          DELETE k
-          WITH p, x MATCH (rk:Rank {slug: x.newRank})
-          CREATE (p)-[:RANK {state: 'candidate', sourceRef: x.rankRef}]->(rk)
-          SET p.canonicalName = x.newName
+          MATCH (p:Person {sanityId: x.sanityId})
+          FOREACH (_ IN CASE WHEN x.newName IS NULL THEN [] ELSE [1] END | SET p.canonicalName = x.newName)
+          FOREACH (_ IN CASE WHEN x.setGraphSha THEN [1] ELSE [] END | SET p.name_graphSha = x.nameGraphSha)
           FOREACH (_ IN CASE WHEN x.serviceClassRef IS NULL THEN [] ELSE [1] END |
             SET p.serviceClass = 'military', p.serviceClass_state = 'candidate', p.serviceClass_sourceRef = x.serviceClassRef)
-          FOREACH (_ IN CASE WHEN x.nameSha IS NULL THEN [] ELSE [1] END |
-            SET p.name_graphSha = x.nameGraphSha)`, { people })
+          WITH p, x WHERE x.newRank IS NOT NULL
+          MATCH (p)-[k:RANK]->() DELETE k
+          WITH p, x MATCH (rk:Rank {slug: x.newRank})
+          CREATE (p)-[:RANK {state: 'candidate', sourceRef: x.rankRef}]->(rk)`, { people })
       })
     } finally {
       await ws.close()

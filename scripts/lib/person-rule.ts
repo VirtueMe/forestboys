@@ -29,13 +29,18 @@ export const RANKS: Record<string, { abbrs: string[]; tier: number; org: string 
   'Flying Officer':    { abbrs: ['F/O'],                                      tier: 4, org: 'raf' },
   'Flight Lieutenant': { abbrs: ['F/Lt', 'Flt'],                              tier: 5, org: 'raf' },
   'Warrant Officer':   { abbrs: ['W/O'],                                      tier: 3, org: 'raf' },
-  'Sub Lieutenant':    { abbrs: ['S/Lt'],                                     tier: 4, org: 'marinen' },
+  'Sub Lieutenant':    { abbrs: ['S/Lt', 'S/Lt.'],                            tier: 4, org: 'marinen' },
   'Second Lieutenant': { abbrs: ['2Lt', '2/Lt'],                              tier: 4, org: 'usaaf' },
 }
 
 const ABBR_TO_RANK = new Map(
   Object.entries(RANKS).flatMap(([canonical, { abbrs }]) => abbrs.map(a => [a.toLowerCase(), canonical] as const)),
 )
+
+/** Abbreviations that mean another rank as the name's first token. Jan writes
+ *  American airmen rank-first ("S/Lt. Davis Jere L" — Second Lieutenant) and
+ *  Norwegians rank-last ("Jan Helen S/Lt" — Sub Lieutenant, navy). */
+const LEADING_ABBR_TO_RANK = new Map([['s/lt', 'Second Lieutenant'], ['s/lt.', 'Second Lieutenant']])
 
 const STATUS_MARKERS: [string, string][] = [['✝', 'KIA'], ['∞', 'ambiguous']]
 const ORG_FLAGS = ['NNIU', 'KS']
@@ -77,7 +82,7 @@ export function parsePerson(name: string): ParsedPerson {
   let rank: ParsedPerson['rank'] = null
   let rankRemainder = remainder
   for (let i = 0; i < tokens.length; i++) {
-    const canonical = ABBR_TO_RANK.get(tokens[i].toLowerCase())
+    const canonical = (i === 0 && LEADING_ABBR_TO_RANK.get(tokens[i].toLowerCase())) || ABBR_TO_RANK.get(tokens[i].toLowerCase())
     if (canonical) {
       rank = { canonical, original: tokens[i] }
       rankRemainder = [...tokens.slice(0, i), ...tokens.slice(i + 1)].join(' ')

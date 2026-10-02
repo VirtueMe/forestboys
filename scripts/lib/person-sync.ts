@@ -46,7 +46,7 @@ export interface GraphPerson {
   knownRank:       { rankSlug: string; sourceRef: string | null } | null
   content:         string[]
   stamps:          Record<string, string>
-  /** Fields (sync names) saved in the editor — `<prop>_sourceRef: 'admin-edit'`. */
+  /** Fields (sync names) saved in the editor — `<prop>_sourceRef: 'admin-edit'`, or links added with that sourceRef. */
   adminEdited:     string[]
   rels:            number
   graphOnlyRels:   number
@@ -274,7 +274,8 @@ export async function fetchGraphPeople(): Promise<Map<string, GraphPerson>> {
              p.birthYear AS birthYear, p.status AS status, p.status_sourceRef AS statusSourceRef,
              p.serviceClass AS serviceClass, p.serviceClass_sourceRef AS serviceClassSourceRef,
              [k IN keys(p) WHERE k ENDS WITH '_sha' OR k ENDS WITH '_graphSha' | [k, p[k]]] AS stampPairs,
-             [k IN keys(p) WHERE k ENDS WITH '_sourceRef' AND p[k] = 'admin-edit' | k] AS adminRefs,
+             [k IN keys(p) WHERE k ENDS WITH '_sourceRef' AND p[k] = 'admin-edit' | k]
+               + CASE WHEN exists { (p)-[:REFERENCED_IN {sourceRef: 'admin-edit'}]->() } THEN ['links_sourceRef'] ELSE [] END AS adminRefs,
              links, linkIds, images, imageIds, knownRank, content, rels, graphOnlyRels
     `)
     return new Map(r.records.map(rec => {

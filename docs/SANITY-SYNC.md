@@ -169,7 +169,7 @@ what can be detected. What can be detected still blocks the field:
   without baseline is a conflict, not review. Saves before 2026-10-02 carry
   no marker;
 - gallery edges with editor props;
-- graph links Sanity doesn't have.
+- graph links Sanity doesn't have (links added with `sourceRef: 'admin-edit'` are a conflict, not review).
 
 Accepted on 2026-09-29 (graph slugs before the run; all 37 were checked
 side by side, and the graph values were older Sanity states, never edits):
@@ -198,11 +198,20 @@ Accepted on 2026-10-02, answered from their descriptions:
 
 None held.
 
-S/Lt is ambiguous in Sanity: Norwegian navy officers (Sub Lieutenant —
-Leif Andreas Larsen, Søreide, Gundersen) and American airmen written
-"S/Lt. Surname Given" (Second Lieutenant — Davis, Sidorek, Durham,
-Polansky). "S/Lt." with a trailing period isn't parsed at all, so several
-of them still have Menig and the token in their name. Open.
+S/Lt means two ranks in Sanity, told apart by position: American airmen
+are written rank-first, "S/Lt. Davis Jere L" — Second Lieutenant (USAAF);
+Norwegians rank-last, "Jan Helen S/Lt" — Sub Lieutenant (navy). The rule
+reads it that way since 2026-10-02 (`LEADING_ABBR_TO_RANK` in
+person-rule.ts, `leading-abbr->canonical` in parse.clj), and "S/Lt." with
+a period is parsed too. `scripts/migrate-rank-table.ts` re-mapped the 9
+people the change touched.
+
+The exception: "S/Lt Ferner" is rank-first because the name comes from a
+333 Squadron crew list (AIR 27), not Jan's American style. He is Finn
+Christian Ferner, Fenrik 1945 (scramble.no, *Luftforsvaret
+personellfortegnelse pr. 1. juni 1945*). Fenrik and Second Lieutenant
+share tier 4, so only the label is off. Waiting for Jan to rename him in
+Sanity (e.g. "Finn Christian Ferner Fenrik"); the sync then takes it in.
 
 ### Where it has run
 
@@ -221,6 +230,7 @@ The scripts use `.env`, which is the **local** Neo4j. Production Aura
 | Person sync, review | `scripts/sync-person.ts --write --accept-review=kare-helland` (2026-10-02) | 1 changed |
 | Rank table | `scripts/migrate-rank-table.ts --write` (2026-10-02) | Second Lieutenant (USAAF); 2 people: Prilliman, Polansky |
 | Person sync, review | `scripts/sync-person.ts --write --accept-review=2lt-polansky-henry-l` (2026-10-02, after his rank was set in the editor) | 1 changed (1 slug rename); 0 held |
+| Rank table | `scripts/migrate-rank-table.ts --write` (2026-10-02, S/Lt by position) | 9 people: 7 Second Lieutenant, 2 Sub Lieutenant |
 
 Production gets the same steps in the same order, behind an explicit
 opt-in that doesn't exist yet.

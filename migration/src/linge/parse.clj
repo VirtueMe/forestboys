@@ -25,7 +25,7 @@
    "Flying Officer"     {:abbrs ["F/O"]                                             :tier 4 :org "raf"}
    "Flight Lieutenant"  {:abbrs ["F/Lt" "Flt"]                                      :tier 5 :org "raf"}
    "Warrant Officer"    {:abbrs ["W/O"]                                             :tier 3 :org "raf"}
-   "Sub Lieutenant"     {:abbrs ["S/Lt"]                                            :tier 4 :org "marinen"}
+   "Sub Lieutenant"     {:abbrs ["S/Lt" "S/Lt."]                                    :tier 4 :org "marinen"}
    "Second Lieutenant"  {:abbrs ["2Lt" "2/Lt"]                                      :tier 4 :org "usaaf"}})
 
 (def abbr->canonical
@@ -66,6 +66,17 @@
           {:flags [] :remainder name-str}
           org-flags))
 
+;; Abbreviations that mean another rank as the name's first token: American
+;; airmen are written rank-first ("S/Lt. Davis Jere L" — Second Lieutenant),
+;; Norwegians rank-last ("Jan Helen S/Lt" — Sub Lieutenant, navy).
+(def leading-abbr->canonical
+  {"s/lt" "Second Lieutenant" "s/lt." "Second Lieutenant"})
+
+(defn- token-rank [i token]
+  (let [t (str/lower-case token)]
+    (or (when (zero? i) (get leading-abbr->canonical t))
+        (get abbr->canonical t))))
+
 (defn extract-rank [name-str]
   (let [tokens (str/split (str/trim name-str) #"\s+")]
     (loop [i 0]
@@ -73,8 +84,8 @@
         (>= i (count tokens))
         {:rank nil :remainder name-str}
 
-        (get abbr->canonical (str/lower-case (nth tokens i)))
-        {:rank      {:canonical (get abbr->canonical (str/lower-case (nth tokens i)))
+        (token-rank i (nth tokens i))
+        {:rank      {:canonical (token-rank i (nth tokens i))
                      :original  (nth tokens i)}
          :remainder (str/join " " (concat (take i tokens) (drop (inc i) tokens)))}
 
