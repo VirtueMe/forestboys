@@ -31,11 +31,12 @@
  *
  * Review fields (no baseline — the graph was imported from a Sanity state
  * older than the April export) are left alone unless the person is named in
- * --accept-review: then Sanity's value applies as if clean. Graph edits to
- * the scalar fields can't be detected (the editor writes no sourceRef), so
- * naming a person is the judgement that the graph holds no edits of its
- * own. What can be detected still blocks the field: gallery edges with
- * editor props (hero, scope…), graph links Sanity doesn't have.
+ * --accept-review: then Sanity's value applies as if clean. Naming a person
+ * is the judgement that the graph holds no edits of its own beyond what can
+ * be detected, and what can be detected still blocks the field: scalar
+ * fields saved in the editor (`<field>_sourceRef: 'admin-edit'` — a conflict,
+ * not review), gallery edges with editor props (hero, scope…), graph links
+ * Sanity doesn't have. Editor saves before 2026-10-02 carry no marker.
  *
  * Usage: npx tsx scripts/sync-person.ts [--write] [--accept-review=<slug>,<slug>…]
  */
@@ -87,7 +88,7 @@ function scalarStmt(id: string, field: 'home' | 'secretName' | 'birthYear', valu
 function nameStmts(id: string, name: string, setCanonical: boolean, g: GraphPerson, summary: string[]): Stmt[] {
   const parsed = parsePerson(name)
   const out: Stmt[] = []
-  if (setCanonical) out.push({ text: `${P} SET p.canonicalName = $v`, params: { id, v: parsed.canonicalName } })
+  if (setCanonical) out.push({ text: `${P} SET p.canonicalName = $v REMOVE p.canonicalName_sourceRef, p.canonicalName_state`, params: { id, v: parsed.canonicalName } })
 
   const migrationRank = !!g.knownRank?.sourceRef?.startsWith('sanity-migration:')
   const want = rankEdge(id, parsed)

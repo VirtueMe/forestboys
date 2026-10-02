@@ -1,8 +1,13 @@
 /**
  * PATCH /api/admin/person/:slug — update Grunnleggende (basic) fields on a Person.
  *
- * Body: { canonicalName?, secretName?, birthYear?, home? }
+ * Body: { canonicalName?, secretName?, birthYear?, home?, type? }
  * Accepts any subset of the keys. null clears a nullable field.
+ *
+ * A claim field whose value changes is marked `<field>_sourceRef: 'admin-edit'`
+ * and `<field>_state: 'verified'` (`unknown` when cleared), like the known
+ * rank — so the Sanity sync can tell a graph edit from an older Sanity state
+ * (docs/SANITY-SYNC.md, "Review — no baseline").
  */
 
 import { requireAdmin } from '~/_lib/require-admin.ts'
@@ -30,6 +35,9 @@ interface PersonRow {
 }
 
 const PERSON_TYPES = new Set(['civilian', 'soldier'])
+
+/** Fields carrying claim provenance. `type` is the editor's own, never synced. */
+const CLAIM_FIELDS = ['canonicalName', 'secretName', 'birthYear', 'home'] as const
 
 /**
  * POST /api/admin/person/new — create a new Person with all scalar fields
@@ -140,9 +148,15 @@ export const onRequestPatch: PagesFunction<Env> = async ({ request, env, params 
 
   if (!Object.keys(props).length) return json({ error: 'No fields to update' }, 400)
 
+  // Mark before `SET p += $props`, only where the stored value differs.
+  const marks = CLAIM_FIELDS.filter(f => f in props).map(f => `
+      FOREACH (_ IN CASE WHEN p.${f} = $props.${f} OR (p.${f} IS NULL AND $props.${f} IS NULL) THEN [] ELSE [1] END |
+        SET p.${f}_sourceRef = 'admin-edit',
+            p.${f}_state = CASE WHEN $props.${f} IS NULL THEN 'unknown' ELSE 'verified' END)`).join('')
+
   try {
     const rows = await runCypher<PersonRow>(env, `
-      MATCH (p:Person {slug: $slug})
+      MATCH (p:Person {slug: $slug})${marks}
       SET p += $props
       RETURN p.slug AS slug, p.canonicalName AS canonicalName,
              p.secretName AS secretName, p.birthYear AS birthYear,

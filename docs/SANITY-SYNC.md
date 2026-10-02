@@ -160,11 +160,16 @@ Some people were imported from a Sanity state older than the April export
 changed field can't be told apart from a graph edit. These go to review.
 
 `--accept-review=<slug>,…` applies Sanity's value for the named people as
-if clean. The editors write no sourceRef, so graph edits to name, cover
-names, home or birth year can't be detected — naming a person is the
-judgement that the graph holds no edits of its own. What can be detected
-still blocks the field: gallery edges with editor props, or graph links
-Sanity doesn't have.
+if clean — the judgement that the graph holds no edits of its own beyond
+what can be detected. What can be detected still blocks the field:
+
+- name, cover name, home or birth year saved in the person editor — the
+  save marks the field `<field>_sourceRef: 'admin-edit'`,
+  `<field>_state: 'verified'` (`unknown` when cleared), and a marked field
+  without baseline is a conflict, not review. Saves before 2026-10-02 carry
+  no marker;
+- gallery edges with editor props;
+- graph links Sanity doesn't have.
 
 Accepted on 2026-09-29 (graph slugs before the run; all 37 were checked
 side by side, and the graph values were older Sanity states, never edits):

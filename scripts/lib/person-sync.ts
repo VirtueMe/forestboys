@@ -11,7 +11,8 @@
  *      imported or applied after April;
  *   2. the April export, when the document's _updatedAt equals the node's
  *      sanityUpdatedAt;
- *   3. none — the field goes to review.
+ *   3. none — the field goes to review, or to conflict when the editor
+ *      marked it (`<field>_sourceRef: 'admin-edit'`).
  */
 
 import { readFileSync } from 'node:fs'
@@ -45,6 +46,8 @@ export interface GraphPerson {
   knownRank:       { rankSlug: string; sourceRef: string | null } | null
   content:         string[]
   stamps:          Record<string, string>
+  /** Fields (sync names) saved in the editor — `<prop>_sourceRef: 'admin-edit'`. */
+  adminEdited:     string[]
   rels:            number
   graphOnlyRels:   number
 }
@@ -144,7 +147,7 @@ export function classify(g: GraphPerson, s: Doc, april: Doc | undefined): FieldV
       verdict:
         f.imported && !f.imported(g) ? 'not-imported'
         : graphHasNew                ? 'already'
-        : !base                      ? 'review'
+        : !base                      ? (g.adminEdited.includes(f.name) ? 'conflict' : 'review')
         : graphNow === ruleValue(f, base) ? 'clean'
         : 'conflict',
     })
@@ -271,11 +274,13 @@ export async function fetchGraphPeople(): Promise<Map<string, GraphPerson>> {
              p.birthYear AS birthYear, p.status AS status, p.status_sourceRef AS statusSourceRef,
              p.serviceClass AS serviceClass, p.serviceClass_sourceRef AS serviceClassSourceRef,
              [k IN keys(p) WHERE k ENDS WITH '_sha' OR k ENDS WITH '_graphSha' | [k, p[k]]] AS stampPairs,
+             [k IN keys(p) WHERE k ENDS WITH '_sourceRef' AND p[k] = 'admin-edit' | k] AS adminRefs,
              links, linkIds, images, imageIds, knownRank, content, rels, graphOnlyRels
     `)
     return new Map(r.records.map(rec => {
-      const { stampPairs, ...rest } = rec.toObject() as Omit<GraphPerson, 'stamps'> & { stampPairs: [string, string][] }
-      const g: GraphPerson = { ...rest, stamps: Object.fromEntries(stampPairs) }
+      const { stampPairs, adminRefs, ...rest } = rec.toObject() as Omit<GraphPerson, 'stamps' | 'adminEdited'> & { stampPairs: [string, string][]; adminRefs: string[] }
+      const adminEdited = adminRefs.map(k => k.slice(0, -'_sourceRef'.length)).map(k => k === 'canonicalName' ? 'name' : k)
+      const g: GraphPerson = { ...rest, stamps: Object.fromEntries(stampPairs), adminEdited }
       return [g.sanityId, g]
     }))
   } finally {
