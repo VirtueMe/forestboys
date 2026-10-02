@@ -35,29 +35,13 @@ import { writeFileSync, mkdirSync } from 'node:fs'
 import { dirname, resolve } from 'node:path'
 import neo4j from 'neo4j-driver'
 import * as dotenv from 'dotenv'
-import { isImportableUrl, imageSources, linkSource } from './lib/person-rule.ts'
-import { neo4jDriver, type Doc } from './lib/person-sync.ts'
+import { neo4jDriver } from './lib/person-sync.ts'
 import { EVENT_BASELINE, fetchSanityEvents } from './lib/event-sync.ts'
+import { SINGLE, PARTICIPANT_EDGE, loadLookups, planEvent, slugOf } from './lib/event-rule.ts'
 dotenv.config()
 
 const write = process.argv.includes('--write')
 const CHUNK = 200
-
-const str  = (v: unknown): string => (typeof v === 'string' ? v : '')
-const ref  = (v: unknown): string => str((v as { _ref?: string } | undefined)?._ref)
-const refs = (v: unknown): string[] =>
-  [...new Set(((v as { _ref?: string }[] | undefined) ?? []).map(r => r?._ref ?? '').filter(Boolean))]
-const slugOf = (d: Doc) => str((d.slug as { current?: string } | undefined)?.current)
-
-/** Single-target reference fields → edge type and target label. */
-const SINGLE: { field: string; type: string; label: string }[] = [
-  { field: 'organization', type: 'ORCHESTRATED_BY', label: 'Organization' },
-  { field: 'district',     type: 'IN_DISTRICT',     label: 'Unit' },
-  { field: 'locationFrom', type: 'FROM',            label: 'Location' },
-  { field: 'locationTo',   type: 'TO',              label: 'Location' },
-  { field: 'stationFrom',  type: 'FROM_STATION',    label: 'Station' },
-  { field: 'stationTo',    type: 'TO_STATION',      label: 'Station' },
-]
 
 /** Edges the import makes; everything else on an event was added in the graph. */
 const IMPORT_EDGE = `
@@ -79,20 +63,10 @@ async function main() {
   const driver = neo4jDriver()
   const read = driver.session({ defaultAccessMode: neo4j.session.READ })
   try {
-    // ── Lookups: sanityId → slug per target label ──
-    const lookup: Record<string, Map<string, string>> = {}
-    for (const label of ['Organization', 'Unit', 'Location', 'Station', 'Transport', 'Person']) {
-      const r = await read.run(`MATCH (n:\`${label}\`) WHERE n.sanityId IS NOT NULL AND n.slug IS NOT NULL RETURN n.sanityId AS id, n.slug AS slug`)
-      lookup[label] = new Map(r.records.map(x => [x.get('id') as string, x.get('slug') as string]))
-    }
+    const lookups = await loadLookups(read)
 
-    // ── Plan the new events ──
+    // ── Plan the new events (scripts/lib/event-rule.ts) ──
     const unresolved: Record<string, { n: number; samples: string[] }> = {}
-    const miss = (field: string, d: Doc, id: string) => {
-      const u = (unresolved[field] ??= { n: 0, samples: [] })
-      u.n++
-      if (u.samples.length < 4) u.samples.push(`${slugOf(d)} → ${id}`)
-    }
     const nodes: Record<string, unknown>[] = []
     const edges: Record<string, { event: string; target: string }[]> = {}
     const people: { event: string; target: string }[] = []
@@ -109,40 +83,18 @@ async function main() {
       if (seenSlugs.has(slug)) errors.push(`slug twice in Sanity: ${slug} (${seenSlugs.get(slug)}, ${d._id})`)
       seenSlugs.set(slug, d._id)
 
-      const node: Record<string, unknown> = {
-        slug, codeName: str(d.title), type: 'unclassified', sanityId: d._id, sanityUpdatedAt: d._updatedAt,
-      }
-      if (str(d.date)) node.date = d.date
-      nodes.push(node)
-
-      for (const s of SINGLE) {
-        const id = ref(d[s.field])
-        if (!id) continue
-        const target = lookup[s.label].get(id)
-        if (target) (edges[s.type] ??= []).push({ event: d._id, target })
-        else miss(s.field, d, id)
-      }
-      for (const id of refs(d.people)) {
-        const target = lookup.Person.get(id)
-        if (target) people.push({ event: d._id, target }); else miss('people', d, id)
-      }
-      for (const id of refs(d.transport)) {
-        const target = lookup.Transport.get(id)
-        if (target) transport.push({ event: d._id, target }); else miss('transport', d, id)
-      }
-      for (const img of imageSources(d.gallery)) images.push({ event: d._id, ...img, caption: img.caption ?? null })
-      const titles = new Map(((d.links as { link?: string; title?: string }[] | undefined) ?? []).map(l => [l.link ?? '', l.title]))
-      for (const url of new Set([...titles.keys()].filter(isImportableUrl))) {
-        links.push({ event: d._id, source: linkSource(url, titles.get(url)) })
-      }
-      if (Array.isArray(d.description) && d.description.length) {
-        descriptions.push({
-          event: d._id,
-          props: {
-            id: `desc:event:${d._id}`, content: JSON.stringify(d.description), order: 1,
-            recordedDate: d._updatedAt, author: 'sanity-event-migration', confidence: 'verified', sanityEventId: d._id,
-          },
-        })
+      const p = planEvent(d, lookups)
+      nodes.push(p.node)
+      for (const e of p.single) (edges[e.type] ??= []).push({ event: d._id, target: e.target })
+      for (const t of p.people) people.push({ event: d._id, target: t })
+      for (const t of p.transport) transport.push({ event: d._id, target: t })
+      for (const img of p.images) images.push({ event: d._id, ...img })
+      for (const src of p.links) links.push({ event: d._id, source: src })
+      if (p.description) descriptions.push({ event: d._id, props: p.description })
+      for (const u of p.unresolved) {
+        const x = (unresolved[u.field] ??= { n: 0, samples: [] })
+        x.n++
+        if (x.samples.length < 4) x.samples.push(`${slug} → ${u.id}`)
       }
     }
 
@@ -238,7 +190,7 @@ async function main() {
         UNWIND $rows AS x
         MATCH (e:Operation {sanityId: x.event}), (p:Person {slug: x.target})
         MERGE (p)-[r:PARTICIPATED_IN]->(e)
-        SET r.state = 'verified', r.sourceRef = 'sanity-event-migration'`, people)
+        SET r.state = '${PARTICIPANT_EDGE.state}', r.sourceRef = '${PARTICIPANT_EDGE.sourceRef}'`, people)
       await run(`
         UNWIND $rows AS x
         MATCH (e:Operation {sanityId: x.event}), (t:Transport {slug: x.target})

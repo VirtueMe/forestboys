@@ -23,9 +23,11 @@ import { writeFileSync, mkdirSync } from 'node:fs'
 import { resolve } from 'node:path'
 import * as dotenv from 'dotenv'
 import {
-  EVENT_FIELDS, calibrateEvents, classifyEvent, fetchGraphEvents, fetchSanityEvents, loadAprilEvents,
+  EVENT_FIELDS, baselineSha, calibrateEvents, classifyEvent, fetchGraphEvents, fetchSanityEvents, loadAprilEvents, sha,
   type EventVerdict,
 } from './lib/event-sync.ts'
+import { loadLookups } from './lib/event-rule.ts'
+import { neo4jDriver } from './lib/person-sync.ts'
 dotenv.config()
 
 const OUT = resolve(process.cwd(), 'data', 'sanity-delta', 'event-fields.json')
@@ -35,7 +37,9 @@ async function main() {
   const [sanityDocs, graph] = await Promise.all([fetchSanityEvents(), fetchGraphEvents()])
   const sanity = new Map(sanityDocs.map(d => [d._id, d]))
 
-  const calib = calibrateEvents(graph, sanity, april)
+  const driver = neo4jDriver(), session = driver.session()
+  const lookups = await loadLookups(session).finally(() => session.close().then(() => driver.close()))
+  const calib = calibrateEvents(graph, sanity, april, lookups)
   const created = sanityDocs.filter(d => !graph.has(d._id))
   const deleted = [...graph.values()].filter(g => !sanity.has(g.sanityId))
 
@@ -45,19 +49,19 @@ async function main() {
   for (const g of graph.values()) {
     const s = sanity.get(g.sanityId)
     if (!s) continue
-    const a = april.get(g.sanityId)
-    const base = a && a._updatedAt === g.sanityUpdatedAt ? a : undefined
-    if (!base) noBaseline++
+    const base = april.get(g.sanityId)
+    if (!EVENT_FIELDS.some(f => baselineSha(g, f, base, lookups) !== undefined)) noBaseline++
     if (s._updatedAt === g.sanityUpdatedAt) {
       unchanged++
-      // Sanity untouched since import: any difference is a graph edit.
-      if (base) {
-        const fields = EVENT_FIELDS.filter(f => f.fromGraph(g) !== f.fromSanity(base)).map(f => f.name)
-        if (fields.length) graphEdits.push({ slug: g.slug, fields })
-      }
+      // Sanity untouched since it was taken in: a difference from the baseline is a graph edit.
+      const fields = EVENT_FIELDS.filter(f => {
+        const b = baselineSha(g, f, base, lookups)
+        return b !== undefined && sha(f.fromGraph(g)) !== b
+      }).map(f => f.name)
+      if (fields.length) graphEdits.push({ slug: g.slug, fields })
       continue
     }
-    const fields = classifyEvent(g, s, base)
+    const fields = classifyEvent(g, s, base, lookups)
     if (fields.length) changed.push({ slug: g.slug, label: g.label, fields })
   }
 

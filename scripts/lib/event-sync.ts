@@ -15,14 +15,19 @@
  *   gallery[]     → HAS_IMAGE (Sanity CDN Sources),  links[] → REFERENCED_IN
  *   description   → (:Description {id: 'desc:event:<sanityId>'})-[:ABOUT]->
  *
- * References compare as the target's sanityId. `movie` was never imported.
+ * References compare as the target's sanityId; ones the graph can't resolve
+ * are left out. People count only the import's links (editor additions are
+ * kept apart). `movie` was never imported.
  *
- * Baseline per event: the April export, when its _updatedAt equals the
- * node's sanityUpdatedAt; otherwise none (review).
+ * Baseline per field: the stamp `<field>_sha` on the node — the value last
+ * taken in from Sanity. Before an event is stamped, the baseline file when
+ * its _updatedAt equals the node's sanityUpdatedAt.
  */
 
 import { readFileSync } from 'node:fs'
+import { createHash } from 'node:crypto'
 import { stableJson } from './sanity-sha.ts'
+import type { Lookups } from './event-rule.ts'
 import { isImportableUrl } from './person-rule.ts'
 import { API, neo4jDriver, type Doc } from './person-sync.ts'
 
@@ -46,11 +51,15 @@ export interface GraphEvent {
   locationTo:      string[]
   stationFrom:     string[]
   stationTo:       string[]
+  /** People linked by the import (sourceRef sanity…) — editor additions are kept apart. */
   people:          string[]
   transport:       string[]
   images:          string[]
+  /** Links not added in the editor. */
   links:           string[]
   description:     string | null
+  /** `<field>_sha` — the field's value as last taken in from Sanity. */
+  stamps:          Record<string, string>
 }
 
 const ws  = (s: string) => s.replace(/\s+/g, ' ').trim()
@@ -58,6 +67,7 @@ const str = (v: unknown): string => (typeof v === 'string' || typeof v === 'numb
 const ref = (v: unknown): string => str((v as { _ref?: string } | undefined)?._ref)
 const refs = (v: unknown): string[] => ((v as { _ref?: string }[] | undefined) ?? []).map(r => r?._ref ?? '').filter(Boolean)
 const set = (xs: string[]) => [...new Set(xs.filter(Boolean))].sort().join('\n')
+export const sha = (s: string) => createHash('sha256').update(s).digest('hex')
 
 /** image-<hash>-<WxH>-<ext> → <hash>-<WxH>.<ext>, the tail of the CDN url. */
 function imageKey(r: string): string {
@@ -67,22 +77,28 @@ function imageKey(r: string): string {
 
 export interface EventField {
   name: string
-  fromSanity: (d: Doc) => string
+  /** Comparable Sanity value. References the graph can't resolve yet are left out —
+   *  when the target arrives, the value changes and the link is added as a Sanity change. */
+  fromSanity: (d: Doc, l: Lookups) => string
   fromGraph:  (g: GraphEvent) => string
 }
+
+const known = (l: Lookups, label: keyof Lookups) => (id: string) => l[label].has(id)
+const one = (field: string, label: keyof Lookups) =>
+  (d: Doc, l: Lookups) => { const id = ref(d[field]); return id && known(l, label)(id) ? id : '' }
 
 export const EVENT_FIELDS: EventField[] = [
   { name: 'title',        fromSanity: d => ws(str(d.title)),   fromGraph: g => ws(g.name ?? '') },
   { name: 'slug',         fromSanity: d => str((d.slug as { current?: string } | undefined)?.current), fromGraph: g => g.slug },
   { name: 'date',         fromSanity: d => str(d.date),        fromGraph: g => g.date ?? '' },
-  { name: 'organization', fromSanity: d => ref(d.organization), fromGraph: g => set(g.organization) },
-  { name: 'district',     fromSanity: d => ref(d.district),     fromGraph: g => set(g.district) },
-  { name: 'locationFrom', fromSanity: d => ref(d.locationFrom), fromGraph: g => set(g.locationFrom) },
-  { name: 'locationTo',   fromSanity: d => ref(d.locationTo),   fromGraph: g => set(g.locationTo) },
-  { name: 'stationFrom',  fromSanity: d => ref(d.stationFrom),  fromGraph: g => set(g.stationFrom) },
-  { name: 'stationTo',    fromSanity: d => ref(d.stationTo),    fromGraph: g => set(g.stationTo) },
-  { name: 'people',       fromSanity: d => set(refs(d.people)),    fromGraph: g => set(g.people) },
-  { name: 'transport',    fromSanity: d => set(refs(d.transport)), fromGraph: g => set(g.transport) },
+  { name: 'organization', fromSanity: one('organization', 'Organization'), fromGraph: g => set(g.organization) },
+  { name: 'district',     fromSanity: one('district', 'Unit'),             fromGraph: g => set(g.district) },
+  { name: 'locationFrom', fromSanity: one('locationFrom', 'Location'),     fromGraph: g => set(g.locationFrom) },
+  { name: 'locationTo',   fromSanity: one('locationTo', 'Location'),       fromGraph: g => set(g.locationTo) },
+  { name: 'stationFrom',  fromSanity: one('stationFrom', 'Station'),       fromGraph: g => set(g.stationFrom) },
+  { name: 'stationTo',    fromSanity: one('stationTo', 'Station'),         fromGraph: g => set(g.stationTo) },
+  { name: 'people',       fromSanity: (d, l) => set(refs(d.people).filter(known(l, 'Person'))),       fromGraph: g => set(g.people) },
+  { name: 'transport',    fromSanity: (d, l) => set(refs(d.transport).filter(known(l, 'Transport'))), fromGraph: g => set(g.transport) },
   { name: 'gallery',
     fromSanity: d => set(((d.gallery as { asset?: { _ref?: string } }[] | undefined) ?? []).map(i => imageKey(i.asset?._ref ?? ''))),
     fromGraph:  g => set(g.images) },
@@ -94,35 +110,54 @@ export const EVENT_FIELDS: EventField[] = [
     fromGraph:  g => (g.description ? stableJson(JSON.parse(g.description)) : '') },
 ]
 
+/** A field's baseline: its stamp, or — before the event is stamped — the baseline file's value. */
+export function baselineSha(g: GraphEvent, f: EventField, base: Doc | undefined, l: Lookups): string | undefined {
+  return g.stamps[`${f.name}_sha`] ?? (base && base._updatedAt === g.sanityUpdatedAt ? sha(f.fromSanity(base, l)) : undefined)
+}
+
+/** Stamps to write when the graph has taken `d` in. */
+export function stampsFor(d: Doc, l: Lookups): Record<string, string> {
+  return Object.fromEntries(EVENT_FIELDS.map(f => [`${f.name}_sha`, sha(f.fromSanity(d, l))]))
+}
+
 export type EventVerdict = 'already' | 'clean' | 'conflict' | 'review'
 
-/** Per changed field: compare current Sanity with the baseline, and the graph with both. */
-export function classifyEvent(g: GraphEvent, s: Doc, april: Doc | undefined): { field: string; verdict: EventVerdict }[] {
-  const base = april && april._updatedAt === g.sanityUpdatedAt ? april : null
+/**
+ * Per field Sanity changed: the field's stamp is the baseline (or, before
+ * the event is stamped, the baseline file when its _updatedAt matches).
+ *   already   the graph holds the new value
+ *   clean     the graph still holds the baseline → apply
+ *   conflict  the graph was edited too → review bundle
+ *   review    no baseline at all
+ */
+export function classifyEvent(g: GraphEvent, s: Doc, base: Doc | undefined, l: Lookups): { field: string; verdict: EventVerdict }[] {
   const out: { field: string; verdict: EventVerdict }[] = []
   for (const f of EVENT_FIELDS) {
-    const now = f.fromSanity(s), graph = f.fromGraph(g)
-    const changed = base ? now !== f.fromSanity(base) : graph !== now
-    if (!changed) continue
-    out.push({
-      field: f.name,
-      verdict: graph === now ? 'already' : !base ? 'review' : graph === f.fromSanity(base) ? 'clean' : 'conflict',
-    })
+    const now = f.fromSanity(s, l), graph = f.fromGraph(g)
+    const stamp = baselineSha(g, f, base, l)
+    if (stamp === undefined) {
+      if (graph !== now) out.push({ field: f.name, verdict: 'review' })
+      continue
+    }
+    if (sha(now) === stamp) continue
+    out.push({ field: f.name, verdict: graph === now ? 'already' : sha(graph) === stamp ? 'clean' : 'conflict' })
   }
   return out
 }
 
-/** Unchanged in Sanity since April with a trustworthy baseline: the graph must equal the baseline. */
-export function calibrateEvents(graph: Map<string, GraphEvent>, sanity: Map<string, Doc>, april: Map<string, Doc>) {
+/** Events Sanity hasn't changed: the graph must still equal its stamps (or the baseline file). */
+export function calibrateEvents(graph: Map<string, GraphEvent>, sanity: Map<string, Doc>, base: Map<string, Doc>, l: Lookups) {
   const checks: Record<string, { agree: number; total: number; samples: unknown[] }> = {}
   for (const g of graph.values()) {
-    const b = april.get(g.sanityId), s = sanity.get(g.sanityId)
-    if (!b || !s || s._updatedAt !== b._updatedAt || b._updatedAt !== g.sanityUpdatedAt) continue
+    const s = sanity.get(g.sanityId), b = base.get(g.sanityId)
+    if (!s) continue
     for (const f of EVENT_FIELDS) {
+      const stamp = baselineSha(g, f, b, l)
+      if (stamp === undefined || sha(f.fromSanity(s, l)) !== stamp) continue   // no baseline, or Sanity changed
       const c = (checks[f.name] ??= { agree: 0, total: 0, samples: [] })
       c.total++
-      if (f.fromGraph(g) === f.fromSanity(b)) c.agree++
-      else if (c.samples.length < 5) c.samples.push({ slug: g.slug, graph: f.fromGraph(g).slice(0, 200), sanity: f.fromSanity(b).slice(0, 200) })
+      if (sha(f.fromGraph(g)) === stamp) c.agree++
+      else if (c.samples.length < 5) c.samples.push({ slug: g.slug, graph: f.fromGraph(g).slice(0, 200), sanity: f.fromSanity(s, l).slice(0, 200) })
     }
   }
   return checks
@@ -165,13 +200,15 @@ export async function fetchGraphEvents(): Promise<Map<string, GraphEvent>> {
              [(e)-[:TO]->(x)              | x.sanityId] AS locationTo,
              [(e)-[:FROM_STATION]->(x)    | x.sanityId] AS stationFrom,
              [(e)-[:TO_STATION]->(x)      | x.sanityId] AS stationTo,
-             [(p:Person)-[:PARTICIPATED_IN|INVOLVED_IN]->(e) | p.sanityId] AS people,
+             [(p:Person)-[r:PARTICIPATED_IN|INVOLVED_IN]->(e) WHERE coalesce(r.sourceRef, '') STARTS WITH 'sanity' | p.sanityId] AS people,
              [(e)-[:USED]->(t:Transport)  | t.sanityId] AS transport,
              [(e)-[:HAS_IMAGE]->(s:Source) WHERE s.url STARTS WITH 'https://cdn.sanity.io/' | last(split(s.url, '/'))] AS images,
-             [(e)-[:REFERENCED_IN]->(s:Source) WHERE s.url IS NOT NULL | s.url] AS links,
-             head([(d:Description)-[:ABOUT]->(e) WHERE d.id = 'desc:event:' + e.sanityId | d.content]) AS description`)
+             [(e)-[r:REFERENCED_IN]->(s:Source) WHERE s.url IS NOT NULL AND coalesce(r.sourceRef, '') <> 'admin-edit' | s.url] AS links,
+             head([(d:Description)-[:ABOUT]->(e) WHERE d.id = 'desc:event:' + e.sanityId | d.content]) AS description,
+             [k IN keys(e) WHERE k ENDS WITH '_sha' | [k, e[k]]] AS stampPairs`)
     return new Map(r.records.map(rec => {
-      const g = rec.toObject() as GraphEvent
+      const { stampPairs, ...rest } = rec.toObject() as Omit<GraphEvent, 'stamps'> & { stampPairs: [string, string][] }
+      const g: GraphEvent = { ...rest, stamps: Object.fromEntries(stampPairs) }
       return [g.sanityId, g]
     }))
   } finally {

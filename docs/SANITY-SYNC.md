@@ -242,6 +242,7 @@ The scripts use `.env`, which is the **local** Neo4j. Production Aura
 | Events → Operation | `scripts/migrate-events-to-operation.ts --write` (2026-10-02) | 2 195 Incidents → Operation; 7 974 PARTICIPATED_IN |
 | Missing references | `scripts/import-missing-refs.ts --write` (2026-10-02) | 51 Location, 2 Station, 58 Transport |
 | Event re-import | `scripts/reimport-events.ts --write` (2026-10-02) | 2 196 deleted, 2 279 Operations, 8 graph additions re-attached; new baseline |
+| Event sync, first run | `scripts/sync-event.ts --write` (2026-10-02) | 2 279 events stamped; 0 changes |
 | Rank table, type | `scripts/migrate-rank-table.ts --write` (2026-10-02) | 18 people civilian → soldier (ranks set by sync, rank table or editor without the type) |
 
 Production gets the same steps in the same order, behind an explicit
@@ -292,8 +293,25 @@ For Jan: location "Sander - Skarnes bro" has the slug `60.2314300 ` and
 lat = lng = 11.81378; transport "Handley Page Halifax II" has no serial
 (slug `handley-page-halifax-ii-`).
 
-Next: `scripts/sync-event.ts` — changes after the baseline as bundles, and
-the classification (Operation → Incident).
+**Sync** — `scripts/sync-event.ts`, a plain bridge like the person sync;
+judgement (Incident candidates, trips under their named operation,
+incidents in descriptions) is left to separate analysis jobs that propose
+bundles.
+
+- Every event carries field stamps (`<field>_sha`, `scripts/lib/event-sync.ts`):
+  the value last taken in from Sanity. The first run stamped all 2 279
+  from the baseline file; from then on the graph holds its own baseline.
+- Per field Sanity changed: `clean` (graph still at the stamp) is applied
+  with the import's rule (`scripts/lib/event-rule.ts`, shared with the
+  re-import), `already` only moves the stamp, `conflict` (graph edited too)
+  is left and listed.
+- People compare on the import's links only — editor additions
+  (`sourceRef: admin-edit`) stay and don't count as a graph edit; removing
+  an imported link does. Links to targets the graph doesn't have yet are
+  left out of the comparison, so they arrive as an ordinary change later.
+- New events are created as Operations; deleted ones need
+  `--accept-delete=<slug>,…` and are blocked by graph additions.
+- Refuses to write unless calibration is 100%; backs up touched events first.
 
 ### Reshaped documents — curated mappings
 
