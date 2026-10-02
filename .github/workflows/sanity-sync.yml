@@ -4,8 +4,7 @@ name: Sanity → graph sync (daily)
 # and keeps the Aura Free instance alive — it is deleted after a period
 # without writes. The heartbeat runs whatever the syncs did.
 #
-# Scheduled workflows run from the default branch; the scripts live on
-# feature/neo4j-migration until it is merged, hence the explicit ref.
+# Scheduled workflows run from the default branch — main, the Neo4j app.
 
 on:
   schedule:
@@ -30,8 +29,6 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-        with:
-          ref: feature/neo4j-migration
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
