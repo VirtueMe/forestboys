@@ -28,6 +28,7 @@ import { requireAdmin } from '~/_lib/require-admin.ts'
 import {
   applyEntityOps,
   checkDrift,
+  checkPropDrift,
   ENTITY_ID_RE,
   indexRemove,
   manifestSetStatus,
@@ -90,9 +91,10 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env, params }
   }
 
   // 2b. Drift check.
-  const drifted = await checkDrift(env, entityId, payload.ops, expectedShas)
-  if (drifted.length) {
-    return json({ kind: 'drift', driftedBlocks: drifted }, 409)
+  const drifted      = await checkDrift(env, entityId, payload.ops, expectedShas)
+  const driftedProps = await checkPropDrift(env, entityId, payload.ops)
+  if (drifted.length || driftedProps.length) {
+    return json({ kind: 'drift', driftedBlocks: drifted, driftedProps }, 409)
   }
 
   // 3. Intent lock.

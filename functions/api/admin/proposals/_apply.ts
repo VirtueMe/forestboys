@@ -2,7 +2,8 @@
  * Apply / unwind helpers shared by accept.ts + deny.ts.
  *
  * Responsibilities:
- *   - Drift check for `modify-block` ops (recompute live sha vs `expectedSha`).
+ *   - Drift check for `modify-block` ops (recompute live sha vs `expectedSha`)
+ *     and `set-props` ops (live value vs the op's `from`).
  *   - Translate a payload's ops into Neo4j writes (per-entity transaction).
  *   - R2 conditional-write helpers (intent lock, manifest patch, index patch).
  *
@@ -25,8 +26,10 @@
 import { runCypher, runCypherTx, type Neo4jEnv } from '~/_lib/neo4j.ts'
 import { stableSha } from '~/_lib/stable-sha.ts'
 import type { BundleOriginFields, DerivedFrom } from '~/_lib/bundle-origin.ts'
+import { ENTITY_ID_RE, nodePattern, parseNodeRef } from '~/_lib/entity-ref.ts'
+import { DEMOTE_TO_INCIDENT, PROMOTE_TO_OPERATION } from '~/_lib/event-kind.ts'
 
-export const ENTITY_ID_RE = /^([A-Za-z]+):([a-z0-9-]+)$/
+export { ENTITY_ID_RE }
 export const BLOCK_PATH_RE = /^section\.([a-z0-9-]+)\.block\.([A-Za-z0-9_-]+)$/
 
 export type BundleOp =
@@ -36,6 +39,10 @@ export type BundleOp =
   | { op: 'remove-edge';  type: string; from: string; to: string }
   | { op: 'delete-entity' }
   | { op: 'obsolete-outline'; reason: string }
+  /** Scalar properties on the payload's entity; `to: null` removes it. `from` is the value the proposal expects to replace. */
+  | { op: 'set-props';    props: Record<string, { from: unknown; to: unknown }> }
+  /** Operation ↔ Incident (functions/_lib/event-kind.ts). Demotion drops ORCHESTRATED_BY and unit participation. */
+  | { op: 'set-kind';     to: 'Operation' | 'Incident' }
 
 export interface EntityPayload {
   entityId:    string
@@ -71,6 +78,33 @@ export interface PtBlock {
   _key:     string
   children: unknown[]
   [k: string]: unknown
+}
+
+export interface DriftedProp {
+  prop:     string
+  expected: unknown
+  actual:   unknown
+}
+
+const norm = (v: unknown) => JSON.stringify(v ?? null)
+
+/** Compare each set-props op's `from` against the live node. */
+export async function checkPropDrift(env: Neo4jEnv, entityId: string, ops: BundleOp[]): Promise<DriftedProp[]> {
+  const setOps = ops.filter((o): o is Extract<BundleOp, { op: 'set-props' }> => o.op === 'set-props')
+  if (!setOps.length) return []
+  const idMatch = entityId.match(ENTITY_ID_RE)
+  if (!idMatch) return []
+  const [, kind, slug] = idMatch
+  const [row] = await runCypher<{ props: Record<string, unknown> | null }>(
+    env, `OPTIONAL MATCH (n:\`${kind}\` {slug: $slug}) RETURN properties(n) AS props`, { slug })
+  const live = row?.props ?? {}
+  const drifted: DriftedProp[] = []
+  for (const op of setOps) {
+    for (const [prop, { from }] of Object.entries(op.props)) {
+      if (norm(live[prop]) !== norm(from)) drifted.push({ prop, expected: from ?? null, actual: live[prop] ?? null })
+    }
+  }
+  return drifted
 }
 
 export interface DriftedBlock {
@@ -194,17 +228,16 @@ export async function applyEntityOps(
         }
         if (op.edges) {
           for (const edge of op.edges) {
-            const toMatch = edge.to.match(ENTITY_ID_RE)
-            if (!toMatch) {
+            const to = parseNodeRef(edge.to)
+            if (!to) {
               summary.droppedEdges.push({ type: edge.type, from: entityId, to: edge.to, reason: 'malformed target id' })
               continue
             }
-            const [, toKind, toSlug] = toMatch
             txStatements.push({
               statement:
-                `MATCH (a:\`${op.kind}\` {slug: $fromSlug}), (b:\`${toKind}\` {slug: $toSlug})
+                `MATCH (a:\`${op.kind}\` {slug: $fromSlug}), ${nodePattern('b', to.kind, 'toKey')}
                  CREATE (a)-[r:\`${edge.type}\`]->(b) SET r = $props`,
-              parameters: { fromSlug: op.slug, toSlug, props: edge.props ?? {} },
+              parameters: { fromSlug: op.slug, toKey: to.key, props: edge.props ?? {} },
             })
           }
         }
@@ -212,31 +245,27 @@ export async function applyEntityOps(
         break
       }
       case 'add-edge': {
-        const fromMatch = op.from.match(ENTITY_ID_RE)
-        const toMatch   = op.to.match(ENTITY_ID_RE)
-        if (!fromMatch || !toMatch) throw new Error(`add-edge: malformed from/to (${op.from}, ${op.to})`)
-        const [, fromKind, fromSlug] = fromMatch
-        const [, toKind,   toSlug]   = toMatch
+        const from = parseNodeRef(op.from)
+        const to   = parseNodeRef(op.to)
+        if (!from || !to) throw new Error(`add-edge: malformed from/to (${op.from}, ${op.to})`)
         txStatements.push({
           statement:
-            `MATCH (a:\`${fromKind}\` {slug: $fromSlug}), (b:\`${toKind}\` {slug: $toSlug})
+            `MATCH ${nodePattern('a', from.kind, 'fromKey')}, ${nodePattern('b', to.kind, 'toKey')}
              MERGE (a)-[r:\`${op.type}\`]->(b) SET r += $props`,
-          parameters: { fromSlug, toSlug, props: op.props ?? {} },
+          parameters: { fromKey: from.key, toKey: to.key, props: op.props ?? {} },
         })
         summary.appliedOps.push(`+${op.type} ${op.from} → ${op.to}`)
         break
       }
       case 'remove-edge': {
-        const fromMatch = op.from.match(ENTITY_ID_RE)
-        const toMatch   = op.to.match(ENTITY_ID_RE)
-        if (!fromMatch || !toMatch) throw new Error(`remove-edge: malformed from/to (${op.from}, ${op.to})`)
-        const [, fromKind, fromSlug] = fromMatch
-        const [, toKind,   toSlug]   = toMatch
+        const from = parseNodeRef(op.from)
+        const to   = parseNodeRef(op.to)
+        if (!from || !to) throw new Error(`remove-edge: malformed from/to (${op.from}, ${op.to})`)
         txStatements.push({
           statement:
-            `MATCH (a:\`${fromKind}\` {slug: $fromSlug})-[r:\`${op.type}\`]->(b:\`${toKind}\` {slug: $toSlug})
+            `MATCH ${nodePattern('a', from.kind, 'fromKey')}-[r:\`${op.type}\`]->${nodePattern('b', to.kind, 'toKey')}
              DELETE r`,
-          parameters: { fromSlug, toSlug },
+          parameters: { fromKey: from.key, toKey: to.key },
         })
         summary.appliedOps.push(`-${op.type} ${op.from} → ${op.to}`)
         break
@@ -257,11 +286,25 @@ export async function applyEntityOps(
         summary.appliedOps.push(`archive ${entityId}`)
         break
       }
+      case 'set-props': {
+        const set = Object.fromEntries(Object.entries(op.props).map(([k, v]) => [k, v.to ?? null]))
+        txStatements.push({
+          // A null in `SET n += map` removes that property.
+          statement: `MATCH (n:\`${kind}\` {slug: $slug}) SET n += $set`,
+          parameters: { slug, set },
+        })
+        summary.appliedOps.push(`set ${Object.keys(set).join(', ')} on ${entityId}`)
+        break
+      }
       case 'modify-block':
-        // Handled below — separate round-trip per op.
+      case 'set-kind':
+        // Handled below — modify-block per op; set-kind last, as it relabels the entity.
         break
     }
   }
+
+  const setKind = payload.ops.find((o): o is Extract<BundleOp, { op: 'set-kind' }> => o.op === 'set-kind')
+  if (setKind && kind !== 'Operation' && kind !== 'Incident') throw new Error(`set-kind: ${entityId} is not an Operation/Incident`)
 
   // Run the batched non-modify-block ops as one transaction.
   if (txStatements.length) {
@@ -273,6 +316,15 @@ export async function applyEntityOps(
     if (op.op !== 'modify-block') continue
     await applyModifyBlock(env, kind, slug, op, bundleId, acceptedAt)
     summary.appliedOps.push(`modify ${op.blockPath}`)
+  }
+
+  // Relabel last — every op above matches the entity by its current label.
+  if (setKind && setKind.to !== kind) {
+    await runCypherTx(env, [{
+      statement:  setKind.to === 'Incident' ? DEMOTE_TO_INCIDENT : PROMOTE_TO_OPERATION,
+      parameters: { slugs: [slug] },
+    }])
+    summary.appliedOps.push(`kind ${kind} → ${setKind.to}`)
   }
 
   return summary

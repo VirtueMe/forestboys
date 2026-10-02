@@ -129,6 +129,7 @@ const bundles = useEntityBundles({
   isAdmin,
   realtimeOutlineId: outlineSlug,
 })
+bundles.focusOnHash(mode)
 const { openBundles, currentBundle, newerBundle, olderBundle, onBundleNavigate, onBundleDeleted, loadOpenBundles, generationPending } = bundles
 
 // Surface the server-side pending-generation marker as the bot-running flag.

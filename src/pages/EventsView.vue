@@ -112,7 +112,7 @@
 <script setup lang="ts">
 import { ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue'
 import { useRoute, useRouter, RouterLink, onBeforeRouteUpdate } from 'vue-router'
-import { useEventsContext } from '../composables/useEventsContext.ts'
+import { eventHash, useEventsContext } from '../composables/useEventsContext.ts'
 import EventPanel from '../components/EventPanel.vue'
 import AppModal   from '../components/AppModal.vue'
 import DatePanel  from '../components/DatePanel.vue'
@@ -167,7 +167,7 @@ function mountTimeline(evts: IdbEvent[]) {
   if (!evts.length) return
 
   const slugVal   = (route.params.slug as string | undefined) ?? ''
-  const hashVal   = route.hash?.slice(1) ?? ''
+  const hashVal   = eventHash(route.hash)
   const startSlug = hashVal || slugVal
   const startAtSlide = Math.max(0, startSlug ? evts.findIndex(e => e.slug === startSlug) : 0)
 
@@ -198,7 +198,7 @@ function mountTimeline(evts: IdbEvent[]) {
 
 watch(() => route.hash, (hash) => {
   if (!tlInstance) return
-  const slug   = hash?.slice(1) ?? ''
+  const slug   = eventHash(hash)
   const target = slug || ((route.params.slug as string | undefined) ?? '')
   if (!target) return
   externalChange = true

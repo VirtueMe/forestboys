@@ -83,6 +83,7 @@ const bundlesPanel = useEntityBundles({
   slug:    transportSlug,
   isAdmin: isAdminTransport,
 })
+bundlesPanel.focusOnHash(mode)
 
 function onSectionsSaved(sections: Section[]) {
   savedSections.value = sections

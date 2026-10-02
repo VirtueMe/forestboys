@@ -204,6 +204,7 @@ const bundlesPanel = useEntityBundles({
 })
 
 const mode = ref<AdminViewMode>('preview')
+bundlesPanel.focusOnHash(mode)
 
 const relationsData = computed<EventRelationsData>(() => ({
   person:       { entries: personEntries.value,        targets: personTargets.value        },

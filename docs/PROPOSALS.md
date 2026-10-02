@@ -294,7 +294,31 @@ filtered from the review UI and recoverable in `bundles/<bundleId>/drifted/`.
   "op":     "obsolete-outline",
   "reason": "fully absorbed into the operation node and 3 person nodes"
 }
+
+// Scalar properties on the payload's entity (sync bundles). `to: null`
+// removes the property. At accept, each `from` is compared with the live
+// value; a mismatch refuses the entity as drift (`driftedProps`) instead
+// of overwriting a newer edit. slug / sanityId / id are not settable.
+{
+  "op":    "set-props",
+  "props": { "codeName": { "from": "AM 468 Reeve", "to": "AM 468 BRIDLE XV 2 Reeve" },
+             "date":     { "from": "1945-03-24",   "to": "1945-03-25" } }
+}
+
+// Operation ↔ Incident, via functions/_lib/event-kind.ts. Applied after
+// every other op of the entity (they match it by its current label).
+// Demotion drops ORCHESTRATED_BY and unit participation — the op summary
+// says so.
+{
+  "op": "set-kind",
+  "to": "Incident"
+}
 ```
+
+Edge endpoints (`add-edge` / `remove-edge` `from`/`to`, `create-entity`
+`edges[].to`) are `<Kind>:<slug>`, or `Source:<id>` — Sources are keyed by
+`id`, which may contain colons (`Source:img:sanity:image-…`).
+`functions/_lib/entity-ref.ts`.
 
 Per-entity payloads can mix multiple ops — e.g. an existing Person can
 have both `modify-block` and `add-edge` ops in the same bundle. Apply
@@ -352,6 +376,8 @@ For each op in the entity's payload:
 | `remove-edge`       | Filter from outbound edges, tag the matching live edge as `pendingRemoval: true`.        |
 | `delete-entity`     | Return live state with `pendingDelete: true`.                                            |
 | `obsolete-outline`  | (only on the outline entity) return live state with `pendingArchive: true`.              |
+| `set-props`         | Live state with the new values (event preview: name and date).                           |
+| `set-kind`          | Live state shown as the new kind.                                                        |
 
 For every edge in the merged result, resolve the target against the
 live graph + the bundle's other entity creations:

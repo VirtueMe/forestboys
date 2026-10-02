@@ -59,11 +59,27 @@ export function useProposalEventData(bundleId: string, entityId: string) {
       } else {
         await live.loadEvent(slug.value)
         applyModifyBlockOps(payload, live.savedSections.value)
+        applyScalarOps(payload)
       }
     } catch (e) {
       _proposal.value.error = (e as Error).message
     } finally {
       _proposal.value.loading = false
+    }
+  }
+
+  /** set-props (name, date) and set-kind on the previewed event — enough to see what changes. */
+  function applyScalarOps(payload: EntityPayload): void {
+    const ev = live.event.value
+    if (!ev) return
+    for (const op of payload.ops) {
+      if (op.op === 'set-props') {
+        for (const [prop, { to }] of Object.entries(op.props)) {
+          if (prop === 'codeName' || prop === 'title') ev.canonicalName = typeof to === 'string' ? to : ev.canonicalName
+          if (prop === 'date') ev.date = typeof to === 'string' ? to : null
+        }
+      }
+      if (op.op === 'set-kind') ev.kind = op.to === 'Incident' ? 'incident' : 'operation'
     }
   }
 

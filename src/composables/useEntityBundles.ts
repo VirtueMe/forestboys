@@ -14,6 +14,7 @@
 import { ref, computed, onUnmounted, watch, type Ref, type ComputedRef } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { authFetch } from './useAuth.ts'
+import type { AdminViewMode } from '../components/AdminViewTabs.vue'
 
 export interface OpenBundle {
   bundleId:  string
@@ -125,7 +126,18 @@ export function useEntityBundles(opts: EntityBundlesOptions) {
     { immediate: true },
   )
 
+  /** Open the proposals tab when the URL hash (#proposal=<bundleId>) names one of
+   *  this entity's open bundles — a shared link lands on the proposal, not the preview. */
+  function focusOnHash(mode: Ref<AdminViewMode>): void {
+    watch(
+      () => [viewingBundleId.value, openBundles.value] as const,
+      ([id, open]) => { if (id && open.some((b) => b.bundleId === id)) mode.value = 'proposals' },
+      { immediate: true },
+    )
+  }
+
   return {
+    focusOnHash,
     openBundles,
     viewingBundleId,
     generationPending,

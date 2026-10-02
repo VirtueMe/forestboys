@@ -36,6 +36,13 @@ const DISTRICT_COLORS: Record<string, string> = {
 
 // ─────────────────────────────────────────────────────────────────────────────
 
+/** The event slug in `#<slug>`. A `key=value` hash (`#proposal=<bundleId>`) belongs to
+ *  someone else — the proposal panel — and is not an event. */
+export function eventHash(hash: string | undefined): string {
+  const h = hash?.slice(1) ?? ''
+  return h.includes('=') ? '' : h
+}
+
 export function useEventsContext() {
   const route  = useRoute()
   const router = useRouter()
@@ -62,7 +69,7 @@ export function useEventsContext() {
   })
 
   const hashEvent = computed<IdbEvent | null>(() => {
-    const hash = route.hash?.slice(1) ?? ''
+    const hash = eventHash(route.hash)
     return hash ? (events.value.find(e => e.slug === hash) ?? null) : null
   })
 
@@ -241,7 +248,7 @@ export function useEventsContext() {
   // ── Timeline data builder ─────────────────────────────────────────────────
   function buildTimelineData(evts: IdbEvent[]): Record<string, unknown> {
     const slugVal = (route.params.slug as string | undefined) ?? ''
-    const hashVal = route.hash?.slice(1) ?? ''
+    const hashVal = eventHash(route.hash)
     const data: Record<string, unknown> = {
       events: evts.map((e, i) => {
         const [year, month, day] = (e.date ?? '').split('-')

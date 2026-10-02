@@ -254,8 +254,10 @@ async function onAccept(entityId: string) {
   try {
     await bundle.accept(entityId, {})
   } catch (e) {
-    const err = e as Error & { driftedBlocks?: unknown[] }
-    if (err.driftedBlocks?.length) {
+    const err = e as Error & { driftedBlocks?: unknown[]; driftedProps?: { prop: string }[] }
+    if (err.driftedProps?.length) {
+      actionError.value[entityId] = `Endret siden forslaget ble laget: ${err.driftedProps.map(d => d.prop).join(', ')} — forslaget er ikke brukt.`
+    } else if (err.driftedBlocks?.length) {
       actionError.value[entityId] = `Drift på ${err.driftedBlocks.length} blokk(er) — last siden på nytt før du godkjenner.`
     } else {
       actionError.value[entityId] = err.message
@@ -403,6 +405,8 @@ async function onDeny(entityId: string) {
 }
 
 .entity-list { display: flex; flex-direction: column; gap: var(--space-md); }
+/* Line the heading up with the text inside the cards below it. */
+.entity-list > .section-heading { padding: 0 var(--space-md); margin: 0; }
 
 .entity-card {
   padding: var(--space-md);

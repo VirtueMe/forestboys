@@ -29,6 +29,7 @@ import {
   bundleChannel, isOutlineBundle, sourceIndexKey, validateDerivedFrom, validateOrigin,
   type BundleOriginFields, type DerivedFrom,
 } from '~/_lib/bundle-origin.ts'
+import { ENTITY_ID_RE, isNodeRef, keyProp, parseNodeRef } from '~/_lib/entity-ref.ts'
 
 interface Env {
   PROPOSALS:         R2Bucket
@@ -50,10 +51,12 @@ const ENTITY_KINDS = new Set([
 ])
 const OP_TYPES = new Set([
   'create-entity', 'modify-block', 'add-edge', 'remove-edge',
-  'delete-entity', 'obsolete-outline',
+  'delete-entity', 'obsolete-outline', 'set-props', 'set-kind',
 ])
 const SLUG_RE        = /^[a-z0-9-]+$/
-const ENTITY_ID_RE   = /^([A-Za-z]+):([a-z0-9-]+)$/
+const PROP_NAME_RE   = /^[A-Za-z][A-Za-z0-9_]*$/
+/** Never set through set-props: identity and provenance the sync owns. */
+const PROTECTED_PROPS = new Set(['slug', 'sanityId', 'id'])
 const BLOCK_PATH_RE  = /^section\.[a-z0-9-]+\.block\.[A-Za-z0-9_-]+$/
 const BUNDLE_ID_RE   = /^bundle:[a-z0-9-]+:[0-9TZ:.-]+$/
 
@@ -91,6 +94,8 @@ type BundleOp =
   | { op: 'remove-edge';  type: string; from: string; to: string }
   | { op: 'delete-entity' }
   | { op: 'obsolete-outline'; reason: string }
+  | { op: 'set-props';        props: Record<string, { from: unknown; to: unknown }> }
+  | { op: 'set-kind';         to: 'Operation' | 'Incident' }
 
 interface EntityPayload {
   entityId:    string
@@ -315,14 +320,33 @@ function validateOp(eid: string, op: Record<string, unknown>): string | null {
     case 'add-edge':
     case 'remove-edge': {
       if (typeof op.type !== 'string' || !op.type)                                  return `${eid} ${op.op}: type required`
-      if (typeof op.from !== 'string' || !ENTITY_ID_RE.test(op.from))               return `${eid} ${op.op}: from must be a valid entityId`
-      if (typeof op.to   !== 'string' || !ENTITY_ID_RE.test(op.to))                 return `${eid} ${op.op}: to must be a valid entityId`
+      if (!isNodeRef(op.from))                                                      return `${eid} ${op.op}: from must be <Kind>:<slug> or Source:<id>`
+      if (!isNodeRef(op.to))                                                        return `${eid} ${op.op}: to must be <Kind>:<slug> or Source:<id>`
       // For add-edge, the target must resolve. v1: we accept "live entity" optimistically — only check that
       // edges to entities-being-created-elsewhere-in-this-bundle do resolve (caught by pass-1 createdEntityIds).
       // Live-entity existence is validated at apply time.
       return null
     }
     case 'delete-entity':     return null
+    case 'set-props': {
+      const props = op.props as Record<string, unknown> | undefined
+      if (!props || typeof props !== 'object' || !Object.keys(props).length) return `${eid} set-props: props must be a non-empty object`
+      for (const [name, change] of Object.entries(props)) {
+        if (!PROP_NAME_RE.test(name) || PROTECTED_PROPS.has(name)) return `${eid} set-props: property "${name}" not allowed`
+        const c = change as Record<string, unknown> | null
+        if (!c || typeof c !== 'object' || !('from' in c) || !('to' in c)) return `${eid} set-props: ${name} needs {from, to}`
+        const scalar = (v: unknown) => v === null || ['string', 'number', 'boolean'].includes(typeof v)
+        if (!scalar(c.from) || !scalar(c.to)) return `${eid} set-props: ${name} from/to must be scalars or null`
+      }
+      return null
+    }
+    case 'set-kind': {
+      const kind = eid.match(ENTITY_ID_RE)?.[1]
+      if (kind !== 'Operation' && kind !== 'Incident')      return `${eid} set-kind: only valid on Operation/Incident entities`
+      if (op.to !== 'Operation' && op.to !== 'Incident')    return `${eid} set-kind: to must be "Operation" or "Incident"`
+      if (op.to === kind)                                    return `${eid} set-kind: already ${kind}`
+      return null
+    }
     case 'obsolete-outline': {
       if (typeof op.reason !== 'string' || !op.reason) return `${eid} obsolete-outline: reason required`
       const idMatch = eid.match(ENTITY_ID_RE)
@@ -336,7 +360,7 @@ function validateOp(eid: string, op: Record<string, unknown>): string | null {
 function validateEdge(eid: string, edge: Record<string, unknown>): string | null {
   if (!edge || typeof edge !== 'object')                              return `${eid} create-entity: edge must be object`
   if (typeof edge.type !== 'string' || !edge.type)                    return `${eid} create-entity: edge.type required`
-  if (typeof edge.to !== 'string' || !ENTITY_ID_RE.test(edge.to))     return `${eid} create-entity: edge.to must be a valid entityId`
+  if (!isNodeRef(edge.to))                                             return `${eid} create-entity: edge.to must be <Kind>:<slug> or Source:<id>`
   // v1: don't enforce that edge.to resolves — apply-time check will catch.
   return null
 }
@@ -349,7 +373,18 @@ function summarizeOp(op: BundleOp): string {
     case 'remove-edge':      return `-${op.type} → ${op.to}`
     case 'delete-entity':    return 'delete'
     case 'obsolete-outline': return 'archive'
+    case 'set-props':        return Object.entries(op.props)
+      .map(([k, { from, to }]) => `${k}: ${fmt(from)} → ${fmt(to)}`).join('; ')
+    case 'set-kind':         return op.to === 'Incident'
+      ? 'kind → Incident (drops ORCHESTRATED_BY and unit participation)'
+      : 'kind → Operation'
   }
+}
+
+function fmt(v: unknown): string {
+  if (v === null || v === undefined || v === '') return '∅'
+  const s = typeof v === 'string' ? v : JSON.stringify(v)
+  return s.length > 60 ? `«${s.slice(0, 57)}…»` : `«${s}»`
 }
 
 async function writeBundle(env: Env, v: ValidatedBundle): Promise<void> {
@@ -500,23 +535,24 @@ async function resolveBundleRefs(env: Env, v: ValidatedBundle): Promise<RefScan>
   const toCheck = [...targets].filter((id) => !created.has(id))
   if (!toCheck.length) return { unresolved: [] }
 
-  // Group by kind for batched Cypher.
+  // Group by kind for batched Cypher. Sources are keyed by id, the rest by slug.
   const byKind: Record<string, string[]> = {}
   for (const id of toCheck) {
-    const m = id.match(ENTITY_ID_RE)
-    if (!m || !ENTITY_KINDS.has(m[1])) continue
-    ;(byKind[m[1]] ||= []).push(m[2])
+    const ref = parseNodeRef(id)
+    if (!ref || (ref.kind !== 'Source' && !ENTITY_KINDS.has(ref.kind))) continue
+    ;(byKind[ref.kind] ||= []).push(ref.key)
   }
 
   const found = new Set<string>()
-  for (const [kind, slugs] of Object.entries(byKind)) {
+  for (const [kind, keys] of Object.entries(byKind)) {
+    const prop = keyProp(kind)
     try {
-      const rows = await runCypher<{ slug: string }>(
+      const rows = await runCypher<{ key: string }>(
         env,
-        `MATCH (n:\`${kind}\`) WHERE n.slug IN $slugs RETURN n.slug AS slug`,
-        { slugs },
+        `MATCH (n:\`${kind}\`) WHERE n.${prop} IN $keys RETURN n.${prop} AS key`,
+        { keys },
       )
-      for (const r of rows) found.add(`${kind}:${r.slug}`)
+      for (const r of rows) found.add(`${kind}:${r.key}`)
     } catch (e) {
       console.error(`resolveBundleRefs ${kind}:`, (e as Error).message)
     }

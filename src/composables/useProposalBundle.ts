@@ -24,6 +24,11 @@ export type BundleOp =
   | { op: 'remove-edge';  type: string; from: string; to: string }
   | { op: 'delete-entity' }
   | { op: 'obsolete-outline'; reason: string }
+  | { op: 'set-props';    props: Record<string, { from: unknown; to: unknown }> }
+  | { op: 'set-kind';     to: 'Operation' | 'Incident' }
+
+/** A set-props field whose live value no longer matches the proposal's `from`. */
+export interface DriftedProp { prop: string; expected: unknown; actual: unknown }
 
 export interface PtBlock {
   _type:    'block'
@@ -161,9 +166,10 @@ export function useProposalBundle(bundleId: string) {
       },
     )
     if (!res.ok) {
-      const body = await res.json().catch(() => ({})) as { kind?: string; driftedBlocks?: DriftConflict[] }
-      const err = new Error(body.kind ?? `HTTP ${res.status}`) as Error & { driftedBlocks?: DriftConflict[] }
+      const body = await res.json().catch(() => ({})) as { kind?: string; driftedBlocks?: DriftConflict[]; driftedProps?: DriftedProp[] }
+      const err = new Error(body.kind ?? `HTTP ${res.status}`) as Error & { driftedBlocks?: DriftConflict[]; driftedProps?: DriftedProp[] }
       if (body.driftedBlocks) err.driftedBlocks = body.driftedBlocks
+      if (body.driftedProps)  err.driftedProps  = body.driftedProps
       throw err
     }
     const out = await res.json() as AcceptResponse
