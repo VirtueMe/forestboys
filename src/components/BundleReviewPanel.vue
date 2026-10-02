@@ -7,7 +7,12 @@
       <header class="manifest-head">
         <dl class="manifest-fields">
           <dt>Bundle</dt><dd><code>{{ manifest.bundleId }}</code></dd>
-          <dt>Outline</dt><dd><code>{{ manifest.outlineId }}</code> (rev <code>{{ manifest.outlineRev.slice(0, 8) }}</code>)</dd>
+          <template v-if="manifest.outlineId">
+            <dt>Outline</dt><dd><code>{{ manifest.outlineId }}</code> (rev <code>{{ manifest.outlineRev?.slice(0, 8) }}</code>)</dd>
+          </template>
+          <template v-else-if="manifest.origin">
+            <dt>Kilde</dt><dd>Sanity <code>{{ manifest.origin.sanityType }}</code>, kjørt {{ manifest.origin.runAt.slice(0, 16).replace('T', ' ') }}</dd>
+          </template>
           <dt>Modell</dt><dd>{{ manifest.model }}</dd>
           <dt>Generert</dt><dd>{{ manifest.createdAt }}</dd>
         </dl>

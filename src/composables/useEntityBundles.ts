@@ -22,8 +22,9 @@ export interface OpenBundle {
 }
 
 export interface EntityBundlesOptions {
-  /** Capitalized kind, e.g. "Person", "Outline". */
-  kind:               string
+  /** Capitalized kind, e.g. "Person", "Outline". A ref when it is only known
+   *  after load (an event is an Operation or an Incident) — refetches on change. */
+  kind:               string | Ref<string | null | undefined>
   /** Reactive slug ref — refetch fires when this changes. */
   slug:               Ref<string | null | undefined>
   /** Reactive admin flag — gate fetch + SSE on it. */
@@ -77,7 +78,9 @@ export function useEntityBundles(opts: EntityBundlesOptions) {
 
   async function loadOpenBundles(slug: string): Promise<void> {
     try {
-      const res = await authFetch(`/api/admin/${opts.kind}/${slug}/proposals`)
+      const kind = typeof opts.kind === 'string' ? opts.kind : opts.kind.value
+      if (!kind) return
+      const res = await authFetch(`/api/admin/${kind}/${slug}/proposals`)
       if (!res.ok) return
       const body = await res.json() as { openBundles?: OpenBundle[]; generationPending?: boolean }
       openBundles.value       = body.openBundles ?? []
@@ -96,7 +99,7 @@ export function useEntityBundles(opts: EntityBundlesOptions) {
   let eventSource: EventSource | null = null
   function openEventStream(outlineId: string): void {
     if (eventSource) eventSource.close()
-    eventSource = new EventSource(`/api/proposals/events?outlineId=${encodeURIComponent(outlineId)}`)
+    eventSource = new EventSource(`/api/proposals/events?channel=${encodeURIComponent(outlineId)}`)
     eventSource.onmessage = () => {
       if (opts.slug.value) void loadOpenBundles(opts.slug.value)
     }
@@ -112,10 +115,10 @@ export function useEntityBundles(opts: EntityBundlesOptions) {
   }
   onUnmounted(() => { eventSource?.close(); eventSource = null })
 
-  // Refetch on slug + admin changes.
+  // Refetch on kind + slug + admin changes.
   watch(
-    () => [opts.slug.value, opts.isAdmin.value] as const,
-    ([s, admin]) => {
+    () => [typeof opts.kind === 'string' ? opts.kind : opts.kind.value, opts.slug.value, opts.isAdmin.value] as const,
+    ([, s, admin]) => {
       if (admin && typeof s === 'string' && s) void loadOpenBundles(s)
       else openBundles.value = []
     },

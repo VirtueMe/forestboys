@@ -9,8 +9,11 @@
  *   3. Compute current Neo4j SHA for every modify-block op (NOT YET — see v1
  *      limitation below).
  *   4. Write the manifest + every per-entity payload to R2.
- *   5. Patch by-entity and by-outline indices with If-Match retry.
- *   6. Comment on the source GitHub issue + close it.
+ *   5. Patch by-entity and source (by-outline / by-source) indices with If-Match retry.
+ *   6. Comment on the source GitHub issue + close it (outline bundles).
+ *
+ * Origin: an outline (Claude, `outlineId` + `outlineRev`) or the Sanity sync
+ * (`origin: {type: 'sanity', …}`) — functions/_lib/bundle-origin.ts.
  *
  * Auth: HMAC-SHA256 on raw body, header `X-Hub-Signature-256`.
  * NOT admin-session-gated.
@@ -21,6 +24,11 @@
  * the bot fetches current state before generating, expectedSha will land
  * here pre-populated.
  */
+
+import {
+  bundleChannel, isOutlineBundle, sourceIndexKey, validateDerivedFrom, validateOrigin,
+  type BundleOriginFields, type DerivedFrom,
+} from '~/_lib/bundle-origin.ts'
 
 interface Env {
   PROPOSALS:         R2Bucket
@@ -55,10 +63,8 @@ interface BundleEntityRef {
   opSummary: string[]
 }
 
-interface BundleManifest {
+interface BundleManifest extends BundleOriginFields {
   bundleId:         string
-  outlineId:        string
-  outlineRev:       string
   summary:          string
   createdAt:        string
   model:            string
@@ -89,15 +95,16 @@ type BundleOp =
 interface EntityPayload {
   entityId:    string
   ops:         BundleOp[]
-  derivedFrom: { outlineId: string; sectionPath?: string; outlineRev: string }
+  derivedFrom: DerivedFrom
   source:      string
   generatedAt: string
 }
 
 interface IngestBody {
   bundleId:    unknown
-  outlineId:   unknown
-  outlineRev:  unknown
+  outlineId?:  unknown
+  outlineRev?: unknown
+  origin?:     unknown
   summary:     unknown
   createdAt:   unknown
   model:       unknown
@@ -140,9 +147,11 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
 
     // Clear the pending-generation marker for this outline. Parents and
     // children alike count as "this outline finished a generation".
-    await env.PROPOSALS.delete(`proposals/pending-generations/${validated.manifest.outlineId}.json`)
+    if (isOutlineBundle(validated.manifest)) {
+      await env.PROPOSALS.delete(`proposals/pending-generations/${validated.manifest.outlineId}.json`)
+    }
 
-    await broadcast(env, validated.manifest.outlineId, {
+    await broadcast(env, bundleChannel(validated.manifest), {
       kind:     'bundle-created',
       bundleId: validated.manifest.bundleId,
     })
@@ -161,9 +170,10 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
       for (const id of refs.unresolved) {
         await appendWatcher(env, id, validated.manifest.bundleId)
       }
-      // Fire-and-forget resolve dispatches. Failure leaves the bundle
-      // blocked — Jan can re-trigger from the UI later.
-      void dispatchResolves(env, validated.manifest, refs.unresolved).catch((e) => {
+      // Fire-and-forget resolve dispatches (outline bundles — the resolver
+      // generates from the outline). Failure leaves the bundle blocked —
+      // Jan can re-trigger from the UI later.
+      if (isOutlineBundle(validated.manifest)) void dispatchResolves(env, validated.manifest, refs.unresolved).catch((e) => {
         console.error('resolve dispatch failed:', (e as Error).message)
       })
     }
@@ -193,10 +203,13 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
 
 function validateBundle(b: IngestBody): ValidatedBundle | string {
   if (typeof b.bundleId !== 'string' || !BUNDLE_ID_RE.test(b.bundleId)) {
-    return 'bundleId must match `bundle:<outlineId>:<isoTimestamp>`'
+    return 'bundleId must match `bundle:<channel>:<isoTimestamp>`'
   }
-  if (typeof b.outlineId !== 'string' || !SLUG_RE.test(b.outlineId)) return 'outlineId must match /^[a-z0-9-]+$/'
-  if (typeof b.outlineRev !== 'string' || !b.outlineRev)             return 'outlineRev required'
+  const origin = validateOrigin(b as unknown as Record<string, unknown>)
+  if (typeof origin === 'string') return origin
+  if (!b.bundleId.startsWith(`bundle:${bundleChannel(origin)}:`)) {
+    return `bundleId must start with bundle:${bundleChannel(origin)}:`
+  }
   if (typeof b.summary    !== 'string' || !b.summary)                return 'summary required'
   if (typeof b.createdAt  !== 'string' || !b.createdAt)              return 'createdAt required (ISO-8601)'
   if (typeof b.model      !== 'string' || !b.model)                  return 'model required'
@@ -236,16 +249,15 @@ function validateBundle(b: IngestBody): ValidatedBundle | string {
       opSummary.push(summarizeOp(op as BundleOp))
     }
 
-    const df = ent.derivedFrom as Record<string, unknown> | undefined
-    if (!df || typeof df.outlineId !== 'string' || typeof df.outlineRev !== 'string') {
-      return `entities[${eid}].derivedFrom must include outlineId + outlineRev`
-    }
+    const df = validateDerivedFrom(origin, ent.derivedFrom)
+    if (typeof df === 'string') return `entities[${eid}].${df}`
 
     payloads.set(eid, {
       entityId:    eid,
       ops:         validatedOps,
-      derivedFrom: { outlineId: df.outlineId, outlineRev: df.outlineRev, sectionPath: typeof df.sectionPath === 'string' ? df.sectionPath : undefined },
-      source:      typeof ent.source === 'string' ? ent.source : `claude:outline:${df.outlineId}`,
+      derivedFrom: df,
+      source:      typeof ent.source === 'string' ? ent.source
+                 : 'outlineId' in df ? `claude:outline:${df.outlineId}` : `sanity:${df.sanityId}`,
       generatedAt: typeof ent.generatedAt === 'string' ? ent.generatedAt : b.createdAt,
     })
     entityRefs.push({ entityId: eid, status: 'pending', opSummary })
@@ -254,8 +266,7 @@ function validateBundle(b: IngestBody): ValidatedBundle | string {
   return {
     manifest: {
       bundleId:   b.bundleId,
-      outlineId:  b.outlineId,
-      outlineRev: b.outlineRev,
+      ...origin,
       summary:    b.summary,
       createdAt:  b.createdAt,
       model:      b.model,
@@ -365,8 +376,8 @@ async function writeBundle(env: Env, v: ValidatedBundle): Promise<void> {
     await appendToIndex(env, `proposals/by-entity/${entityId}/index.json`, bundleId)
   }
 
-  // 4. by-outline index
-  await appendToIndex(env, `proposals/by-outline/${v.manifest.outlineId}/index.json`, bundleId)
+  // 4. Source index (by-outline / by-source)
+  await appendToIndex(env, sourceIndexKey(v.manifest), bundleId)
 }
 
 /** Read an index (or initialize empty), add the bundleId if not present, write back. If-Match conditional. */
@@ -396,7 +407,7 @@ async function appendToIndex(env: Env, key: string, bundleId: string): Promise<v
 }
 
 async function commentAndClose(env: Env, v: ValidatedBundle): Promise<void> {
-  if (!v.issueNumber || !env.GITHUB_TOKEN || !env.GITHUB_REPO) return
+  if (!v.issueNumber || !env.GITHUB_TOKEN || !env.GITHUB_REPO || !isOutlineBundle(v.manifest)) return
 
   const reviewUrl = env.ADMIN_BASE_URL
     ? `${env.ADMIN_BASE_URL}/admin/proposals/${v.manifest.bundleId}`
@@ -634,7 +645,7 @@ async function revalidateParent(env: Env, parentBundleId: string): Promise<void>
   })
 
   if (wasBlocked && parent.status === 'pending') {
-    await broadcast(env, parent.outlineId, {
+    await broadcast(env, bundleChannel(parent), {
       kind:     'bundle-status',
       bundleId: parent.bundleId,
       status:   'pending',
@@ -642,10 +653,10 @@ async function revalidateParent(env: Env, parentBundleId: string): Promise<void>
   }
 }
 
-async function broadcast(env: Env, outlineId: string, event: Record<string, unknown>): Promise<void> {
+async function broadcast(env: Env, channel: string, event: Record<string, unknown>): Promise<void> {
   if (!env.BUNDLE_EVENTS) return
   try {
-    const id   = env.BUNDLE_EVENTS.idFromName(outlineId)
+    const id   = env.BUNDLE_EVENTS.idFromName(channel)
     const stub = env.BUNDLE_EVENTS.get(id)
     await stub.fetch('https://bundle-events/broadcast', {
       method:  'POST',

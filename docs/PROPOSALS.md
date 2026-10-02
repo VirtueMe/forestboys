@@ -142,6 +142,7 @@ proposals/bundles/<bundleId>/
 
 proposals/by-entity/<entityId>/index.json  ← which open bundles touch this entity (drives marker badge)
 proposals/by-outline/<outlineId>/index.json ← which open bundles derive from this outline
+proposals/by-source/sanity-<type>/index.json ← which open sync bundles come from this Sanity type
 
 denied-corpus/<kind>.json                  ← cross-entity denial index (suppression + learning)
 denial-analyses/<kind>/<entityId>/<ts>-<entitySlug>.json  ← Claude's structured analysis of one entity-level denial
@@ -149,8 +150,9 @@ history/<entityId>/<ts>-<eventKind>.json   ← append-only event log per entity 
 bot-history/<YYYY>/<MM>/<issueNumber>.json ← archived bot-task + bot-deny-analysis issues
 ```
 
-`<bundleId>` is `bundle:<outlineId>:<isoTimestamp>` so it's deterministic
-and human-readable in URLs. `<entityId>` keeps the `<Kind>:<slug>`
+`<bundleId>` is `bundle:<channel>:<isoTimestamp>` — the channel being the
+outline id, or `sanity-<type>` for sync bundles (see "Bundle origin") — so
+it's deterministic and human-readable in URLs. `<entityId>` keeps the `<Kind>:<slug>`
 shape used elsewhere.
 
 The **marker badge** for an entity reads
@@ -167,9 +169,27 @@ proposed changes in unrelated blocks.
 entity. One fetch tells the UI whether to render a marker badge at all,
 without doing an `R2.list()` on every page load.
 
+## Bundle origin
+
+A bundle comes from one of two places (`functions/_lib/bundle-origin.ts`):
+
+| | Outline (Claude) | Sanity sync (docs/SANITY-SYNC.md) |
+|---|---|---|
+| Manifest | `outlineId`, `outlineRev` | `origin: {type: 'sanity', sanityType, runAt}` |
+| Per entity `derivedFrom` | `{outlineId, outlineRev, sectionPath?}` | `{sanityId, sanityRev}` |
+| Channel (bundle id, live updates) | `<outlineId>` | `sanity-<type>` |
+| Source index | `by-outline/<outlineId>` | `by-source/sanity-<type>` |
+| On full accept | outline archived (`obsolete-outline`) | — |
+| GitHub issue, resolve dispatch | yes | no |
+
+Ingest takes exactly one of the two. Sync bundles use `model: 'sanity-sync'`
+and a rule version as `promptHash`. The live-update stream is
+`/api/proposals/events?channel=<channel>` (`outlineId=` still accepted).
+
 ## Bundle shape
 
-A bundle is one outline-absorption proposal. It carries a manifest +
+A bundle is one outline-absorption proposal, or one sync run's proposals
+for a Sanity type. It carries a manifest +
 per-entity payloads. Ops within an entity's payload are typed via a
 discriminator.
 

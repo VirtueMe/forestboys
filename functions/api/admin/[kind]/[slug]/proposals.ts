@@ -13,6 +13,7 @@
  */
 
 import { requireAdmin } from '~/_lib/require-admin.ts'
+import { originLabel, type BundleOriginFields } from '~/_lib/bundle-origin.ts'
 
 interface Env {
   SESSION_SECRET: string
@@ -31,10 +32,8 @@ interface BundleEntityRef {
   opSummary: string[]
 }
 
-interface BundleManifest {
+interface BundleManifest extends BundleOriginFields {
   bundleId:   string
-  outlineId:  string
-  outlineRev: string
   summary:    string
   createdAt:  string
   model:      string
@@ -48,7 +47,9 @@ interface IndexFile {
 
 interface OpenBundleEntry {
   bundleId:   string
-  outlineId:  string
+  /** "outline <slug>" / "Sanity <type>" */
+  source:     string
+  outlineId:  string | null
   summary:    string
   createdAt:  string
   status:     'pending'
@@ -126,7 +127,8 @@ async function loadOpenEntry(env: Env, bundleId: string, entityId: string): Prom
 
   return {
     bundleId,
-    outlineId:  manifest.outlineId,
+    source:     originLabel(manifest),
+    outlineId:  manifest.outlineId ?? null,
     summary:    manifest.summary,
     createdAt:  manifest.createdAt,
     status:     'pending',

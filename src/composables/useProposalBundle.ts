@@ -40,10 +40,16 @@ export interface BundleEntityRef {
 
 export type BundleStatus = 'pending' | 'blocked' | 'closed'
 
+/** Bundle origin — functions/_lib/bundle-origin.ts. */
+export interface SanityOrigin { type: 'sanity'; sanityType: string; runAt: string }
+
 export interface BundleManifest {
   bundleId:         string
-  outlineId:        string
-  outlineRev:       string
+  /** Outline bundles (Claude absorbing an outline). */
+  outlineId?:       string
+  outlineRev?:      string
+  /** Sync bundles (Sanity → graph). */
+  origin?:          SanityOrigin
   summary:          string
   createdAt:        string
   model:            string
@@ -58,7 +64,9 @@ export interface BundleManifest {
 export interface EntityPayload {
   entityId:    string
   ops:         BundleOp[]
-  derivedFrom: { outlineId: string; sectionPath?: string; outlineRev: string }
+  derivedFrom:
+    | { outlineId: string; outlineRev: string; sectionPath?: string }
+    | { sanityId: string; sanityRev: string }
   source:      string
   generatedAt: string
 }

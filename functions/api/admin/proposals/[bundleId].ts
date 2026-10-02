@@ -11,6 +11,7 @@
  */
 
 import { requireAdmin } from '~/_lib/require-admin.ts'
+import { bundleChannel, sourceIndexKey, type BundleOriginFields, type DerivedFrom } from '~/_lib/bundle-origin.ts'
 
 interface Env {
   SESSION_SECRET: string
@@ -20,10 +21,8 @@ interface Env {
 
 const BUNDLE_ID_RE = /^bundle:[a-z0-9-]+:[0-9TZ:.-]+$/
 
-interface BundleManifest {
+interface BundleManifest extends BundleOriginFields {
   bundleId:   string
-  outlineId:  string
-  outlineRev: string
   summary:    string
   createdAt:  string
   model:      string
@@ -34,7 +33,7 @@ interface BundleManifest {
 interface EntityPayload {
   entityId:    string
   ops:         unknown[]
-  derivedFrom: { outlineId: string; sectionPath?: string; outlineRev: string }
+  derivedFrom: DerivedFrom
   source:      string
   generatedAt: string
 }
@@ -49,7 +48,7 @@ export const onRequestGet: PagesFunction<Env> = async ({ request, env, params })
   // would fail BUNDLE_ID_RE without decoding.
   const bundleId = decodeURIComponent(String(params.bundleId))
   if (!BUNDLE_ID_RE.test(bundleId)) {
-    return json({ error: 'bundleId must match `bundle:<outlineId>:<isoTimestamp>`' }, 400)
+    return json({ error: 'bundleId must match `bundle:<channel>:<isoTimestamp>`' }, 400)
   }
 
   try {
@@ -78,7 +77,7 @@ export const onRequestGet: PagesFunction<Env> = async ({ request, env, params })
  * DELETE /api/admin/proposals/<bundleId> — remove a bundle entirely.
  *
  * Drops manifest + every per-entity payload, then prunes the bundleId
- * from the per-entity and by-outline indices. Intent locks under the
+ * from the per-entity and source indices. Intent locks under the
  * bundle are also removed. Used for cleanup when a bundle is stale or
  * the bot's output was bad enough that Jan wants it gone instead of
  * denying entity-by-entity.
@@ -90,7 +89,7 @@ export const onRequestDelete: PagesFunction<Env> = async ({ request, env, params
 
   const bundleId = decodeURIComponent(String(params.bundleId))
   if (!BUNDLE_ID_RE.test(bundleId)) {
-    return json({ error: 'bundleId must match `bundle:<outlineId>:<isoTimestamp>`' }, 400)
+    return json({ error: 'bundleId must match `bundle:<channel>:<isoTimestamp>`' }, 400)
   }
 
   try {
@@ -104,7 +103,7 @@ export const onRequestDelete: PagesFunction<Env> = async ({ request, env, params
     for (const ent of manifest.entities) {
       await indexRemove(env.PROPOSALS, `proposals/by-entity/${ent.entityId}/index.json`, bundleId)
     }
-    await indexRemove(env.PROPOSALS, `proposals/by-outline/${manifest.outlineId}/index.json`, bundleId)
+    await indexRemove(env.PROPOSALS, sourceIndexKey(manifest), bundleId)
 
     // Delete payloads + manifest + intent locks under the bundle prefix.
     const prefix = `proposals/bundles/${bundleId}/`
@@ -119,7 +118,7 @@ export const onRequestDelete: PagesFunction<Env> = async ({ request, env, params
 
     if (env.BUNDLE_EVENTS) {
       try {
-        const id = env.BUNDLE_EVENTS.idFromName(manifest.outlineId)
+        const id = env.BUNDLE_EVENTS.idFromName(bundleChannel(manifest))
         await env.BUNDLE_EVENTS.get(id).fetch('https://bundle-events/broadcast', {
           method:  'POST',
           headers: { 'Content-Type': 'application/json' },

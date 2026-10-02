@@ -1,7 +1,8 @@
 /**
  * GET /api/admin/proposals — list every bundle in R2.
  *
- * Lightweight summary per bundle: bundleId, outlineId, summary, status,
+ * Lightweight summary per bundle: bundleId, source label, outlineId (outline
+ * bundles), summary, status,
  * createdAt, pendingEntityCount, model. Sorted newest-first. The list
  * is bounded by R2's per-prefix scan; we list manifests under
  * proposals/bundles/<bundleId>/manifest.json and read each.
@@ -10,15 +11,15 @@
  */
 
 import { requireAdmin } from '~/_lib/require-admin.ts'
+import { originLabel, type BundleOriginFields } from '~/_lib/bundle-origin.ts'
 
 interface Env {
   SESSION_SECRET: string
   PROPOSALS:      R2Bucket
 }
 
-interface BundleManifest {
+interface BundleManifest extends BundleOriginFields {
   bundleId:    string
-  outlineId:   string
   summary:     string
   createdAt:   string
   model:       string
@@ -29,7 +30,9 @@ interface BundleManifest {
 
 interface BundleSummary {
   bundleId:           string
-  outlineId:          string
+  /** "outline <slug>" / "Sanity <type>" */
+  source:             string
+  outlineId:          string | null
   summary:            string
   model:              string
   createdAt:          string
@@ -75,7 +78,8 @@ export const onRequestGet: PagesFunction<Env> = async ({ request, env }) => {
       )
       bundles.push({
         bundleId:      m.bundleId,
-        outlineId:     m.outlineId,
+        source:        originLabel(m),
+        outlineId:     m.outlineId ?? null,
         summary:       m.summary,
         model:         m.model,
         createdAt:     m.createdAt,

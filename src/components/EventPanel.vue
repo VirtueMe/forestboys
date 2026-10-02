@@ -197,7 +197,8 @@ watch(() => props.event.slug, (slug) => { if (slug) void loadEvent(slug) }, { im
 
 const slugRef = computed(() => props.event.slug)
 const bundlesPanel = useEntityBundles({
-  kind: computed(() => neoEvent.value?.kind === 'operation' ? 'Operation' : 'Incident').value,
+  // Known only once the event has loaded — null until then, so nothing is fetched as the wrong kind.
+  kind: computed(() => neoEvent.value?.kind === 'operation' ? 'Operation' : neoEvent.value?.kind === 'incident' ? 'Incident' : null),
   slug: slugRef,
   isAdmin,
 })

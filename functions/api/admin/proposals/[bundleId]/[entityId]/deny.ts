@@ -12,7 +12,7 @@
  *   4. Append to `denied-corpus/<kind>.json`.
  *   5. Append history-log entry. (No Neo4j writes.)
  *   6. Patch manifest entity status to `denied`.
- *   7. Patch by-entity (and by-outline if bundle now closed) indices.
+ *   7. Patch by-entity (and the source index if bundle now closed) indices.
  *   8. If `reason.length >= 40`, fire-and-forget create a
  *      `bot-deny-analysis` GitHub issue. (DEFERRED — needs
  *      bot-deny-analysis workflow to land first.)
@@ -23,6 +23,7 @@
  */
 
 import { requireAdmin } from '~/_lib/require-admin.ts'
+import { sourceIndexKey } from '~/_lib/bundle-origin.ts'
 import {
   ENTITY_ID_RE,
   indexRemove,
@@ -110,7 +111,7 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env, params }
   const remainingPending = updatedManifest.entities.filter((e) => e.status === 'pending').length
   const bundleClosed     = remainingPending === 0
   if (bundleClosed) {
-    await indexRemove(env, `proposals/by-outline/${updatedManifest.outlineId}/index.json`, bundleId)
+    await indexRemove(env, sourceIndexKey(updatedManifest), bundleId)
   }
 
   // 8. TODO: bot-deny-analysis issue creation when reason.length >= REASON_BOT_GATE.

@@ -24,6 +24,7 @@
 
 import { runCypher, runCypherTx, type Neo4jEnv } from '~/_lib/neo4j.ts'
 import { stableSha } from '~/_lib/stable-sha.ts'
+import type { BundleOriginFields, DerivedFrom } from '~/_lib/bundle-origin.ts'
 
 export const ENTITY_ID_RE = /^([A-Za-z]+):([a-z0-9-]+)$/
 export const BLOCK_PATH_RE = /^section\.([a-z0-9-]+)\.block\.([A-Za-z0-9_-]+)$/
@@ -39,15 +40,13 @@ export type BundleOp =
 export interface EntityPayload {
   entityId:    string
   ops:         BundleOp[]
-  derivedFrom: { outlineId: string; sectionPath?: string; outlineRev: string }
+  derivedFrom: DerivedFrom
   source:      string
   generatedAt: string
 }
 
-export interface BundleManifest {
+export interface BundleManifest extends BundleOriginFields {
   bundleId:    string
-  outlineId:   string
-  outlineRev:  string
   summary:     string
   createdAt:   string
   model:       string

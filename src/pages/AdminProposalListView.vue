@@ -15,7 +15,7 @@
         <RouterLink :to="`/admin/proposals/${encodeURIComponent(b.bundleId)}`" class="bundle-link">
           <header class="bundle-row-head">
             <span class="bundle-status" :class="`bundle-status--${b.status}`">{{ statusLabel(b.status) }}</span>
-            <span class="bundle-outline"><code>{{ b.outlineId }}</code></span>
+            <span class="bundle-outline"><code>{{ b.outlineId ?? b.source }}</code></span>
             <span class="bundle-meta">{{ b.createdAt.slice(0, 16).replace('T', ' ') }}</span>
           </header>
           <p class="bundle-summary">{{ b.summary }}</p>
@@ -42,7 +42,9 @@ import { authFetch } from '@/composables/useAuth.ts'
 
 interface BundleSummary {
   bundleId:      string
-  outlineId:     string
+  /** "outline <slug>" / "Sanity <type>" */
+  source:        string
+  outlineId:     string | null
   summary:       string
   model:         string
   createdAt:     string

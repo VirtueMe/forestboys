@@ -24,6 +24,7 @@ import {
   type EntityPayload,
 } from '~/api/admin/proposals/_apply.ts'
 import { runCypher, type Neo4jEnv } from '~/_lib/neo4j.ts'
+import { sourceIndexKey } from '~/_lib/bundle-origin.ts'
 
 interface Env extends Neo4jEnv {
   SESSION_SECRET: string
@@ -120,7 +121,7 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env, params }
   const finalManifest = finalObj ? await finalObj.json<BundleManifest>() : manifest
   const remainingPending = finalManifest.entities.filter((e) => e.status === 'pending').length
   if (remainingPending === 0) {
-    await indexRemove(env, `proposals/by-outline/${finalManifest.outlineId}/index.json`, bundleId)
+    await indexRemove(env, sourceIndexKey(finalManifest), bundleId)
   }
 
   return json({ bundleId, results, remainingPending, bundleClosed: remainingPending === 0 })

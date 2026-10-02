@@ -14,7 +14,7 @@
  *      runs separately — see `_apply.ts` v1 limitation note).
  *   5. Append history log entry.
  *   6. Patch manifest entity status to `accepted`.
- *   7. Patch by-entity / by-outline indices.
+ *   7. Patch by-entity / source (by-outline, by-source) indices.
  *   8. Auto-archive outline if every other entity in the bundle is
  *      non-pending and the bundle includes an `obsolete-outline` op.
  *
@@ -37,6 +37,7 @@ import {
 } from '~/api/admin/proposals/_apply.ts'
 import type { Neo4jEnv } from '~/_lib/neo4j.ts'
 import { runCypher } from '~/_lib/neo4j.ts'
+import { sourceIndexKey } from '~/_lib/bundle-origin.ts'
 
 interface Env extends Neo4jEnv {
   SESSION_SECRET: string
@@ -135,14 +136,16 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env, params }
   const remainingPending = updatedManifest.entities.filter((e) => e.status === 'pending').length
   const bundleClosed     = remainingPending === 0
   if (bundleClosed) {
-    await indexRemove(env, `proposals/by-outline/${updatedManifest.outlineId}/index.json`, bundleId)
+    await indexRemove(env, sourceIndexKey(updatedManifest), bundleId)
   }
 
   // 8. Auto-archive outline if every non-Outline entity is now non-pending
   //    and the bundle carries an obsolete-outline op for this outline.
   let outlineArchived = false
   const outlineEntityId = `Outline:${updatedManifest.outlineId}`
-  const outlineEnt      = updatedManifest.entities.find((e) => e.entityId === outlineEntityId)
+  const outlineEnt      = updatedManifest.outlineId
+    ? updatedManifest.entities.find((e) => e.entityId === outlineEntityId)
+    : undefined
   const nonOutlineAllDecided = updatedManifest.entities
     .filter((e) => e.entityId !== outlineEntityId)
     .every((e) => e.status !== 'pending')
