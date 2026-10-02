@@ -13,8 +13,8 @@
  */
 
 import neo4j from 'neo4j-driver'
-import * as dotenv from 'dotenv'
-dotenv.config()
+import { loadEnv } from './lib/env.ts'
+loadEnv()
 
 const dry = process.argv.includes('--dry')
 

@@ -15,11 +15,11 @@
  */
 
 import neo4j from 'neo4j-driver'
-import * as dotenv from 'dotenv'
+import { loadEnv } from './lib/env.ts'
 import { imageSources, isImportableUrl, linkSource, sanMigRef } from './lib/person-rule.ts'
 import { API, neo4jDriver, type Doc } from './lib/person-sync.ts'
 import { fetchSanityEvents } from './lib/event-sync.ts'
-dotenv.config()
+loadEnv()
 
 const write = process.argv.includes('--write')
 

@@ -34,11 +34,11 @@
 import { writeFileSync, mkdirSync } from 'node:fs'
 import { dirname, resolve } from 'node:path'
 import neo4j from 'neo4j-driver'
-import * as dotenv from 'dotenv'
+import { loadEnv } from './lib/env.ts'
 import { neo4jDriver } from './lib/person-sync.ts'
 import { EVENT_BASELINE, fetchSanityEvents } from './lib/event-sync.ts'
 import { SINGLE, PARTICIPANT_EDGE, loadLookups, planEvent, slugOf } from './lib/event-rule.ts'
-dotenv.config()
+loadEnv()
 
 const write = process.argv.includes('--write')
 const CHUNK = 200

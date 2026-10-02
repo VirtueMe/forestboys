@@ -22,12 +22,12 @@
 
 import { writeFileSync, mkdirSync } from 'node:fs'
 import { resolve } from 'node:path'
-import * as dotenv from 'dotenv'
+import { loadEnv } from './lib/env.ts'
 import {
   FIELDS, calibrate, classify, fetchGraphPeople, fetchSanityPeople, loadApril, str,
   type FieldVerdict, type Verdict,
 } from './lib/person-sync.ts'
-dotenv.config()
+loadEnv()
 
 const OUT_DIR = resolve(process.cwd(), 'data', 'sanity-delta')
 

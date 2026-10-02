@@ -1,0 +1,62 @@
+name: Sanity → graph sync (daily)
+
+# Carries Jan's Sanity edits into the production graph (docs/SANITY-SYNC.md)
+# and keeps the Aura Free instance alive — it is deleted after a period
+# without writes. The heartbeat runs whatever the syncs did.
+#
+# Scheduled workflows run from the default branch; the scripts live on
+# feature/neo4j-migration until it is merged, hence the explicit ref.
+
+on:
+  schedule:
+    - cron: '17 3 * * *'   # 03:17 UTC daily
+  workflow_dispatch:
+
+concurrency:
+  group: sanity-sync
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    env:
+      PRODUCTION_NEO4J_URI:      ${{ secrets.PRODUCTION_NEO4J_URI }}
+      PRODUCTION_NEO4J_USERNAME: ${{ secrets.PRODUCTION_NEO4J_USERNAME }}
+      PRODUCTION_NEO4J_PASSWORD: ${{ secrets.PRODUCTION_NEO4J_PASSWORD }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: feature/neo4j-migration
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: 'npm'
+
+      - run: npm ci
+
+      - name: Person sync
+        id: person
+        continue-on-error: true
+        run: npx tsx scripts/sync-person.ts --production --write
+
+      - name: Event sync
+        id: event
+        continue-on-error: true
+        run: npx tsx scripts/sync-event.ts --production --write
+
+      - name: Heartbeat
+        if: always()
+        run: npx tsx scripts/heartbeat.ts --production --write
+
+      - name: Fail if a sync failed
+        if: steps.person.outcome == 'failure' || steps.event.outcome == 'failure'
+        run: |
+          echo "A sync refused or failed — see its step. The heartbeat still ran."
+          exit 1

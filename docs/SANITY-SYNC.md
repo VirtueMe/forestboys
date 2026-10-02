@@ -245,8 +245,21 @@ The scripts use `.env`, which is the **local** Neo4j. Production Aura
 | Event sync, first run | `scripts/sync-event.ts --write` (2026-10-02) | 2 279 events stamped; 0 changes |
 | Rank table, type | `scripts/migrate-rank-table.ts --write` (2026-10-02) | 18 people civilian → soldier (ranks set by sync, rank table or editor without the type) |
 
-Production gets the same steps in the same order, behind an explicit
-opt-in that doesn't exist yet.
+Production: the Aura Free instance (`f8cb9726`) was deleted for
+inactivity — Aura Free needs regular writes. A new instance is loaded from
+a dump of the local graph (`data/dumps/neo4j.dump`, 2026-10-02: 23 676
+nodes, 45 852 relationships), which already holds every step above, so the
+steps aren't replayed there.
+
+Scripts reach production only with `--production` (`scripts/lib/env.ts`):
+it reads `.env.production` and connects with `PRODUCTION_NEO4J_URI`,
+`PRODUCTION_NEO4J_USERNAME`, `PRODUCTION_NEO4J_PASSWORD` (environment
+variables win — the CI secrets use the same names), printing the target
+first. The new instance is `ad896296`. Without it they read `.env` and refuse a NEO4J_URI that
+isn't localhost. Writing still needs `--write`. A daily job running
+`sync-person.ts` and `sync-event.ts` with `--production --write` keeps
+Jan's edits flowing in and the instance alive (both write
+`SyncState.at`).
 
 ### Events
 

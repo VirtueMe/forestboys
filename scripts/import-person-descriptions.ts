@@ -30,9 +30,9 @@
  */
 
 import neo4j from 'neo4j-driver'
-import * as dotenv from 'dotenv'
+import { loadEnv } from './lib/env.ts'
 import { fieldSha } from './lib/sanity-sha.ts'
-dotenv.config()
+loadEnv()
 
 const API   = 'https://7r6kqtqy.api.sanity.io/v2021-08-31/data/query/production'
 const write = process.argv.includes('--write')

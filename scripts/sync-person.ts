@@ -49,14 +49,14 @@
 import { writeFileSync, mkdirSync } from 'node:fs'
 import { resolve } from 'node:path'
 import neo4j, { type ManagedTransaction } from 'neo4j-driver'
-import * as dotenv from 'dotenv'
+import { loadEnv } from './lib/env.ts'
 import {
   FIELDS, calibrate, classify, fetchGraphPeople, fetchSanityPeople, loadApril, neo4jDriver,
   sanityLinks, stampFor, str, type Doc, type GraphPerson,
 } from './lib/person-sync.ts'
 import { imageSources, linkSource, parsePerson, personClaims, rankEdge, sanMigRef } from './lib/person-rule.ts'
 import { deletionStmts, deletionSummary, planDeletions } from './lib/person-deletions.ts'
-dotenv.config()
+loadEnv()
 
 const write = process.argv.includes('--write')
 const acceptReview = new Set(

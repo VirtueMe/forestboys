@@ -5,8 +5,8 @@
  */
 
 import neo4j from 'neo4j-driver'
-import * as dotenv from 'dotenv'
-dotenv.config()
+import { loadEnv } from './lib/env.ts'
+loadEnv()
 
 async function main() {
   const driver = neo4j.driver(

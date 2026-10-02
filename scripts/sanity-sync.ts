@@ -27,8 +27,8 @@
 import { writeFileSync, mkdirSync } from 'node:fs'
 import { resolve } from 'node:path'
 import neo4j, { type Session } from 'neo4j-driver'
-import * as dotenv from 'dotenv'
-dotenv.config()
+import { loadEnv } from './lib/env.ts'
+loadEnv()
 
 const API     = 'https://7r6kqtqy.api.sanity.io/v2021-08-31/data/query/production'
 const OUT_DIR = resolve(process.cwd(), 'data', 'sanity-delta')
