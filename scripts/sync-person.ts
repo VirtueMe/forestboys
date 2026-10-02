@@ -38,7 +38,12 @@
  * not review), gallery edges with editor props (hero, scope…), graph links
  * Sanity doesn't have. Editor saves before 2026-10-02 carry no marker.
  *
- * Usage: npx tsx scripts/sync-person.ts [--write] [--accept-review=<slug>,<slug>…]
+ * People deleted in Sanity are listed with what deleting them would do
+ * (scripts/lib/person-deletions.ts): their event edges move to the person
+ * Jan merged them into, where the Sanity event shows one; the rest goes.
+ * Only the people named in --accept-delete are deleted.
+ *
+ * Usage: npx tsx scripts/sync-person.ts [--write] [--accept-review=<slug>,…] [--accept-delete=<slug>,…]
  */
 
 import { writeFileSync, mkdirSync } from 'node:fs'
@@ -50,11 +55,15 @@ import {
   sanityLinks, stampFor, str, type Doc, type GraphPerson,
 } from './lib/person-sync.ts'
 import { imageSources, linkSource, parsePerson, personClaims, rankEdge, sanMigRef } from './lib/person-rule.ts'
+import { deletionStmts, deletionSummary, planDeletions } from './lib/person-deletions.ts'
 dotenv.config()
 
 const write = process.argv.includes('--write')
 const acceptReview = new Set(
   (process.argv.find(a => a.startsWith('--accept-review='))?.slice('--accept-review='.length) ?? '')
+    .split(',').map(x => x.trim()).filter(Boolean))
+const acceptDelete = new Set(
+  (process.argv.find(a => a.startsWith('--accept-delete='))?.slice('--accept-delete='.length) ?? '')
     .split(',').map(x => x.trim()).filter(Boolean))
 const OUT   = resolve(process.cwd(), 'data', 'sanity-delta', 'person-apply-plan.json')
 
@@ -321,6 +330,13 @@ async function main() {
       .map(g => sanity.get(g.sanityId) ? planChanged(g, sanity.get(g.sanityId)!, april.get(g.sanityId), skipped, renames, blocked) : null)
       .filter((p): p is Plan => !!p)
     const created = sanityDocs.filter(d => !graph.has(d._id)).map(planNew)
+    const deletions = await planDeletions(driver, new Map([...graph.values()].map(g => [g.sanityId, g.slug])), sanity)
+    const deleted = deletions.filter(d => acceptDelete.has(d.slug))
+    for (const slug of acceptDelete) {
+      const d = deletions.find(x => x.slug === slug)
+      if (!d) errors.push(`--accept-delete: ${slug} is not deleted in Sanity`)
+      else if (d.blockers.length) errors.push(`--accept-delete: ${slug} has graph edits: ${d.blockers.join('; ')}`)
+    }
     for (const [id, fields] of blocked) skipped.push(`${graph.get(id)!.slug}: ${[...fields].join(', ')} (graph edits — accept-review blocked)`)
 
     // New people must resolve.
@@ -349,12 +365,15 @@ async function main() {
     console.log(`Slug renames: ${renames.length}`)
     console.log(`New people: ${created.length} (${created.filter(c => c.stmts.length === 4).length} with description)`)
     console.log(`Left alone: ${skipped.length} field(s) — see plan file`)
+    console.log(`Deleted in Sanity: ${deletions.length} (${deleted.length} accepted)`)
+    for (const d of deletions) console.log(`  ${acceptDelete.has(d.slug) ? '✓' : ' '} ${deletionSummary(d)}`)
     if (errors.length) console.log(`\nErrors (${errors.length}):\n  ${errors.join('\n  ')}`)
 
     mkdirSync(resolve(OUT, '..'), { recursive: true })
     writeFileSync(OUT, JSON.stringify({
       generatedAt: new Date().toISOString(), calibration: calib, errors, skipped, renames,
       changed: changed.map(p => ({ slug: p.slug, summary: p.summary })),
+      deletions: deletions.map(d => ({ ...d, accepted: acceptDelete.has(d.slug) })),
       created: created.map(p => ({ slug: p.slug, name: p.stmts[0].params.props && (p.stmts[0].params.props as { canonicalName: string }).canonicalName, rank: p.stmts[0].params.rank })),
     }, null, 2) + '\n')
     console.log(`Plan: ${OUT}`)
@@ -376,12 +395,20 @@ async function main() {
              [(p)-[h:HAS_IMAGE]->(s) | {id: s.id, props: properties(h)}] AS images,
              [(p)-[:HAS_CONTENT]->(d) | properties(d)] AS descriptions`,
       { ids: changed.map(c => c.sanityId) })
+    const snapDeleted = await ws.run(`
+      UNWIND $ids AS id
+      MATCH (p:Person {sanityId: id})
+      RETURN id, properties(p) AS props,
+             [(p)-[r]-(o) | {type: type(r), out: startNode(r) = p, other: coalesce(o.slug, o.id), otherSanityId: o.sanityId, props: properties(r)}] AS edges,
+             [(p)-[:HAS_CONTENT]->(d) | properties(d)] AS descriptions`,
+      { ids: deleted.map(d => d.sanityId) })
     const snapFile = resolve(OUT, '..', `person-before-${new Date().toISOString().replace(/[:.]/g, '-')}.json`)
     writeFileSync(snapFile, JSON.stringify({
       created: created.map(c => c.sanityId),
       changed: snap.records.map(r => r.toObject()),
+      deleted: snapDeleted.records.map(r => r.toObject()),
     }, null, 2) + '\n')
-    console.log(`\nSnapshot of ${snap.records.length} changed people: ${snapFile}`)
+    console.log(`\nSnapshot of ${snap.records.length} changed, ${snapDeleted.records.length} deleted people: ${snapFile}`)
 
     let done = 0
     try {
@@ -397,6 +424,12 @@ async function main() {
         })
         done++
       }
+      for (const d of deleted) {
+        await ws.executeWrite(async (tx: ManagedTransaction) => {
+          for (const s of deletionStmts(d)) await tx.run(s.text, s.params)
+        })
+      }
+      if (deleted.length) console.log(`Deleted ${deleted.length} people.`)
       const newest = sanityDocs.map(d => d._updatedAt).reduce((a, b) => (b > a ? b : a))
       await ws.run(`
         MERGE (s:SyncState {source: 'sanity', type: 'person'})

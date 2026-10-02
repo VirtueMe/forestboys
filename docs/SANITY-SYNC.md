@@ -113,9 +113,13 @@ narrows which documents to look at.
 3. New documents: run the type's import rule, apply directly (the rule
    may send doubtful cases to review — e.g. an event that could be an
    Incident or an Operation).
-4. Deleted documents: a review bundle proposing removal, showing graph
-   edges that would be left dangling (e.g. stays entered in the graph for
-   a person deleted in Sanity).
+4. Deleted documents: listed with what deleting them would do, applied
+   only when named (`--accept-delete=<slug>,…` for people,
+   `scripts/lib/person-deletions.ts`). Most are Jan merging a duplicate:
+   where the deleted person was, the Sanity event now names the survivor,
+   so the event edge moves there. Other edges the import made go with the
+   person; anything entered in the graph (stays, rank history, notes,
+   editor-marked links, mentions in other descriptions) blocks it.
 5. After applying, the applied Sanity version becomes the new baseline
    for that document, and `importedUpTo` advances **in the same
    transaction as the writes**, so a fetched-but-not-applied change is
@@ -231,6 +235,7 @@ The scripts use `.env`, which is the **local** Neo4j. Production Aura
 | Rank table | `scripts/migrate-rank-table.ts --write` (2026-10-02) | Second Lieutenant (USAAF); 2 people: Prilliman, Polansky |
 | Person sync, review | `scripts/sync-person.ts --write --accept-review=2lt-polansky-henry-l` (2026-10-02, after his rank was set in the editor) | 1 changed (1 slug rename); 0 held |
 | Rank table | `scripts/migrate-rank-table.ts --write` (2026-10-02, S/Lt by position) | 9 people: 7 Second Lieutenant, 2 Sub Lieutenant |
+| Person sync, deleted | `scripts/sync-person.ts --write --accept-delete=…` (2026-10-02, all 7) | 7 deleted; 5 event edges moved to the survivor (Aksdal ×3, Øygard, Vestrheim) |
 
 Production gets the same steps in the same order, behind an explicit
 opt-in that doesn't exist yet.
