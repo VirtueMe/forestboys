@@ -8,7 +8,9 @@
  *             Person PARTICIPATED_IN {state: 'verified', sourceRef: 'sanity-event-migration'}
  *   images    HAS_IMAGE {order, caption?} → Source img:sanity:<asset>
  *   links     REFERENCED_IN → Source (person-rule linkSource)
- *   text      (:Description {id: 'desc:event:<id>', …})-[:ABOUT]->
+ *   text      (event)-[:HAS_CONTENT {order}]->(:Description {id: 'desc:event:<id>', …})
+ *             (older imports made it (Description)-[:ABOUT]->(event); the readers and
+ *             compare still accept that shape until scripts/migrate-event-descriptions.ts has moved it)
  *
  * References resolve by sanityId to the target's slug; one the graph lacks
  * is left out (and reported).
@@ -131,6 +133,6 @@ export async function writeEvent(tx: ManagedTransaction, p: EventPlan, stamps: R
     MERGE (s:Source {id: src.id}) ON CREATE SET s += src
     MERGE (e)-[:REFERENCED_IN]->(s)`, { id, links: p.links })
   if (p.description) {
-    await tx.run(`MATCH (e:Operation {sanityId: $id}) CREATE (d:Description)-[:ABOUT]->(e) SET d = $props`, { id, props: p.description })
+    await tx.run(`MATCH (e:Operation {sanityId: $id}) CREATE (e)-[r:HAS_CONTENT]->(d:Description) SET d = $props, r.order = $props.order`, { id, props: p.description })
   }
 }

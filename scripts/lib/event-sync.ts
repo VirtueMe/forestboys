@@ -13,7 +13,8 @@
  *   locationFrom/To → FROM / TO,      stationFrom/To → FROM_STATION / TO_STATION
  *   people[]      → PARTICIPATED_IN / INVOLVED_IN,  transport[] → USED
  *   gallery[]     → HAS_IMAGE (Sanity CDN Sources),  links[] → REFERENCED_IN
- *   description   → (:Description {id: 'desc:event:<sanityId>'})-[:ABOUT]->
+ *   description   → (event)-[:HAS_CONTENT]->(:Description {id: 'desc:event:<sanityId>'})
+ *                   (read from the older (Description)-[:ABOUT]->(event) shape too)
  *
  * References compare as the target's sanityId; ones the graph can't resolve
  * are left out. People count only the import's links (editor additions are
@@ -204,7 +205,8 @@ export async function fetchGraphEvents(): Promise<Map<string, GraphEvent>> {
              [(e)-[:USED]->(t:Transport)  | t.sanityId] AS transport,
              [(e)-[:HAS_IMAGE]->(s:Source) WHERE s.url STARTS WITH 'https://cdn.sanity.io/' | last(split(s.url, '/'))] AS images,
              [(e)-[r:REFERENCED_IN]->(s:Source) WHERE s.url IS NOT NULL AND coalesce(r.sourceRef, '') <> 'admin-edit' | s.url] AS links,
-             head([(d:Description)-[:ABOUT]->(e) WHERE d.id = 'desc:event:' + e.sanityId | d.content]) AS description,
+             head([(e)-[:HAS_CONTENT]->(d:Description) WHERE d.id = 'desc:event:' + e.sanityId | d.content]
+                  + [(d:Description)-[:ABOUT]->(e) WHERE d.id = 'desc:event:' + e.sanityId | d.content]) AS description,
              [k IN keys(e) WHERE k ENDS WITH '_sha' | [k, e[k]]] AS stampPairs`)
     return new Map(r.records.map(rec => {
       const { stampPairs, ...rest } = rec.toObject() as Omit<GraphEvent, 'stamps'> & { stampPairs: [string, string][] }
