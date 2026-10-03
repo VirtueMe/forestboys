@@ -1,5 +1,8 @@
-blank_issues_enabled: true
+blank_issues_enabled: false
 contact_links:
-  - name: Bot-task issues are auto-created
-    url: https://github.com/${OWNER}/milorg/blob/main/docs/PROPOSALS.md
-    about: The bot-task and bot-deny-analysis templates exist as documentation of what the Cloudflare Functions create. They are not meant to be filed manually — see docs/PROPOSALS.md for the proposal pipeline.
+  - name: Report a security vulnerability
+    url: https://github.com/VirtueMe/forestboys/security/advisories/new
+    about: Please report security problems privately, not as a public issue. See SECURITY.md.
+  - name: Contributing guide
+    url: https://github.com/VirtueMe/forestboys/blob/main/CONTRIBUTING.md
+    about: Setup, workflow, labels, and how content corrections are reviewed.
