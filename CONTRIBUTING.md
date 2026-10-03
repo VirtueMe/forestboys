@@ -57,6 +57,20 @@ A pre-commit hook runs `npm run lint`.
    only, with the `Lint, type-check, build` and `Cloudflare Pages` checks
    green. Cloudflare builds a preview of every PR.
 
+## Releases
+
+Versions follow [Semantic Versioning](https://semver.org/) and are derived from
+your commit messages, so the Conventional Commit type matters:
+`feat` bumps the minor version (while we are below 1.0), `fix` bumps the patch,
+and `feat!` / a `BREAKING CHANGE:` footer marks a breaking change. `chore`, `ci`,
+`test` and `style` commits don't appear in the changelog.
+
+[release-please](https://github.com/googleapis/release-please) keeps a
+`chore: release X.Y.Z` pull request open on `main`. It updates `package.json`
+and `CHANGELOG.md`. A maintainer merges it when a release is wanted; that tags
+the version and publishes a GitHub Release. Don't edit `CHANGELOG.md` or the
+version by hand.
+
 ## Design and code style
 
 - UI follows [`DESIGN.md`](./DESIGN.md) (light) and
