@@ -19,7 +19,7 @@
  *                  Person PARTICIPATED_IN {state: 'verified', sourceRef: 'sanity-event-migration'}
  *        images    HAS_IMAGE {order, caption?} → Source img:sanity:<asset>
  *        links     REFERENCED_IN → Source (person-rule linkSource)
- *        text      (:Description {id: 'desc:event:<id>', …})-[:ABOUT]->
+ *        text      (event)-[:HAS_CONTENT {order}]->(:Description {id: 'desc:event:<id>', …})
  *      A reference to a document the graph doesn't have is dropped and counted.
  *   5. Re-attach the graph additions by the event's sanityId (MERGE — where
  *      Sanity now has the same edge, the import's version stands).
@@ -47,7 +47,7 @@ const CHUNK = 200
 const IMPORT_EDGE = `
   CASE
     WHEN type(r) IN ['PARTICIPATED_IN', 'INVOLVED_IN'] THEN coalesce(r.sourceRef, '') STARTS WITH 'sanity'
-    WHEN type(r) = 'ABOUT' THEN coalesce(o.id, '') = 'desc:event:' + e.sanityId
+    WHEN type(r) IN ['ABOUT', 'HAS_CONTENT'] THEN coalesce(o.id, '') = 'desc:event:' + e.sanityId
     WHEN type(r) IN ['ORCHESTRATED_BY', 'IN_DISTRICT', 'FROM', 'TO', 'FROM_STATION', 'TO_STATION', 'USED', 'HAS_IMAGE', 'REFERENCED_IN']
       THEN startNode(r) = e
     ELSE false
@@ -101,8 +101,8 @@ async function main() {
     // ── What is there now ──
     const now = await read.run(`
       MATCH (e) WHERE (e:Operation OR e:Incident) AND e.sanityId IS NOT NULL
-      OPTIONAL MATCH (d:Description)-[:ABOUT]->(e) WHERE d.id = 'desc:event:' + e.sanityId
-      RETURN count(DISTINCT e) AS events, count(d) AS descs`)
+      OPTIONAL MATCH (d:Description) WHERE d.id = 'desc:event:' + e.sanityId AND ((e)-[:HAS_CONTENT]->(d) OR (d)-[:ABOUT]->(e))
+      RETURN count(DISTINCT e) AS events, count(DISTINCT d) AS descs`)
     const before = { events: now.records[0].get('events') as number, descriptions: now.records[0].get('descs') as number }
 
     const extras = (await read.run(`
@@ -156,7 +156,8 @@ async function main() {
       RETURN labels(e) AS labels, properties(e) AS props,
              [(e)-[r]-(o) | {type: type(r), out: startNode(r) = e, otherLabel: labels(o)[0],
                              other: coalesce(o.slug, o.id), props: properties(r)}] AS edges,
-             [(d:Description)-[:ABOUT]->(e) WHERE d.id = 'desc:event:' + e.sanityId | properties(d)] AS descriptions`)
+             [(e)-[:HAS_CONTENT]->(d:Description) WHERE d.id = 'desc:event:' + e.sanityId | properties(d)]
+               + [(d:Description)-[:ABOUT]->(e) WHERE d.id = 'desc:event:' + e.sanityId | properties(d)] AS descriptions`)
     const dir = resolve(process.cwd(), 'data', 'sanity-delta')
     mkdirSync(dir, { recursive: true })
     const file = resolve(dir, `events-before-${new Date().toISOString().replace(/[:.]/g, '-')}.json`)
@@ -174,8 +175,9 @@ async function main() {
       await run(`
         UNWIND $rows AS id
         MATCH (e {sanityId: id}) WHERE e:Operation OR e:Incident
-        OPTIONAL MATCH (d:Description)-[:ABOUT]->(e) WHERE d.id = 'desc:event:' + id
-        DETACH DELETE d, e`, ids)
+        OPTIONAL MATCH (e)-[:HAS_CONTENT]->(a:Description {id: 'desc:event:' + id})
+        OPTIONAL MATCH (b:Description {id: 'desc:event:' + id})-[:ABOUT]->(e)
+        DETACH DELETE a, b, e`, ids)
       console.log(`Deleted ${ids.length} events.`)
 
       // ── 4. Create ──
@@ -210,7 +212,7 @@ async function main() {
       await run(`
         UNWIND $rows AS x
         MATCH (e:Operation {sanityId: x.event})
-        CREATE (d:Description)-[:ABOUT]->(e) SET d = x.props`, descriptions)
+        CREATE (e)-[r:HAS_CONTENT]->(d:Description) SET d = x.props, r.order = x.props.order`, descriptions)
       console.log(`Created ${nodes.length} Operations.`)
 
       // ── 5. Re-attach graph additions ──

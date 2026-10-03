@@ -130,11 +130,15 @@ function applyField(field: string, g: GraphEvent, d: Doc, l: Lookups): Stmt[] {
     case 'description': {
       const props = descriptionProps(d)
       return [{
+        // The imported text is replaced in place; sections an editor wrote
+        // (other ids) stay. Both shapes are cleared, the older ABOUT one too.
         text: `${E}
-               OPTIONAL MATCH (old:Description)-[:ABOUT]->(e) WHERE old.id = 'desc:event:' + $id DETACH DELETE old
+               OPTIONAL MATCH (e)-[:HAS_CONTENT]->(a:Description {id: 'desc:event:' + $id})
+               OPTIONAL MATCH (b:Description {id: 'desc:event:' + $id})-[:ABOUT]->(e)
+               DETACH DELETE a, b
                WITH DISTINCT e
                FOREACH (_ IN CASE WHEN $props IS NULL THEN [] ELSE [1] END |
-                 CREATE (d:Description)-[:ABOUT]->(e) SET d = $props)`,
+                 CREATE (e)-[r:HAS_CONTENT]->(d:Description) SET d = $props, r.order = $props.order)`,
         params: { id, props },
       }]
     }
@@ -196,7 +200,7 @@ async function main() {
         MATCH (e)-[r]-(o)
         WHERE NOT (
           (type(r) IN ['PARTICIPATED_IN', 'INVOLVED_IN'] AND coalesce(r.sourceRef, '') STARTS WITH 'sanity') OR
-          (type(r) = 'ABOUT' AND coalesce(o.id, '') = 'desc:event:' + $id) OR
+          (type(r) IN ['ABOUT', 'HAS_CONTENT'] AND coalesce(o.id, '') = 'desc:event:' + $id) OR
           (type(r) IN ['ORCHESTRATED_BY','IN_DISTRICT','FROM','TO','FROM_STATION','TO_STATION','USED','HAS_IMAGE'] AND startNode(r) = e) OR
           (type(r) = 'REFERENCED_IN' AND coalesce(r.sourceRef, '') <> 'admin-edit'))
         RETURN type(r) + ' ' + coalesce(o.slug, o.id) AS what`, { id: g.sanityId })
@@ -245,7 +249,8 @@ async function main() {
       UNWIND $ids AS id MATCH (e {sanityId: id}) WHERE e:Operation OR e:Incident
       RETURN labels(e) AS labels, properties(e) AS props,
              [(e)-[r]-(o) | {type: type(r), out: startNode(r) = e, other: coalesce(o.slug, o.id), props: properties(r)}] AS edges,
-             [(d:Description)-[:ABOUT]->(e) WHERE d.id = 'desc:event:' + id | properties(d)] AS descriptions`, { ids: touched })
+             [(e)-[:HAS_CONTENT]->(d:Description) WHERE d.id = 'desc:event:' + id | properties(d)]
+               + [(d:Description)-[:ABOUT]->(e) WHERE d.id = 'desc:event:' + id | properties(d)] AS descriptions`, { ids: touched })
     const file = resolve(OUT, '..', `event-before-${new Date().toISOString().replace(/[:.]/g, '-')}.json`)
     writeFileSync(file, JSON.stringify({ created: created.map(c => c.doc._id), events: snap.records.map(r => r.toObject()) }) + '\n')
     console.log(`\nBackup of ${snap.records.length} events: ${file}`)
@@ -270,8 +275,9 @@ async function main() {
       for (const g of deleted.filter(x => acceptDelete.has(x.slug))) {
         await ws.executeWrite(tx => tx.run(`
           ${E}
-          OPTIONAL MATCH (d:Description)-[:ABOUT]->(e) WHERE d.id = 'desc:event:' + $id
-          DETACH DELETE d, e`, { id: g.sanityId }))
+          OPTIONAL MATCH (e)-[:HAS_CONTENT]->(a:Description {id: 'desc:event:' + $id})
+          OPTIONAL MATCH (b:Description {id: 'desc:event:' + $id})-[:ABOUT]->(e)
+          DETACH DELETE a, b, e`, { id: g.sanityId }))
       }
       const newest = sanityDocs.map(d => d._updatedAt).reduce((a, b) => (b > a ? b : a))
       await ws.run(`MERGE (s:SyncState {source: 'sanity', type: 'event'}) SET s.importedUpTo = $newest, s.at = datetime()`, { newest })
