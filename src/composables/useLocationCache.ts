@@ -2,6 +2,8 @@ import { openDB, type IDBPDatabase, type DBSchema } from 'idb'
 import { ref } from 'vue'
 import { SANITY_CDN, SANITY_IMG } from '../config/sanity.ts'
 import { neo4jQuery } from './useNeo4j.ts'
+import { cacheState } from './cacheFreshness.ts'
+import { currentRole, ensureUser } from './useAuth.ts'
 import type { IdbLocation, IdbStation, IdbPerson, IdbEvent, IdbTransport, IdbOutline, IdbCache, IdbEventDetail, SavedPosition, SavedMapState } from '../types/idb.ts'
 
 interface MilorgDB extends DBSchema {
@@ -25,7 +27,6 @@ const STORE = 'cache' as const
 // CACHE_KEY bumped: data now sourced from Neo4j (round-3 schema); invalidates
 // any v17 Sanity-shaped cache from previous deployments.
 const CACHE_KEY = 'v18-neo4j'
-const MAX_AGE_MS = 5 * 60 * 1000 // 5 minutes
 
 // Convert Sanity Portable Text block array to a plain string.
 // Each block becomes one paragraph; non-block types (images etc.) are skipped.
@@ -325,6 +326,11 @@ export async function fetchEventDetail(id: string): Promise<IdbEventDetail> {
 
 const eventDetailCache = new Map<string, IdbEventDetail>()
 
+/** Forget the loaded Sanity event details (after an admin save). */
+export function clearEventDetailCache(): void {
+  eventDetailCache.clear()
+}
+
 export async function fetchEventDetailBySlug(slug: string): Promise<IdbEventDetail | null> {
   if (eventDetailCache.has(slug)) return eventDetailCache.get(slug)!
   const query = `*[_type == "event" && slug.current == "${slug}"][0]{
@@ -366,44 +372,59 @@ export function useLocationCache() {
   const loading = ref(true)
   const error = ref<string | null>(null)
 
+  function apply(data: {
+    locations: IdbLocation[]; stations: IdbStation[]; people: IdbPerson[]
+    events?: IdbEvent[]; transport?: IdbTransport[]; outlines?: IdbOutline[]
+    orgColors?: Record<string, string>; districtColors?: Record<string, string>
+  }) {
+    locations.value = data.locations
+    stations.value = data.stations
+    people.value = data.people
+    events.value = data.events ?? []
+    transport.value = data.transport ?? []
+    outlines.value  = data.outlines ?? []
+    orgColors.value = data.orgColors ?? {}
+    districtColors.value = data.districtColors ?? {}
+  }
+
   async function init() {
     try {
       const cached = await readCache()
-      const now = Date.now()
+      const indexedAt = cached ? new Date(cached.indexedAt).getTime() : 0
 
-      if (cached) {
+      // Written before the latest admin save: showing it would hide the edit.
+      // Fetch first (editors want the change, not the old list); fall back to
+      // the old list only if the fetch fails.
+      const state = cached ? cacheState(indexedAt, Date.now(), currentRole()) : 'blocked'
+
+      if (cached && state !== 'blocked') {
         console.log(`[cache] hit — ${cached.locations.length} locations, indexed ${cached.indexedAt}`)
-        locations.value = cached.locations
-        stations.value = cached.stations
-        people.value = cached.people
-        events.value = cached.events ?? []
-        transport.value = cached.transport ?? []
-        outlines.value  = cached.outlines ?? []
-        orgColors.value = cached.orgColors ?? {}
-        districtColors.value = cached.districtColors ?? {}
+        apply(cached)
         loading.value = false
+        if (state === 'revalidate') void backgroundSync()
 
-        const age = now - new Date(cached.indexedAt).getTime()
-        if (age > MAX_AGE_MS) {
-          void backgroundSync()
-        }
+        // The role may not be known yet on a cold start: once it is, an editor
+        // or admin gets the short window too.
+        void ensureUser().then(() => {
+          if (cacheState(indexedAt, Date.now(), currentRole()) === 'revalidate') void backgroundSync()
+        })
       } else {
-        console.log('[cache] miss — fetching from Neo4j')
-        const fresh = await fetchFromNeo4j()
-        console.log(`[cache] fetched ${fresh.locations.length} locations`)
+        console.log(cached ? '[cache] stale after a save — fetching from Neo4j' : '[cache] miss — fetching from Neo4j')
+        try {
+          const fresh = await fetchFromNeo4j()
+          console.log(`[cache] fetched ${fresh.locations.length} locations`)
 
-        // Set data first — visible immediately even if IDB write fails
-        locations.value = fresh.locations
-        stations.value = fresh.stations
-        people.value = fresh.people
-        events.value = fresh.events
-        transport.value = fresh.transport
-        outlines.value  = fresh.outlines
-        orgColors.value = fresh.orgColors
-        districtColors.value = fresh.districtColors
-        loading.value = false
+          // Set data first — visible immediately even if IDB write fails
+          apply(fresh)
+          loading.value = false
 
-        writeCache(fresh).catch(e => console.error('[IDB] writeCache failed:', e))
+          writeCache(fresh).catch(e => console.error('[IDB] writeCache failed:', e))
+        } catch (e) {
+          if (!cached) throw e
+          console.error('[cache] refresh failed, showing the older list:', e)
+          apply(cached)
+          loading.value = false
+        }
       }
     } catch (e) {
       console.error('[cache] init failed:', e)
@@ -412,22 +433,21 @@ export function useLocationCache() {
     }
   }
 
+  let syncing = false
+
   async function backgroundSync() {
+    if (syncing) return
+    syncing = true
     try {
       console.log('[cache] background sync starting')
       const fresh = await fetchFromNeo4j()
-      locations.value = fresh.locations
-      stations.value = fresh.stations
-      people.value = fresh.people
-      events.value = fresh.events
-      transport.value = fresh.transport
-      outlines.value  = fresh.outlines
-      orgColors.value = fresh.orgColors
-      districtColors.value = fresh.districtColors
+      apply(fresh)
       writeCache(fresh).catch(e => console.error('[IDB] backgroundSync writeCache failed:', e))
       console.log('[cache] background sync complete')
     } catch (e) {
       console.error('[cache] backgroundSync fetch failed:', e)
+    } finally {
+      syncing = false
     }
   }
 

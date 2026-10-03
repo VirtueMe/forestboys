@@ -1,4 +1,5 @@
 import { ref, onMounted } from 'vue'
+import { isAdminWrite, markCacheStale } from './cacheFreshness.ts'
 
 export interface AuthUser {
   id:    string
@@ -32,7 +33,15 @@ export async function authFetch(input: RequestInfo | URL, init: RequestInit = {}
   if (token.value && !headers.has('Authorization')) {
     headers.set('Authorization', `Bearer ${token.value}`)
   }
-  return fetch(input, { ...init, headers, credentials: 'include' })
+  const res = await fetch(input, { ...init, headers, credentials: 'include' })
+  // A saved change makes every cached list and loaded detail out of date.
+  if (res.ok && isAdminWrite(input, init.method)) markCacheStale()
+  return res
+}
+
+/** The signed-in user's role, or null when signed out or not loaded yet. */
+export function currentRole(): AuthUser['role'] | null {
+  return user.value?.role ?? null
 }
 
 async function fetchUser(): Promise<void> {
