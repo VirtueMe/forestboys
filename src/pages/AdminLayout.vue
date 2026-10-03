@@ -68,6 +68,22 @@
         </div>
 
         <div class="nav-group">
+          <div class="nav-group-label">Tilgang</div>
+          <ul class="nav-list">
+            <li>
+              <router-link to="/admin/users" class="nav-link nav-link-nested" active-class="active">
+                Brukere
+                <span
+                  v-if="pendingCount > 0"
+                  class="nav-badge"
+                  :title="`${pendingCount} ber om tilgang`"
+                >{{ pendingCount }}</span>
+              </router-link>
+            </li>
+          </ul>
+        </div>
+
+        <div class="nav-group">
           <div class="nav-group-label">Gjennomgang</div>
           <ul class="nav-list">
             <li>
@@ -106,8 +122,9 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { useRoute } from 'vue-router'
+import { pendingCount, refreshPendingCount } from '@/composables/usePendingRequests.ts'
 
 const PAGES = [
   { slug: 'home',  label: 'Hjem' },
@@ -117,8 +134,11 @@ const PAGES = [
 const route = useRoute()
 const navOpen = ref(false)
 
+onMounted(refreshPendingCount)
+
 const crumb = computed(() => {
   if (route.path.startsWith('/admin/sources'))   return 'Kilder'
+  if (route.path.startsWith('/admin/users'))     return 'Brukere'
   if (route.path.startsWith('/admin/proposals')) return 'Forslag'
   if (route.path.startsWith('/admin/review'))    return 'Gjennomgang'
   const pageSlug = String(route.params.slug ?? '')
@@ -175,6 +195,16 @@ const crumb = computed(() => {
 }
 
 .nav-group { padding: 8px 0; }
+
+.nav-badge {
+  margin-left: 6px;
+  padding: 0 6px;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--paper);
+  background: var(--faded-red);
+  border-radius: 8px;
+}
 
 .nav-group-label {
   font-size: 10px;

@@ -98,6 +98,7 @@
           Innlogget som <strong>{{ user.name }}</strong> ({{ user.email }}).<br />
           Forespørselen din er sendt — en administrator vil godkjenne den snart.
         </p>
+        <button class="btn btn-secondary" type="button" @click="refetch">Sjekk på nytt</button>
         <button class="btn btn-secondary" type="button" @click="logout">Logg ut</button>
       </div>
 
@@ -135,7 +136,7 @@ import { RouterLink, useRoute, useRouter } from 'vue-router'
 import { useAuth } from '../composables/useAuth.ts'
 import { parseFailureDetail } from '../utils/failureDetail.ts'
 
-const { user, loading, directLogin, logout } = useAuth()
+const { user, loading, directLogin, logout, refetch } = useAuth()
 const route  = useRoute()
 const router = useRouter()
 
