@@ -1,6 +1,7 @@
 import { ref, computed, reactive, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { useLocationCache, fetchEventDetailBySlug } from './useLocationCache.ts'
+import { useLocationCache, fetchEventDetailBySlug, clearEventDetailCache } from './useLocationCache.ts'
+import { cacheVersion } from './cacheFreshness.ts'
 import { useEventsList, fetchEventDetailFromNeo4j } from './useEventsList.ts'
 import type { IdbEvent, IdbEventDetail } from '../types/idb.ts'
 
@@ -208,8 +209,9 @@ export function useEventsContext() {
     !!visibleEvent.value && !visibleDetail.value && fetchingSlug.value === visibleEvent.value.slug,
   )
 
-  watch(visibleEvent, async (event) => {
-    if (!event || detailCache[event.slug]) return
+  /** `force` reloads even when the detail is already held (after an admin save). */
+  async function loadDetail(event: IdbEvent, force = false): Promise<void> {
+    if (detailCache[event.slug] && !force) return
     fetchingSlug.value = event.slug
     detailError.value  = false
     try {
@@ -226,7 +228,18 @@ export function useEventsContext() {
     } finally {
       if (fetchingSlug.value === event.slug) fetchingSlug.value = null
     }
-  }, { immediate: true })
+  }
+
+  watch(visibleEvent, (event) => { if (event) void loadDetail(event) }, { immediate: true })
+
+  // An admin saved something: drop the details held for other events and
+  // reload the open one in place (the old text stays up until the new arrives).
+  watch(cacheVersion, () => {
+    clearEventDetailCache()
+    const open = visibleEvent.value
+    for (const slug of Object.keys(detailCache)) if (slug !== open?.slug) delete detailCache[slug]
+    if (open) void loadDetail(open, true)
+  })
 
   /**
    * Re-key a renamed event in both caches. `slugEvent` resolves the URL
