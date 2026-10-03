@@ -1,0 +1,30 @@
+name: Release
+
+# Keeps a "chore: release X" PR open on main. It bumps package.json and
+# prepends the generated notes to CHANGELOG.md; merging it tags the version
+# and publishes a GitHub Release. Cloudflare then builds that merge commit, so
+# the deployed app carries its real version.
+#
+# Requires secret RELEASE_PLEASE_TOKEN: a fine-grained personal access token
+# for this repository with Contents, Pull requests and Issues read/write.
+# GITHUB_TOKEN is not enough: PRs it opens don't trigger workflows, so the
+# required "Lint, type-check, build" check would never run on the release PR.
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+
+jobs:
+  release-please:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: googleapis/release-please-action@v4
+        with:
+          token: ${{ secrets.RELEASE_PLEASE_TOKEN }}
+          config-file: release-please-config.json
+          manifest-file: .release-please-manifest.json
