@@ -6,11 +6,14 @@
       <span class="credit">Forskning: Jan Warberg &amp; Rolf G. Halvorsen</span>
       <span class="sep" aria-hidden="true">·</span>
       <span class="copy">&copy; {{ year }}</span>
+      <AppVersion />
     </div>
   </footer>
 </template>
 
 <script setup lang="ts">
+import AppVersion from './AppVersion.vue'
+
 const year = new Date().getFullYear()
 </script>
 
