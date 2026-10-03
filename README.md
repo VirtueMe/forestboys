@@ -52,7 +52,7 @@ Sanity into the graph until editing there stops
 is specified in [`docs/ENRICHMENT_PIPELINE.md`](./docs/ENRICHMENT_PIPELINE.md).
 
 Documentation is indexed in [`docs/INDEX.md`](./docs/INDEX.md). Project
-orientation for contributors and coding agents is in [`CLAUDE.md`](./CLAUDE.md).
+orientation for contributors and coding agents is in [`AGENTS.md`](./AGENTS.md).
 
 ## Branches and deployment
 

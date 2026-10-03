@@ -65,7 +65,7 @@ A pre-commit hook runs `npm run lint`.
 - TypeScript is strict. Match the surrounding code's naming and comment density.
 - UI text is Norwegian.
 - Mobile first: check changes on a narrow viewport.
-- Project orientation is in [`CLAUDE.md`](./CLAUDE.md); design and data
+- Project orientation is in [`AGENTS.md`](./AGENTS.md); design and data
   documents are indexed in [`docs/INDEX.md`](./docs/INDEX.md).
 
 ## Labels
