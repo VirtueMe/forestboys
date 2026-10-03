@@ -1,15 +1,14 @@
 /**
- * GET /auth/callback — exchange Google code, upsert user in D1, set session cookie
+ * GET /auth/callback — Google: check state, exchange the code, read the
+ * user, then sign in (functions/_lib/oauth.ts). Only a verified email is
+ * accepted — admin rights hang on it (ADMIN_EMAILS).
  */
 
-import { createSessionCookie } from '../_lib/session.ts'
+import { accessError, checkState, signIn, type OAuthEnv } from '../_lib/oauth.ts'
 
-interface Env {
+interface Env extends OAuthEnv {
   GOOGLE_CLIENT_ID:     string
   GOOGLE_CLIENT_SECRET: string
-  SESSION_SECRET:       string
-  ADMIN_EMAILS:         string
-  milorg_users:         D1Database
 }
 
 interface GoogleTokenResponse {
@@ -18,20 +17,22 @@ interface GoogleTokenResponse {
 }
 
 interface GoogleUserInfo {
-  sub:   string
-  email: string
-  name:  string
+  sub:            string
+  email:          string
+  email_verified: boolean
+  name:           string
 }
 
 export const onRequestGet: PagesFunction<Env> = async ({ request, env }) => {
   const url = new URL(request.url)
+  if (url.searchParams.get('error')) return accessError('denied')   // the user declined at Google
+
+  const state = checkState(request, 'google')
+  if (!state.ok) return accessError('state')
+
   const code = url.searchParams.get('code')
+  if (!code) return accessError('failed')
 
-  if (!code) {
-    return new Response('Missing code', { status: 400 })
-  }
-
-  // Exchange code for tokens
   const tokenRes = await fetch('https://oauth2.googleapis.com/token', {
     method: 'POST',
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
@@ -43,60 +44,20 @@ export const onRequestGet: PagesFunction<Env> = async ({ request, env }) => {
       grant_type:    'authorization_code',
     }),
   })
-
-  if (!tokenRes.ok) {
-    return new Response('Token exchange failed', { status: 502 })
-  }
-
+  if (!tokenRes.ok) return accessError('failed')
   const tokens: GoogleTokenResponse = await tokenRes.json()
 
-  // Get user info
   const userRes = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
     headers: { Authorization: `Bearer ${tokens.access_token}` },
   })
-
-  if (!userRes.ok) {
-    return new Response('Failed to fetch user info', { status: 502 })
-  }
-
+  if (!userRes.ok) return accessError('failed')
   const googleUser: GoogleUserInfo = await userRes.json()
+  if (!googleUser.email_verified) return accessError('unverified')
 
-  // Determine role — admin bootstrap via ADMIN_EMAILS env var
-  const adminEmails = (env.ADMIN_EMAILS ?? '').split(',').map(e => e.trim().toLowerCase())
-  const isAdmin = adminEmails.includes(googleUser.email.toLowerCase())
-
-  // Upsert user in D1
-  const existing = await env.milorg_users
-    .prepare('SELECT role FROM users WHERE id = ?')
-    .bind(googleUser.sub)
-    .first<{ role: string }>()
-
-  let role: string
-  if (existing) {
-    role = existing.role
-    await env.milorg_users
-      .prepare('UPDATE users SET last_login = datetime(\'now\'), name = ? WHERE id = ?')
-      .bind(googleUser.name, googleUser.sub)
-      .run()
-  } else {
-    role = isAdmin ? 'admin' : 'pending'
-    await env.milorg_users
-      .prepare('INSERT INTO users (id, email, name, role) VALUES (?, ?, ?, ?)')
-      .bind(googleUser.sub, googleUser.email, googleUser.name, role)
-      .run()
-  }
-
-  // Set session cookie and redirect
-  const cookie = await createSessionCookie(
-    { id: googleUser.sub, email: googleUser.email, name: googleUser.name, role },
-    env.SESSION_SECRET,
-  )
-
-  return new Response(null, {
-    status: 302,
-    headers: {
-      Location:   '/',
-      'Set-Cookie': cookie,
-    },
-  })
+  return signIn(env, {
+    provider:   'google',
+    providerId: googleUser.sub,
+    email:      googleUser.email,
+    name:       googleUser.name,
+  }, state.next)
 }
