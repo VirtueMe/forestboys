@@ -438,7 +438,6 @@ const originalById = ref<Map<string, Card>>(new Map())
 const paneView = ref<'edit' | 'preview'>('preview')
 
 const SCALAR_FIELDS = ['order', 'title', 'layout', 'kind', 'headingLevel'] as const
-type ScalarField = typeof SCALAR_FIELDS[number]
 
 const selected = computed(() => cards.value.find(c => c.id === selectedId.value) ?? null)
 

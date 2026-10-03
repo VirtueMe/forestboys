@@ -57,7 +57,7 @@ function parseName(raw: string): ParsedName {
   }
 
   // Known manual overrides where the pattern isn't mechanical
-  const overrides: Record<string, Omit<ParsedName, 'sortingName'>> = {
+  const overrides: Record<string, Omit<ParsedName, 'sortingName' | 'slug'>> = {
     'NNIU - Norwegian Naval Independent Unit': {
       name: 'NNIU',
       formalName: 'Norwegian Naval Independent Unit',

@@ -66,7 +66,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, useTemplateRef, onMounted, onBeforeUnmount, inject } from 'vue'
+import { ref, computed, watch, useTemplateRef, inject } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useLocationCache } from '../composables/useLocationCache.ts'
 import { usePersonData } from '../composables/usePersonData.ts'

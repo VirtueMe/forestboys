@@ -29,7 +29,7 @@ import { ref, watch } from 'vue'
 import spdxIds from 'spdx-license-ids'
 import { NOASSERTION, LICENSE_REF_COPYRIGHT, normalizeLicense } from '@/utils/licenseForDomain.ts'
 
-const SENTINELS = [NOASSERTION, LICENSE_REF_COPYRIGHT]
+const SENTINELS: string[] = [NOASSERTION, LICENSE_REF_COPYRIGHT]
 const ALL: string[] = [...SENTINELS, ...spdxIds]
 
 const props = defineProps<{

@@ -113,7 +113,7 @@ export function rankEdge(sanityId: string, parsed: ParsedPerson): { rankSlug: st
 }
 
 /** Scalar claims as node properties: `<field>`, `<field>_state`, `<field>_sourceRef`. */
-export function personClaims(sanityId: string, doc: { birthYear?: unknown; home?: unknown; secretName?: unknown }, parsed: ParsedPerson): Record<string, unknown> {
+export function personClaims(sanityId: string, doc: Record<string, unknown> & { birthYear?: unknown; home?: unknown; secretName?: unknown }, parsed: ParsedPerson): Record<string, unknown> {
   const out: Record<string, unknown> = {}
   const claim = (field: string, value: unknown, ref: string) => {
     out[field] = value

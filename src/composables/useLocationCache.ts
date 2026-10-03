@@ -1,6 +1,6 @@
 import { openDB, type IDBPDatabase, type DBSchema } from 'idb'
 import { ref } from 'vue'
-import { SANITY_CDN } from '../config/sanity.ts'
+import { SANITY_CDN, SANITY_IMG } from '../config/sanity.ts'
 import { neo4jQuery } from './useNeo4j.ts'
 import type { IdbLocation, IdbStation, IdbPerson, IdbEvent, IdbTransport, IdbOutline, IdbCache, IdbEventDetail, SavedPosition, SavedMapState } from '../types/idb.ts'
 
@@ -148,6 +148,14 @@ interface IncidentRow {
   district: string | null
 }
 
+/** Neo4j returns null for a missing value; the cache's shapes use optional fields. */
+function toIdbEvent(e: IncidentRow): IdbEvent {
+  return {
+    _id: e._id, title: e.title, slug: e.slug,
+    date: e.date ?? undefined, organization: e.organization ?? undefined, district: e.district ?? undefined,
+  }
+}
+
 async function fetchFromNeo4j(): Promise<IdbCache> {
   const [
     rawLocations, rawStations, rawPeople, rawTransport,
@@ -253,7 +261,7 @@ async function fetchFromNeo4j(): Promise<IdbCache> {
       .map((l): IdbLocation => ({
         _id: l._id, title: l.title, slug: l.slug,
         lat: l.lat, lng: l.lng,
-        events: l.events,
+        events: l.events.map(toIdbEvent),
         organizations: [...new Set(l.events.map(e => e.organization).filter((x): x is string => Boolean(x)))],
         districts:     [...new Set(l.events.map(e => e.district).filter((x): x is string => Boolean(x)))],
       })),
@@ -262,7 +270,7 @@ async function fetchFromNeo4j(): Promise<IdbCache> {
       .map((s): IdbStation => ({
         _id: s._id, title: s.title, slug: s.slug, type: s.type ?? undefined,
         lat: s.lat, lng: s.lng,
-        events: s.events,
+        events: s.events.map(toIdbEvent),
       })),
     people: rawPeople.map(p => ({
       _id: p._id, name: p.name, slug: p.slug,
@@ -285,159 +293,6 @@ async function fetchFromNeo4j(): Promise<IdbCache> {
       } as unknown as IdbTransport))
       .sort((a, b) => String(a.name ?? '').localeCompare(String(b.name ?? ''), 'nb')),
     outlines: [] as IdbOutline[],
-    orgColors,
-    districtColors,
-  }
-}
-
-// ── Legacy Sanity fetch (no longer called; kept as a documentation record
-// of what the previous shape was — delete once Neo4j path proves out in
-// production for a full deploy cycle).
-async function fetchFromSanityUnused(): Promise<IdbCache> {
-  const [rawLocations, rawStations, rawPeople, rawOrgs, rawEvents, rawTransport, rawOutlines] = await Promise.all([
-    fetchAll<Record<string, unknown>>(`*[_type == "location"]{
-      _id, title, "slug": slug.current,
-      "lat": coalesce(coordinates.lat, lat),
-      "lng": coalesce(coordinates.lng, lng),
-      description, color,
-      "events": *[_type == "event" && references(^._id)]{
-        _id, title, "slug": slug.current, date,
-        "organization": organization->name,
-        "district": district->name
-      },
-      "gallery": gallery[]{_key, asset, caption},
-      movie,
-      "links": links[]{ _key, title, "url": link },
-      "people": people[]->{_id, name, "slug": slug.current}
-    }`),
-    fetchAll<Record<string, unknown>>(`*[_type == "station"]{
-      _id, title, "slug": slug.current, type,
-      "lat": coalesce(coordinates.lat, lat),
-      "lng": coalesce(coordinates.lng, lng),
-      description,
-      "events": *[_type == "event" && references(^._id)]{
-        _id, title, "slug": slug.current, date,
-        "organization": organization->name,
-        "district": district->name
-      },
-      "gallery": gallery[]{_key, asset, caption},
-      movie,
-      "links": links[]{ _key, title, "url": link },
-      "people": people[]->{_id, name, "slug": slug.current}
-    }`),
-    fetchAll<Record<string, unknown>>(`*[_type == "person"]{
-      _id, name, "slug": slug.current, secretName, home, birthYear,
-      description,
-      "events": *[_type == "event" && references(^._id)]{
-        _id, title, "slug": slug.current, date,
-        "organization": organization->name,
-        "district": district->name
-      },
-      "locations": *[_type == "location" && references(^._id)]{_id, title, "slug": slug.current} | order(title asc),
-      "stations": *[_type == "station" && ^._id in people[]._ref]{_id, title, "slug": slug.current} | order(title asc),
-      "outlines": *[_type == "outline" && references(^._id)]{_id, title, "slug": slug.current} | order(title asc),
-      "gallery": gallery[]{_key, asset, caption},
-      movie,
-      "links": links[]{ _key, title, "url": link }
-    }`),
-    fetchAll<Record<string, unknown>>(`*[_type == "organization"]{ "name": name, "color": color.hex }`),
-    fetchAll<Record<string, unknown>>(`*[_type == "event"]{
-      _id, title, "slug": slug.current, date,
-      "organization": organization->name,
-      "district": district->name,
-      "gallery": gallery[0..0]{asset}
-    }`),
-    fetchAll<Record<string, unknown>>(`*[_type == "transport"]{
-      _id, name, "slug": slug.current, type, unit, regser, reserve,
-      description,
-      "events": *[_type == "event" && references(^._id)]{
-        _id, title, "slug": slug.current, date,
-        "organization": organization->name,
-        "district": district->name
-      },
-      "gallery": gallery[]{_key, asset, caption},
-      movie,
-      "links": links[]{ _key, title, "url": link }
-    }`),
-    fetchAll<Record<string, unknown>>(`*[_type == "outline"]{
-      _id, title, "slug": slug.current,
-      description,
-      "people": people[]->{_id, name, "slug": slug.current},
-      "gallery": gallery[]{_key, asset, caption},
-      movie,
-      "links": links[]{ _key, title, "url": link }
-    }`),
-  ])
-
-  const orgColors: Record<string, string> = {}
-  for (const org of rawOrgs) {
-    if (typeof org.name === 'string' && typeof org.color === 'string') {
-      orgColors[org.name] = org.color
-    }
-  }
-
-  // Derive district colours from events: district → colour of its org
-  const districtColors: Record<string, string> = {}
-  for (const loc of rawLocations) {
-    for (const ev of (loc.events as Array<{ organization?: string; district?: string }> | null) ?? []) {
-      if (ev.district && ev.organization && orgColors[ev.organization] && !districtColors[ev.district]) {
-        districtColors[ev.district] = orgColors[ev.organization]
-      }
-    }
-  }
-
-  const events = (rawEvents as unknown as Array<Omit<IdbEvent, 'thumbnailUrl'> & { gallery?: unknown[] }>)
-    .map(({ gallery, ...e }) => ({ ...e, thumbnailUrl: galleryThumb(gallery) }))
-    .sort((a, b) => (a.date ?? '').localeCompare(b.date ?? ''))
-
-  return {
-    version: 1,
-    indexedAt: new Date().toISOString(),
-    locations: rawLocations
-      .filter(l => isValidCoord(l.lat, l.lng))
-      .map(l => {
-        const events = (l.events as IdbEvent[] | null) ?? []
-        return {
-          ...l,
-          description:  blocksToText(l.description),
-          thumbnailUrl: galleryThumb(l.gallery),
-          events,
-          organizations: [...new Set(events.map(e => e.organization).filter(Boolean))],
-          districts:     [...new Set(events.map(e => e.district).filter(Boolean))],
-        }
-      }) as unknown as IdbLocation[],
-    stations: rawStations
-      .filter(s => isValidCoord(s.lat, s.lng))
-      .map(s => ({
-        ...s,
-        description:  blocksToText(s.description),
-        thumbnailUrl: galleryThumb(s.gallery),
-        events:       (s.events as IdbEvent[] | null) ?? [],
-      })) as unknown as IdbStation[],
-    people: rawPeople
-      .map(p => ({
-        ...p,
-        description:     blocksToText(p.description),
-        descriptionHtml: blocksToHtml(p.description) || undefined,
-        thumbnailUrl:    galleryThumb(p.gallery),
-        events:          (p.events as IdbEvent[] | null) ?? [],
-      })) as unknown as IdbPerson[],
-    events,
-    transport: rawTransport
-      .map(t => ({
-        ...t,
-        description:  blocksToText(t.description),
-        thumbnailUrl: galleryThumb(t.gallery),
-        events:       (t.events as IdbEvent[] | null) ?? [],
-      } as IdbTransport))
-      .sort((a, b) => String(a.name ?? '').localeCompare(String(b.name ?? ''), 'nb')),
-    outlines: rawOutlines
-      .map(o => ({
-        ...o,
-        description:  blocksToText(o.description),
-        thumbnailUrl: galleryThumb(o.gallery),
-      } as IdbOutline))
-      .sort((a, b) => String(a.title ?? '').localeCompare(String(b.title ?? ''), 'nb')),
     orgColors,
     districtColors,
   }

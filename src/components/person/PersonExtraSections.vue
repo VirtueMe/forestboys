@@ -56,8 +56,14 @@ import { ref, computed } from 'vue'
 import { RouterLink } from 'vue-router'
 import type { IdbEvent } from '@/types/idb.ts'
 
+/** Events as the person pages pass them — Neo4j gives null where the cache has undefined. */
+interface PersonEvent {
+  _id?: string; slug: string; title: string
+  date?: string | null; organization?: string | null; district?: string | null
+}
+
 interface PersonShape {
-  events?:    IdbEvent[]
+  events?:    PersonEvent[]
   movie?:     string | null
 }
 
@@ -73,8 +79,11 @@ const props = defineProps<{
 const eventSortAsc = ref(true)
 
 const sortedEvents = computed<IdbEvent[]>(() => {
-  const evs = props.person.events ?? []
-  return [...evs].sort((a, b) => {
+  const evs: IdbEvent[] = (props.person.events ?? []).map(e => ({
+    _id: e._id ?? e.slug, slug: e.slug, title: e.title,
+    date: e.date ?? undefined, organization: e.organization ?? undefined, district: e.district ?? undefined,
+  }))
+  return evs.sort((a, b) => {
     const ad = a.date ?? ''
     const bd = b.date ?? ''
     return eventSortAsc.value ? ad.localeCompare(bd) : bd.localeCompare(ad)

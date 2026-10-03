@@ -122,10 +122,10 @@ const CONFIDENCE_LABELS: Record<string, string> = {
 }
 
 const FILTERS = computed(() => [
-  { id: 'all',      label: 'Alle',     count: items.value.length },
-  { id: 'pending',  label: 'Venter',   count: items.value.filter(i => i.status === 'pending').length },
-  { id: 'approved', label: 'Godkjent', count: items.value.filter(i => i.status === 'approved').length },
-  { id: 'rejected', label: 'Avvist',   count: items.value.filter(i => i.status === 'rejected').length },
+  { id: 'all' as const,      label: 'Alle',     count: items.value.length },
+  { id: 'pending' as const,  label: 'Venter',   count: items.value.filter(i => i.status === 'pending').length },
+  { id: 'approved' as const, label: 'Godkjent', count: items.value.filter(i => i.status === 'approved').length },
+  { id: 'rejected' as const, label: 'Avvist',   count: items.value.filter(i => i.status === 'rejected').length },
 ])
 
 const pendingCount = computed(() => items.value.filter(i => i.status === 'pending').length)
