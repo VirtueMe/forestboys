@@ -110,11 +110,12 @@ testing; the Google flow is exercised on the deployed test sites.
 
 ```bash
 npm run lint           # ESLint
+npm test               # Vitest (npm run test:watch while developing)
 npm run build          # vue-tsc type-check (including functions/) + Vite build → dist/
 npm run preview        # serve dist/ via Vite preview (no functions)
 ```
 
-CI runs lint and build on every pull request.
+CI runs lint, tests and build on every pull request.
 
 ## Scripts
 

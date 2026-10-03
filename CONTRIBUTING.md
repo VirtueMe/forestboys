@@ -35,6 +35,7 @@ Before opening a PR, run what CI runs:
 
 ```bash
 npm run lint
+npm test             # Vitest; *.test.ts files sit next to the code they test
 npm run build        # vue-tsc type-check (including functions/) + vite build
 ```
 
