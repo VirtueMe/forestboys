@@ -10,6 +10,7 @@
  */
 import { ref } from 'vue'
 import { neo4jQuery } from './useNeo4j.ts'
+import { descriptionBlocks } from '../utils/descriptionBlocks.ts'
 import type { IdbEvent, IdbEventDetail } from '../types/idb.ts'
 
 interface EventRow {
@@ -116,9 +117,18 @@ export async function fetchEventDetailFromNeo4j(slug: string): Promise<IdbEventD
   const stFromEdge    = kindLabel === 'Operation' ? '[:FROM_STATION]' : '[:AT_STATION]'
   const stToEdge      = kindLabel === 'Operation' ? '[:TO_STATION]'   : '[:AT_STATION]'
 
-  const [descRows, locFromRows, locToRows, stFromRows, stToRows, peopleRows, galleryRows] = await Promise.all([
+  const [descRows, aboutRows, locFromRows, locToRows, stFromRows, stToRows, peopleRows, galleryRows] = await Promise.all([
     neo4jQuery<{ content: string | null }>(
       `MATCH (:\`${kindLabel}\` {slug: $slug})-[:HAS_CONTENT]->(d:Description)
+       RETURN d.content AS content
+       ORDER BY coalesce(d.order, 1) ASC`,
+      { slug },
+    ),
+    // The text imported from Sanity (scripts/sync-event.ts) is stored the other
+    // way round: (Description)-[:ABOUT]->(event). Used below when the event has
+    // no HAS_CONTENT sections.
+    neo4jQuery<{ content: string | null }>(
+      `MATCH (d:Description)-[:ABOUT]->(:\`${kindLabel}\` {slug: $slug})
        RETURN d.content AS content
        ORDER BY coalesce(d.order, 1) ASC`,
       { slug },
@@ -164,14 +174,9 @@ export async function fetchEventDetailFromNeo4j(slug: string): Promise<IdbEventD
 
   // Synthesize PT description blocks from the Description content
   // strings (each Description holds a JSON-stringified PT array).
-  const description: unknown[] = []
-  for (const r of descRows) {
-    if (!r.content) continue
-    try {
-      const blocks = JSON.parse(r.content) as unknown[]
-      for (const b of blocks) description.push(b)
-    } catch { /* skip malformed */ }
-  }
+  // Sections written in the app win; the imported ABOUT text shows only until
+  // an editor has written sections of their own.
+  const description = descriptionBlocks(descRows.length ? descRows : aboutRows)
 
   // Gallery shape mirrors Sanity's; consumers read .url first, asset second.
   const gallery = galleryRows.map((g) => ({
