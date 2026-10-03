@@ -32,6 +32,10 @@ export default defineConfig(({ mode }) => {
         manifest: false, // we supply public/manifest.json
         workbox: {
           globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
+          // Server routes (Pages Functions) must reach the network. Without
+          // this the service worker answers their navigations with index.html:
+          // /auth/github then shows the app's blank 404 instead of redirecting.
+          navigateFallbackDenylist: [/^\/auth\//, /^\/api\//, /^\/images\//],
           runtimeCaching: [
             {
               urlPattern: /^https:\/\/\w+\.apicdn\.sanity\.io\//,
