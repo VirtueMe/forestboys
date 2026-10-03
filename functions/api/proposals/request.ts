@@ -164,7 +164,7 @@ async function createBotTaskIssue(env: Required<Env>, req: ValidatedRequest): Pr
 }
 
 function renderIssueBody(req: ValidatedRequest): string {
-  // Mirrors .github/ISSUE_TEMPLATE/bot-task.md so a human inspecting the
+  // Mirrors .github/bot-templates/bot-task.md so a human inspecting the
   // bot-created issue sees the same shape as the template documentation.
   // The Action's parser only requires the first ```json fence to be the
   // request payload.

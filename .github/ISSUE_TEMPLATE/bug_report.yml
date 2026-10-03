@@ -1,0 +1,48 @@
+name: Bug report
+description: Something in the app is broken or behaves unexpectedly
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting. Norwegian or English is fine.
+        Wrong *historical facts* (a date, name or place) go in the **Content correction** form instead.
+        Security problems must not be filed here, see [SECURITY.md](https://github.com/VirtueMe/forestboys/blob/main/SECURITY.md).
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: What did you see, and what did you expect to see?
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: Where you were in the app and what you did. A link to the page helps.
+      placeholder: |
+        1. Open /locations/...
+        2. Tap ...
+        3. ...
+    validations:
+      required: true
+  - type: dropdown
+    id: device
+    attributes:
+      label: Device
+      options:
+        - Phone
+        - Tablet
+        - Desktop
+    validations:
+      required: true
+  - type: input
+    id: browser
+    attributes:
+      label: Browser and version
+      placeholder: Safari 18 on iOS, Chrome 130 on Windows, ...
+  - type: textarea
+    id: extra
+    attributes:
+      label: Screenshots or console errors
+      description: Drag images in here. Paste console errors as text if you have them.

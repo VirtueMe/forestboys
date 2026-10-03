@@ -44,7 +44,7 @@ jobs:
           body = os.environ['ISSUE_BODY']
 
           # Extract the first ```json fence — that's the request payload.
-          # See .github/ISSUE_TEMPLATE/bot-task.md + functions/api/proposals/request.ts.
+          # See .github/bot-templates/bot-task.md + functions/api/proposals/request.ts.
           match = re.search(r'```json\s*\n(.*?)\n```', body, re.DOTALL)
           if not match:
               print('::error::No ```json fence found in issue body', file=sys.stderr)

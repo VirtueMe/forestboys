@@ -1,0 +1,38 @@
+name: Content correction
+description: A historical fact, name, date, place or source is wrong or missing
+labels: ['area: content']
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you. The material rests on primary-source research by Jan Warberg and Rolf G. Halvorsen,
+        and every change to it is reviewed by the editors. A **source** is what lets them act on this.
+  - type: input
+    id: page
+    attributes:
+      label: Link to the page
+      description: The page in the app where the problem is.
+      placeholder: https://forestboys.pages.dev/...
+    validations:
+      required: true
+  - type: textarea
+    id: current
+    attributes:
+      label: What does it say now?
+    validations:
+      required: true
+  - type: textarea
+    id: correct
+    attributes:
+      label: What should it say?
+    validations:
+      required: true
+  - type: textarea
+    id: source
+    attributes:
+      label: Source
+      description: >
+        Archive reference, book and page, or a direct link to a scan (for example on nb.no),
+        ideally with the relevant line quoted. Don't paste long passages from copyrighted works.
+    validations:
+      required: true
