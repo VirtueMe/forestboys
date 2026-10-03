@@ -39,7 +39,7 @@ function decodePayload(payload: string): SessionUser {
   const bin = atob(payload)
   const bytes = Uint8Array.from(bin, c => c.charCodeAt(0))
   try {
-    return JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(bytes)) as SessionUser
+    return JSON.parse(new TextDecoder('utf-8', { fatal: true, ignoreBOM: false }).decode(bytes)) as SessionUser
   } catch {
     return JSON.parse(bin) as SessionUser
   }
