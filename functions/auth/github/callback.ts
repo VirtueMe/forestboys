@@ -23,7 +23,23 @@ const API_HEADERS = (token: string) => ({
   'User-Agent':           'milorg-forestboys',
 })
 
+/** A failed step: log it for the Pages logs and give /access a short code to show.
+ *  `detail` is GitHub's own error code or an HTTP status, never a secret. */
+function failed(step: string, detail: string): Response {
+  console.error(`github sign-in failed at ${step}: ${detail}`)
+  return accessError('failed', { detail: `${step}:${detail}` })
+}
+
 export const onRequestGet: PagesFunction<Env> = async ({ request, env }) => {
+  try {
+    return await signInWithGitHub(request, env)
+  } catch (err) {
+    console.error('github sign-in threw', err)
+    return failed('exception', err instanceof Error ? err.name : 'unknown')
+  }
+}
+
+async function signInWithGitHub(request: Request, env: Env): Promise<Response> {
   const url = new URL(request.url)
   if (url.searchParams.get('error')) return accessError('denied')   // the user declined at GitHub
 
@@ -31,7 +47,7 @@ export const onRequestGet: PagesFunction<Env> = async ({ request, env }) => {
   if (!state.ok) return accessError('state')
 
   const code = url.searchParams.get('code')
-  if (!code) return accessError('failed')
+  if (!code) return failed('code', 'missing')
 
   const tokenRes = await fetch('https://github.com/login/oauth/access_token', {
     method:  'POST',
@@ -43,14 +59,15 @@ export const onRequestGet: PagesFunction<Env> = async ({ request, env }) => {
       redirect_uri:  `${url.origin}/auth/github/callback`,
     }),
   })
-  const token = await tokenRes.json().catch(() => ({})) as { access_token?: string }
-  if (!tokenRes.ok || !token.access_token) return accessError('failed')
+  const token = await tokenRes.json().catch(() => ({})) as { access_token?: string; error?: string }
+  if (!tokenRes.ok || !token.access_token) return failed('token', token.error ?? `http_${tokenRes.status}`)
 
   const [userRes, emailsRes] = await Promise.all([
     fetch('https://api.github.com/user',        { headers: API_HEADERS(token.access_token) }),
     fetch('https://api.github.com/user/emails', { headers: API_HEADERS(token.access_token) }),
   ])
-  if (!userRes.ok || !emailsRes.ok) return accessError('failed')
+  if (!userRes.ok)   return failed('user',   `http_${userRes.status}`)
+  if (!emailsRes.ok) return failed('emails', `http_${emailsRes.status}`)
   const user   = await userRes.json<GitHubUser>()
   const emails = await emailsRes.json<GitHubEmail[]>()
 

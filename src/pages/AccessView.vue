@@ -151,6 +151,12 @@ function authHref(provider: 'google' | 'github'): string {
 
 const PROVIDER_LABEL: Record<string, string> = { google: 'Google', github: 'GitHub' }
 
+/** Short code from the failing step, e.g. `token:incorrect_client_credentials`. Only plain codes are shown. */
+const failureDetail = computed<string | null>(() => {
+  const d = typeof route.query.detail === 'string' ? route.query.detail : ''
+  return /^[a-z0-9_:]{1,60}$/.test(d) ? d : null
+})
+
 /** Why an OAuth sign-in came back to /access (accessError() in functions/_lib/oauth.ts). */
 const oauthError = computed<string | null>(() => {
   const code = typeof route.query.error === 'string' ? route.query.error : null
@@ -160,7 +166,7 @@ const oauthError = computed<string | null>(() => {
     case 'unverified': return 'Kontoen har ingen bekreftet e-postadresse. Bekreft e-posten hos leverandøren og prøv igjen.'
     case 'state':      return 'Innloggingen ble avbrutt eller har gått ut på tid. Prøv igjen.'
     case 'denied':     return 'Innloggingen ble avbrutt.'
-    case 'failed':     return 'Innloggingen mislyktes. Prøv igjen.'
+    case 'failed':     return `Innloggingen mislyktes. Prøv igjen.${failureDetail.value ? ` (feilkode: ${failureDetail.value})` : ''}`
     default:           return null
   }
 })
