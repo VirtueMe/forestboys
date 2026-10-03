@@ -36,6 +36,10 @@ function httpUri(env: Env): string {
 }
 
 export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
+  // Cloudflare keeps separate Production and Preview variables — say which is missing.
+  const missing = (['NEO4J_URI', 'NEO4J_USERNAME', 'NEO4J_PASSWORD'] as const).filter(k => !env[k])
+  if (missing.length) return json({ error: `Neo4j is not configured in this environment (${missing.join(', ')} missing)` }, 500)
+
   const body = await request.json<{ query?: unknown; params?: unknown }>().catch(() => null)
   if (!body || typeof body.query !== 'string' || !body.query.trim()) return json({ error: 'query required' }, 400)
   if (body.query.length > MAX_QUERY) return json({ error: 'query too long' }, 413)
