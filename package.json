@@ -54,7 +54,7 @@
     "vite-plugin-vue-devtools": "^8.1.1",
     "vue-eslint-parser": "^10.4.0",
     "vue-tsc": "^3.2.6",
-    "wrangler": "^4.83.0",
+    "wrangler": "^4.147.0",
     "yargs": "^18.0.0"
   }
 }
