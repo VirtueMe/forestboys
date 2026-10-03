@@ -4,25 +4,14 @@
  * Response to short-circuit the handler with 401/403.
  */
 
-import { readSession, type SessionUser } from './session.ts'
-import { verifyJwt }                     from './jwt.ts'
-
-interface Env {
-  SESSION_SECRET: string
-}
+import { resolveUser, type UserEnv } from './current-user.ts'
+import type { SessionUser }            from './session.ts'
 
 export async function requireAdmin(
   request: Request,
-  env:     Env,
+  env:     UserEnv,
 ): Promise<SessionUser | Response> {
-  const bearer = request.headers.get('Authorization')?.match(/^Bearer\s+(.+)$/i)?.[1]
-
-  let user: SessionUser | null = null
-  if (bearer) {
-    const claims = await verifyJwt(bearer, env.SESSION_SECRET)
-    if (claims) user = { id: claims.sub, email: claims.email, name: claims.name, role: claims.role }
-  }
-  user ??= await readSession(request, env.SESSION_SECRET)
+  const user = await resolveUser(request, env)
 
   if (!user) {
     return new Response(JSON.stringify({ error: 'Not authenticated' }), {
