@@ -27,6 +27,7 @@ const AdminPagesView           = () => import('../pages/AdminPagesView.vue')
 const AdminSourcesView         = () => import('../pages/AdminSourcesView.vue')
 const AdminRanksView           = () => import('../pages/AdminRanksView.vue')
 const AdminRolesView           = () => import('../pages/AdminRolesView.vue')
+const AdminUsersView           = () => import('../pages/AdminUsersView.vue')
 const AdminProposalListView    = () => import('../pages/AdminProposalListView.vue')
 const AdminProposalBundleView  = () => import('../pages/AdminProposalBundleView.vue')
 const AdminProposalEntityPreview = () => import('../pages/AdminProposalEntityPreview.vue')
@@ -73,6 +74,7 @@ const router = createRouter({
         { path: 'sources',              component: AdminSourcesView },
         { path: 'ranks',                component: AdminRanksView },
         { path: 'roles',                component: AdminRolesView },
+        { path: 'users',                component: AdminUsersView },
         { path: 'review',                                    component: ReviewView },
         { path: 'proposals',                                 component: AdminProposalListView },
         { path: 'proposals/:bundleId',                       component: AdminProposalBundleView },
