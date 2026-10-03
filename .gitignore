@@ -54,3 +54,6 @@ tsconfig.tsbuildinfo
 
 # Playwright MCP — page snapshots and console logs from browser sessions
 .playwright-mcp/
+
+# Local per-issue working checklist (see CONTRIBUTING.md)
+CHECKLIST.md
