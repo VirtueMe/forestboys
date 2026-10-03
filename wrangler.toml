@@ -18,3 +18,9 @@ bucket_name = "milorg-proposals"
 name        = "BUNDLE_EVENTS"
 class_name  = "BundleEventsDO"
 script_name = "milorg-bundle-events"
+
+[vars]
+# GitHub OAuth App "MILORG CLOUDFLARE" (#14) — the client id is public; GITHUB_CLIENT_SECRET
+# is a Cloudflare secret (Production + Preview), never here. Locally .dev.vars overrides
+# both with the 127.0.0.1 app.
+GITHUB_CLIENT_ID = "Ov23li62h3a4NAutaB7P"

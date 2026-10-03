@@ -25,8 +25,28 @@ async function hmac(secret: string, data: string): Promise<string> {
   return btoa(String.fromCharCode(...new Uint8Array(sig)))
 }
 
+/** JSON → base64 of its UTF-8 bytes. btoa() alone throws on anything outside
+ *  Latin-1, and GitHub names are free text (emoji, any script). */
+function encodePayload(user: SessionUser): string {
+  const bytes = new TextEncoder().encode(JSON.stringify(user))
+  let bin = ''
+  for (const b of bytes) bin += String.fromCharCode(b)
+  return btoa(bin)
+}
+
+/** Reads UTF-8 payloads, and the older Latin-1 ones (plain btoa of the JSON). */
+function decodePayload(payload: string): SessionUser {
+  const bin = atob(payload)
+  const bytes = Uint8Array.from(bin, c => c.charCodeAt(0))
+  try {
+    return JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(bytes)) as SessionUser
+  } catch {
+    return JSON.parse(bin) as SessionUser
+  }
+}
+
 export async function createSessionCookie(user: SessionUser, secret: string): Promise<string> {
-  const payload = btoa(JSON.stringify(user))
+  const payload = encodePayload(user)
   const sig = await hmac(secret, payload)
   const value = `${payload}.${sig}`
   return `${COOKIE_NAME}=${value}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=${COOKIE_MAX_AGE}`
@@ -44,7 +64,7 @@ export async function readSession(request: Request, secret: string): Promise<Ses
   if (expected !== sig) return null
 
   try {
-    return JSON.parse(atob(payload)) as SessionUser
+    return decodePayload(payload)
   } catch {
     return null
   }
