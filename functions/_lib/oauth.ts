@@ -111,6 +111,8 @@ export async function signIn(
   const session = await createSessionCookie({ id, email, name: who.name, role }, env.SESSION_SECRET)
   return new Response(null, {
     status: 302,
-    headers: [['Location', safeNext(next)], ['Set-Cookie', session], ['Set-Cookie', clearStateCookie()]],
+    // Only editors and admins have anything to do at `next`; a pending or
+    // denied user is sent to see where their request stands.
+    headers: [['Location', role === 'admin' || role === 'editor' ? safeNext(next) : '/access'], ['Set-Cookie', session], ['Set-Cookie', clearStateCookie()]],
   })
 }
