@@ -52,6 +52,7 @@ export function useProposalStationData(bundleId: string, entityId: string) {
           canonicalName: string
           type:          string | null
           category:      StationCategory | null
+          sourceRefs:    string[]
           lat:           number | null
           lng:           number | null
           activeFrom:    string | null
@@ -63,6 +64,7 @@ export function useProposalStationData(bundleId: string, entityId: string) {
           name:        props.canonicalName ?? createOp.slug,
           type:        props.type        ?? null,
           category:    props.category    ?? null,
+          sourceRefs:  props.sourceRefs  ?? [],
           lat:         props.lat         ?? null,
           lng:         props.lng         ?? null,
           activeFrom:  props.activeFrom  ?? null,

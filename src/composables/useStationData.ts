@@ -30,6 +30,8 @@ export interface StationNode {
   type:        string | null
   /** The controlled value — Skole / Base / Annet; null until someone sets it. */
   category:    StationCategory | null
+  /** What backs the station's facts — a document, a page (`<source-id>#page:A163`). */
+  sourceRefs:  string[]
   lat:         number | null
   lng:         number | null
   activeFrom:  string | null
@@ -121,7 +123,7 @@ export function useStationData() {
   async function loadStation(slug: string) {
     if (slug === 'new') {
       station.value = {
-        name: '', type: null, category: null, lat: null, lng: null,
+        name: '', type: null, category: null, sourceRefs: [], lat: null, lng: null,
         activeFrom: null, activeTo: null,
         description: null, links: null,
       }
@@ -137,6 +139,7 @@ export function useStationData() {
            RETURN coalesce(s.canonicalName, s.title) AS name,
                   s.type        AS type,
                   s.category    AS category,
+                  coalesce(s.sourceRefs, []) AS sourceRefs,
                   s.lat         AS lat,
                   s.lng         AS lng,
                   s.activeFrom  AS activeFrom,

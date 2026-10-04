@@ -66,6 +66,10 @@
       <label class="edit-label" for="edit-station-activeTo">Aktiv til</label>
       <input id="edit-station-activeTo" v-model="draft.activeTo" class="edit-input edit-input-date" type="text" placeholder="YYYY-MM-DD" />
     </div>
+    <div class="edit-row edit-row--top">
+      <span class="edit-label">Kilder</span>
+      <SourceRefsEditor v-model="draft.sourceRefs" />
+    </div>
   </section>
 
   <footer v-if="createMode || dirty" class="edit-save-bar">
@@ -87,6 +91,7 @@
  * user can leave them empty without typing 0; parsed at save time.
  */
 import { ref, computed, watch } from 'vue'
+import SourceRefsEditor from '@/components/SourceRefsEditor.vue'
 import { authFetch } from '@/composables/useAuth.ts'
 import { neo4jQuery } from '@/composables/useNeo4j.ts'
 import { slugify, SLUG_RE } from '@/utils/slug.ts'
@@ -100,6 +105,8 @@ export interface StationDraft {
   type:       string
   /** '' = not set. */
   category:   '' | StationCategory
+  /** The station's sources, one list for the whole station. */
+  sourceRefs: string[]
   lat:        string
   lng:        string
   activeFrom: string
@@ -120,11 +127,11 @@ const emit = defineEmits<{
 }>()
 
 const empty: StationDraft = {
-  name: '', type: '', category: '', lat: '', lng: '', activeFrom: '', activeTo: '', slug: '',
+  name: '', type: '', category: '', sourceRefs: [], lat: '', lng: '', activeFrom: '', activeTo: '', slug: '',
 }
 
-const draft    = ref<StationDraft>({ ...empty })
-const baseline = ref<StationDraft>({ ...empty })
+const draft    = ref<StationDraft>({ ...empty, sourceRefs: [] })
+const baseline = ref<StationDraft>({ ...empty, sourceRefs: [] })
 const saving   = ref(false)
 const error    = ref<string | null>(null)
 
@@ -169,14 +176,15 @@ function snapshot() {
     name:       props.saved.name ?? '',
     type:       props.saved.type ?? '',
     category:   props.saved.category ?? '',
+    sourceRefs: [...props.saved.sourceRefs],
     lat:        props.saved.lat == null ? '' : String(props.saved.lat),
     lng:        props.saved.lng == null ? '' : String(props.saved.lng),
     activeFrom: props.saved.activeFrom ?? '',
     activeTo:   props.saved.activeTo ?? '',
     slug:       props.createMode ? 'new' : '',
   }
-  draft.value    = { ...snap }
-  baseline.value = { ...snap }
+  draft.value    = { ...snap, sourceRefs: [...snap.sourceRefs] }
+  baseline.value = { ...snap, sourceRefs: [...snap.sourceRefs] }
   error.value    = null
   slugEdited.value   = false
   slugEditable.value = false
@@ -194,8 +202,13 @@ const suggestion = computed<StationCategory | null>(() =>
   draft.value.category ? null : suggestStationCategory(draft.value.type),
 )
 
+const sameRefs = (a: string[], b: string[]) => JSON.stringify(a) === JSON.stringify(b)
+
 const dirty = computed(() =>
-  (Object.keys(draft.value) as (keyof StationDraft)[]).some(k => draft.value[k] !== baseline.value[k]),
+  !sameRefs(draft.value.sourceRefs, baseline.value.sourceRefs) ||
+  (Object.keys(draft.value) as (keyof StationDraft)[])
+    .filter(k => k !== 'sourceRefs')
+    .some(k => draft.value[k] !== baseline.value[k]),
 )
 
 /** Returns the parsed value, or 'invalid' if non-empty and unparseable. */
@@ -226,7 +239,7 @@ function toggleSlugEdit() {
 }
 
 function revert() {
-  draft.value = { ...baseline.value }
+  draft.value = { ...baseline.value, sourceRefs: [...baseline.value.sourceRefs] }
   error.value = null
 }
 
@@ -253,6 +266,7 @@ async function save() {
           canonicalName: f.name.trim(),
           type:          f.type.trim() || null,
           category:      f.category || null,
+          sourceRefs:    f.sourceRefs,
           lat, lng,
         }),
       })
@@ -271,6 +285,7 @@ async function save() {
     if (f.name       !== b.name)       body.name       = f.name.trim()
     if (f.type       !== b.type)       body.type       = f.type.trim() || null
     if (f.category   !== b.category)   body.category   = f.category || null
+    if (!sameRefs(f.sourceRefs, b.sourceRefs)) body.sourceRefs = f.sourceRefs
     if (f.lat        !== b.lat)        body.lat        = lat
     if (f.lng        !== b.lng)        body.lng        = lng
     if (f.activeFrom !== b.activeFrom) body.activeFrom = f.activeFrom.trim() || null
@@ -343,6 +358,8 @@ defineExpose({
 }
 .edit-input:focus { outline: 1px solid var(--focus); outline-offset: 0; border-color: var(--focus); }
 .edit-input.locked { background: var(--paper-sunken); color: var(--muted); font-family: var(--font-mono); font-size: var(--size-mono); }
+.edit-row--top { align-items: start; }
+.edit-row--top .edit-label { padding-top: var(--space-sm); }
 .edit-input-select { width: auto; min-width: 10em; }
 .category-stack { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-xs) var(--space-md); }
 .category-hint { font-family: var(--font-sans); font-size: var(--size-label); color: var(--ink-soft); }
