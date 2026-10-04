@@ -88,6 +88,15 @@
       </div>
     </details>
 
+    <details v-if="!hideEditable && sourceRefs.length" class="section" open>
+      <summary class="section-summary">
+        <h3 class="section-heading">Kilder ({{ sourceRefs.length }})</h3>
+      </summary>
+      <div class="section-body">
+        <SourceRef :refs="sourceRefs" inline />
+      </div>
+    </details>
+
     <details class="section" open>
       <summary class="section-summary">
         <h3 class="section-heading">Lenker<span v-if="totalLinkCount"> ({{ totalLinkCount }})</span></h3>
@@ -153,6 +162,8 @@ import { NAME_TYPE_LABEL, formatNamePeriod, sortNames } from '@/utils/stationNam
 const props = withDefaults(defineProps<{
   /** The Station's other names (HAS_NAME). */
   names:             StationName[]
+  /** What backs the station's facts — one list for the whole station. */
+  sourceRefs:        string[]
   previewSections:   Section[]
   legacyDescription: string | null
   legacyLinksJson:   string | null

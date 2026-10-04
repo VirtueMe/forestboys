@@ -51,6 +51,7 @@
       <StationViewPane
         v-show="mode !== 'proposals'"
         :names="names"
+        :source-refs="station.sourceRefs"
         :preview-sections="previewSections"
         :legacy-description="station.description"
         :legacy-links-json="station.links"
@@ -130,13 +131,14 @@ function onScalarSaved(out: Partial<StationNode>) {
   if (out.name       !== undefined) station.value.name       = out.name ?? ''
   if (out.type       !== undefined) station.value.type       = out.type       ?? null
   if (out.category   !== undefined) station.value.category   = out.category   ?? null
+  if (out.sourceRefs !== undefined) station.value.sourceRefs = out.sourceRefs ?? []
   if (out.lat        !== undefined) station.value.lat        = out.lat        ?? null
   if (out.lng        !== undefined) station.value.lng        = out.lng        ?? null
   if (out.activeFrom !== undefined) station.value.activeFrom = out.activeFrom ?? null
   if (out.activeTo   !== undefined) station.value.activeTo   = out.activeTo   ?? null
 }
 
-function pickStr(field: keyof StationDraft, fallback: string | null | undefined): string {
+function pickStr(field: Exclude<keyof StationDraft, 'sourceRefs'>, fallback: string | null | undefined): string {
   const ed = editPane.value
   if (ed?.scalarDirty && ed.scalarDraft) return ed.scalarDraft[field]
   return fallback ?? ''
