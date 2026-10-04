@@ -31,6 +31,23 @@ export function usageCypher(keyExpr: string): string {
   return `{ ${parts.join(', ')} }`
 }
 
+/** The scope whose roles can be flagged `attended` — shown under «Har deltatt på». */
+export const ATTENDED_SCOPE = 'stationed'
+
+/**
+ * `attended` marks a role whose links are shown under «Har deltatt på»
+ * (training, instructor) instead of «Stasjonert på». A boolean, only for a
+ * role that applies to the stationed scope; absent means false.
+ */
+export function parseAttended(v: unknown, scopes: string[]): { attended: boolean } | { error: string } {
+  if (v === undefined || v === null) return { attended: false }
+  if (typeof v !== 'boolean') return { error: 'attended må være sann eller usann' }
+  if (v && !scopes.includes(ATTENDED_SCOPE)) {
+    return { error: 'Bare roller for «Stasjonert på» kan vises under «Har deltatt på»' }
+  }
+  return { attended: v }
+}
+
 /** Scopes must be a non-empty list of known scope keys, deduplicated. */
 export function parseScopes(v: unknown): { list: string[] } | { error: string } {
   if (!Array.isArray(v) || !v.length) return { error: 'Velg minst én gruppe' }

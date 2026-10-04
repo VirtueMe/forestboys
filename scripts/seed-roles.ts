@@ -29,7 +29,8 @@ const SCOPE_EDGES: Record<string, string> = {
   'crew':       'CREW_OF',
 }
 
-const SEED: Array<{ key: string; name: string; scopes: string[] }> = [
+/** `attended`: links with the role are shown under «Har deltatt på» (docs/ROLES.md R18). */
+const SEED: Array<{ key: string; name: string; scopes: string[]; attended?: boolean }> = [
   // Person → Unit / Organization
   { key: 'operative',      name: 'operatør',         scopes: ['membership'] },
   { key: 'courier',        name: 'kurér',            scopes: ['membership'] },
@@ -46,8 +47,8 @@ const SEED: Array<{ key: string; name: string; scopes: string[] }> = [
   { key: 'stationed',      name: 'stasjonert',       scopes: ['stationed'] },
   { key: 'hiding',         name: 'i skjul',          scopes: ['stationed'] },
   { key: 'imprisoned',     name: 'fange',            scopes: ['stationed'] },
-  { key: 'training',       name: 'opplæring',        scopes: ['stationed'] },
-  { key: 'instructor',     name: 'instruktør',       scopes: ['stationed'] },
+  { key: 'training',       name: 'opplæring',        scopes: ['stationed'], attended: true },
+  { key: 'instructor',     name: 'instruktør',       scopes: ['stationed'], attended: true },
   { key: 'operating',      name: 'operatør',         scopes: ['stationed'] },
 ]
 
@@ -89,8 +90,9 @@ async function main() {
     const res = await session.run(`
       UNWIND $seed AS s
       MERGE (r:Role {key: s.key})
-        ON CREATE SET r.name = s.name, r.scopes = s.scopes
-        ON MATCH  SET r.scopes = r.scopes + [x IN s.scopes WHERE NOT x IN r.scopes]
+        ON CREATE SET r.name = s.name, r.scopes = s.scopes, r.attended = coalesce(s.attended, false)
+        ON MATCH  SET r.scopes = r.scopes + [x IN s.scopes WHERE NOT x IN r.scopes],
+                      r.attended = coalesce(r.attended, coalesce(s.attended, false))
       RETURN count(r) AS n
     `, { seed: SEED })
     console.log(`Merged ${res.records[0]?.get('n')} roles.`)
