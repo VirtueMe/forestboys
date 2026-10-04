@@ -159,7 +159,7 @@ async function main() {
     const l = await loadLookups(read)
     const calib = calibrateEvents(graph, sanity, base, l)
     const off = Object.entries(calib).filter(([, c]) => c.agree !== c.total)
-    console.log(`Calibration: ${off.length ? off.map(([n, c]) => `${n} ${c.total - c.agree} differ`).join(', ') : `graph equals its baseline (${Object.values(calib)[0]?.total ?? 0} events)`}`)
+    console.log(`Calibration: ${off.length ? off.map(([n, c]) => `${n} ${c.total - c.agree} differ`).join(', ') : `${Object.values(calib)[0]?.total ? `graph equals its stamps${base.size ? ' and baseline' : ''} (${Object.values(calib)[0].total} events)` : 'nothing to check — no stamped event, and no baseline file'}`}`)
 
     // Events not stamped yet: stamp them from the baseline file (first run).
     const toStamp = [...graph.values()].filter(g => !Object.keys(g.stamps).length && base.get(g.sanityId)?._updatedAt === g.sanityUpdatedAt)

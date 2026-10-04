@@ -15,10 +15,10 @@
  *      marked it (`<field>_sourceRef: 'admin-edit'`).
  */
 
-import { readFileSync } from 'node:fs'
 import { createHash } from 'node:crypto'
 import neo4j from 'neo4j-driver'
 import { stableJson } from './sanity-sha.ts'
+import { loadBaselineFile } from './baseline.ts'
 import { isImportableUrl, parsePerson, rankEdge, urlToId, imageSources } from './person-rule.ts'
 
 export const API      = 'https://7r6kqtqy.api.sanity.io/v2021-08-31/data/query/production'
@@ -210,8 +210,8 @@ export function calibrate(graph: Map<string, GraphPerson>, sanity: Map<string, D
 
 // ── Data ──
 
-export const loadApril = (): Map<string, Doc> =>
-  new Map((JSON.parse(readFileSync(BASELINE, 'utf8')) as Doc[]).map(d => [d._id, d]))
+/** The April export — empty when the file is not there (CI): see ./baseline.ts. */
+export const loadApril = (): Map<string, Doc> => loadBaselineFile(BASELINE)
 
 export async function fetchSanityPeople(): Promise<Doc[]> {
   const out: Doc[] = []

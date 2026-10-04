@@ -297,9 +297,12 @@ async function main() {
   const [sanityDocs, graph] = await Promise.all([fetchSanityPeople(), fetchGraphPeople()])
   const sanity = new Map(sanityDocs.map(d => [d._id, d]))
 
-  const calib = calibrate(graph, sanity, april)
-  const off = Object.entries(calib).filter(([, c]) => c.agree !== c.total)
-  console.log(`Calibration: ${off.length ? off.map(([n, c]) => `${n} ${c.total - c.agree} differ`).join(', ') : 'rule reproduces the graph (100%)'}`)
+  // Calibration compares what the rule makes of the baseline with the graph, so it needs the
+  // baseline file — a dev-machine check (after a rule change, run sanity-person-fields.ts). Without
+  // the file (CI) it is skipped, and says so, instead of passing on zero checks.
+  const calib = april.size ? calibrate(graph, sanity, april) : null
+  const off = calib ? Object.entries(calib).filter(([, c]) => c.agree !== c.total) : []
+  console.log(`Calibration: ${!calib ? 'skipped — no baseline file (the stamps on the nodes are the baseline)' : off.length ? off.map(([n, c]) => `${n} ${c.total - c.agree} differ`).join(', ') : 'rule reproduces the graph (100%)'}`)
 
   const driver = neo4jDriver()
   const errors: string[] = []
