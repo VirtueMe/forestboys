@@ -57,6 +57,7 @@ import {
 } from '../lib/person-sync.ts'
 import { imageSources, linkSource, parsePerson, personClaims, rankEdge, sanMigRef } from '../lib/person-rule.ts'
 import { deletionStmts, deletionSummary, planDeletions } from '../lib/person-deletions.ts'
+import { writeStampUndo } from '../lib/stamp-undo.ts'
 loadEnv()
 
 const write = process.argv.includes('--write')
@@ -323,6 +324,8 @@ async function stampPeople(graph: Map<string, GraphPerson>, sanity: Map<string, 
     process.exitCode = 1
     return
   }
+  // The keys this run adds, per person — some already carry stamps from earlier applies, so the undo cannot be "remove every _sha".
+  console.log(`Undo file: ${writeStampUndo('person', rows)}`)
   const driver = neo4jDriver()
   const ws = driver.session()
   try {

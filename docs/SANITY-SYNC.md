@@ -265,7 +265,11 @@ CI has no `data/`, so it has no baseline files (24 MB, local only): a
 document's baseline is its stamps on the node. `sync-person.ts --stamp` and
 `sync-event.ts --stamp` write them once from the local baseline files — a dry
 run by default, `--write` to stamp, nothing else changes, and they refuse
-unless every document gets from its stamps the verdicts the file gives. A
+unless every document gets from its stamps the verdicts the file gives, and
+`--write` first saves `data/sanity-delta/<person|event>-stamp-undo-<time>.json`:
+per node, exactly the keys it adds (a map of nulls) and the Cypher that removes
+them (`SET p += x.remove` over the file's `rows`) — some nodes already carry
+stamps from earlier applies, so the undo cannot be "remove every `_sha`". A
 document with neither a stamp nor a trustworthy baseline has no baseline and
 goes to review, never to an automatic apply. Without the file the person
 calibration is skipped (it compares the rule with the baseline, so it stays a
