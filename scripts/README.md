@@ -21,7 +21,7 @@ A script talks to the local Neo4j (`.env`, which must be `localhost`) unless you
 writes need your say-so each time.
 
 Most scripts that write are a **dry run unless you pass `--write`**. Not all: a few
-(`seed-roles`, `classify-person-type`, `course-membership-to-attended`,
-`flatten-page-cards`, `promote-*`) write unless you pass `--dry`, and the banner
+(`seed-roles`, `flatten-page-cards`, `promote-heading-text-cards`) write
+unless you pass `--dry`, and the banner
 printed for `--production` is wrong for those. Until the convention is unified
 (#78), read the script's header before running it, and pass `--dry` first where it exists.

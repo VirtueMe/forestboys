@@ -279,7 +279,7 @@ function planNew(s: Doc): Plan {
         id, rank: rank.rankSlug, rankRef: rank.sourceRef,
         props: {
           slug, canonicalName: parsed.canonicalName, sanityUpdatedAt: s._updatedAt,
-          // classify-person-type.ts: a parsed rank makes a soldier; the Menig default does not.
+          // A parsed rank makes a soldier; the Menig default does not (the rule of the one-shot that set Person.type).
           type: parsed.rank ? 'soldier' : 'civilian',
           ...personClaims(id, s, parsed),
           ...stamps,
