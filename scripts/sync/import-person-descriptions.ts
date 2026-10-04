@@ -30,8 +30,8 @@
  */
 
 import neo4j from 'neo4j-driver'
-import { loadEnv } from './lib/env.ts'
-import { fieldSha } from './lib/sanity-sha.ts'
+import { loadEnv } from '../lib/env.ts'
+import { fieldSha } from '../lib/sanity-sha.ts'
 loadEnv()
 
 const API   = 'https://7r6kqtqy.api.sanity.io/v2021-08-31/data/query/production'

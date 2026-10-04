@@ -21,13 +21,13 @@
 
 import { writeFileSync, mkdirSync } from 'node:fs'
 import { resolve } from 'node:path'
-import { loadEnv } from './lib/env.ts'
+import { loadEnv } from '../lib/env.ts'
 import {
   EVENT_FIELDS, baselineSha, calibrateEvents, classifyEvent, fetchGraphEvents, fetchSanityEvents, loadAprilEvents, sha,
   type EventVerdict,
-} from './lib/event-sync.ts'
-import { loadLookups } from './lib/event-rule.ts'
-import { neo4jDriver } from './lib/person-sync.ts'
+} from '../lib/event-sync.ts'
+import { loadLookups } from '../lib/event-rule.ts'
+import { neo4jDriver } from '../lib/person-sync.ts'
 loadEnv()
 
 const OUT = resolve(process.cwd(), 'data', 'sanity-delta', 'event-fields.json')

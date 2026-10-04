@@ -27,7 +27,7 @@
 import { writeFileSync, mkdirSync } from 'node:fs'
 import { resolve } from 'node:path'
 import neo4j, { type Session } from 'neo4j-driver'
-import { loadEnv } from './lib/env.ts'
+import { loadEnv } from '../lib/env.ts'
 loadEnv()
 
 const API     = 'https://7r6kqtqy.api.sanity.io/v2021-08-31/data/query/production'
