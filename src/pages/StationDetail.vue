@@ -11,6 +11,7 @@
         :name="displayName"
         :names="names"
         :type="displayType"
+        :category="displayCategory"
         :active-from="displayActiveFrom"
         :active-to="displayActiveTo"
         :lat="displayLat"
@@ -75,6 +76,7 @@ import AdminViewTabs from '../components/AdminViewTabs.vue'
 import BundleReviewPanel from '../components/BundleReviewPanel.vue'
 import type { Section } from '../components/SectionsEditor.vue'
 import StationHeader   from '../components/station/StationHeader.vue'
+import type { StationCategory } from '../utils/stationCategory.ts'
 import StationEditPane from '../components/station/StationEditPane.vue'
 import StationViewPane from '../components/station/StationViewPane.vue'
 import type { StationDraft } from '../components/station/StationScalarEditor.vue'
@@ -127,6 +129,7 @@ function onScalarSaved(out: Partial<StationNode>) {
   if (!station.value) return
   if (out.name       !== undefined) station.value.name       = out.name ?? ''
   if (out.type       !== undefined) station.value.type       = out.type       ?? null
+  if (out.category   !== undefined) station.value.category   = out.category   ?? null
   if (out.lat        !== undefined) station.value.lat        = out.lat        ?? null
   if (out.lng        !== undefined) station.value.lng        = out.lng        ?? null
   if (out.activeFrom !== undefined) station.value.activeFrom = out.activeFrom ?? null
@@ -151,6 +154,7 @@ function pickCoord(field: 'lat' | 'lng', fallback: number | null | undefined): n
 
 const displayName       = computed(() => pickStr('name',       station.value?.name))
 const displayType       = computed(() => pickStr('type',       station.value?.type))
+const displayCategory   = computed(() => (pickStr('category',   station.value?.category) || null) as StationCategory | null)
 const displayActiveFrom = computed(() => pickStr('activeFrom', station.value?.activeFrom))
 const displayActiveTo   = computed(() => pickStr('activeTo',   station.value?.activeTo))
 const displayLat        = computed(() => pickCoord('lat', station.value?.lat))

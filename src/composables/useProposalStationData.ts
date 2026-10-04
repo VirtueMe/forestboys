@@ -7,6 +7,7 @@
  */
 import { ref, computed } from 'vue'
 import { useStationData } from './useStationData.ts'
+import type { StationCategory } from '@/utils/stationCategory.ts'
 import { useProposalBundle, type EntityStatus, type EntityPayload } from './useProposalBundle.ts'
 import { applyModifyBlockOps, computeExpectedShas, synthesizeSectionsFromModifyOps } from './proposalMerge.ts'
 
@@ -50,6 +51,7 @@ export function useProposalStationData(bundleId: string, entityId: string) {
         const props = createOp.props as Partial<{
           canonicalName: string
           type:          string | null
+          category:      StationCategory | null
           lat:           number | null
           lng:           number | null
           activeFrom:    string | null
@@ -60,6 +62,7 @@ export function useProposalStationData(bundleId: string, entityId: string) {
         live.station.value = {
           name:        props.canonicalName ?? createOp.slug,
           type:        props.type        ?? null,
+          category:    props.category    ?? null,
           lat:         props.lat         ?? null,
           lng:         props.lng         ?? null,
           activeFrom:  props.activeFrom  ?? null,

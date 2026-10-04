@@ -8,7 +8,8 @@
         {{ g.text }}
       </span>
     </p>
-    <p v-if="type || activeFrom || activeTo || coords" class="item-meta">
+    <p v-if="category || type || activeFrom || activeTo || coords" class="item-meta">
+      <span v-if="category" class="type-pill type-pill--category">{{ STATION_CATEGORY_LABEL[category] }}</span>
       <span v-if="type" class="type-pill">{{ type }}</span>
       <span v-if="activeFrom || activeTo" class="period">
         {{ activeFrom ?? '?' }}<span v-if="activeTo"> – {{ activeTo }}</span>
@@ -20,11 +21,12 @@
 
 <script setup lang="ts">
 /**
- * StationHeader — back link + station name + the other names + type pill
- * + active period + coordinates row. Sits at the page top above the View / Edit tabs.
+ * StationHeader — back link + station name + the other names + category and
+ * type pills + active period + coordinates row. Sits at the page top above the View / Edit tabs.
  */
 import { computed } from 'vue'
 import { RouterLink } from 'vue-router'
+import { STATION_CATEGORY_LABEL, type StationCategory } from '@/utils/stationCategory.ts'
 import {
   NAME_TYPE_SHORT, formatNamePeriod, sortNames, type NameLike, type NameType,
 } from '@/utils/stationNames.ts'
@@ -34,6 +36,7 @@ const props = defineProps<{
   /** The Station's other names (HAS_NAME), saved ones. */
   names?:      NameLike[]
   type?:       string | null
+  category?:   StationCategory | null
   activeFrom?: string | null
   activeTo?:   string | null
   lat?:        number | null
@@ -111,6 +114,7 @@ const coords = computed(() => {
   letter-spacing: 0.06em;
   text-transform: uppercase;
 }
+.type-pill--category { color: var(--ink-soft); border-color: var(--ink-soft); }
 .period { font-variant-numeric: tabular-nums; }
 .coords { font-family: var(--font-mono); font-size: 11px; font-variant-numeric: tabular-nums; }
 </style>

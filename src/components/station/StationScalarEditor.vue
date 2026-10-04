@@ -34,8 +34,21 @@
     </div>
 
     <div class="edit-row">
-      <label class="edit-label" for="edit-station-type">Type</label>
-      <input id="edit-station-type" v-model="draft.type" class="edit-input" type="text" placeholder="f.eks. flyplass, radiostasjon" />
+      <label class="edit-label" for="edit-station-category">Kategori</label>
+      <div class="category-stack">
+        <select id="edit-station-category" v-model="draft.category" class="edit-input edit-input-select">
+          <option value="">Ikke satt</option>
+          <option v-for="c in STATION_CATEGORIES" :key="c" :value="c">{{ STATION_CATEGORY_LABEL[c] }}</option>
+        </select>
+        <span v-if="suggestion" class="category-hint">
+          Forslag ut fra «{{ draft.type.trim() }}»: {{ STATION_CATEGORY_LABEL[suggestion] }}
+          <button type="button" class="category-use" @click="draft.category = suggestion">Bruk</button>
+        </span>
+      </div>
+    </div>
+    <div class="edit-row">
+      <label class="edit-label" for="edit-station-type">Funksjon</label>
+      <input id="edit-station-type" v-model="draft.type" class="edit-input" type="text" placeholder="f.eks. flyplass, radiostasjon, forskning og utvikling" />
     </div>
     <div class="edit-row">
       <label class="edit-label" for="edit-station-lat">Breddegrad</label>
@@ -67,7 +80,8 @@
 
 <script setup lang="ts">
 /**
- * StationScalarEditor — Stasjon edit/create form. Mirror of
+ * StationScalarEditor — Stasjon edit/create form (name, Kategori, Funksjon,
+ * coordinates, active period). Mirror of
  * UnitScalarEditor with Station-specific fields (type + coordinates +
  * active period). Coordinates are typed as strings in the draft so the
  * user can leave them empty without typing 0; parsed at save time.
@@ -77,10 +91,15 @@ import { authFetch } from '@/composables/useAuth.ts'
 import { neo4jQuery } from '@/composables/useNeo4j.ts'
 import { slugify, SLUG_RE } from '@/utils/slug.ts'
 import type { StationNode } from '@/composables/useStationData.ts'
+import {
+  STATION_CATEGORIES, STATION_CATEGORY_LABEL, suggestStationCategory, type StationCategory,
+} from '@/utils/stationCategory.ts'
 
 export interface StationDraft {
   name:       string
   type:       string
+  /** '' = not set. */
+  category:   '' | StationCategory
   lat:        string
   lng:        string
   activeFrom: string
@@ -101,7 +120,7 @@ const emit = defineEmits<{
 }>()
 
 const empty: StationDraft = {
-  name: '', type: '', lat: '', lng: '', activeFrom: '', activeTo: '', slug: '',
+  name: '', type: '', category: '', lat: '', lng: '', activeFrom: '', activeTo: '', slug: '',
 }
 
 const draft    = ref<StationDraft>({ ...empty })
@@ -149,6 +168,7 @@ function snapshot() {
   const snap: StationDraft = {
     name:       props.saved.name ?? '',
     type:       props.saved.type ?? '',
+    category:   props.saved.category ?? '',
     lat:        props.saved.lat == null ? '' : String(props.saved.lat),
     lng:        props.saved.lng == null ? '' : String(props.saved.lng),
     activeFrom: props.saved.activeFrom ?? '',
@@ -168,6 +188,11 @@ watch(() => draft.value.name, (v) => {
   if (slugEdited.value) return
   draft.value.slug = slugify(v)
 })
+
+/** A guess from the free-text function — only offered while the category is not set. */
+const suggestion = computed<StationCategory | null>(() =>
+  draft.value.category ? null : suggestStationCategory(draft.value.type),
+)
 
 const dirty = computed(() =>
   (Object.keys(draft.value) as (keyof StationDraft)[]).some(k => draft.value[k] !== baseline.value[k]),
@@ -227,6 +252,7 @@ async function save() {
           slug:          f.slug.trim(),
           canonicalName: f.name.trim(),
           type:          f.type.trim() || null,
+          category:      f.category || null,
           lat, lng,
         }),
       })
@@ -244,6 +270,7 @@ async function save() {
     const f = draft.value, b = baseline.value
     if (f.name       !== b.name)       body.name       = f.name.trim()
     if (f.type       !== b.type)       body.type       = f.type.trim() || null
+    if (f.category   !== b.category)   body.category   = f.category || null
     if (f.lat        !== b.lat)        body.lat        = lat
     if (f.lng        !== b.lng)        body.lng        = lng
     if (f.activeFrom !== b.activeFrom) body.activeFrom = f.activeFrom.trim() || null
@@ -316,6 +343,22 @@ defineExpose({
 }
 .edit-input:focus { outline: 1px solid var(--focus); outline-offset: 0; border-color: var(--focus); }
 .edit-input.locked { background: var(--paper-sunken); color: var(--muted); font-family: var(--font-mono); font-size: var(--size-mono); }
+.edit-input-select { width: auto; min-width: 10em; }
+.category-stack { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-xs) var(--space-md); }
+.category-hint { font-family: var(--font-sans); font-size: var(--size-label); color: var(--ink-soft); }
+.category-use {
+  margin-left: var(--space-xs);
+  background: transparent;
+  border: none;
+  padding: 0;
+  font: inherit;
+  color: var(--ink-soft);
+  text-decoration: underline;
+  text-decoration-color: var(--rule);
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+.category-use:hover { color: var(--faded-red); text-decoration-color: var(--faded-red); }
 .edit-input-coord { font-family: var(--font-mono); font-size: var(--size-mono); max-width: 160px; }
 .edit-input-date  { font-family: var(--font-mono); font-size: var(--size-mono); max-width: 160px; }
 

@@ -22,10 +22,14 @@ import type { Section } from '@/components/SectionsEditor.vue'
 import type { RelationEntry } from '@/components/relation/RelationStrategy.ts'
 import { StationStaysStrategy } from '@/components/relation/stayStrategies.ts'
 import type { NameType } from '@/utils/stationNames.ts'
+import type { StationCategory } from '@/utils/stationCategory.ts'
 
 export interface StationNode {
   name:        string
+  /** Free-text function from Sanity ("SOE Training School", "MTB base") — shown as Funksjon. */
   type:        string | null
+  /** The controlled value — Skole / Base / Annet; null until someone sets it. */
+  category:    StationCategory | null
   lat:         number | null
   lng:         number | null
   activeFrom:  string | null
@@ -117,7 +121,7 @@ export function useStationData() {
   async function loadStation(slug: string) {
     if (slug === 'new') {
       station.value = {
-        name: '', type: null, lat: null, lng: null,
+        name: '', type: null, category: null, lat: null, lng: null,
         activeFrom: null, activeTo: null,
         description: null, links: null,
       }
@@ -132,6 +136,7 @@ export function useStationData() {
           `MATCH (s:Station {slug: $slug})
            RETURN coalesce(s.canonicalName, s.title) AS name,
                   s.type        AS type,
+                  s.category    AS category,
                   s.lat         AS lat,
                   s.lng         AS lng,
                   s.activeFrom  AS activeFrom,
