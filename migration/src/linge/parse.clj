@@ -1,6 +1,6 @@
 (ns linge.parse
   "Extract rank, status, and organizational flags from raw Sanity person names.
-   Ported from scripts/round-0-importer.ts; refine in the REPL."
+   Ported from the TypeScript round-0 importer (deleted, see git history); refine in the REPL."
   (:require [clojure.string :as str]))
 
 ;; ────────────────────────────────────────────────────────────────────────────

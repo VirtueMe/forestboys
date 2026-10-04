@@ -3,7 +3,7 @@
  * Errors and warnings go to stderr so they don't pollute the pipe.
  *
  * Usage:
- *   npx tsx scripts/neo4j-fetch.ts | npx tsx scripts/neo4j-validate.ts | npx tsx scripts/neo4j-import.ts
+ *   npx tsx scripts/neo4j-fetch.ts | npx tsx scripts/neo4j-validate.ts
  */
 
 async function readStdin(): Promise<string> {
