@@ -422,7 +422,9 @@ Migration target: `Event` → `Incident`, normalize `DEPARTED_FROM_STATION` → 
 ### Station
 
 **Identity**: `slug` · **Display**: `canonicalName` (legacy `title` on un-migrated nodes)
-**Properties**: `type` (free text — `Airfield`, `MTB base`, `SOE Training School`, …), `lat`, `lng`, `activeFrom`, `activeTo`
+**Properties**: `category` (`training` | `base` | `other`; unset until someone sets it), `type` (free text, shown as *Funksjon* — `Airfield`, `MTB base`, `SOE Training School`, `Research and Development`, …), `lat`, `lng`, `activeFrom`, `activeTo`
+
+`category` is the one controlled value, set in the editor (Skole / Base / Annet). It only suggests a default role when a person is linked to the station (docs/PERSON-STATIONED-AT.md); the link's own role decides where the person is shown. The editor suggests a category from the free-text `type` (`src/utils/stationCategory.ts`) but never sets it by itself — the type is wrong for some stations (Stn. VIII is typed "SOE Training School", but was an R&D workshop).
 
 **Outbound:**
 
