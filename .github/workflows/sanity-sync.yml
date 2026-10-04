@@ -4,12 +4,24 @@ name: Sanity → graph sync (daily)
 # and keeps the Aura Free instance alive — it is deleted after a period
 # without writes. The heartbeat runs whatever the syncs did.
 #
+# CI has no data/: the baseline a sync compares against is the stamps on the
+# nodes (`--stamp`, docs/SANITY-SYNC.md), not a file. Each run keeps its plans
+# and the undo snapshots as an artifact.
+#
+# Run it by hand (Actions → Run workflow) with «write» unticked for a dry run
+# that only reads production.
+#
 # Scheduled workflows run from the default branch — main, the Neo4j app.
 
 on:
   schedule:
     - cron: '17 3 * * *'   # 03:17 UTC daily
   workflow_dispatch:
+    inputs:
+      write:
+        description: 'Apply the changes. Untick for a dry run that only reads production.'
+        type: boolean
+        default: true
 
 concurrency:
   group: sanity-sync
@@ -38,22 +50,26 @@ jobs:
 
       - run: npm ci
 
+      # A step that fails stays red in the run, and the later steps still run
+      # (!cancelled()): the event sync does not depend on the person sync, and
+      # the heartbeat must run whatever the syncs did.
       - name: Person sync
-        id: person
-        continue-on-error: true
-        run: npx tsx scripts/sync/sync-person.ts --production --write
+        run: npx tsx scripts/sync/sync-person.ts --production ${{ (github.event_name == 'schedule' || inputs.write) && '--write' || '' }}
 
       - name: Event sync
-        id: event
-        continue-on-error: true
-        run: npx tsx scripts/sync/sync-event.ts --production --write
+        if: ${{ !cancelled() }}
+        run: npx tsx scripts/sync/sync-event.ts --production ${{ (github.event_name == 'schedule' || inputs.write) && '--write' || '' }}
 
       - name: Heartbeat
-        if: always()
-        run: npx tsx scripts/sync/heartbeat.ts --production --write
+        if: ${{ !cancelled() }}
+        run: npx tsx scripts/sync/heartbeat.ts --production ${{ (github.event_name == 'schedule' || inputs.write) && '--write' || '' }}
 
-      - name: Fail if a sync failed
-        if: steps.person.outcome == 'failure' || steps.event.outcome == 'failure'
-        run: |
-          echo "A sync refused or failed — see its step. The heartbeat still ran."
-          exit 1
+      # The plans, and the snapshots a write takes first, so a run can be undone.
+      - name: Keep the plans and the undo snapshots
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: sync-plans-and-snapshots
+          path: data/sanity-delta/
+          if-no-files-found: ignore
+          retention-days: 30
