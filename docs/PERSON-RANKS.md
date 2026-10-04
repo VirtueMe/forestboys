@@ -145,8 +145,8 @@ entry as history. Zero errors, and every person ends with exactly one
 | Entry note | `PATCH /api/admin/rank-note/:entryId` (`functions/_lib/edge-note.ts`, shared with stay notes) |
 | Editor | `PersonRanksEditor.vue` (known rank + hint), `PersonRankHistoryEditor.vue` (R7 closing) |
 | Pill + history popup | `PersonRanksPreview.vue` |
-| Sync | `scripts/sync-person.ts` feeds `RANK` only; updates it only while its sourceRef is the migration's |
-| Migration | `scripts/migrate-rank-split.ts` — local run: 3 963 migration ranks → `RANK`; Martin Linge → `RANK` Kaptein + 1 history entry |
+| Sync | `scripts/sync/sync-person.ts` feeds `RANK` only; updates it only while its sourceRef is the migration's |
+| Migration | `scripts/migrations/migrate-rank-split.ts` — local run: 3 963 migration ranks → `RANK`; Martin Linge → `RANK` Kaptein + 1 history entry |
 
 ## Decided (2026-09-28)
 

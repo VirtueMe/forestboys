@@ -1,6 +1,6 @@
 /**
- * Shared by the person sync report (scripts/sanity-person-fields.ts) and
- * the apply step (scripts/sync-person.ts) — one set of verdicts for both.
+ * Shared by the person sync report (scripts/sanity/sanity-person-fields.ts) and
+ * the apply step (scripts/sync/sync-person.ts) — one set of verdicts for both.
  * docs/SANITY-SYNC.md, "Sync".
  *
  * Every field is reduced to a comparable string. The baseline for a field

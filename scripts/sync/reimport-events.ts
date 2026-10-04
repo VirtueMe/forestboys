@@ -2,7 +2,7 @@
  * Re-import every Sanity event as it is now (docs/SANITY-SYNC.md, "Events").
  *
  * The graph's events were still almost exactly what the April import made
- * of them (scripts/sanity-event-fields.ts: calibration all but one field),
+ * of them (scripts/sanity/sanity-event-fields.ts: calibration all but one field),
  * so rather than sync 379 changed, 104 new and 20 deleted events one by
  * one, they are replaced:
  *
@@ -28,7 +28,7 @@
  *
  * EXCLUDED_EVENT_SLUGS (the WT station template) are left out.
  *
- * Usage: npx tsx scripts/reimport-events.ts [--write]
+ * Usage: npx tsx scripts/sync/reimport-events.ts [--write]
  */
 
 import { writeFileSync, mkdirSync } from 'node:fs'

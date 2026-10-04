@@ -14,8 +14,8 @@
  * properties yet; that's a follow-up once the new model is in production.
  *
  * Usage:
- *   npx tsx scripts/flatten-page-cards.ts
- *   npx tsx scripts/flatten-page-cards.ts --dry
+ *   npx tsx scripts/migrations/flatten-page-cards.ts
+ *   npx tsx scripts/migrations/flatten-page-cards.ts --dry
  */
 
 import neo4j from 'neo4j-driver'

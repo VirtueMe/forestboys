@@ -12,7 +12,7 @@
  * Env vars (all set on the Pages env where direct login is allowed):
  *   DIRECT_LOGIN_USERNAME       — plaintext username
  *   DIRECT_LOGIN_PASSWORD_HASH  — PBKDF2 hash in format `pbkdf2$<iter>$<salt-b64>$<hash-b64>`.
- *                                 Generate with `npx tsx scripts/hash-password.ts`.
+ *                                 Generate with `npx tsx scripts/tools/hash-password.ts`.
  *   DIRECT_LOGIN_USER_NAME      — display name (default 'Gjestebruker')
  *   DIRECT_LOGIN_USER_EMAIL     — identifier email (default 'gjest@milorg.local')
  *   DIRECT_LOGIN_ROLE           — 'admin' | 'editor' | 'pending' (default 'admin')

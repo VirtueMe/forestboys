@@ -33,7 +33,7 @@ import { isImportableUrl } from './person-rule.ts'
 import { API, neo4jDriver, type Doc } from './person-sync.ts'
 
 /** The Sanity events the graph last took in whole: the re-import of 2026-10-02
- *  (scripts/reimport-events.ts). Before it, the April export. */
+ *  (scripts/sync/reimport-events.ts). Before it, the April export. */
 export const EVENT_BASELINE = 'data/sanity-baseline-2026-10/sanity-event.json'
 
 /** Sanity events that are not events: Jan's template for new WT stations. */

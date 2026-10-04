@@ -26,7 +26,7 @@
  *   (never overwrites graph-authored text). Skips are reported.
  * - Idempotent: a Person with description_sourceRef is skipped.
  *
- * Usage: npx tsx scripts/import-person-descriptions.ts [--write]
+ * Usage: npx tsx scripts/sync/import-person-descriptions.ts [--write]
  */
 
 import neo4j from 'neo4j-driver'

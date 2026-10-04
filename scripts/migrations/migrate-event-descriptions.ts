@@ -19,7 +19,7 @@
  * .env.production (PRODUCTION_NEO4J_*) and prints the target first, like the
  * other scripts (scripts/lib/env.ts).
  *
- * Usage: npx tsx scripts/migrate-event-descriptions.ts [--production] [--write]
+ * Usage: npx tsx scripts/migrations/migrate-event-descriptions.ts [--production] [--write]
  */
 
 import { writeFileSync, mkdirSync } from 'node:fs'

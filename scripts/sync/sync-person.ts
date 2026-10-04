@@ -43,7 +43,7 @@
  * Jan merged them into, where the Sanity event shows one; the rest goes.
  * Only the people named in --accept-delete are deleted.
  *
- * Usage: npx tsx scripts/sync-person.ts [--write] [--accept-review=<slug>,…] [--accept-delete=<slug>,…]
+ * Usage: npx tsx scripts/sync/sync-person.ts [--write] [--accept-review=<slug>,…] [--accept-delete=<slug>,…]
  */
 
 import { writeFileSync, mkdirSync } from 'node:fs'

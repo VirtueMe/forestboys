@@ -1,6 +1,6 @@
 /**
  * Export all Sanity documents to data/sanity-{type}.json files.
- * Run with: npx tsx scripts/sanity-export.ts
+ * Run with: npx tsx scripts/sanity/sanity-export.ts
  *
  * Safe to re-run — overwrites existing files.
  * Output directory (data/) is gitignored.

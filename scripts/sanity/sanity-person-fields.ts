@@ -17,7 +17,7 @@
  *
  * Output: data/sanity-delta/person-fields.json + a summary.
  *
- * Usage: npx tsx scripts/sanity-person-fields.ts
+ * Usage: npx tsx scripts/sanity/sanity-person-fields.ts
  */
 
 import { writeFileSync, mkdirSync } from 'node:fs'

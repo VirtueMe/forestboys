@@ -21,7 +21,7 @@ export function isStationCategory(v: unknown): v is StationCategory {
 
 /**
  * The role a person's link to a station gets by default when the station
- * links are imported (scripts/migrate-stationed-at.ts): `training` at a Skole,
+ * links are imported (scripts/migrations/migrate-stationed-at.ts): `training` at a Skole,
  * `stationed` everywhere else. The station's category when it has one, else
  * the one its free-text type suggests. A default only — what a person did
  * there is per link, and Jan corrects it.

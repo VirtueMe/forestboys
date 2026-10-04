@@ -93,7 +93,7 @@ direct login flow:
 ```
 SESSION_SECRET=<any long random string>
 DIRECT_LOGIN_USERNAME=<the username you'll type in the form>
-DIRECT_LOGIN_PASSWORD_HASH=<output of npx tsx scripts/hash-password.ts>
+DIRECT_LOGIN_PASSWORD_HASH=<output of npx tsx scripts/tools/hash-password.ts>
 DIRECT_LOGIN_USER_NAME=<display name>
 DIRECT_LOGIN_USER_EMAIL=<identifier email>
 DIRECT_LOGIN_ROLE=admin
@@ -119,8 +119,8 @@ CI runs lint, tests and build on every pull request.
 
 ## Scripts
 
-See [`scripts/`](./scripts/) for one-off helpers — Sanity → Neo4j extractors,
-Anthropic Batch API submissions, source data quality checks, and the
+See [`scripts/`](./scripts/README.md): the nightly Sanity → graph sync, read-only
+looks at Sanity, one-shot graph migrations, reference-data seeds, and the
 `hash-password.ts` utility used when provisioning direct-login credentials.
 
 ## Contributing

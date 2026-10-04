@@ -17,7 +17,7 @@
  * Checks afterwards: every Person has exactly one RANK, no migration edge
  * is left in the history, every history entry has an id.
  *
- * Usage: npx tsx scripts/migrate-rank-split.ts [--write]
+ * Usage: npx tsx scripts/migrations/migrate-rank-split.ts [--write]
  */
 
 import { randomUUID } from 'node:crypto'

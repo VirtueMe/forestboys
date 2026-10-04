@@ -12,7 +12,7 @@
  * - Idempotent: MERGE on key; re-running only fills missing roles and
  *   adds missing scopes, never overwrites a name edited on the page.
  *
- * Usage: npx tsx scripts/seed-roles.ts [--dry]
+ * Usage: npx tsx scripts/seed/seed-roles.ts [--dry]
  */
 
 import neo4j from 'neo4j-driver'

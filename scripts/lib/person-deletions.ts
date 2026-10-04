@@ -16,7 +16,7 @@
  *   stays, notes, editor-marked links or images, mentions in other
  *   descriptions, any edge without a Sanity sourceRef.
  *
- * Applied only for people named in `--accept-delete` (scripts/sync-person.ts).
+ * Applied only for people named in `--accept-delete` (scripts/sync/sync-person.ts).
  */
 
 import { type Driver } from 'neo4j-driver'

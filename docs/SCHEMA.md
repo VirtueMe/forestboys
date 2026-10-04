@@ -370,7 +370,7 @@ A single edge type carries every Incident↔Operation containment relation. The 
 
 **Why one edge:** kind flips (`PATCH /event/:slug/kind`) become a pure label rename. Edges survive untouched — no rewrites, no illegal-combo blockers on the hierarchy. Replaces the earlier `PART_OF` (same-kind) + `OCCURRED_IN` (cross-kind) split.
 
-Migration: `scripts/migrate-related-to.cypher` rewrites legacy edges; `scripts/migrate-incident-at.cypher` collapses Incident's directional `FROM`/`TO` into `AT`/`AT_STATION` (FROM wins when both exist).
+Migration: `scripts/migrations/migrate-related-to.cypher` rewrites legacy edges; `scripts/migrations/migrate-incident-at.cypher` collapses Incident's directional `FROM`/`TO` into `AT`/`AT_STATION` (FROM wins when both exist).
 
 ---
 

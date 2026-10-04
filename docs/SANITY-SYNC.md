@@ -2,7 +2,7 @@
 
 How the graph keeps up with Sanity until Jan stops editing there. Draft
 for review — nothing here is built yet except the sync report
-(`scripts/sanity-sync.ts`). Extends `PROPOSALS.md`, which covers the
+(`scripts/sanity/sanity-sync.ts`). Extends `PROPOSALS.md`, which covers the
 review flow; this document covers what a sync decides before anything
 reaches review.
 
@@ -84,7 +84,7 @@ does.
 
 - **Person descriptions** — never imported with the rest (the Person page
   showed them from the Sanity cache). Imported 2026-09-27 by
-  `scripts/import-person-descriptions.ts`: 3 462 people, one section each,
+  `scripts/sync/import-person-descriptions.ts`: 3 462 people, one section each,
   `description_state: 'candidate'`. 163 people with descriptions are not
   in the graph yet; the new-person import must bring theirs along.
 
@@ -98,7 +98,7 @@ narrows which documents to look at.
 
 1. Fetch documents with `_updatedAt >= importedUpTo` from `api.sanity.io`
    (not the CDN, which can lag), plus the full `_id` list for deletions.
-   `scripts/sanity-sync.ts` does this today and writes a report.
+   `scripts/sanity/sanity-sync.ts` does this today and writes a report.
 2. For each changed document, compare field by field, three ways —
    **baseline** value, **current Sanity** value, **graph** value (what
    the import rule makes of the field):
@@ -138,7 +138,7 @@ tooling stays in one language. Calibration holds the port to the original:
 applied to the April baseline it must reproduce the graph for every
 unchanged person — canonical name, rank edge, status, serviceClass, link
 and image Source ids. It did, 100 % over 3 435 people.
-`scripts/sync-person.ts` refuses to write when it doesn't.
+`scripts/sync/sync-person.ts` refuses to write when it doesn't.
 
 ### Stamps
 
@@ -199,7 +199,7 @@ Accepted on 2026-10-02, answered from their descriptions:
   "Rank: Second Lieutenant" (USAAF, 492nd BG). Jan's "S/Lt" here means
   Second Lieutenant, while the rule maps S/Lt to Sub Lieutenant (navy), so
   the known rank is set as an editor save (`admin-edit`) before the accept;
-  the sync keeps it. Order mattered: `scripts/migrate-rank-table.ts` had
+  the sync keeps it. Order mattered: `scripts/migrations/migrate-rank-table.ts` had
   already stripped "2Lt" from the graph name, so the name compared equal
   and the sync skipped the ✝ status — set by hand with the name stamp.
 
@@ -210,7 +210,7 @@ are written rank-first, "S/Lt. Davis Jere L" — Second Lieutenant (USAAF);
 Norwegians rank-last, "Jan Helen S/Lt" — Sub Lieutenant (navy). The rule
 reads it that way since 2026-10-02 (`LEADING_ABBR_TO_RANK` in
 person-rule.ts, `leading-abbr->canonical` in parse.clj), and "S/Lt." with
-a period is parsed too. `scripts/migrate-rank-table.ts` re-mapped the 9
+a period is parsed too. `scripts/migrations/migrate-rank-table.ts` re-mapped the 9
 people the change touched.
 
 The exception: "S/Lt Ferner" is rank-first because the name comes from a
@@ -227,23 +227,23 @@ The scripts use `.env`, which is the **local** Neo4j. Production Aura
 
 | Step | Script | Result |
 |---|---|---|
-| Stationed roles | `scripts/seed-roles.ts` | 5 roles |
-| Person descriptions | `scripts/import-person-descriptions.ts --write` | 3 462 |
-| Person sync | `scripts/sync-person.ts --write` | 259 changed (20 slug renames), 173 new; 37 left for review |
-| Rank split | `scripts/migrate-rank-split.ts --write` | 3 964 `RANK` edges; 1 history entry (PERSON-RANKS.md) |
-| Person sync | `scripts/sync-person.ts --write` | 3 changed |
-| Person sync, review | `scripts/sync-person.ts --write --accept-review=…` (list above) | 34 changed (5 slug renames); 3 held |
-| Person sync, review | `scripts/sync-person.ts --write --accept-review=na` (2026-10-02) | 1 changed (1 slug rename); 2 held |
-| Person sync, review | `scripts/sync-person.ts --write --accept-review=kare-helland` (2026-10-02) | 1 changed |
-| Rank table | `scripts/migrate-rank-table.ts --write` (2026-10-02) | Second Lieutenant (USAAF); 2 people: Prilliman, Polansky |
-| Person sync, review | `scripts/sync-person.ts --write --accept-review=2lt-polansky-henry-l` (2026-10-02, after his rank was set in the editor) | 1 changed (1 slug rename); 0 held |
-| Rank table | `scripts/migrate-rank-table.ts --write` (2026-10-02, S/Lt by position) | 9 people: 7 Second Lieutenant, 2 Sub Lieutenant |
-| Person sync, deleted | `scripts/sync-person.ts --write --accept-delete=…` (2026-10-02, all 7) | 7 deleted; 5 event edges moved to the survivor (Aksdal ×3, Øygard, Vestrheim) |
-| Events → Operation | `scripts/migrate-events-to-operation.ts --write` (2026-10-02) | 2 195 Incidents → Operation; 7 974 PARTICIPATED_IN |
-| Missing references | `scripts/import-missing-refs.ts --write` (2026-10-02) | 51 Location, 2 Station, 58 Transport |
-| Event re-import | `scripts/reimport-events.ts --write` (2026-10-02) | 2 196 deleted, 2 279 Operations, 8 graph additions re-attached; new baseline |
-| Event sync, first run | `scripts/sync-event.ts --write` (2026-10-02) | 2 279 events stamped; 0 changes |
-| Rank table, type | `scripts/migrate-rank-table.ts --write` (2026-10-02) | 18 people civilian → soldier (ranks set by sync, rank table or editor without the type) |
+| Stationed roles | `scripts/seed/seed-roles.ts` | 5 roles |
+| Person descriptions | `scripts/sync/import-person-descriptions.ts --write` | 3 462 |
+| Person sync | `scripts/sync/sync-person.ts --write` | 259 changed (20 slug renames), 173 new; 37 left for review |
+| Rank split | `scripts/migrations/migrate-rank-split.ts --write` | 3 964 `RANK` edges; 1 history entry (PERSON-RANKS.md) |
+| Person sync | `scripts/sync/sync-person.ts --write` | 3 changed |
+| Person sync, review | `scripts/sync/sync-person.ts --write --accept-review=…` (list above) | 34 changed (5 slug renames); 3 held |
+| Person sync, review | `scripts/sync/sync-person.ts --write --accept-review=na` (2026-10-02) | 1 changed (1 slug rename); 2 held |
+| Person sync, review | `scripts/sync/sync-person.ts --write --accept-review=kare-helland` (2026-10-02) | 1 changed |
+| Rank table | `scripts/migrations/migrate-rank-table.ts --write` (2026-10-02) | Second Lieutenant (USAAF); 2 people: Prilliman, Polansky |
+| Person sync, review | `scripts/sync/sync-person.ts --write --accept-review=2lt-polansky-henry-l` (2026-10-02, after his rank was set in the editor) | 1 changed (1 slug rename); 0 held |
+| Rank table | `scripts/migrations/migrate-rank-table.ts --write` (2026-10-02, S/Lt by position) | 9 people: 7 Second Lieutenant, 2 Sub Lieutenant |
+| Person sync, deleted | `scripts/sync/sync-person.ts --write --accept-delete=…` (2026-10-02, all 7) | 7 deleted; 5 event edges moved to the survivor (Aksdal ×3, Øygard, Vestrheim) |
+| Events → Operation | `scripts/migrations/migrate-events-to-operation.ts --write` (2026-10-02) | 2 195 Incidents → Operation; 7 974 PARTICIPATED_IN |
+| Missing references | `scripts/sync/import-missing-refs.ts --write` (2026-10-02) | 51 Location, 2 Station, 58 Transport |
+| Event re-import | `scripts/sync/reimport-events.ts --write` (2026-10-02) | 2 196 deleted, 2 279 Operations, 8 graph additions re-attached; new baseline |
+| Event sync, first run | `scripts/sync/sync-event.ts --write` (2026-10-02) | 2 279 events stamped; 0 changes |
+| Rank table, type | `scripts/migrations/migrate-rank-table.ts --write` (2026-10-02) | 18 people civilian → soldier (ranks set by sync, rank table or editor without the type) |
 
 Production: the Aura Free instance (`f8cb9726`) was deleted for
 inactivity — Aura Free needs regular writes. A new instance is loaded from
@@ -270,7 +270,7 @@ is a reshaping — one place, no organisation of its own — so it is
 proposed, never applied by the sync.
 
 - 2026-10-02: every Sanity event in the graph became an Operation
-  (`scripts/migrate-events-to-operation.ts`, local: 2 195 flipped, 7 974
+  (`scripts/migrations/migrate-events-to-operation.ts`, local: 2 195 flipped, 7 974
   person edges kept with their properties). The flip is the shared rewrite
   in `functions/_lib/event-kind.ts`, also used by the kind endpoint.
 - New events come in as Operations; changed fields apply to the node with
@@ -281,17 +281,17 @@ proposed, never applied by the sync.
 Bundles can come from the sync (`origin: {type: 'sanity'}`) and carry
 `set-props` and `set-kind` (PROPOSALS.md, "Bundle origin").
 
-**Re-import, 2026-10-02.** The field report (`scripts/sanity-event-fields.ts`)
+**Re-import, 2026-10-02.** The field report (`scripts/sanity/sanity-event-fields.ts`)
 showed the graph's events still matched the April import on every field
 but one — and Sanity had moved on: 379 changed, 104 new (31 of them Jan's
 new "WT Station …" events), 20 deleted. Syncing that event by event would
 have been slower than taking Sanity in again, so:
 
-1. `scripts/import-missing-refs.ts --write` — the 51 Locations, 2 Stations
+1. `scripts/sync/import-missing-refs.ts --write` — the 51 Locations, 2 Stations
    and 58 Transports events refer to that were new in Sanity since April
    (round_one.clj's rule). The organizations "Avd D. Mi IV" and "COHQ" and
    the district "D41-Finnmark" are shaped by hand and left for that.
-2. `scripts/reimport-events.ts --write` — backup, delete the 2 196 events,
+2. `scripts/sync/reimport-events.ts --write` — backup, delete the 2 196 events,
    create 2 279 Operations from Sanity (the WT station template
    `wt-stationmal` excluded: `EXCLUDED_EVENT_SLUGS`), re-attach the 8 graph
    additions (Martin Linge's editor links and note, the Haslund pair on
@@ -306,7 +306,7 @@ For Jan: location "Sander - Skarnes bro" has the slug `60.2314300 ` and
 lat = lng = 11.81378; transport "Handley Page Halifax II" has no serial
 (slug `handley-page-halifax-ii-`).
 
-**Sync** — `scripts/sync-event.ts`, a plain bridge like the person sync;
+**Sync** — `scripts/sync/sync-event.ts`, a plain bridge like the person sync;
 judgement (Incident candidates, trips under their named operation,
 incidents in descriptions) is left to separate analysis jobs that propose
 bundles.

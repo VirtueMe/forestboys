@@ -1,7 +1,7 @@
 /**
  * The Sanity event → graph rule (migration/src/linge/events.clj,
  * external_sources.clj, galleries.clj), as Operations. Shared by the
- * re-import (scripts/reimport-events.ts) and the sync (scripts/sync-event.ts).
+ * re-import (scripts/sync/reimport-events.ts) and the sync (scripts/sync/sync-event.ts).
  *
  *   node      slug, codeName (title), date, type 'unclassified', sanityId, sanityUpdatedAt
  *   edges     ORCHESTRATED_BY, IN_DISTRICT, FROM, TO, FROM_STATION, TO_STATION, USED,
@@ -10,7 +10,7 @@
  *   links     REFERENCED_IN → Source (person-rule linkSource)
  *   text      (event)-[:HAS_CONTENT {order}]->(:Description {id: 'desc:event:<id>', …})
  *             (older imports made it (Description)-[:ABOUT]->(event); the readers and
- *             compare still accept that shape until scripts/migrate-event-descriptions.ts has moved it)
+ *             compare still accept that shape until scripts/migrations/migrate-event-descriptions.ts has moved it)
  *
  * References resolve by sanityId to the target's slug; one the graph lacks
  * is left out (and reported).

@@ -21,7 +21,7 @@
  *   reported and the write is refused (bulk-op rule: zero errors).
  * - Duplicate refs within one place collapse to one edge.
  * - Idempotent: a link whose sourceRef already exists is skipped.
- * - Both roles must exist in the stationed scope (scripts/seed-roles.ts).
+ * - Both roles must exist in the stationed scope (scripts/seed/seed-roles.ts).
  * - Places whose title suggests a role other than 'stationed' (prison,
  *   enemy post) are listed for review; they keep the default role as
  *   candidates.
@@ -29,7 +29,7 @@
  * Local graph unless --production (scripts/lib/env.ts); production stays held
  * until the sanity-sync mapping record exists (project-sanity-sync).
  *
- * Usage: npx tsx scripts/migrate-stationed-at.ts [--write]
+ * Usage: npx tsx scripts/migrations/migrate-stationed-at.ts [--write]
  */
 
 import { readFileSync } from 'node:fs'
@@ -80,7 +80,7 @@ async function main() {
     const haveRoles = new Set(roleRows.records.map(r => r.get('key') as string))
     const missingRoles = DEFAULT_ROLES.filter(r => !haveRoles.has(r))
     if (missingRoles.length) {
-      console.error(`Missing roles in the stationed scope: ${missingRoles.join(', ')} — run scripts/seed-roles.ts first.`)
+      console.error(`Missing roles in the stationed scope: ${missingRoles.join(', ')} — run scripts/seed/seed-roles.ts first.`)
       process.exitCode = 1
       return
     }
