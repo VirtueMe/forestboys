@@ -25,12 +25,12 @@
  * its _updatedAt equals the node's sanityUpdatedAt.
  */
 
-import { readFileSync } from 'node:fs'
 import { createHash } from 'node:crypto'
 import { stableJson } from './sanity-sha.ts'
 import type { Lookups } from './event-rule.ts'
 import { isImportableUrl } from './person-rule.ts'
 import { API, neo4jDriver, type Doc } from './person-sync.ts'
+import { loadBaselineFile } from './baseline.ts'
 
 /** The Sanity events the graph last took in whole: the re-import of 2026-10-02
  *  (scripts/sync/reimport-events.ts). Before it, the April export. */
@@ -166,8 +166,8 @@ export function calibrateEvents(graph: Map<string, GraphEvent>, sanity: Map<stri
 
 // ── Data ──
 
-export const loadAprilEvents = (): Map<string, Doc> =>
-  new Map((JSON.parse(readFileSync(EVENT_BASELINE, 'utf8')) as Doc[]).map(d => [d._id, d]))
+/** The October event export — empty when the file is not there (CI): see ./baseline.ts. */
+export const loadAprilEvents = (): Map<string, Doc> => loadBaselineFile(EVENT_BASELINE)
 
 export async function fetchSanityEvents(): Promise<Doc[]> {
   const out: Doc[] = []
