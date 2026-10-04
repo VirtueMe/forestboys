@@ -82,8 +82,3 @@ Output goes to `../data/round-0/` :
 
 Does not touch `../data/cypher/` or `../data/cypher-clean/` (parallel clone's
 isolated-extraction import lives there).
-
-## Reference
-
-`../scripts/round-0-importer.ts` — TypeScript version of the same logic.
-Delete once the Clojure pipeline produces equivalent output.

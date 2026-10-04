@@ -8,7 +8,7 @@
      03-persons.cypher       — 272 Person nodes with scalar claims
      04-relationships.cypher — MEMBER_OF (Linge) and HELD_RANK edges
 
-   Port of scripts/round-0-importer.ts — reference implementation in TypeScript."
+   Port of the TypeScript round-0 importer (deleted, see git history)."
   (:require [clojure.java.io :as io]
             [clojure.string  :as str]
             [linge.sanity    :as sanity]
