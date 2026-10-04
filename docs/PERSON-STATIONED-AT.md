@@ -59,6 +59,7 @@ never "ended the same day". Display as "1943 –" (see Open question 3 for
 | `hiding` | I skjul | Hid there (safe house, cabin) |
 | `imprisoned` | Fange | Held there (prison, camp) |
 | `training` | Opplæring | Trained there |
+| `instructor` | Instruktør | Taught there (staff at a training school) |
 | `operating` | Operatør | Ran something there (radio station, depot) |
 
 The list is a starting point for Jan to adjust. Roles are meant to

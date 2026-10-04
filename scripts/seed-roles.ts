@@ -47,6 +47,7 @@ const SEED: Array<{ key: string; name: string; scopes: string[] }> = [
   { key: 'hiding',         name: 'i skjul',          scopes: ['stationed'] },
   { key: 'imprisoned',     name: 'fange',            scopes: ['stationed'] },
   { key: 'training',       name: 'opplæring',        scopes: ['stationed'] },
+  { key: 'instructor',     name: 'instruktør',       scopes: ['stationed'] },
   { key: 'operating',      name: 'operatør',         scopes: ['stationed'] },
 ]
 
