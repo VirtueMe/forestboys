@@ -54,7 +54,10 @@
             </div>
 
             <span class="entry-type" :style="{ background: TYPE_COLORS[item.label] }">{{ item.label.slice(0, 1) }}</span>
-            <span class="entry-name">{{ item.name }}</span>
+            <span class="entry-name">
+              {{ item.name }}
+              <span v-if="aliasFor(item)" class="entry-alias">· {{ aliasFor(item) }}</span>
+            </span>
           </RouterLink>
         </div>
       </div>
@@ -85,7 +88,7 @@ const isAdmin = computed(() => user.value?.role === 'admin')
 // Each category gets its own small query; "Informasjon" unions the
 // four outline-descended types (Article / Operation / EquipmentType / Source).
 
-interface NeoRow { name: string; slug: string; color?: string | null; entityType?: string }
+interface NeoRow { name: string; slug: string; color?: string | null; entityType?: string; aliases?: string[] | null }
 
 const neoOrgs         = ref<NeoRow[]>([])
 const neoUnits        = ref<NeoRow[]>([])
@@ -113,7 +116,8 @@ onMounted(async () => {
          ORDER BY name`),
       neo4jQuery<NeoRow>(
         `MATCH (s:Station)
-         RETURN s.canonicalName AS name, s.slug AS slug
+         RETURN s.canonicalName AS name, s.slug AS slug,
+                [(s)-[:HAS_NAME]->(n:Name) | n.value] AS aliases
          ORDER BY name`),
       neo4jQuery<NeoRow>(
         `MATCH (l:Location)
@@ -209,6 +213,8 @@ interface Entry {
   slug:         string
   route:        string
   thumbnailUrl?: string
+  /** Other names (stations): the entry also matches a search on these. */
+  aliases?:     string[]
 }
 
 function informasjonRoute(e: NeoRow): string {
@@ -235,6 +241,7 @@ const allEntries = computed<Entry[]>(() => {
     ...neoStations.value.map(s => ({
       type: 'station', label: 'Stasjon',
       name: s.name, slug: s.slug, route: `/station/${s.slug}`,
+      aliases: s.aliases ?? undefined,
     })),
     ...neoLocations.value.map(l => ({
       type: 'location', label: 'Sted',
@@ -256,15 +263,26 @@ const allEntries = computed<Entry[]>(() => {
   return entries.sort((a, b) => (a.name ?? '').localeCompare(b.name ?? '', 'nb'))
 })
 
+/** Every token starts a word of `candidate`. */
+function matchesTokens(candidate: string, tokens: string[]): boolean {
+  const words = candidate.toLowerCase().split(/\s+/).filter(Boolean)
+  return tokens.every(t => words.some(w => w.startsWith(t)))
+}
+
+/** The other name a hit matched on, shown next to it — null when the name itself matched. */
+function aliasFor(e: Entry): string | null {
+  if (!e.aliases?.length || query.value.length < 2) return null
+  const tokens = query.value.toLowerCase().split(/\s+/).filter(Boolean)
+  if (matchesTokens(e.name, tokens)) return null
+  return e.aliases.find(a => matchesTokens(a, tokens)) ?? null
+}
+
 const filtered = computed<Entry[]>(() => {
   const activeKeys = new Set(selectedTypes.value.map(t => TYPE_KEY[t]))
   let r = allEntries.value.filter(e => activeKeys.has(e.type))
   if (query.value.length >= 2) {
     const tokens = query.value.toLowerCase().split(/\s+/).filter(Boolean)
-    r = r.filter(e => {
-      const words = e.name.toLowerCase().split(/\s+/).filter(Boolean)
-      return tokens.every(t => words.some(w => w.startsWith(t)))
-    })
+    r = r.filter(e => [e.name, ...(e.aliases ?? [])].some(c => matchesTokens(c, tokens)))
   }
   return r
 })
@@ -425,6 +443,7 @@ function fmt(n: number): string {
   text-transform: uppercase;
 }
 
+.entry-alias { font-weight: 400; color: var(--muted); }
 .entry-name {
   flex: 1;
   min-width: 0;

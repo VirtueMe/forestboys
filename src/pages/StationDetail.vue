@@ -9,6 +9,7 @@
     <template v-if="station">
       <StationHeader
         :name="displayName"
+        :names="names"
         :type="displayType"
         :active-from="displayActiveFrom"
         :active-to="displayActiveTo"
@@ -48,6 +49,7 @@
 
       <StationViewPane
         v-show="mode !== 'proposals'"
+        :names="names"
         :preview-sections="previewSections"
         :legacy-description="station.description"
         :legacy-links-json="station.links"

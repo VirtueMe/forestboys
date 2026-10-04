@@ -44,6 +44,8 @@ export interface IdbStation {
   title: string
   slug: string
   type?: string
+  /** The Station's other names (HAS_NAME), for search. */
+  names?: string[]
   lat: number
   lng: number
   coordinates?: { lat: number; lng: number }
