@@ -100,6 +100,7 @@ import type { MapMovePayload, InitialView } from '../components/AppMap.vue'
 import { useLocationCache, readMapState, saveMapState } from '../composables/useLocationCache.ts'
 import { useGeolocation } from '../composables/useGeolocation.ts'
 import { haversineKm } from '../composables/useHaversine.ts'
+import { matchingName } from '../utils/stationNames.ts'
 import type { IdbLocation, IdbStation, IdbPerson } from '../types/idb.ts'
 
 function itemThumb(item: MapItem | IdbPerson): string | undefined {
@@ -175,7 +176,7 @@ const filteredStations = computed(() => {
   const q = searchText.value.toLowerCase().trim()
   if (!q) return stations.value
   return stations.value.filter(s =>
-    (searchInStations.value && s.title.toLowerCase().includes(q)) ||
+    (searchInStations.value && (s.title.toLowerCase().includes(q) || matchingName(q, s.names) !== null)) ||
     (searchInEvents.value && s.events?.some(e => e.title.toLowerCase().includes(q))),
   )
 })

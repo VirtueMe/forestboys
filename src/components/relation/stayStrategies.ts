@@ -54,7 +54,8 @@ export const PersonStaysStrategy: RelationStrategy = {
       MATCH (pl) WHERE pl:Location OR pl:Station
       RETURN CASE WHEN pl:Station THEN 'station:' ELSE 'location:' END + pl.slug AS slug,
              coalesce(pl.canonicalName, pl.title)
-               + CASE WHEN pl:Station THEN ' (stasjon)' ELSE '' END AS name
+               + CASE WHEN pl:Station THEN ' (stasjon)' ELSE '' END AS name,
+             [(pl)-[:HAS_NAME]->(n:Name) | n.value] AS aliases
       ORDER BY name
     `)
   },

@@ -1,6 +1,22 @@
 <template>
   <!-- Single root so the page's v-show applies. -->
   <div class="view-pane">
+    <details v-if="!hideEditable && sortedNames.length" class="section" open>
+      <summary class="section-summary">
+        <h3 class="section-heading">Navnehistorikk ({{ sortedNames.length }})</h3>
+      </summary>
+      <div class="section-body">
+        <ul class="name-history">
+          <li v-for="n in sortedNames" :key="n.id" class="name-item">
+            <span class="name-value">{{ n.value }}</span>
+            <span class="name-kind">{{ NAME_TYPE_LABEL[n.type] }}</span>
+            <span v-if="formatNamePeriod(n)" class="name-period">{{ formatNamePeriod(n) }}</span>
+            <SourceRef v-if="n.sourceRefs.length" :refs="n.sourceRefs" inline />
+          </li>
+        </ul>
+      </div>
+    </details>
+
     <details v-if="!hideEditable && previewSections.length" class="section" open>
       <summary class="section-summary">
         <h3 class="section-heading">Beskrivelse</h3>
@@ -130,9 +146,13 @@ import RelationListView from '@/components/relation/RelationListView.vue'
 import RelationInfoPopup from '@/components/relation/RelationInfoPopup.vue'
 import { StationStaysStrategy } from '@/components/relation/stayStrategies.ts'
 import type { RelationEntry } from '@/components/relation/RelationStrategy.ts'
-import type { StationEvent, StationExternalRef } from '@/composables/useStationData.ts'
+import SourceRef from '@/components/SourceRef.vue'
+import type { StationEvent, StationExternalRef, StationName } from '@/composables/useStationData.ts'
+import { NAME_TYPE_LABEL, formatNamePeriod, sortNames } from '@/utils/stationNames.ts'
 
 const props = withDefaults(defineProps<{
+  /** The Station's other names (HAS_NAME). */
+  names:             StationName[]
   previewSections:   Section[]
   legacyDescription: string | null
   legacyLinksJson:   string | null
@@ -147,6 +167,8 @@ const props = withDefaults(defineProps<{
 })
 
 const activeStay = ref<RelationEntry | null>(null)
+
+const sortedNames = computed(() => sortNames(props.names))
 
 interface LegacyLink { title: string; link: string }
 
@@ -293,6 +315,26 @@ function formatDate(iso?: string | null): string {
 .event-direction--departed { background: var(--paper); color: var(--focus); border: 1px solid var(--rule); }
 .event-direction--arrived  { background: var(--paper); color: var(--moss);  border: 1px solid var(--rule); }
 .event-title { font-size: 13px; color: var(--focus); flex: 1; min-width: 0; }
+
+.name-history { list-style: none; margin: 0; padding: 0; }
+.name-item {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 2px 10px;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--rule);
+}
+.name-item:last-child { border-bottom: none; }
+.name-value { font-size: 14px; font-weight: 600; color: var(--ink); }
+.name-kind {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.name-period { font-size: 12px; color: var(--ink-soft); font-variant-numeric: tabular-nums; }
 
 .ref-item {
   display: flex;

@@ -21,6 +21,7 @@ import type { SlideImage } from '@/components/ImageSlider.vue'
 import type { Section } from '@/components/SectionsEditor.vue'
 import type { RelationEntry } from '@/components/relation/RelationStrategy.ts'
 import { StationStaysStrategy } from '@/components/relation/stayStrategies.ts'
+import type { NameType } from '@/utils/stationNames.ts'
 
 export interface StationNode {
   name:        string
@@ -35,7 +36,7 @@ export interface StationNode {
   links:       string | null
 }
 
-export type StationNameType = 'former' | 'later' | 'alias'
+export type StationNameType = NameType
 
 /** One other name of the Station — (:Station)-[:HAS_NAME]->(:Name), docs/SCHEMA.md. */
 export interface StationName {

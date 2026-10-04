@@ -12,6 +12,8 @@ import type { Section } from '@/components/SectionsEditor.vue'
 export interface RelationTarget {
   slug: string
   name: string
+  /** Other names (a station's former names etc.): the picker matches on these too. */
+  aliases?: string[]
 }
 
 export interface RelationEntry {

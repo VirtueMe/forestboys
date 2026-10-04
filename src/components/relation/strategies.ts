@@ -789,9 +789,10 @@ async function fetchLocationOptions(): Promise<RelationTarget[]> {
 }
 
 async function fetchStationOptions(): Promise<RelationTarget[]> {
-  const rows = await neo4jQuery<{ slug: string; name: string }>(`
+  const rows = await neo4jQuery<RelationTarget>(`
     MATCH (s:Station)
-    RETURN s.slug AS slug, coalesce(s.canonicalName, s.title) AS name
+    RETURN s.slug AS slug, coalesce(s.canonicalName, s.title) AS name,
+           [(s)-[:HAS_NAME]->(n:Name) | n.value] AS aliases
     ORDER BY name
   `)
   return rows

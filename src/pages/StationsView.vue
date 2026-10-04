@@ -39,7 +39,10 @@
               alt=""
             />
             <span v-else class="station-thumb-placeholder"></span>
-            <span class="station-name">{{ item.title }}</span>
+            <span class="station-name">
+              {{ item.title }}
+              <span v-if="aliasHint(query, item.title, item.names)" class="station-alias">· {{ aliasHint(query, item.title, item.names) }}</span>
+            </span>
             <span v-if="item.type" class="station-type">{{ item.type }}</span>
           </RouterLink>
         </div>
@@ -59,6 +62,7 @@
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import { RouterLink } from 'vue-router'
 import { useLocationCache } from '../composables/useLocationCache.ts'
+import { aliasHint, matchingName } from '../utils/stationNames.ts'
 
 const { stations, loading, init } = useLocationCache()
 
@@ -83,7 +87,8 @@ const filtered = computed(() => {
   const q = query.value.toLowerCase()
   return sorted.value.filter(s =>
     s.title.toLowerCase().includes(q) ||
-    (s.type ?? '').toLowerCase().includes(q),
+    (s.type ?? '').toLowerCase().includes(q) ||
+    matchingName(q, s.names) !== null,
   )
 })
 
@@ -200,6 +205,7 @@ function fmt(n: number): string {
   flex-shrink: 0;
 }
 
+.station-alias { font-weight: 400; color: var(--muted); }
 .station-name {
   flex: 1;
   font-size: 13px;

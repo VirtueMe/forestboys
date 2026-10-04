@@ -61,6 +61,7 @@
                     @mousedown.prevent="pickTarget(e, opt)"
                   >
                     {{ opt.name }}
+                    <span v-if="aliasHint(pickerQuery, opt.name, opt.aliases)" class="unit-alias">· {{ aliasHint(pickerQuery, opt.name, opt.aliases) }}</span>
                   </button>
                   <a
                     v-if="createHref"
@@ -155,6 +156,7 @@ import SourceRefsEditor from '@/components/SourceRefsEditor.vue'
 import type { RelationEntry, RelationStrategy, RelationTarget } from './RelationStrategy.ts'
 import { useRoles, useRoleOptions } from '@/composables/useRoles.ts'
 import { formatPeriod } from '@/utils/period.ts'
+import { aliasHint, matchingName } from '@/utils/stationNames.ts'
 
 const props = withDefaults(defineProps<{
   parentSlug: string
@@ -271,7 +273,9 @@ const valid = computed(() => props.entries.every(e => e.targetSlug.trim().length
 const filteredTargets = computed(() => {
   const q = pickerQuery.value.trim().toLowerCase()
   if (!q) return props.targets.slice(0, 12)
-  return props.targets.filter(t => t.name.toLowerCase().includes(q)).slice(0, 20)
+  return props.targets
+    .filter(t => t.name.toLowerCase().includes(q) || matchingName(q, t.aliases) !== null)
+    .slice(0, 20)
 })
 
 function toggleIndex(i: number) {
@@ -657,6 +661,7 @@ function revert() {
   z-index: 10;
 }
 
+.unit-alias { color: var(--muted); }
 .unit-result {
   display: block;
   width: 100%;

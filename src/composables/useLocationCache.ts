@@ -25,8 +25,9 @@ const DB_NAME = 'milorg-v7'
 const DB_VERSION = 1
 const STORE = 'cache' as const
 // CACHE_KEY bumped: data now sourced from Neo4j (round-3 schema); invalidates
-// any v17 Sanity-shaped cache from previous deployments.
-const CACHE_KEY = 'v18-neo4j'
+// any v17 Sanity-shaped cache from previous deployments. v19: stations carry
+// their other names (HAS_NAME), so a v18 cache has none to search.
+const CACHE_KEY = 'v19-station-names'
 
 // Convert Sanity Portable Text block array to a plain string.
 // Each block becomes one paragraph; non-block types (images etc.) are skipped.
@@ -176,7 +177,7 @@ async function fetchFromNeo4j(): Promise<IdbCache> {
               l.lat AS lat, l.lng AS lng,
               [e IN events WHERE e IS NOT NULL] AS events`),
 
-    neo4jQuery<{ _id: string; slug: string; title: string; type: string | null; lat: number; lng: number; events: IncidentRow[] }>(
+    neo4jQuery<{ _id: string; slug: string; title: string; type: string | null; names: string[]; lat: number; lng: number; events: IncidentRow[] }>(
       `MATCH (s:Station)
        OPTIONAL MATCH (s)<-[:FROM_STATION|TO_STATION]-(i:Incident|Operation)
        OPTIONAL MATCH (i)-[:ORCHESTRATED_BY]->(org:Organization)
@@ -188,6 +189,7 @@ async function fetchFromNeo4j(): Promise<IdbCache> {
             END) AS events
        RETURN s.sanityId AS _id, s.slug AS slug, s.canonicalName AS title,
               s.type AS type, s.lat AS lat, s.lng AS lng,
+              [(s)-[:HAS_NAME]->(n:Name) | n.value] AS names,
               [e IN events WHERE e IS NOT NULL] AS events`),
 
     neo4jQuery<{ _id: string; slug: string; name: string; secretName: string | null; home: string | null; birthYear: number | null; events: IncidentRow[] }>(
@@ -270,6 +272,7 @@ async function fetchFromNeo4j(): Promise<IdbCache> {
       .filter(s => isValidCoord(s.lat, s.lng))
       .map((s): IdbStation => ({
         _id: s._id, title: s.title, slug: s.slug, type: s.type ?? undefined,
+        names: s.names?.length ? s.names : undefined,
         lat: s.lat, lng: s.lng,
         events: s.events.map(toIdbEvent),
       })),
