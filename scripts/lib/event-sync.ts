@@ -146,6 +146,28 @@ export function classifyEvent(g: GraphEvent, s: Doc, base: Doc | undefined, l: L
   return out
 }
 
+/** Events with no stamp yet whose baseline file entry is the version the graph took in — they are stamped from it (#80). */
+export const eventsToStamp = (graph: Map<string, GraphEvent>, base: Map<string, Doc>): GraphEvent[] =>
+  [...graph.values()].filter(g => !Object.keys(g.stamps).length && base.get(g.sanityId)?._updatedAt === g.sanityUpdatedAt)
+
+/**
+ * The guarantee behind stamping: for every event that would be stamped, the verdicts its new stamps give are
+ * the verdicts the baseline file gives. `differ` must be empty before anything is written.
+ */
+export function verifyEventStamps(toStamp: GraphEvent[], sanity: Map<string, Doc>, base: Map<string, Doc>, l: Lookups) {
+  let checked = 0
+  const differ: { slug: string; withFile: { field: string; verdict: EventVerdict }[]; withStamps: { field: string; verdict: EventVerdict }[] }[] = []
+  for (const g of toStamp) {
+    const s = sanity.get(g.sanityId), b = base.get(g.sanityId)
+    if (!s || !b) continue
+    const withFile = classifyEvent(g, s, b, l)
+    const withStamps = classifyEvent({ ...g, stamps: stampsFor(b, l) }, s, undefined, l)
+    checked++
+    if (JSON.stringify(withFile) !== JSON.stringify(withStamps)) differ.push({ slug: g.slug, withFile, withStamps })
+  }
+  return { checked, differ }
+}
+
 /** Events Sanity hasn't changed: the graph must still equal its stamps (or the baseline file). */
 export function calibrateEvents(graph: Map<string, GraphEvent>, sanity: Map<string, Doc>, base: Map<string, Doc>, l: Lookups) {
   const checks: Record<string, { agree: number; total: number; samples: unknown[] }> = {}

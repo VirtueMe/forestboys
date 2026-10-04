@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { FIELDS, classify, stampFor, type Doc, type GraphPerson } from './person-sync.ts'
+import { FIELDS, classify, stampFor, stampsFromBaseline, verifyStamps, type Doc, type GraphPerson } from './person-sync.ts'
 
 const person = (over: Partial<GraphPerson> = {}): GraphPerson => ({
   sanityId: 'p1', sanityUpdatedAt: '2026-04-01', slug: 'ola-nordmann', canonicalName: 'Ola Nordmann',
@@ -61,5 +61,51 @@ describe('stampFor', () => {
     expect(Object.keys(out)).toEqual(['home_sha'])
     const name = FIELDS.find(f => f.name === 'name')!
     expect(Object.keys(stampFor(name, sanityDoc({ name: 'Kaptein Ola Nordmann' })))).toContain('name_graphSha')
+  })
+})
+
+describe('stampsFromBaseline', () => {
+  const april = (over: Record<string, unknown> = {}) => sanityDoc({ _updatedAt: '2026-04-01', ...over })
+
+  it('stamps every field when the baseline is the version the graph took in', () => {
+    const out = stampsFromBaseline(person(), april())
+    for (const f of FIELDS) expect(out).toHaveProperty(`${f.name}_sha`)
+  })
+
+  it('stamps nothing when the baseline is not that version, or there is none', () => {
+    expect(stampsFromBaseline(person({ sanityUpdatedAt: '2026-04-02' }), april())).toEqual({})
+    expect(stampsFromBaseline(person(), undefined)).toEqual({})
+  })
+
+  it('leaves a field that already has a stamp alone', () => {
+    const out = stampsFromBaseline(person({ stamps: { home_sha: 'kept' } }), april())
+    expect(out).not.toHaveProperty('home_sha')
+    expect(out).toHaveProperty('birthYear_sha')
+  })
+
+  it('stamps what the rule makes of the baseline, not what the graph holds now, so an edit stays visible', () => {
+    const edited = person({ home: 'Trondheim' })
+    const out = stampsFromBaseline(edited, april())
+    expect(out.home_sha).toBe(stampFor(home, april()).home_sha)
+  })
+})
+
+describe('verifyStamps: the stamps give the verdicts the baseline file gives', () => {
+  const aprilDoc = sanityDoc({ _updatedAt: '2026-04-01' })
+  const check = (g: GraphPerson, s: Doc) => verifyStamps(new Map([[g.sanityId, g]]), new Map([[s._id, s]]), new Map([[aprilDoc._id, aprilDoc]]))
+  const text = [{ _type: 'block', children: [{ _type: 'span', text: 'En beskrivelse' }] }]
+
+  it.each([
+    ['nothing changed in Sanity', person(), sanityDoc({ _updatedAt: '2026-04-01' })],
+    ['Sanity changed, the graph still holds the baseline', person(), sanityDoc({ home: 'Bergen' })],
+    ['Sanity changed, the graph was edited', person({ home: 'Trondheim' }), sanityDoc({ home: 'Bergen' })],
+    ['Sanity changed, the graph already has the new value', person({ home: 'Bergen' }), sanityDoc({ home: 'Bergen' })],
+    ['several fields changed at once', person(), sanityDoc({ home: 'Bergen', birthYear: 1921, secretName: 'X' })],
+    ['a description the graph never imported, unchanged in Sanity', person(), sanityDoc({ _updatedAt: '2026-04-01', description: text })],
+    ['a description the graph never imported, changed in Sanity', person(), sanityDoc({ description: text })],
+  ])('%s', (_label, g, s) => {
+    const { checked, differ } = check(g, s)
+    expect(checked).toBe(1)
+    expect(differ).toEqual([])
   })
 })

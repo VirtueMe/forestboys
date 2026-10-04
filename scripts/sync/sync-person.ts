@@ -44,6 +44,7 @@
  * Only the people named in --accept-delete are deleted.
  *
  * Usage: npx tsx scripts/sync/sync-person.ts [--write] [--accept-review=<slug>,…] [--accept-delete=<slug>,…]
+ *        npx tsx scripts/sync/sync-person.ts --stamp [--write]   stamp the baseline into the graph, nothing else (#80)
  */
 
 import { writeFileSync, mkdirSync } from 'node:fs'
@@ -51,7 +52,7 @@ import { resolve } from 'node:path'
 import neo4j, { type ManagedTransaction } from 'neo4j-driver'
 import { loadEnv } from '../lib/env.ts'
 import {
-  FIELDS, calibrate, classify, fetchGraphPeople, fetchSanityPeople, loadApril, neo4jDriver,
+  FIELDS, calibrate, classify, fetchGraphPeople, fetchSanityPeople, loadApril, neo4jDriver, stampsFromBaseline, verifyStamps,
   sanityLinks, stampFor, str, type Doc, type GraphPerson,
 } from '../lib/person-sync.ts'
 import { imageSources, linkSource, parsePerson, personClaims, rankEdge, sanMigRef } from '../lib/person-rule.ts'
@@ -59,6 +60,7 @@ import { deletionStmts, deletionSummary, planDeletions } from '../lib/person-del
 loadEnv()
 
 const write = process.argv.includes('--write')
+const stampOnly = process.argv.includes('--stamp')
 const acceptReview = new Set(
   (process.argv.find(a => a.startsWith('--accept-review='))?.slice('--accept-review='.length) ?? '')
     .split(',').map(x => x.trim()).filter(Boolean))
@@ -290,12 +292,58 @@ function planNew(s: Doc): Plan {
   return { sanityId: id, slug, summary: ['new'], stmts }
 }
 
+// ── Stamp only (#80) ──
+
+/**
+ * Writes the baseline into the graph as per-field stamps, so the sync no longer needs the baseline file
+ * (24 MB, local only — CI cannot read it). Changes no data field and moves no SyncState. Dry run unless
+ * --write; refuses to write unless every person gets, from its stamps, the verdicts the file gives.
+ */
+async function stampPeople(graph: Map<string, GraphPerson>, sanity: Map<string, Doc>, april: Map<string, Doc>) {
+  if (!april.size) {
+    console.error('--stamp needs the baseline file: there is nothing to stamp from.')
+    process.exitCode = 1
+    return
+  }
+  const rows = [...graph.values()]
+    .map(g => ({ id: g.sanityId, slug: g.slug, stamps: stampsFromBaseline(g, april.get(g.sanityId)) }))
+    .filter(r => Object.keys(r.stamps).length)
+  const fieldCount = rows.reduce((n, r) => n + Object.keys(r.stamps).filter(k => k.endsWith('_sha')).length, 0)
+  const untrusted = [...graph.values()].filter(g => april.get(g.sanityId)?._updatedAt !== g.sanityUpdatedAt && !Object.keys(g.stamps).length).length
+  const { checked, differ } = verifyStamps(graph, sanity, april)
+
+  console.log(`Stamp only: ${rows.length} people, ${fieldCount} fields to stamp from the baseline`)
+  console.log(`Not stamped: ${untrusted} people with neither a trustworthy baseline nor a stamp (a Sanity change to one goes to review)`)
+  console.log(`Check: ${checked} people give the same verdicts from the stamps as from the file${differ.length ? ` — ${differ.length} DIFFER` : ''}`)
+  for (const d of differ.slice(0, 5)) console.log(`  ${d.slug}: file ${JSON.stringify(d.withFile)} · stamps ${JSON.stringify(d.withStamps)}`)
+
+  if (!write) { console.log('\n(dry run — pass --write to stamp)'); return }
+  if (differ.length) {
+    console.error('\nRefusing to write: the stamps must give the same verdicts as the baseline file.')
+    process.exitCode = 1
+    return
+  }
+  const driver = neo4jDriver()
+  const ws = driver.session()
+  try {
+    for (let i = 0; i < rows.length; i += 200) {
+      await ws.executeWrite(tx => tx.run(`UNWIND $rows AS x MATCH (p:Person {sanityId: x.id}) SET p += x.stamps`,
+        { rows: rows.slice(i, i + 200).map(r => ({ id: r.id, stamps: r.stamps })) }))
+    }
+    console.log(`Stamped ${rows.length} people (${fieldCount} fields).`)
+  } finally {
+    await ws.close()
+    await driver.close()
+  }
+}
+
 // ── Main ──
 
 async function main() {
   const april = loadApril()
   const [sanityDocs, graph] = await Promise.all([fetchSanityPeople(), fetchGraphPeople()])
   const sanity = new Map(sanityDocs.map(d => [d._id, d]))
+  if (stampOnly) return stampPeople(graph, sanity, april)
 
   // Calibration compares what the rule makes of the baseline with the graph, so it needs the
   // baseline file — a dev-machine check (after a rule change, run sanity-person-fields.ts). Without

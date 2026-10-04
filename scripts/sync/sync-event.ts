@@ -23,6 +23,7 @@
  * data/sanity-delta/event-before-<time>.json.
  *
  * Usage: npx tsx scripts/sync/sync-event.ts [--write] [--accept-delete=<slug>,…]
+ *        npx tsx scripts/sync/sync-event.ts --stamp [--write]   stamp the baseline into the graph, nothing else (#80)
  */
 
 import { writeFileSync, mkdirSync } from 'node:fs'
@@ -32,7 +33,7 @@ import { loadEnv } from '../lib/env.ts'
 import { neo4jDriver, type Doc } from '../lib/person-sync.ts'
 import {
   EVENT_FIELDS, calibrateEvents, classifyEvent, fetchGraphEvents, fetchSanityEvents,
-  loadAprilEvents, stampsFor, type EventVerdict, type GraphEvent,
+  eventsToStamp, loadAprilEvents, stampsFor, verifyEventStamps, type EventVerdict, type GraphEvent,
 } from '../lib/event-sync.ts'
 import {
   PARTICIPANT_EDGE, SINGLE, descriptionProps, eventImages, eventLinks, loadLookups, planEvent, ref, refs, slugOf, str,
@@ -41,6 +42,7 @@ import {
 loadEnv()
 
 const write = process.argv.includes('--write')
+const stampOnly = process.argv.includes('--stamp')
 const acceptDelete = new Set(
   (process.argv.find(a => a.startsWith('--accept-delete='))?.slice('--accept-delete='.length) ?? '')
     .split(',').map(x => x.trim()).filter(Boolean))
@@ -162,7 +164,32 @@ async function main() {
     console.log(`Calibration: ${off.length ? off.map(([n, c]) => `${n} ${c.total - c.agree} differ`).join(', ') : `${Object.values(calib)[0]?.total ? `graph equals its stamps${base.size ? ' and baseline' : ''} (${Object.values(calib)[0].total} events)` : 'nothing to check — no stamped event, and no baseline file'}`}`)
 
     // Events not stamped yet: stamp them from the baseline file (first run).
-    const toStamp = [...graph.values()].filter(g => !Object.keys(g.stamps).length && base.get(g.sanityId)?._updatedAt === g.sanityUpdatedAt)
+    const toStamp = eventsToStamp(graph, base)
+
+    // Stamp only (#80): put the baseline into the graph so the file is not needed, change nothing else.
+    // Dry run unless --write; refuses to write unless the stamps give the verdicts the file gives.
+    if (stampOnly) {
+      if (!base.size) { console.error('--stamp needs the baseline file: there is nothing to stamp from.'); process.exitCode = 1; return }
+      const stamped = [...graph.values()].filter(g => Object.keys(g.stamps).length).length
+      const { checked, differ } = verifyEventStamps(toStamp, sanity, base, l)
+      console.log(`Stamp only: ${toStamp.length} events to stamp from the baseline · ${stamped} already stamped`)
+      console.log(`Not stamped: ${graph.size - toStamp.length - stamped} events with no trustworthy baseline (a Sanity change to one goes to review)`)
+      console.log(`Check: ${checked} events give the same verdicts from the stamps as from the file${differ.length ? ` — ${differ.length} DIFFER` : ''}`)
+      for (const d of differ.slice(0, 5)) console.log(`  ${d.slug}: file ${JSON.stringify(d.withFile)} · stamps ${JSON.stringify(d.withStamps)}`)
+      if (!write) { console.log('\n(dry run — pass --write to stamp)'); return }
+      if (differ.length) { console.error('\nRefusing to write: the stamps must give the same verdicts as the baseline file.'); process.exitCode = 1; return }
+      const ws = driver.session({ defaultAccessMode: neo4j.session.WRITE })
+      try {
+        const rows = toStamp.map(g => ({ id: g.sanityId, stamps: stampsFor(base.get(g.sanityId)!, l) }))
+        for (let i = 0; i < rows.length; i += 200) {
+          await ws.executeWrite(tx => tx.run(`
+            UNWIND $rows AS x MATCH (e {sanityId: x.id}) WHERE e:Operation OR e:Incident SET e += x.stamps`,
+            { rows: rows.slice(i, i + 200) }))
+        }
+        console.log(`Stamped ${rows.length} events.`)
+      } finally { await ws.close() }
+      return
+    }
 
     // Changed in Sanity.
     const skipped: string[] = []

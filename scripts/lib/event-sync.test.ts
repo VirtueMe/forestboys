@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { baselineSha, classifyEvent, sha, stampsFor, type GraphEvent } from './event-sync.ts'
+import { baselineSha, classifyEvent, eventsToStamp, sha, stampsFor, verifyEventStamps, type GraphEvent } from './event-sync.ts'
 import type { Doc } from './person-sync.ts'
 import type { Lookups } from './event-rule.ts'
 
@@ -67,5 +67,34 @@ describe('classifyEvent without a baseline file (CI)', () => {
     const g = graphEvent({ name: 'Landing at dawn', stamps: stampsFor(doc(), l) })
     const v = classifyEvent(g, doc({ title: 'Landing at dawn' }), undefined, l)
     expect(verdictOf(v, 'title')).toBe('already')
+  })
+})
+
+describe('eventsToStamp / verifyEventStamps', () => {
+  const l = lookups()
+  const baseDoc = doc({ _updatedAt: '2026-04-01' })
+  const base = new Map([['e1', baseDoc]])
+  const check = (g: GraphEvent, s: Doc) => verifyEventStamps([g], new Map([['e1', s]]), base, l)
+
+  it('picks the unstamped events whose baseline is the version the graph took in', () => {
+    const graph = new Map<string, GraphEvent>([
+      ['e1', graphEvent()],
+      ['e2', graphEvent({ sanityId: 'e2' })],
+      ['e3', graphEvent({ sanityId: 'e3', stamps: { title_sha: 'x' } })],
+    ])
+    const b = new Map([['e1', baseDoc], ['e3', { ...baseDoc, _id: 'e3' }]])
+    expect(eventsToStamp(graph, b).map(g => g.sanityId)).toEqual(['e1'])
+  })
+
+  it.each([
+    ['nothing changed in Sanity', graphEvent(), doc({ _updatedAt: '2026-04-01' })],
+    ['Sanity changed, the graph still holds the baseline', graphEvent(), doc({ title: 'Landing at dawn' })],
+    ['Sanity changed, the graph was edited', graphEvent({ name: 'Landing (edited)' }), doc({ title: 'Landing at dawn' })],
+    ['Sanity changed, the graph already has the new value', graphEvent({ name: 'Landing at dawn' }), doc({ title: 'Landing at dawn' })],
+    ['several fields changed at once', graphEvent(), doc({ title: 'Other', date: '1944-02-02' })],
+  ])('%s', (_label, g, s) => {
+    const { checked, differ } = check(g, s)
+    expect(checked).toBe(1)
+    expect(differ).toEqual([])
   })
 })

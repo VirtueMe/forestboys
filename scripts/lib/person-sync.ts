@@ -139,7 +139,12 @@ export function classify(g: GraphPerson, s: Doc, april: Doc | undefined): FieldV
     if (stamp) {
       if (sha(f.fromSanity(s)) === stamp) continue
       const graphStamp = g.stamps[`${f.name}_graphSha`] ?? stamp
-      out.push({ field: f.name, verdict: graphHasNew ? 'already' : sha(graphNow) === graphStamp ? 'clean' : 'conflict' })
+      // Same order as without a stamp: a field the graph holds nothing for is not-imported first.
+      out.push({
+        field: f.name,
+        verdict: f.imported && !f.imported(g) ? 'not-imported'
+               : graphHasNew ? 'already' : sha(graphNow) === graphStamp ? 'clean' : 'conflict',
+      })
       continue
     }
     const changed = base ? f.fromSanity(s) !== f.fromSanity(base) : !graphHasNew
@@ -155,6 +160,44 @@ export function classify(g: GraphPerson, s: Doc, april: Doc | undefined): FieldV
     })
   }
   return out
+}
+
+/**
+ * Stamps to add to a person from the baseline file (#80): for each field with no stamp yet, when the
+ * baseline is the version the graph took in. `<field>_sha` is the hash of the baseline's Sanity value and
+ * `<field>_graphSha` the hash of what the rule makes of it — not of the graph's value now, so an edit
+ * made since the import still shows up as a conflict. After this the file is not needed for the person.
+ * A field the graph holds nothing for (an un-imported description) is stamped too: unchanged in Sanity it
+ * stays silent, as it does against the file, and when it changes it is still `not-imported`.
+ */
+export function stampsFromBaseline(g: GraphPerson, april: Doc | undefined): Record<string, string> {
+  if (!april || april._updatedAt !== g.sanityUpdatedAt) return {}
+  const out: Record<string, string> = {}
+  for (const f of FIELDS) {
+    if (g.stamps[`${f.name}_sha`]) continue
+    Object.assign(out, stampFor(f, april))
+  }
+  return out
+}
+
+/**
+ * The guarantee behind stamping: for every person that would be stamped, the verdicts the stamps give are
+ * the verdicts the baseline file gives. `differ` must be empty before anything is written.
+ */
+export function verifyStamps(graph: Map<string, GraphPerson>, sanity: Map<string, Doc>, april: Map<string, Doc>) {
+  let checked = 0
+  const differ: { slug: string; withFile: FieldVerdict[]; withStamps: FieldVerdict[] }[] = []
+  for (const g of graph.values()) {
+    const s = sanity.get(g.sanityId), b = april.get(g.sanityId)
+    if (!s) continue
+    const add = stampsFromBaseline(g, b)
+    if (!Object.keys(add).length) continue
+    const withFile = classify(g, s, b)
+    const withStamps = classify({ ...g, stamps: { ...g.stamps, ...add } }, s, undefined)
+    checked++
+    if (JSON.stringify(withFile) !== JSON.stringify(withStamps)) differ.push({ slug: g.slug, withFile, withStamps })
+  }
+  return { checked, differ }
 }
 
 /**
