@@ -429,6 +429,7 @@ Migration target: `Event` → `Incident`, normalize `DEPARTED_FROM_STATION` → 
 | Edge            | To       | Properties           |
 |-----------------|----------|----------------------|
 | `HAS_CONTENT`   | `Description` | sections        |
+| `HAS_NAME`      | `Name`   | other names (former, later, alias) |
 | `HAS_IMAGE`     | `Source` | gallery              |
 | `REFERENCED_IN` | `Source` | external links       |
 | `EXTRACTED_FROM`| `Source` | provenance (legacy)  |
@@ -447,6 +448,25 @@ Migration target: `Event` → `Incident`, normalize `DEPARTED_FROM_STATION` → 
 | `links` (JSON string of `[{title, link}]`)              | → `(s)-[:REFERENCED_IN]->(:Source)` per link                                  |
 | `title` (display)                                       | → `canonicalName`                                                             |
 | `sanityId` (only key on un-migrated nodes)              | → `slug` populated from the Sanity slug field                                 |
+
+
+---
+
+### Name
+
+An other name of an entity — a place that was renamed, a unit with a former designation. The owner's `canonicalName` stays the one display name; a Name never repeats it. Station is the only owner so far; Person, Unit and Organization still use the older `names[]` convention (see open decision 2).
+
+**Identity**: `id` (stable across saves) · **Display**: `value`
+**Properties**: `order`, `value`, `type`, `from`, `to`, `fromAbout`, `toAbout`, `sourceRefs[]`
+
+Vocabularies:
+- `type` ∈ `former` (a name it had before `canonicalName`) | `later` (a name it got after) | `alias` (any other name it is known by)
+- `from` / `to`: partial dates (`YYYY`, `YYYY-MM`, `YYYY-MM-DD`), each end optional; open means unknown or still in use. `fromAbout` / `toAbout` mark the date as approximate ("omkring"); they are only meaningful when the date is set.
+- `sourceRefs[]`: evidence, same shape as on STATIONED_AT (`<source-id>#page:A163`).
+
+**Inbound:** `(:Station)-[:HAS_NAME]->(n)`. Saved as a whole list per owner (`PATCH /api/admin/station/:slug/names`); a name keeps its `id` while it exists.
+
+Example — STS 3 was renamed STS 47 at the same site: the Station `STS 03 Stodham Park` has `(:Name {value: 'STS 47', type: 'later'})`.
 
 ---
 
@@ -768,7 +788,7 @@ These edges accept any first-citizen target — readers MUST verify the label in
 ## Open decisions
 
 1. **Station ↔ Location merge?** Station is currently its own label; could become `Location{type:'station-airfield'}` etc.
-2. **`Person.names[]` as sub-document vs own node** — affects cross-entity name search.
+2. **`Person.names[]` as sub-document vs own node** — affects cross-entity name search. Decided for Station: own `Name` node (`HAS_NAME`). Person, Unit, Organization and the rest still carry `names[]` until they get an editor.
 3. **Full node versioning** — partially answered for PT blocks by the `previous*` one-step revert + the R2 `history/` append-only log (see `PROPOSALS.md`). A broader `EditEvent` stream covering scalars and edges remains deferred until mis-edit recovery on those becomes a real need.
 4. **Migrate Unit `(:Description)-[:ABOUT]->` stack to `(:Unit)-[:HAS_CONTENT]->`.** Drop the legacy ABOUT shape once done.
 5. **Migrate Station / Transport `description` (free text) + `links` (JSON) to `HAS_CONTENT` + `REFERENCED_IN`.**
