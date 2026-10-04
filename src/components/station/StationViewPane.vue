@@ -67,7 +67,9 @@
         <h3 class="section-heading">Deltakere ({{ people.length }})</h3>
       </summary>
       <div class="section-body">
+        <!-- One role in use: a flat list with the role on each row, as before. -->
         <RelationListView
+          v-if="peopleGroups.length <= 1"
           :entries="people"
           :strategy="StationStaysStrategy"
           label="Deltakere"
@@ -75,6 +77,21 @@
           headless
           @open="e => activeStay = e"
         />
+        <!-- Several roles: a group per role, so an instructor is not lost among 39 students. -->
+        <div v-for="g in peopleGroups" v-else :key="g.role ?? 'none'" class="role-group">
+          <h4 class="role-group-heading">
+            <RoleLabel v-if="g.role" :role-key="g.role" />
+            <template v-else>Uten rolle</template>
+            <span class="role-group-count">({{ g.entries.length }})</span>
+          </h4>
+          <RelationListView
+            :entries="g.entries"
+            :strategy="StationStaysStrategy"
+            label="Deltakere"
+            headless
+            @open="e => activeStay = e"
+          />
+        </div>
       </div>
     </details>
     <RelationInfoPopup :entry="activeStay" show-role @close="activeStay = null" />
@@ -153,6 +170,9 @@ import LegacyDescription from '@/components/LegacyDescription.vue'
 import type { Section } from '@/components/SectionsEditor.vue'
 import RelationListView from '@/components/relation/RelationListView.vue'
 import RelationInfoPopup from '@/components/relation/RelationInfoPopup.vue'
+import RoleLabel from '@/components/role/RoleLabel.vue'
+import { useRoles } from '@/composables/useRoles.ts'
+import { groupByRole } from '@/utils/roleGroups.ts'
 import { StationStaysStrategy } from '@/components/relation/stayStrategies.ts'
 import type { RelationEntry } from '@/components/relation/RelationStrategy.ts'
 import SourceRef from '@/components/SourceRef.vue'
@@ -180,6 +200,11 @@ const props = withDefaults(defineProps<{
 const activeStay = ref<RelationEntry | null>(null)
 
 const sortedNames = computed(() => sortNames(props.names))
+
+const { roles } = useRoles()
+const peopleGroups = computed(() =>
+  groupByRole(props.people, key => roles.value.get(key)?.name ?? key),
+)
 
 interface LegacyLink { title: string; link: string }
 
@@ -327,6 +352,17 @@ function formatDate(iso?: string | null): string {
 .event-direction--arrived  { background: var(--paper); color: var(--moss);  border: 1px solid var(--rule); }
 .event-title { font-size: 13px; color: var(--focus); flex: 1; min-width: 0; }
 
+.role-group + .role-group { margin-top: var(--space-md); }
+.role-group-heading {
+  margin: 0 0 var(--space-xs);
+  font-family: var(--font-sans);
+  font-size: var(--size-caps);
+  font-weight: 600;
+  letter-spacing: var(--tracking-caps);
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.role-group-count { margin-left: 0.4em; font-weight: 400; }
 .name-history { list-style: none; margin: 0; padding: 0; }
 .name-item {
   display: flex;
