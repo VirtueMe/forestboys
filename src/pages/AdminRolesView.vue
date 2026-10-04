@@ -31,6 +31,7 @@
           <span v-for="s in r.scopes" :key="s" class="row-scope" :title="`${usage(r, s)} koblinger`">
             {{ scopeLabel(s) }}<span class="row-scope-count"> · {{ usage(r, s) }}</span>
           </span>
+          <span v-if="r.attended" class="row-attended" title="Vises under «Har deltatt på»">Har deltatt på</span>
           <span v-if="!r.hasDescription" class="row-nodesc">mangler beskrivelse</span>
         </div>
         <div class="row-actions">
@@ -218,6 +219,16 @@ async function confirmDelete(r: RoleRow) {
 }
 .row-scope-count { color: var(--muted); font-variant-numeric: tabular-nums; }
 .row-nodesc { font-size: 11px; font-style: italic; color: var(--muted); }
+.row-attended {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  padding: 1px 6px;
+  border: 1px solid var(--rule);
+  border-radius: 3px;
+  color: var(--ink-soft);
+}
 
 .row-actions { display: flex; gap: 6px; align-self: flex-start; }
 .btn-ghost,

@@ -45,6 +45,17 @@
         </div>
       </div>
 
+      <div v-if="draft.scopes.includes(ATTENDED_SCOPE)" class="form-row form-row--top">
+        <span class="form-label">Vises</span>
+        <div class="stack">
+          <label class="scope-option">
+            <input v-model="draft.attended" type="checkbox" />
+            Under «Har deltatt på»
+          </label>
+          <span class="form-hint">Koblinger med denne rollen står under «Har deltatt på» (kurs, opplæring) i stedet for «Stasjonert på».</span>
+        </div>
+      </div>
+
       <div v-if="error" class="form-error">{{ error }}</div>
 
       <div class="form-actions">
@@ -84,7 +95,7 @@ import { ref, computed, watch } from 'vue'
 import { authFetch } from '@/composables/useAuth.ts'
 import { neo4jQuery } from '@/composables/useNeo4j.ts'
 import { slugify, SLUG_RE } from '@/utils/slug.ts'
-import { scopeLabel } from '@/utils/roleScopes.ts'
+import { scopeLabel, ATTENDED_SCOPE } from '@/utils/roleScopes.ts'
 import DescriptionEditor from '@/components/DescriptionEditor.vue'
 import type { Section } from '@/components/SectionsEditor.vue'
 
@@ -92,6 +103,8 @@ export interface RoleRow {
   key:            string
   name:           string
   scopes:         string[]
+  /** Links with this role are shown under «Har deltatt på». */
+  attended:       boolean
   usage:          Record<string, number>
   hasDescription: boolean
 }
@@ -116,8 +129,9 @@ const draft = ref({
   key:    props.role?.key ?? '',
   name:   props.role?.name ?? '',
   scopes: [...(props.role?.scopes ?? [])],
+  attended: props.role?.attended ?? false,
 })
-const baseline = { name: draft.value.name, scopes: [...draft.value.scopes] }
+const baseline = { name: draft.value.name, scopes: [...draft.value.scopes], attended: draft.value.attended }
 const saving    = ref(false)
 const error     = ref<string | null>(null)
 const keyEdited = ref(false)
@@ -145,8 +159,12 @@ function toggleScope(s: string) {
 
 const sameScopes = (a: string[], b: string[]) => [...a].sort().join() === [...b].sort().join()
 const dirty = computed(() =>
-  draft.value.name !== baseline.name || !sameScopes(draft.value.scopes, baseline.scopes),
+  draft.value.name !== baseline.name || !sameScopes(draft.value.scopes, baseline.scopes) ||
+  attendedNow.value !== baseline.attended,
 )
+
+// «Har deltatt på» only applies while the role is offered for «Stasjonert på».
+const attendedNow = computed(() => draft.value.scopes.includes(ATTENDED_SCOPE) && draft.value.attended)
 
 const canSave = computed(() => {
   if (!draft.value.name.trim() || !draft.value.scopes.length) return false
@@ -165,17 +183,18 @@ async function save() {
       const res = await authFetch('/api/admin/roles', {
         method:  'POST',
         headers: { 'Content-Type': 'application/json' },
-        body:    JSON.stringify({ key, name: f.name.trim(), scopes: f.scopes }),
+        body:    JSON.stringify({ key, name: f.name.trim(), scopes: f.scopes, attended: attendedNow.value }),
       })
       const out = await res.json().catch(() => ({})) as { error?: string }
       if (!res.ok) { error.value = out.error ?? `HTTP ${res.status}`; return }
-      emit('saved', { key, name: f.name.trim(), scopes: [...f.scopes], usage: {}, hasDescription: false })
+      emit('saved', { key, name: f.name.trim(), scopes: [...f.scopes], attended: attendedNow.value, usage: {}, hasDescription: false })
       return
     }
 
     const body: Record<string, unknown> = {}
     if (f.name !== baseline.name) body.name = f.name.trim()
     if (!sameScopes(f.scopes, baseline.scopes)) body.scopes = f.scopes
+    if (attendedNow.value !== baseline.attended) body.attended = attendedNow.value
     const res = await authFetch(`/api/admin/roles/${encodeURIComponent(props.role!.key)}`, {
       method:  'PATCH',
       headers: { 'Content-Type': 'application/json' },
@@ -190,10 +209,13 @@ async function save() {
     }
     baseline.name   = out.name ?? f.name.trim()
     baseline.scopes = [...(out.scopes ?? f.scopes)]
+    baseline.attended = out.attended ?? attendedNow.value
+    draft.value.attended = baseline.attended
     emit('saved', {
       ...props.role!,
       name:   baseline.name,
       scopes: [...baseline.scopes],
+      attended: baseline.attended,
       usage:  out.usage ?? props.role!.usage,
     })
   } catch (e) {

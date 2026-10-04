@@ -1,7 +1,8 @@
 /**
  * /api/admin/roles/:key
  *
- *   PATCH  — update name and/or scopes. Removing a scope that edges still
+ *   PATCH  — update name, scopes and/or `attended` (shown under «Har deltatt på»).
+ *            Removing a scope that edges still
  *            use is refused (409) with the count, so no edge ends up
  *            carrying a role its relation no longer offers.
  *   DELETE — remove the Role and its description, only if no edge in any
@@ -12,16 +13,23 @@
 
 import { requireAdmin } from '~/_lib/require-admin.ts'
 import { runCypher, type Neo4jEnv } from '~/_lib/neo4j.ts'
-import { usageCypher, parseScopes } from '~/_lib/role-scopes.ts'
+import { ATTENDED_SCOPE, usageCypher, parseScopes, parseAttended } from '~/_lib/role-scopes.ts'
 
 interface Env extends Neo4jEnv { SESSION_SECRET: string }
 
-async function loadUsage(env: Env, key: string): Promise<Record<string, number> | null> {
-  const [row] = await runCypher<{ usage: Record<string, number> }>(env, `
+interface RoleState { usage: Record<string, number>; scopes: string[]; attended: boolean }
+
+async function loadRole(env: Env, key: string): Promise<RoleState | null> {
+  const [row] = await runCypher<RoleState>(env, `
     MATCH (r:Role {key: $key})
-    RETURN ${usageCypher('r.key')} AS usage
+    RETURN ${usageCypher('r.key')} AS usage, coalesce(r.scopes, []) AS scopes,
+           coalesce(r.attended, false) AS attended
   `, { key })
-  return row?.usage ?? null
+  return row ?? null
+}
+
+async function loadUsage(env: Env, key: string): Promise<Record<string, number> | null> {
+  return (await loadRole(env, key))?.usage ?? null
 }
 
 export const onRequestPatch: PagesFunction<Env> = async ({ request, env, params }) => {
@@ -29,7 +37,7 @@ export const onRequestPatch: PagesFunction<Env> = async ({ request, env, params 
   if (guard instanceof Response) return guard
 
   const key  = String(params.key)
-  const body = await request.json<{ name?: unknown; scopes?: unknown }>().catch(() => null)
+  const body = await request.json<{ name?: unknown; scopes?: unknown; attended?: unknown }>().catch(() => null)
   if (!body) return json({ error: 'Invalid JSON' }, 400)
 
   const props: Record<string, unknown> = {}
@@ -43,11 +51,24 @@ export const onRequestPatch: PagesFunction<Env> = async ({ request, env, params 
     if ('error' in scopes) return json({ error: scopes.error }, 400)
     props.scopes = scopes.list
   }
-  if (!Object.keys(props).length) return json({ ok: true, unchanged: true })
+  if ('attended' in body && typeof body.attended !== 'boolean') return json({ error: 'attended må være sann eller usann' }, 400)
+  if (!Object.keys(props).length && !('attended' in body)) return json({ ok: true, unchanged: true })
 
   try {
-    const usage = await loadUsage(env, key)
-    if (!usage) return json({ error: 'Role not found' }, 404)
+    const current = await loadRole(env, key)
+    if (!current) return json({ error: 'Role not found' }, 404)
+    const usage = current.usage
+
+    // `attended` only makes sense while the role applies to the stationed
+    // scope: dropping that scope clears it, and setting it needs the scope.
+    const finalScopes = (props.scopes as string[] | undefined) ?? current.scopes
+    if ('attended' in body) {
+      const attended = parseAttended(body.attended, finalScopes)
+      if ('error' in attended) return json({ error: attended.error }, 400)
+      props.attended = attended.attended
+    } else if (current.attended && !finalScopes.includes(ATTENDED_SCOPE)) {
+      props.attended = false
+    }
 
     if (props.scopes) {
       const kept = props.scopes as string[]
@@ -57,10 +78,10 @@ export const onRequestPatch: PagesFunction<Env> = async ({ request, env, params 
       }
     }
 
-    const [row] = await runCypher<{ key: string; name: string; scopes: string[] }>(env, `
+    const [row] = await runCypher<{ key: string; name: string; scopes: string[]; attended: boolean }>(env, `
       MATCH (r:Role {key: $key})
       SET r += $props
-      RETURN r.key AS key, r.name AS name, r.scopes AS scopes
+      RETURN r.key AS key, r.name AS name, r.scopes AS scopes, coalesce(r.attended, false) AS attended
     `, { key, props })
     return json({ ok: true, ...row, usage })
   } catch (e) {

@@ -128,6 +128,13 @@ values).
 **R17 — Remove the hard-coded lists** once pickers, views and backend
 read Role nodes.
 
+**R18 — Section flag.** A role that applies to the `stationed` scope can be
+flagged `attended` (`Role.attended`, a boolean, absent = false). Links with
+such a role (opplæring, instruktør) are shown under «Har deltatt på» on the
+person page instead of «Stasjonert på». Set with a checkbox in the role form
+(only offered while the stationed scope is ticked); dropping the scope clears
+it. Roles stay data: nothing in the views lists role keys.
+
 ---
 
 ## Open questions

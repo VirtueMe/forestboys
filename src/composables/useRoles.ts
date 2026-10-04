@@ -14,6 +14,8 @@ export interface RoleInfo {
   key:       string
   name:      string
   scopes:    string[]
+  /** Links with this role are shown under «Har deltatt på», not «Stasjonert på». */
+  attended:  boolean
   /** Description rendered to HTML ('' when none). */
   html:      string
   /** Description as plain text ('' when none) — hover title, help text. */
@@ -26,6 +28,7 @@ interface RoleRow {
   key:       string
   name:      string
   scopes:    string[] | null
+  attended:  boolean | null
   sections:  string[]
   sourceIds: string[]
 }
@@ -49,7 +52,7 @@ async function load(): Promise<void> {
     ORDER BY coalesce(d.order, 1)
     WITH r, [x IN collect(d.content) WHERE x IS NOT NULL] AS sections,
          reduce(acc = [], l IN collect(ids) | acc + l) AS allIds
-    RETURN r.key AS key, r.name AS name, r.scopes AS scopes, sections,
+    RETURN r.key AS key, r.name AS name, r.scopes AS scopes, r.attended AS attended, sections,
            reduce(acc = [], i IN allIds | CASE WHEN i IN acc THEN acc ELSE acc + i END) AS sourceIds
   `)
   roles.value = new Map(rows.map((r) => {
@@ -58,6 +61,7 @@ async function load(): Promise<void> {
       key:       r.key,
       name:      r.name,
       scopes:    r.scopes ?? [],
+      attended:  r.attended ?? false,
       html:      blocks.map(b => blocksToHtml(b)).join(''),
       text:      blocks.map(b => blocksToText(b)).join(' ').trim(),
       sourceIds: r.sourceIds,

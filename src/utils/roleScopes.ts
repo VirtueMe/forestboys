@@ -10,4 +10,7 @@ export const ROLE_SCOPE_LABEL: Record<string, string> = {
   'crew':       'Mannskap',
 }
 
+/** The scope whose roles can be flagged `attended` (mirrors functions/_lib/role-scopes.ts). */
+export const ATTENDED_SCOPE = 'stationed'
+
 export const scopeLabel = (scope: string): string => ROLE_SCOPE_LABEL[scope] ?? scope
