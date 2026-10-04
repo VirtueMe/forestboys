@@ -7,7 +7,8 @@
 
 <script setup lang="ts">
 /**
- * LocationMap — small MapLibre map with a single Location marker.
+ * LocationMap — small MapLibre map with a single marker for a Location or a
+ * Station (the station editor and page use it too).
  *
  * Edit mode (default): coordinate picker. Click anywhere to move the
  * marker there; the marker is draggable. Emits `pick` with coordinates

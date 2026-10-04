@@ -58,6 +58,10 @@
       <label class="edit-label" for="edit-station-lng">Lengdegrad</label>
       <input id="edit-station-lng" v-model="draft.lng" class="edit-input edit-input-coord" type="text" inputmode="decimal" placeholder="10.752" />
     </div>
+    <div class="edit-row edit-row--top">
+      <span class="edit-label">Kart</span>
+      <LocationMap :lat="pickerLat" :lng="pickerLng" @pick="onPick" />
+    </div>
     <div class="edit-row">
       <label class="edit-label" for="edit-station-activeFrom">Aktiv fra</label>
       <input id="edit-station-activeFrom" v-model="draft.activeFrom" class="edit-input edit-input-date" type="text" placeholder="YYYY-MM-DD" />
@@ -92,6 +96,7 @@
  */
 import { ref, computed, watch } from 'vue'
 import SourceRefsEditor from '@/components/SourceRefsEditor.vue'
+import LocationMap from '@/components/location/LocationMap.vue'
 import { authFetch } from '@/composables/useAuth.ts'
 import { neo4jQuery } from '@/composables/useNeo4j.ts'
 import { slugify, SLUG_RE } from '@/utils/slug.ts'
@@ -217,6 +222,22 @@ function parseCoord(v: string): number | null | 'invalid' {
   if (!t) return null
   const n = Number(t)
   return Number.isFinite(n) ? n : 'invalid'
+}
+
+// The picker only shows a marker when both fields parse; a click or a drag
+// writes the coordinates back into the two text fields.
+const pickerLat = computed(() => {
+  const lat = parseCoord(draft.value.lat), lng = parseCoord(draft.value.lng)
+  return typeof lat === 'number' && typeof lng === 'number' ? lat : null
+})
+const pickerLng = computed(() => {
+  const lat = parseCoord(draft.value.lat), lng = parseCoord(draft.value.lng)
+  return typeof lat === 'number' && typeof lng === 'number' ? lng : null
+})
+
+function onPick(lat: number, lng: number) {
+  draft.value.lat = String(lat)
+  draft.value.lng = String(lng)
 }
 
 const canSave = computed(() => {

@@ -50,6 +50,9 @@
 
       <StationViewPane
         v-show="mode !== 'proposals'"
+        :slug="stationSlug"
+        :lat="station.lat"
+        :lng="station.lng"
         :names="names"
         :source-refs="station.sourceRefs"
         :preview-sections="previewSections"
