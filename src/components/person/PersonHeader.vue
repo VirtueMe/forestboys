@@ -2,9 +2,13 @@
   <div class="page-header">
     <RouterLink to="/registre" class="back-link">&#x2039; Tilbake</RouterLink>
     <h1 class="person-name" itemprop="name">{{ title }}</h1>
-    <meta v-if="secretName" :content="secretName" itemprop="alternateName" />
+    <p v-if="secretName" class="person-alias" itemprop="alternateName"><span class="alias-label">Dekknavn:</span> {{ secretName }}</p>
     <meta v-if="birthYear !== null && birthYear !== undefined" :content="String(birthYear)" itemprop="birthDate" />
-    <p v-if="home" class="person-meta" itemprop="homeLocation">{{ home }}</p>
+    <p v-if="home || birthYear" class="person-meta">
+      <span v-if="birthYear">Født {{ birthYear }}</span>
+      <span v-if="home && birthYear" aria-hidden="true"> · </span>
+      <span v-if="home" itemprop="homeLocation">{{ home }}</span>
+    </p>
   </div>
 </template>
 
@@ -43,7 +47,7 @@ defineProps<{
 
 .person-name {
   font-family: var(--font-serif);
-  font-size: var(--size-display);
+  font-size: var(--size-h1);
   font-weight: 600;
   color: var(--ink);
   margin: 0 0 var(--space-xs);
@@ -51,6 +55,15 @@ defineProps<{
   letter-spacing: var(--tracking-tight);
   overflow-wrap: break-word;
 }
+
+.person-alias {
+  font-family: var(--font-sans);
+  font-size: var(--size-label);
+  color: var(--ink-soft);
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.alias-label { color: var(--muted); }
 
 .person-meta {
   font-family: var(--font-sans);

@@ -197,10 +197,7 @@ const person = computed(() => {
 
 const personTitle = computed(() => {
   if (!person.value) return ''
-  let t = person.value.name
-  if (person.value.secretName) t += ` (${person.value.secretName})`
-  if (person.value.birthYear) t += ` - født i ${person.value.birthYear}`
-  return t
+  return person.value.name
 })
 
 
