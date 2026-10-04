@@ -8,8 +8,8 @@
  * Usage: npx tsx scripts/heartbeat.ts [--production] --write
  */
 
-import { loadEnv } from './lib/env.ts'
-import { neo4jDriver } from './lib/person-sync.ts'
+import { loadEnv } from '../lib/env.ts'
+import { neo4jDriver } from '../lib/person-sync.ts'
 loadEnv()
 
 if (!process.argv.includes('--write')) {

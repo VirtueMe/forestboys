@@ -5,7 +5,7 @@
  */
 
 import neo4j from 'neo4j-driver'
-import { loadEnv } from './lib/env.ts'
+import { loadEnv } from '../lib/env.ts'
 loadEnv()
 
 async function main() {

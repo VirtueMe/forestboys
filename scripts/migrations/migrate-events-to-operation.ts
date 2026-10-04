@@ -19,9 +19,9 @@
 import { writeFileSync, mkdirSync } from 'node:fs'
 import { resolve } from 'node:path'
 import neo4j from 'neo4j-driver'
-import { loadEnv } from './lib/env.ts'
-import { PROMOTE_TO_OPERATION } from '../functions/_lib/event-kind.ts'
-import { neo4jDriver } from './lib/person-sync.ts'
+import { loadEnv } from '../lib/env.ts'
+import { PROMOTE_TO_OPERATION } from '../../functions/_lib/event-kind.ts'
+import { neo4jDriver } from '../lib/person-sync.ts'
 loadEnv()
 
 const write = process.argv.includes('--write')

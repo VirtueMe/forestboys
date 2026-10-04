@@ -28,16 +28,16 @@
 import { writeFileSync, mkdirSync } from 'node:fs'
 import { resolve } from 'node:path'
 import neo4j, { type ManagedTransaction } from 'neo4j-driver'
-import { loadEnv } from './lib/env.ts'
-import { neo4jDriver, type Doc } from './lib/person-sync.ts'
+import { loadEnv } from '../lib/env.ts'
+import { neo4jDriver, type Doc } from '../lib/person-sync.ts'
 import {
   EVENT_FIELDS, calibrateEvents, classifyEvent, fetchGraphEvents, fetchSanityEvents,
   loadAprilEvents, stampsFor, type EventVerdict, type GraphEvent,
-} from './lib/event-sync.ts'
+} from '../lib/event-sync.ts'
 import {
   PARTICIPANT_EDGE, SINGLE, descriptionProps, eventImages, eventLinks, loadLookups, planEvent, ref, refs, slugOf, str,
   writeEvent, type Lookups,
-} from './lib/event-rule.ts'
+} from '../lib/event-rule.ts'
 loadEnv()
 
 const write = process.argv.includes('--write')

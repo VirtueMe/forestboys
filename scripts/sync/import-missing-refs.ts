@@ -19,10 +19,10 @@
  */
 
 import neo4j from 'neo4j-driver'
-import { loadEnv } from './lib/env.ts'
-import { imageSources, isImportableUrl, linkSource, sanMigRef } from './lib/person-rule.ts'
-import { API, neo4jDriver, type Doc } from './lib/person-sync.ts'
-import { fetchSanityEvents } from './lib/event-sync.ts'
+import { loadEnv } from '../lib/env.ts'
+import { imageSources, isImportableUrl, linkSource, sanMigRef } from '../lib/person-rule.ts'
+import { API, neo4jDriver, type Doc } from '../lib/person-sync.ts'
+import { fetchSanityEvents } from '../lib/event-sync.ts'
 loadEnv()
 
 const write = process.argv.includes('--write')

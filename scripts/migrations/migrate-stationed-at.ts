@@ -35,8 +35,8 @@
 import { readFileSync } from 'node:fs'
 import { randomUUID } from 'node:crypto'
 import neo4j from 'neo4j-driver'
-import { loadEnv } from './lib/env.ts'
-import { defaultRoleForStation } from '../src/utils/stationCategory.ts'
+import { loadEnv } from '../lib/env.ts'
+import { defaultRoleForStation } from '../../src/utils/stationCategory.ts'
 loadEnv()
 
 const write = process.argv.includes('--write')

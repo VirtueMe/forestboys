@@ -49,13 +49,13 @@
 import { writeFileSync, mkdirSync } from 'node:fs'
 import { resolve } from 'node:path'
 import neo4j, { type ManagedTransaction } from 'neo4j-driver'
-import { loadEnv } from './lib/env.ts'
+import { loadEnv } from '../lib/env.ts'
 import {
   FIELDS, calibrate, classify, fetchGraphPeople, fetchSanityPeople, loadApril, neo4jDriver,
   sanityLinks, stampFor, str, type Doc, type GraphPerson,
-} from './lib/person-sync.ts'
-import { imageSources, linkSource, parsePerson, personClaims, rankEdge, sanMigRef } from './lib/person-rule.ts'
-import { deletionStmts, deletionSummary, planDeletions } from './lib/person-deletions.ts'
+} from '../lib/person-sync.ts'
+import { imageSources, linkSource, parsePerson, personClaims, rankEdge, sanMigRef } from '../lib/person-rule.ts'
+import { deletionStmts, deletionSummary, planDeletions } from '../lib/person-deletions.ts'
 loadEnv()
 
 const write = process.argv.includes('--write')
