@@ -8,6 +8,10 @@
  * `<field>`, `<field>_state: 'candidate'`, `<field>_sourceRef`; images and
  * links as for events (galleries.clj, external_sources.clj).
  *
+ * Stations that have people linked in Sanity (`station.people[]`) are wanted
+ * too: scripts/migrate-stationed-at.ts needs the station node for each link
+ * and refuses to write while one is missing.
+ *
  * Organizations and districts are shaped by hand in the graph — those
  * references are only listed.
  *
@@ -32,6 +36,15 @@ const KINDS = [
   { label: 'Station',   type: 'station',   fields: ['stationFrom', 'stationTo'] },
   { label: 'Transport', type: 'transport', fields: ['transport'] },
 ] as const
+
+/** Ids of the Sanity stations that have people linked — their links become STATIONED_AT edges. */
+async function stationsWithPeople(): Promise<string[]> {
+  const url = new URL(API)
+  url.searchParams.set('query', `*[_type == "station" && count(people) > 0]._id`)
+  const res = await fetch(url)
+  if (!res.ok) throw new Error(`Sanity ${res.status}`)
+  return ((await res.json() as { result: string[] }).result).map(id => id.replace(/^drafts\./, ''))
+}
 
 async function fetchDocs(ids: string[]): Promise<Doc[]> {
   if (!ids.length) return []
@@ -81,6 +94,7 @@ async function main() {
       const have = new Set((await read.run(`MATCH (n:\`${k.label}\`) WHERE n.sanityId IS NOT NULL RETURN n.sanityId AS id`))
         .records.map(r => r.get('id') as string))
       const wanted = new Set(events.flatMap(e => k.fields.flatMap(f => (f === 'transport' ? refs(e[f]) : [ref(e[f])]))).filter(Boolean))
+      if (k.type === 'station') for (const id of await stationsWithPeople()) wanted.add(id)
       const missing = [...wanted].filter(id => !have.has(id))
       const docs = (await fetchDocs(missing)).filter(d => d._type === k.type)
       const notFound = missing.filter(id => !docs.some(d => d._id === id))

@@ -20,6 +20,18 @@ export function isStationCategory(v: unknown): v is StationCategory {
 }
 
 /**
+ * The role a person's link to a station gets by default when the station
+ * links are imported (scripts/migrate-stationed-at.ts): `training` at a Skole,
+ * `stationed` everywhere else. The station's category when it has one, else
+ * the one its free-text type suggests. A default only — what a person did
+ * there is per link, and Jan corrects it.
+ */
+export function defaultRoleForStation(category: unknown, type: string | null | undefined): 'training' | 'stationed' {
+  const c = isStationCategory(category) ? category : suggestStationCategory(type)
+  return c === 'training' ? 'training' : 'stationed'
+}
+
+/**
  * A guess at the category from the free-text type Sanity gave the station
  * (~55 spellings, some misspelled). Only a suggestion: it is wrong for some
  * stations (Stn. VIII is typed "SOE Training School" but was a workshop), so

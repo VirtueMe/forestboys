@@ -108,8 +108,13 @@ must still show, without an empty "–".
 
 **R14 — Import the 850 legacy links** from `data/sanity-location.json`
 and `data/sanity-station.json` as `STATIONED_AT` edges with no dates,
-`role: 'stationed'`, and a `sanity-migration:…` sourceRef so they can be
-filtered and reviewed.
+a default role, and a `sanity-migration:…` sourceRef so they can be
+filtered and reviewed. The default is `training` (opplæring) for a station
+whose category is Skole — or, while it has none, the category its free-text
+type suggests — and `stationed` for everything else. It is only a default:
+what a person did at a place is per link (Ruben trained at Invergordon, a
+base), so Jan corrects the odd one in the person editor. Links whose role is
+flagged `attended` (docs/ROLES.md R18) are shown under «Har deltatt på».
 
 **R15 — Mark them as unreviewed.** Migrated edges get `state:
 'candidate'` (the schema's claim-state convention), so Jan can review

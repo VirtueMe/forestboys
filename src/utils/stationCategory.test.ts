@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { isStationCategory, suggestStationCategory } from './stationCategory.ts'
+import { defaultRoleForStation, isStationCategory, suggestStationCategory } from './stationCategory.ts'
 
 describe('suggestStationCategory', () => {
   it.each([
@@ -36,5 +36,27 @@ describe('isStationCategory', () => {
     expect(isStationCategory('other')).toBe(true)
     expect(isStationCategory('school')).toBe(false)
     expect(isStationCategory(null)).toBe(false)
+  })
+})
+
+describe('defaultRoleForStation', () => {
+  it('is training at a Skole, by category', () => {
+    expect(defaultRoleForStation('training', null)).toBe('training')
+  })
+
+  it('is stationed at a Base or Annet, by category', () => {
+    expect(defaultRoleForStation('base', 'SOE Training School')).toBe('stationed')
+    expect(defaultRoleForStation('other', 'SOE Training School')).toBe('stationed')
+  })
+
+  it('falls back to the category the type suggests while there is none', () => {
+    expect(defaultRoleForStation(null, 'SOE Training School')).toBe('training')
+    expect(defaultRoleForStation(undefined, 'Airfield')).toBe('stationed')
+    expect(defaultRoleForStation('', 'Skole')).toBe('training')
+  })
+
+  it('is stationed when nothing says otherwise', () => {
+    expect(defaultRoleForStation(null, null)).toBe('stationed')
+    expect(defaultRoleForStation(null, 'Lighthouse')).toBe('stationed')
   })
 })
