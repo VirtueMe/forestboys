@@ -1,6 +1,15 @@
 <template>
   <!-- Single root so the page's v-show applies. -->
   <div class="view-pane">
+    <details v-if="!hideEditable && lat != null && lng != null" class="section" open>
+      <summary class="section-summary">
+        <h3 class="section-heading">Kart</h3>
+      </summary>
+      <div class="section-body">
+        <LocationMap :lat="lat" :lng="lng" readonly :marker-to="slug ? `/map/${slug}` : undefined" />
+      </div>
+    </details>
+
     <details v-if="!hideEditable && sortedNames.length" class="section" open>
       <summary class="section-summary">
         <h3 class="section-heading">Navnehistorikk ({{ sortedNames.length }})</h3>
@@ -176,10 +185,15 @@ import { groupByRole } from '@/utils/roleGroups.ts'
 import { StationStaysStrategy } from '@/components/relation/stayStrategies.ts'
 import type { RelationEntry } from '@/components/relation/RelationStrategy.ts'
 import SourceRef from '@/components/SourceRef.vue'
+import LocationMap from '@/components/location/LocationMap.vue'
 import type { StationEvent, StationExternalRef, StationName } from '@/composables/useStationData.ts'
 import { NAME_TYPE_LABEL, formatNamePeriod, sortNames } from '@/utils/stationNames.ts'
 
 const props = withDefaults(defineProps<{
+  /** The Station's slug and coordinates, for the map. */
+  slug?:             string
+  lat?:              number | null
+  lng?:              number | null
   /** The Station's other names (HAS_NAME). */
   names:             StationName[]
   /** What backs the station's facts — one list for the whole station. */
