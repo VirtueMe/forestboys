@@ -1,7 +1,15 @@
 # migration/
 
-Clojure pipeline that reads Sanity JSON dumps and emits Cypher for the Neo4j
-replacement tool. Dies when Jan switches over — don't invest in long-term polish.
+Clojure pipeline that reads the Sanity JSON dumps in `../data/` and emits Cypher
+for the Neo4j graph, one namespace per round. It built the graph (rounds 0–3 and
+the source, gallery and index rounds below), and it is where the **import rules**
+live: the TypeScript ports in `../scripts/lib/` (`person-rule.ts`, `event-rule.ts`)
+and `../scripts/sync/import-missing-refs.ts` mirror them for the nightly sync
+(`../docs/SANITY-SYNC.md`). A change to a rule is therefore made in both places,
+and the port is re-calibrated against the graph with
+`../scripts/sanity/sanity-person-fields.ts` / `sanity-event-fields.ts`.
+
+Dies when Jan switches over — don't invest in long-term polish.
 
 ## One-time setup
 
@@ -49,36 +57,53 @@ structures, beautiful for poking at 3791 persons.
 ;; Edit notebooks/*.clj — rendered live at http://localhost:7777
 ```
 
-### Neo4j direct connection (later)
+### Neo4j connection
 
-Round-0 emits Cypher files — no driver needed yet. When you want a direct
-Bolt connection, pick a driver and add it to `deps.edn` at that point.
-Options: Neo4j's official Java driver (`org.neo4j.driver/neo4j-java-driver`,
-use via Java interop), or one of the Clojure wrappers (coordinates change
-often — check Clojars before adding).
+The rounds only emit Cypher files — no driver needed; load them with the Neo4j
+browser or `cypher-shell`. `export-pages` queries Neo4j directly, over its HTTP
+transactional API, so there is no driver dependency either. If a direct Bolt
+connection is ever wanted, pick a driver and add it to `deps.edn` then
+(coordinates change often — check Clojars).
 
 ## Layout
 
 ```
 src/linge/
-  sanity.clj      load and index Sanity dumps from ../data/
-  parse.clj       extract rank / status / flags from raw person name strings
-  cypher.clj      Cypher-as-data emitter (composable, testable)
-  round_zero.clj  orchestrate round-0 seed for the Kompani Linge slice
+  sanity.clj           load and index the Sanity dumps from ../data/
+  cypher.clj           Cypher-as-data emitter (composable, testable)
+  parse.clj            rank / status / flags from raw person name strings
+  round_zero.clj       round 0: the Kompani Linge seed (vertical prototype)
+  round_one.clj        round 1: the skeleton across the full dataset (orgs, sources,
+                       ranks, persons, transports, stations, locations, HELD_RANK)
+  pages.clj            round 1.5: Sanity `home` + `aboutUs` → Page / Card / Description
+  outlines.clj         round 2: the 29 outlines classified into Units, Operations,
+                       EquipmentTypes, Sources and Articles
+  courses.clj          round 2.1: Kompani Linge's 30 training courses
+  events.clj           round 3: events → Incidents, districts → Units, descriptions
+  external_sources.clj every entity's links[] → Source nodes + REFERENCED_IN edges
+  galleries.clj        every entity's gallery[] → Source{photograph} + HAS_IMAGE edges
+  indexes.clj          constraints and indexes (idempotent, safe to re-run)
+  export_pages.clj     Page / Card / Description bundles as JSON, read from Neo4j
 ```
 
-## Run round-0 as a script
+## Run a round
 
-```sh
-clj -M:run
-```
+`clj -M:<alias>`; each writes Cypher under `../data/` (gitignored, local):
 
-Output goes to `../data/round-0/` :
-- `00-organizations.cypher`
-- `01-sources.cypher`
-- `02-ranks.cypher`
-- `03-persons.cypher`
-- `04-relationships.cypher`
+| Round | Alias | Output |
+|---|---|---|
+| 0 | `:run` | `round-0/` — organizations, sources, ranks, persons, relationships |
+| 1 | `:run-1` | `round-1/` |
+| 1.5 | `:run-1-5` | `round-1.5/` |
+| 2 | `:run-2` | `round-2/` |
+| 2.1 | `:run-2-1` | `round-2.1/` |
+| 3 | `:run-3` | `round-3/` |
+| sources | `:run-sources` | `round-sources/` |
+| galleries | `:run-galleries` | `round-galleries/` |
+| indexes | `:indexes` | `round-indexes/` |
+| — | `:export-pages` | page bundles as JSON (queries Neo4j) |
 
-Does not touch `../data/cypher/` or `../data/cypher-clean/` (parallel clone's
-isolated-extraction import lives there).
+Three more folders in `../data/` are not produced by a namespace here:
+`round-outlines/` is written by `../scripts/sync/import-outlines.ts`,
+`round-kp-f-fix/` holds one hand-written patch (`patch.cypher`), and
+`round-outline-link-refs/` is empty.
