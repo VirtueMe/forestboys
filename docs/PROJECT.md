@@ -119,8 +119,8 @@ RETURN slug, title, group, log ORDER BY group
 
 ### Event classification
 
-Every event is classified into a group during the import pipeline
-(`scripts/sanity-analyze.ts`) using title prefix matching:
+Every event was classified into a group during the April import pipeline
+(`scripts/sanity-analyze.ts`, since deleted) using title prefix matching:
 
 | Group | Prefix examples | Count |
 |-------|----------------|-------|
@@ -269,7 +269,7 @@ All other first logins create a `pending` record.
 ```
 Sanity CMS
   └─ scripts/sanity-export.ts        → data/sanity-*.json  (local snapshots)
-  └─ scripts/sanity-analyze.ts       → data/sanity-event-meta.json
+  └─ (April) sanity-analyze.ts       → data/sanity-event-meta.json
        ├─ classify() → event group from title prefix
        ├─ extractSections() → named sections + uncategorised content
        └─ extractLogEntries() → report + arrest log entries
@@ -280,7 +280,7 @@ Sanity CMS
        ├─ Section nodes (HAS_SECTION)
        └─ LogEntry nodes (HAS_LOG_ENTRY)
 
-  └─ scripts/sanity-audit.ts         → data/audit-report.json
+  └─ (April) sanity-audit.ts         → data/audit-report.json
        ├─ Query graph for structural gaps (no people, no location, etc.)
        ├─ Cross-reference arrest names against Person nodes
        ├─ Flag log entries with dates outside 1939–1946
@@ -294,7 +294,9 @@ Today the graph is kept current by `scripts/sync-person.ts` and `scripts/sync-ev
 
 ## Data quality pipeline
 
-The audit script runs after every import and writes `data/audit-report.json` —
+> **Historical.** `scripts/sanity-audit.ts` and `scripts/sanity-analyze.ts` are deleted (nothing read their output); a new data-quality inbox is planned in #74. The finding types below are kept as history.
+
+The audit script ran after every import and wrote `data/audit-report.json` —
 a list of structured findings that feed the editor UI's data health dashboard.
 
 ### Finding types
@@ -306,7 +308,7 @@ a list of structured findings that feed the editor UI's data health dashboard.
 | `no-date` | error | Events where `e.date IS NULL` |
 | `arrest-unmatched` | info | Arrest log entries whose name doesn't match any `Person.name` |
 | `date-out-of-range` | error | Log entries with dates outside 1939–1946 |
-| `extraction-issue` | info | Issues collected by `sanity-analyze.ts` per event group |
+| `extraction-issue` | info | Issues collected by `sanity-analyze.ts` (deleted) per event group |
 | `missing-section` | info | StationOperation / CommandoRaid events with no `oppdrag` section |
 | `no-description` | warning | Events with no `content` section and no named sections |
 
@@ -364,7 +366,6 @@ run picks up the change, and the next audit run removes the finding.
 | `src/composables/useEventsContext.ts` | Events state, filters, hash navigation |
 | `src/utils/portableText.ts` | blocksToHtml() + blocksToText() |
 | `scripts/sanity-export.ts` | Fetch all Sanity documents → data/*.json |
-| `scripts/sanity-analyze.ts` | Classify events, extract sections + log entries |
 
 ---
 
