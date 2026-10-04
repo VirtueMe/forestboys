@@ -9,6 +9,14 @@
       @created="onScalarCreated"
     />
 
+    <StationNamesEditor
+      v-if="!createMode"
+      ref="namesEditor"
+      :slug="slug"
+      :saved="savedNames"
+      @saved="names => emit('savedNames', names)"
+    />
+
     <DescriptionEditor
       ref="descEditor"
       :saved="savedSections"
@@ -43,7 +51,8 @@
 <script setup lang="ts">
 /**
  * StationEditPane — admin "Rediger" pane for a Station. Bundles the
- * scalar editor and the Beskrivelse description editor (HAS_CONTENT).
+ * scalar editor, the other names (HAS_NAME) and the Beskrivelse description
+ * editor (HAS_CONTENT).
  *
  * Deltakere edits the STATIONED_AT stays from the Station side (same
  * edges as the Person page's "Stasjonert på"). DEPARTED/ARRIVED_FROM_STATION
@@ -51,12 +60,13 @@
  */
 import { useTemplateRef } from 'vue'
 import StationScalarEditor, { type StationDraft } from './StationScalarEditor.vue'
+import StationNamesEditor from './StationNamesEditor.vue'
 import DescriptionEditor from '@/components/DescriptionEditor.vue'
 import RelationListEditor from '@/components/relation/RelationListEditor.vue'
 import { StationStaysStrategy, staySummaryExtra } from '@/components/relation/stayStrategies.ts'
 import type { RelationEntry, RelationTarget } from '@/components/relation/RelationStrategy.ts'
 import type { Section } from '@/components/SectionsEditor.vue'
-import type { StationNode } from '@/composables/useStationData.ts'
+import type { StationName, StationNode } from '@/composables/useStationData.ts'
 import { authFetch } from '@/composables/useAuth.ts'
 import { stashPendingDescription, type PendingDescription } from '@/composables/usePendingDescription.ts'
 
@@ -64,6 +74,7 @@ defineProps<{
   slug:           string
   station:        StationNode
   savedSections:  Section[]
+  savedNames:     StationName[]
   /** STATIONED_AT stays at this place — mutated in place on save. */
   stayEntries:    RelationEntry[]
   stayTargets:    RelationTarget[]
@@ -74,15 +85,18 @@ defineProps<{
 const emit = defineEmits<{
   savedScalar:   [out: Partial<StationNode>]
   savedSections: [sections: Section[]]
+  savedNames:    [names: StationName[]]
   created:       [slug: string]
 }>()
 
 const scalarEditor = useTemplateRef<{ draft: StationDraft; dirty: boolean } | null>('scalarEditor')
+const namesEditor  = useTemplateRef<{ dirty: boolean } | null>('namesEditor')
 const descEditor   = useTemplateRef<{ draft: Section[];     dirty: boolean } | null>('descEditor')
 
 defineExpose({
   get scalarDraft(): StationDraft | null { return scalarEditor.value?.draft ?? null },
   get scalarDirty(): boolean             { return scalarEditor.value?.dirty ?? false },
+  get namesDirty():  boolean             { return namesEditor.value?.dirty ?? false },
   get descDraft():   Section[]           { return descEditor.value?.draft ?? [] },
   get descDirty():   boolean             { return descEditor.value?.dirty ?? false },
 })

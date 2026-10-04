@@ -35,6 +35,20 @@ export interface StationNode {
   links:       string | null
 }
 
+export type StationNameType = 'former' | 'later' | 'alias'
+
+/** One other name of the Station — (:Station)-[:HAS_NAME]->(:Name), docs/SCHEMA.md. */
+export interface StationName {
+  id:         string
+  value:      string
+  type:       StationNameType
+  from:       string | null
+  fromAbout:  boolean
+  to:         string | null
+  toAbout:    boolean
+  sourceRefs: string[]
+}
+
 export interface StationEvent { slug: string; title: string; date: string | null; direction: 'departed' | 'arrived' }
 export interface StationExternalRef {
   id: string; title: string | null; url: string;
@@ -83,6 +97,7 @@ function rowToSection(r: SectionRow): Section {
 export function useStationData() {
   const station       = ref<StationNode | null>(null)
   const savedSections = ref<Section[]>([])
+  const names         = ref<StationName[]>([])
   const people        = ref<RelationEntry[]>([])
   const events        = ref<StationEvent[]>([])
   const externalRefs  = ref<StationExternalRef[]>([])
@@ -91,6 +106,7 @@ export function useStationData() {
   function resetStation() {
     station.value       = null
     savedSections.value = []
+    names.value         = []
     people.value        = []
     events.value        = []
     externalRefs.value  = []
@@ -107,7 +123,7 @@ export function useStationData() {
       return
     }
     try {
-      const [stationRows, sectionRows, peopleRows, eventRows, refRows, galleryRows] = await Promise.all([
+      const [stationRows, sectionRows, nameRows, peopleRows, eventRows, refRows, galleryRows] = await Promise.all([
         // canonicalName from new model; fall back to legacy `title` on
         // pre-migration nodes so the page renders something while the
         // Sanity → Neo4j slug/canonicalName backfill is still pending.
@@ -150,6 +166,18 @@ export function useStationData() {
            ORDER BY \`order\``,
           { slug },
         ),
+        neo4jQuery<{
+          id: string; order: number | null; value: string; type: StationNameType
+          from: string | null; fromAbout: boolean | null; to: string | null; toAbout: boolean | null
+          sourceRefs: string[] | null
+        }>(
+          `MATCH (:Station {slug: $slug})-[:HAS_NAME]->(n:Name)
+           RETURN n.id AS id, n.order AS \`order\`, n.value AS value, n.type AS type,
+                  n.from AS \`from\`, n.fromAbout AS fromAbout, n.to AS \`to\`, n.toAbout AS toAbout,
+                  n.sourceRefs AS sourceRefs
+           ORDER BY coalesce(n.order, 0), n.value`,
+          { slug },
+        ),
         StationStaysStrategy.fetchEntries(slug),
         // Direction marks departures vs arrivals; both surface in the
         // same Hendelser list, separately labelled.
@@ -187,6 +215,16 @@ export function useStationData() {
       ])
 
       station.value      = stationRows[0] ?? null
+      names.value        = nameRows.map(n => ({
+        id:         n.id,
+        value:      n.value,
+        type:       n.type,
+        from:       n.from,
+        fromAbout:  n.fromAbout ?? false,
+        to:         n.to,
+        toAbout:    n.toAbout ?? false,
+        sourceRefs: n.sourceRefs ?? [],
+      }))
       people.value       = peopleRows
       events.value       = eventRows
       externalRefs.value = refRows
@@ -212,6 +250,7 @@ export function useStationData() {
   return {
     station,
     savedSections,
+    names,
     people,
     events,
     externalRefs,
