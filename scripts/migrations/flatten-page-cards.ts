@@ -14,8 +14,8 @@
  * properties yet; that's a follow-up once the new model is in production.
  *
  * Usage:
- *   npx tsx scripts/migrations/flatten-page-cards.ts
- *   npx tsx scripts/migrations/flatten-page-cards.ts --dry
+ *   npx tsx scripts/migrations/flatten-page-cards.ts           # dry run
+ *   npx tsx scripts/migrations/flatten-page-cards.ts --write   # apply
  */
 
 import neo4j from 'neo4j-driver'
@@ -23,7 +23,8 @@ import { loadEnv } from '../lib/env.ts'
 
 loadEnv()
 
-const dry = process.argv.includes('--dry')
+const write = process.argv.includes('--write')
+const dry = !write
 
 const NEO4J_URI      = process.env.NEO4J_URI      ?? 'bolt://localhost:7687'
 const NEO4J_USERNAME = process.env.NEO4J_USERNAME ?? 'neo4j'
@@ -88,7 +89,7 @@ async function main() {
     }
 
     if (dry) {
-      console.log('\n(dry run — no writes)')
+      console.log('\n(dry run — pass --write to apply)')
       return
     }
 

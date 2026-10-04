@@ -12,14 +12,15 @@
  * - Idempotent: MERGE on key; re-running only fills missing roles and
  *   adds missing scopes, never overwrites a name edited on the page.
  *
- * Usage: npx tsx scripts/seed/seed-roles.ts [--dry]
+ * Usage: npx tsx scripts/seed/seed-roles.ts [--write]   (a dry run unless --write)
  */
 
 import neo4j from 'neo4j-driver'
 import { loadEnv } from '../lib/env.ts'
 loadEnv()
 
-const dry = process.argv.includes('--dry')
+const write = process.argv.includes('--write')
+const dry = !write
 
 // Must match functions/_lib/role-scopes.ts.
 const SCOPE_EDGES: Record<string, string> = {
@@ -84,7 +85,7 @@ async function main() {
     const missing = SEED.filter(s => !have.has(s.key))
     console.log(`\nRoles in seed: ${SEED.length} · already present: ${have.size} · to create: ${missing.length}`)
 
-    if (dry) { console.log('(dry run — no writes)'); return }
+    if (dry) { console.log('(dry run — pass --write to apply)'); return }
 
     await session.run(`CREATE CONSTRAINT role_key IF NOT EXISTS FOR (r:Role) REQUIRE r.key IS UNIQUE`)
     const res = await session.run(`
