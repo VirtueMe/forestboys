@@ -35,12 +35,14 @@
         :slug="stationSlug"
         :station="station"
         :saved-sections="savedSections"
+        :saved-names="names"
         :stay-entries="people"
         :stay-targets="stayTargets"
         :create-mode="isCreate"
         :pending-description="pendingDescription"
         @saved-scalar="onScalarSaved"
         @saved-sections="onSectionsSaved"
+        @saved-names="onNamesSaved"
         @created="onCreated"
       />
 
@@ -61,7 +63,7 @@
 
 <script setup lang="ts">
 import { computed, ref, useTemplateRef, inject, watch } from 'vue'
-import { useStationData, type StationNode } from '../composables/useStationData.ts'
+import { useStationData, type StationName, type StationNode } from '../composables/useStationData.ts'
 import { StationDataKey } from '../composables/proposalDataInjection.ts'
 import { useDetailCreateMode } from '../composables/useDetailCreateMode.ts'
 import { useAuth } from '../composables/useAuth.ts'
@@ -90,13 +92,17 @@ const bundlesPanel = useEntityBundles({
 })
 bundlesPanel.focusOnHash(mode)
 
+function onNamesSaved(saved: StationName[]) {
+  names.value = saved
+}
+
 function onSectionsSaved(sections: Section[]) {
   savedSections.value = sections
   clearPending()
 }
 
 const {
-  station, savedSections,
+  station, savedSections, names,
   people, events, externalRefs, galleryImages,
   loadStation, resetStation,
 } = inject(StationDataKey, () => useStationData(), true)
