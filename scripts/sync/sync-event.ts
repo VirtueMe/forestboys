@@ -27,6 +27,7 @@
  */
 
 import { writeFileSync, mkdirSync } from 'node:fs'
+import { writeStampUndo } from '../lib/stamp-undo.ts'
 import { resolve } from 'node:path'
 import neo4j, { type ManagedTransaction } from 'neo4j-driver'
 import { loadEnv } from '../lib/env.ts'
@@ -181,6 +182,7 @@ async function main() {
       const ws = driver.session({ defaultAccessMode: neo4j.session.WRITE })
       try {
         const rows = toStamp.map(g => ({ id: g.sanityId, stamps: stampsFor(base.get(g.sanityId)!, l) }))
+        console.log(`Undo file: ${writeStampUndo('event', rows)}`)
         for (let i = 0; i < rows.length; i += 200) {
           await ws.executeWrite(tx => tx.run(`
             UNWIND $rows AS x MATCH (e {sanityId: x.id}) WHERE e:Operation OR e:Incident SET e += x.stamps`,
@@ -286,6 +288,7 @@ async function main() {
     try {
       if (toStamp.length) {
         const rows = toStamp.map(g => ({ id: g.sanityId, stamps: stampsFor(base.get(g.sanityId)!, l) }))
+        console.log(`Undo file for the first-run stamps: ${writeStampUndo('event', rows)}`)
         for (let i = 0; i < rows.length; i += 200) {
           await ws.executeWrite(tx => tx.run(`
             UNWIND $rows AS x MATCH (e {sanityId: x.id}) WHERE e:Operation OR e:Incident SET e += x.stamps`,
