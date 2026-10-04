@@ -70,7 +70,7 @@
       :entries="data.stay.entries"
       :targets="data.stay.targets"
       :strategy="PersonStaysStrategy"
-      label="Stasjonert på"
+      label="Steder og stasjoner"
       add-label="+ Legg til opphold"
       empty-label="Ingen opphold"
       search-placeholder="Søk sted eller stasjon…"
@@ -94,11 +94,13 @@
       @open="openMembership"
     />
     <RelationListView
-      :entries="data.attendance.entries"
-      :strategy="AttendanceStrategy"
-      label="Kurs"
+      :entries="attendedRows"
+      :strategy="attendedStrategy"
+      label="Har deltatt på"
+      show-role
       show-passed
-      @open="openAttendance"
+      :kind-label="e => isCourse(e) ? 'Kurs' : null"
+      @open="openAttended"
     />
     <RelationListView
       :entries="data.operation.entries"
@@ -113,7 +115,7 @@
       @open="openIncident"
     />
     <RelationListView
-      :entries="data.stay.entries"
+      :entries="stationedEntries"
       :strategy="PersonStaysStrategy"
       label="Vært stasjonert på"
       show-role
@@ -131,7 +133,9 @@
 <script setup lang="ts">
 /**
  * PersonRelations — composite of the relation slots on a Person page
- * (Medlemskap, Kurs, Operasjoner, Hendelser, Stasjonert på).
+ * (Medlemskap, Har deltatt på, Operasjoner, Hendelser, Stasjonert på).
+ * In the view «Har deltatt på» merges the courses with the station links
+ * whose role is flagged `attended`; the editors stay one per relation.
  *
  * - `mode === 'edit'`: RelationListEditor instances wired to the
  *   matching strategies + labels.
@@ -142,7 +146,7 @@
  * via the `data` prop. Component does not load or save — RelationListEditor
  * handles that internally.
  */
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
 import RelationListEditor from '@/components/relation/RelationListEditor.vue'
 import RelationListView   from '@/components/relation/RelationListView.vue'
 import RelationInfoPopup  from '@/components/relation/RelationInfoPopup.vue'
@@ -151,7 +155,9 @@ import {
   IncidentStrategy, OperationStrategy,
 } from '@/components/relation/strategies.ts'
 import { PersonStaysStrategy, staySummaryExtra } from '@/components/relation/stayStrategies.ts'
-import type { RelationEntry, RelationTarget } from '@/components/relation/RelationStrategy.ts'
+import type { RelationEntry, RelationStrategy, RelationTarget } from '@/components/relation/RelationStrategy.ts'
+import { useRoles } from '@/composables/useRoles.ts'
+import { sortAttended, splitByAttended } from '@/utils/attended.ts'
 import type { AdminViewMode } from '@/components/AdminViewTabs.vue'
 
 export interface PersonRelationsData {
@@ -162,7 +168,7 @@ export interface PersonRelationsData {
   stay:       { entries: RelationEntry[]; targets: RelationTarget[] }
 }
 
-defineProps<{
+const props = defineProps<{
   mode:                 AdminViewMode
   slug:                 string
   data:                 PersonRelationsData
@@ -171,6 +177,24 @@ defineProps<{
    *  inside the Operasjon/Hendelse pickers. */
   createEventHref?:    (kind: 'incident' | 'operation') => string
 }>()
+
+// «Har deltatt på» = the courses plus the station links whose role is flagged
+// `attended`; the other station links stay under «Stasjonert på».
+const { roles } = useRoles()
+const isAttendedRole = (key: string) => roles.value.get(key)?.attended === true
+const stayGroups = computed(() => splitByAttended(props.data.stay.entries, isAttendedRole))
+const stationedEntries = computed(() => stayGroups.value.stationed)
+
+const courseEntries = computed(() => new Set(props.data.attendance.entries))
+const isCourse = (e: RelationEntry) => courseEntries.value.has(e)
+const attendedRows = computed(() =>
+  sortAttended([...props.data.attendance.entries, ...stayGroups.value.attended]),
+)
+/** One list, two kinds of row: a row links where its own kind links. */
+const attendedStrategy: RelationStrategy = {
+  ...AttendanceStrategy,
+  targetRoute: e => (isCourse(e) ? AttendanceStrategy : PersonStaysStrategy).targetRoute(e),
+}
 
 const activeEntry        = ref<RelationEntry | null>(null)
 const activeShowsRole    = ref(false)
@@ -181,10 +205,10 @@ function openMembership(e: RelationEntry) {
   activeShowsRole.value   = true
   activeShowsPassed.value = false
 }
-function openAttendance(e: RelationEntry) {
+function openAttended(e: RelationEntry) {
   activeEntry.value       = e
-  activeShowsRole.value   = false
-  activeShowsPassed.value = true
+  activeShowsRole.value   = !isCourse(e)
+  activeShowsPassed.value = isCourse(e)
 }
 function openOperation(e: RelationEntry) {
   activeEntry.value       = e

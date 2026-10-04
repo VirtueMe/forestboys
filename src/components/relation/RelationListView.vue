@@ -14,6 +14,7 @@
         <RouterLink :to="strategy.targetRoute(e)" class="relation-link">{{ e.targetName }}</RouterLink>
         <span v-if="e.pendingFromBundle" class="pending-chip pending-chip--add">Foreslått</span>
         <span v-if="e.pendingRemoval" class="pending-chip pending-chip--del">Vil fjernes</span>
+        <span v-if="kindLabel?.(e)" class="relation-kind">{{ kindLabel(e) }}</span>
         <span v-if="showRole && e.role" class="relation-role">
           <RoleLabel :role-key="e.role" />
         </span>
@@ -50,10 +51,13 @@ withDefaults(defineProps<{
   showPassed?:  boolean
   /** Rows only — the caller renders its own heading (e.g. a <details> summary). */
   headless?:    boolean
+  /** A short tag before the role, for a list that mixes kinds of rows (e.g. «Kurs»). */
+  kindLabel?:   (e: RelationEntry) => string | null
 }>(), {
   showRole:    false,
   showPassed:  false,
   headless:    false,
+  kindLabel:   undefined,
 })
 
 const emit = defineEmits<{ open: [entry: RelationEntry] }>()
@@ -98,6 +102,18 @@ function periodOf(e: RelationEntry): string {
   color: var(--ink-soft);
   padding: var(--space-xs) var(--space-sm);
   background: var(--paper-sunken);
+  border-radius: var(--radius-pill);
+}
+
+.relation-kind {
+  font-family: var(--font-sans);
+  font-size: var(--size-caps);
+  font-weight: 600;
+  letter-spacing: var(--tracking-caps);
+  text-transform: uppercase;
+  color: var(--ink-soft);
+  padding: var(--space-xs) var(--space-sm);
+  border: 1px solid var(--rule);
   border-radius: var(--radius-pill);
 }
 
