@@ -1,6 +1,6 @@
 /**
  * Incident ↔ Operation flip — shared by PATCH /api/admin/event/:slug/kind,
- * the bundle op `set-kind` and scripts/migrate-events-to-operation.ts.
+ * the bundle op `set-kind` and scripts/migrations/migrate-events-to-operation.ts.
  *
  * One statement per direction, over a list of slugs ($slugs):
  *   • label           Incident ↔ Operation

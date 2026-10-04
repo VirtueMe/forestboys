@@ -16,7 +16,7 @@
  *
  * Output: data/sanity-delta/event-fields.json + a summary.
  *
- * Usage: npx tsx scripts/sanity-event-fields.ts
+ * Usage: npx tsx scripts/sanity/sanity-event-fields.ts
  */
 
 import { writeFileSync, mkdirSync } from 'node:fs'

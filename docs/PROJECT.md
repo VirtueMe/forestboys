@@ -29,7 +29,7 @@ shape how the material is presented without touching code.
 | **Neo4j Aura** | Graph of all entities and relationships, plus extracted content (sections, log entries) | Read via `milorg_reader` user; write via admin during import |
 | **IndexedDB** (browser) | Lean cached copies of all entities for instant load and offline use | Local only |
 
-Data flows in one direction: **Sanity → Neo4j**. The graph was built from Sanity by the Clojure pipeline in `migration/`, and the nightly sync (`scripts/sync-person.ts`, `scripts/sync-event.ts`; see `docs/SANITY-SYNC.md`) carries Jan's later edits across until the cutover.
+Data flows in one direction: **Sanity → Neo4j**. The graph was built from Sanity by the Clojure pipeline in `migration/`, and the nightly sync (`scripts/sync/sync-person.ts`, `scripts/sync/sync-event.ts`; see `docs/SANITY-SYNC.md`) carries Jan's later edits across until the cutover.
 The browser reads from both IndexedDB (fast, offline) and Neo4j (enriched graph view).
 
 ---
@@ -268,7 +268,7 @@ All other first logins create a `pending` record.
 > **Historical.** The April import described below (`scripts/neo4j-import-full.ts`) was replaced by the Clojure pipeline in `migration/` and then by the sync. The script is deleted; `git log --follow -- scripts/neo4j-import-full.ts` finds it. The section is kept for the model it describes.
 ```
 Sanity CMS
-  └─ scripts/sanity-export.ts        → data/sanity-*.json  (local snapshots)
+  └─ scripts/sanity/sanity-export.ts        → data/sanity-*.json  (local snapshots)
   └─ (April) sanity-analyze.ts       → data/sanity-event-meta.json
        ├─ classify() → event group from title prefix
        ├─ extractSections() → named sections + uncategorised content
@@ -288,7 +288,7 @@ Sanity CMS
        └─ Write structured findings for editor UI
 ```
 
-Today the graph is kept current by `scripts/sync-person.ts` and `scripts/sync-event.ts` (daily in CI, `docs/SANITY-SYNC.md`). Scripts need `.env` with `NEO4J_URI`, `NEO4J_USERNAME`, `NEO4J_PASSWORD` (the local Neo4j; production only with `--production`).
+Today the graph is kept current by `scripts/sync/sync-person.ts` and `scripts/sync/sync-event.ts` (daily in CI, `docs/SANITY-SYNC.md`). Scripts need `.env` with `NEO4J_URI`, `NEO4J_USERNAME`, `NEO4J_PASSWORD` (the local Neo4j; production only with `--production`).
 
 ---
 
@@ -365,7 +365,7 @@ run picks up the change, and the next audit run removes the finding.
 | `src/composables/useLocationCache.ts` | IndexedDB ops + background sync |
 | `src/composables/useEventsContext.ts` | Events state, filters, hash navigation |
 | `src/utils/portableText.ts` | blocksToHtml() + blocksToText() |
-| `scripts/sanity-export.ts` | Fetch all Sanity documents → data/*.json |
+| `scripts/sanity/sanity-export.ts` | Fetch all Sanity documents → data/*.json |
 
 ---
 

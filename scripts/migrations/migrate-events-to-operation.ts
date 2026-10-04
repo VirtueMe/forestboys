@@ -13,7 +13,7 @@
  * Undo is the inverse relabel of those slugs — not DEMOTE_TO_INCIDENT,
  * which strips ORCHESTRATED_BY.
  *
- * Usage: npx tsx scripts/migrate-events-to-operation.ts [--write]
+ * Usage: npx tsx scripts/migrations/migrate-events-to-operation.ts [--write]
  */
 
 import { writeFileSync, mkdirSync } from 'node:fs'

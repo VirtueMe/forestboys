@@ -18,11 +18,11 @@
  *   chosen in the editor: a parsed or editor-set rank makes a soldier, the
  *   Menig default a civilian.
  *
- * Afterwards scripts/sync-person.ts must calibrate at 100 % again.
+ * Afterwards scripts/sync/sync-person.ts must calibrate at 100 % again.
  * Before writing, the affected people are saved to
  * data/sanity-delta/rank-table-before-<time>.json.
  *
- * Usage: npx tsx scripts/migrate-rank-table.ts [--write]
+ * Usage: npx tsx scripts/migrations/migrate-rank-table.ts [--write]
  */
 
 import { writeFileSync, mkdirSync } from 'node:fs'

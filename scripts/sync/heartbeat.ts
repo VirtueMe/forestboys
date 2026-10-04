@@ -5,7 +5,7 @@
  *
  *   (:Heartbeat {id: 'daily'}) — at, runs
  *
- * Usage: npx tsx scripts/heartbeat.ts [--production] --write
+ * Usage: npx tsx scripts/sync/heartbeat.ts [--production] --write
  */
 
 import { loadEnv } from '../lib/env.ts'

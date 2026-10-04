@@ -41,16 +41,16 @@ jobs:
       - name: Person sync
         id: person
         continue-on-error: true
-        run: npx tsx scripts/sync-person.ts --production --write
+        run: npx tsx scripts/sync/sync-person.ts --production --write
 
       - name: Event sync
         id: event
         continue-on-error: true
-        run: npx tsx scripts/sync-event.ts --production --write
+        run: npx tsx scripts/sync/sync-event.ts --production --write
 
       - name: Heartbeat
         if: always()
-        run: npx tsx scripts/heartbeat.ts --production --write
+        run: npx tsx scripts/sync/heartbeat.ts --production --write
 
       - name: Fail if a sync failed
         if: steps.person.outcome == 'failure' || steps.event.outcome == 'failure'

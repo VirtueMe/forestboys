@@ -164,7 +164,7 @@ place reference and must run clean before commit (bulk-op rule).
    editor), as R5 originally said; the note's citations back the note's
    text only.
 2. **Roles:** the R4 table, seeded as Role nodes in scope `stationed`
-   (`scripts/seed-roles.ts`). Born / lived / buried stay separate edges.
+   (`scripts/seed/seed-roles.ts`). Born / lived / buried stay separate edges.
 3. **Open end:** plain "1943 –" (`src/utils/period.ts`, used by all
    relation lists).
 4. **Migration:** everything imported as `stationed`, `state: 'candidate'`.
@@ -181,7 +181,7 @@ place reference and must run clean before commit (bulk-op rule).
 | Place side | `PATCH /api/admin/{location,station}/:slug/stays` |
 | Note | `PATCH /api/admin/stay-note/:stayId` |
 | Strategies | `src/components/relation/stayStrategies.ts` |
-| Migration | `scripts/migrate-stationed-at.ts` (dry run by default, `--write`) |
+| Migration | `scripts/migrations/migrate-stationed-at.ts` (dry run by default, `--write`) |
 
 **State:** a save keeps a stay's state when place, person, role and dates
 are unchanged; anything else (and every new stay) becomes `verified`.

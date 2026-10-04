@@ -8,7 +8,7 @@
  *   linkSource     ← migration/src/linge/external_sources.clj
  *   imageSource    ← migration/src/linge/galleries.clj
  *
- * `scripts/sync-person.ts --check` proves the port: applied to the April
+ * `scripts/sync/sync-person.ts --check` proves the port: applied to the April
  * baseline it must reproduce the graph for every unchanged person. Keep
  * the two in step — if a rule changes here, the check says whether the
  * existing graph still matches it.

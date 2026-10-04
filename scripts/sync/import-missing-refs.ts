@@ -1,7 +1,7 @@
 /**
  * Import the Locations, Stations and Transports that Sanity events refer to
  * but the graph doesn't have yet — new in Sanity since the April import —
- * so the event re-import (scripts/reimport-events.ts) can link them.
+ * so the event re-import (scripts/sync/reimport-events.ts) can link them.
  *
  * Same rule as migration/src/linge/round_one.clj (location-cypher,
  * station-cypher, transport-cypher): scalar props, Sanity-fed claims as
@@ -9,13 +9,13 @@
  * links as for events (galleries.clj, external_sources.clj).
  *
  * Stations that have people linked in Sanity (`station.people[]`) are wanted
- * too: scripts/migrate-stationed-at.ts needs the station node for each link
+ * too: scripts/migrations/migrate-stationed-at.ts needs the station node for each link
  * and refuses to write while one is missing.
  *
  * Organizations and districts are shaped by hand in the graph — those
  * references are only listed.
  *
- * Usage: npx tsx scripts/import-missing-refs.ts [--write]
+ * Usage: npx tsx scripts/sync/import-missing-refs.ts [--write]
  */
 
 import neo4j from 'neo4j-driver'

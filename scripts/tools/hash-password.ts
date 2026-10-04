@@ -2,8 +2,8 @@
  * PBKDF2 hash generator for DIRECT_LOGIN_PASSWORD_HASH.
  *
  * Usage:
- *   npx tsx scripts/hash-password.ts <password>
- *   npx tsx scripts/hash-password.ts                # prompts stdin
+ *   npx tsx scripts/tools/hash-password.ts <password>
+ *   npx tsx scripts/tools/hash-password.ts                # prompts stdin
  *
  * Output format matches what functions/auth/token.ts expects:
  *   pbkdf2$<iterations>$<salt-b64>$<hash-b64>

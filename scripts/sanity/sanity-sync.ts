@@ -21,7 +21,7 @@
  * data/sanity-delta/report.json. The full exports in data/sanity-*.json
  * are not touched.
  *
- * Usage: npx tsx scripts/sanity-sync.ts [--type person]
+ * Usage: npx tsx scripts/sanity/sanity-sync.ts [--type person]
  */
 
 import { writeFileSync, mkdirSync } from 'node:fs'

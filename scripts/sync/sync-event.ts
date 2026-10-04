@@ -22,7 +22,7 @@
  * affected events (node, edges, description) are saved to
  * data/sanity-delta/event-before-<time>.json.
  *
- * Usage: npx tsx scripts/sync-event.ts [--write] [--accept-delete=<slug>,…]
+ * Usage: npx tsx scripts/sync/sync-event.ts [--write] [--accept-delete=<slug>,…]
  */
 
 import { writeFileSync, mkdirSync } from 'node:fs'
