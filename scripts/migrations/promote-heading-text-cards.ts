@@ -11,14 +11,15 @@
  *
  * Cards with real body prose (multiple blocks, marks, links) are left alone.
  *
- * Idempotent. Use --dry to preview.
+ * Idempotent. A dry run unless --write.
  */
 
 import neo4j from 'neo4j-driver'
 import { loadEnv } from '../lib/env.ts'
 loadEnv()
 
-const dry = process.argv.includes('--dry')
+const write = process.argv.includes('--write')
+const dry = !write
 
 interface Span  { _type: 'span'; text: string; marks?: string[] }
 interface Block { _type: 'block'; style?: string; children?: Span[]; markDefs?: unknown[] }
@@ -80,7 +81,7 @@ async function main() {
     }
 
     if (!promotions.length || dry) {
-      if (dry) console.log('\n(dry run — no writes)')
+      if (dry) console.log('\n(dry run — pass --write to apply)')
       return
     }
 

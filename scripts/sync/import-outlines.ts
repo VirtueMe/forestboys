@@ -13,16 +13,17 @@
  * Output: data/round-outlines/outlines.cypher
  *
  * Usage:
- *   npx tsx scripts/sync/import-outlines.ts            # emit cypher only
- *   npx tsx scripts/sync/import-outlines.ts --apply    # emit + run against Neo4j
+ *   npx tsx scripts/sync/import-outlines.ts            # emit cypher only (a dry run)
+ *   npx tsx scripts/sync/import-outlines.ts --write    # emit + run against Neo4j
  *
- * --apply uses NEO4J_URI / NEO4J_USERNAME / NEO4J_PASSWORD from .env.
+ * --write goes to the local Neo4j; --production to the production one (scripts/lib/env.ts).
  */
 
-import 'dotenv/config'
 import { readFileSync, writeFileSync, mkdirSync } from 'node:fs'
 import { resolve } from 'node:path'
 import neo4j from 'neo4j-driver'
+import { loadEnv } from '../lib/env.ts'
+loadEnv()
 
 const DATA_DIR = resolve(process.cwd(), 'data')
 const OUT_DIR  = resolve(DATA_DIR, 'round-outlines')
@@ -104,7 +105,7 @@ console.log(
   `  ${outlines.length} outlines, ${mentionStmts} MENTIONS statements`,
 )
 
-if (process.argv.includes('--apply')) {
+if (process.argv.includes('--write')) {
   await applyToNeo4j(lines.join('\n'))
 }
 
@@ -113,7 +114,7 @@ async function applyToNeo4j(cypher: string): Promise<void> {
   const user = process.env.NEO4J_USERNAME
   const pass = process.env.NEO4J_PASSWORD
   if (!uri || !user || !pass) {
-    console.error('--apply requires NEO4J_URI/NEO4J_USERNAME/NEO4J_PASSWORD in .env')
+    console.error('--write requires NEO4J_URI/NEO4J_USERNAME/NEO4J_PASSWORD')
     process.exit(1)
   }
   const driver  = neo4j.driver(uri, neo4j.auth.basic(user, pass))
