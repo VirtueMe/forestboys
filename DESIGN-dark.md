@@ -132,6 +132,13 @@ lamp-lit parchment.
 | `focus`            | `#3A5A74`   | `#7FA4C3`   | Lifted for dark contrast.                  |
 | `danger`           | `#8B2E1F`   | `#CE7060`   | Mirrors `faded-red`.                       |
 
+## Flag mark colors
+
+The flag mark (favicon, PWA icons, 404 page) keeps the light-mode flag colors
+in dark mode (`flag-red` `#BA0C2F`, `flag-white` `#FFFFFF`, `flag-blue`
+`#00205B`; see `DESIGN.md`). They are an image, not UI, so they are not
+remapped and are exempt from the pure-`#FFFFFF` rule below.
+
 ## Contrast verification
 
 The same promise as in `DESIGN.md`: every pair declared under `components` meets WCAG AA (4.5:1 for

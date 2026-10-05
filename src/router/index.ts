@@ -18,6 +18,7 @@ import OrganizationDetail from '../pages/OrganizationDetail.vue'
 import DistrictDetail     from '../pages/DistrictDetail.vue'
 import ChangelogView from '../pages/ChangelogView.vue'
 import AccessView    from '../pages/AccessView.vue'
+import NotFoundView  from '../pages/NotFoundView.vue'
 import ReviewView    from '../pages/ReviewView.vue'
 import AdminQualityLinksView from '../pages/AdminQualityLinksView.vue'
 import { ensureUser } from '../composables/useAuth.ts'
@@ -94,6 +95,7 @@ const router = createRouter({
         { path: 'proposals/:bundleId/preview/:kind/:slug',   component: AdminProposalEntityPreview },
       ],
     },
+    { path: '/:pathMatch(.*)*',        component: NotFoundView },
   ],
 })
 
