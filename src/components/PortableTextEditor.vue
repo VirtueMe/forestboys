@@ -104,6 +104,73 @@ onBeforeUnmount(() => {
   margin: 0 0 0.75em;
 }
 
+/* Links: ink with a hairline underline, faded-red on hover (DESIGN.md). */
+.pt-link-mark {
+  color: var(--ink);
+  text-decoration: none;
+  border-bottom: 1px solid var(--rule);
+  cursor: text;
+}
+.pt-link-mark:hover { color: var(--faded-red); border-bottom-color: var(--faded-red); }
+/* A stored link with no address leads nowhere — shown, so it can be fixed. */
+.pt-link-mark--dead { border-bottom: 1px dashed var(--faded-red); }
+
+.pt-tb-link {
+  position: relative;
+  display: inline-block;
+}
+
+.pt-link-pop {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  width: 280px;
+  max-width: calc(100vw - 32px);
+  background: var(--paper-raised);
+  border: 1px solid var(--rule);
+  border-radius: 4px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  z-index: 20;
+  padding: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.pt-link-hint {
+  margin: 0;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.pt-link-input {
+  padding: 7px 10px;
+  font-size: 13px;
+  color: var(--ink);
+  background: var(--paper);
+  border: 1px solid var(--rule);
+  border-radius: 3px;
+  box-sizing: border-box;
+  outline: none;
+}
+.pt-link-input:focus { border-color: var(--focus); }
+
+.pt-link-actions { display: flex; gap: 6px; }
+
+.pt-link-apply,
+.pt-link-remove {
+  padding: 5px 10px;
+  font-size: 12px;
+  font-weight: 600;
+  font-family: inherit;
+  border-radius: 3px;
+  cursor: pointer;
+}
+.pt-link-apply  { color: #fff; background: var(--focus); border: 1px solid var(--focus); }
+.pt-link-apply:disabled { opacity: 0.4; cursor: default; }
+.pt-link-remove { color: var(--faded-red); background: transparent; border: 1px solid var(--rule); }
+.pt-link-remove:hover { border-color: var(--faded-red); }
+
 .pt-person-mark {
   color: var(--focus);
   background: rgba(5, 35, 69, 0.08);

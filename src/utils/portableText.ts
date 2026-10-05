@@ -71,6 +71,16 @@ export function resolveLinkTarget(raw: string | undefined): LinkTarget | null {
   return { kind: 'internal', href: `/events/${encodeSlug(t)}` }
 }
 
+/** Does any span in `blocks` carry a link mark? A def that no span uses does not count. */
+export function hasLinkMark(blocks: unknown[]): boolean {
+  return blocks.some(b => {
+    const block = b as SanityBlock
+    if (block?._type !== 'block') return false
+    const links = new Set((block.markDefs ?? []).filter(d => d._type === 'link').map(d => d._key))
+    return (block.children ?? []).some(c => (c.marks ?? []).some(m => links.has(m)))
+  })
+}
+
 const attr = (v: string) => v.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
 
 function renderSpans(

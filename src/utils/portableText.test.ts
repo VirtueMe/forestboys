@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { blocksToHtml, blocksToText, type SanityBlock } from './portableText'
+import { blocksToHtml, blocksToText, hasLinkMark, type SanityBlock } from './portableText'
 
 const block = (over: Partial<SanityBlock> & { text?: string; marks?: string[] }): SanityBlock => ({
   _key: 'b',
@@ -126,5 +126,39 @@ describe('blocksToText', () => {
 
   it('returns an empty string for missing input', () => {
     expect(blocksToText(null)).toBe('')
+  })
+})
+
+describe('hasLinkMark', () => {
+  const linked = (marks: string[], defs: SanityBlock['markDefs']) =>
+    [block({ text: 'AIR-27-2165', marks, markDefs: defs })]
+
+  it('is true when a span carries a link mark', () => {
+    expect(hasLinkMark(linked(['m1'], [{ _key: 'm1', _type: 'link', href: '/events/x' }]))).toBe(true)
+  })
+
+  it('is true for a link on only some of the spans', () => {
+    const blocks = [block({
+      text: 'plain', markDefs: [{ _key: 'm1', _type: 'link', href: 'x' }],
+      children: [
+        { _key: 'a', _type: 'span', text: 'plain' },
+        { _key: 'b', _type: 'span', text: 'linked', marks: ['strong', 'm1'] },
+      ],
+    })]
+    expect(hasLinkMark(blocks)).toBe(true)
+  })
+
+  it('is false for a person mark, or for decorators only', () => {
+    expect(hasLinkMark(linked(['p1'], [{ _key: 'p1', _type: 'person', slug: 'x' }]))).toBe(false)
+    expect(hasLinkMark(linked(['strong', 'underline'], []))).toBe(false)
+  })
+
+  it('is false when the def is not used by any span', () => {
+    expect(hasLinkMark(linked([], [{ _key: 'm1', _type: 'link', href: 'x' }]))).toBe(false)
+  })
+
+  it('is false for nothing, and ignores items that are not blocks', () => {
+    expect(hasLinkMark([])).toBe(false)
+    expect(hasLinkMark([{ _key: 'i', _type: 'image' }, null])).toBe(false)
   })
 })
