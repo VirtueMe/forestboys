@@ -137,6 +137,19 @@ The palette is four paper tones, one ink, one accent, plus functional utilities.
 - **`danger` `#8B2E1F`** — destructive action (delete, revoke). Same hex as
   `faded-red` by design: destructive actions are visually weighty, not noisy.
 
+### Flag mark colors (exception)
+
+The Norwegian flag mark (favicon, PWA icons, and the 404 page) is the one
+place the palette is set aside. It uses the flag's own colors as supplied,
+not the oxidized tokens above:
+
+- **`flag-red` `#BA0C2F`** — flag field.
+- **`flag-white` `#FFFFFF`** — flag cross. Pure white is allowed here only.
+- **`flag-blue` `#00205B`** — flag inner cross.
+
+These are for the flag mark and the 404 page only. Never use them for UI
+chrome, buttons, or text; the UI keeps using `faded-red` and `paper`.
+
 ### Contrast rules
 
 - Body text (`ink` on `paper`) is 13.2:1 — comfortably AAA.
