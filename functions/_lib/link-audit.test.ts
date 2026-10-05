@@ -40,6 +40,13 @@ describe('auditDescriptions', () => {
     expect(a).toEqual({ rows: [], scanned: 2, checked: 0 })
   })
 
+  it('sends a home-page card to the admin editor of its page', () => {
+    const a = auditDescriptions(SLUGS, [
+      desc({ label: 'Card', slug: null, name: 'Innledning', descId: 'desc:home:2', pageSlug: 'home', cardId: 'card:home:2', content: content('gone') }),
+    ])
+    expect(a.rows[0].path).toBe('/admin/pages/home?card=card%3Ahome%3A2')
+  })
+
   it('has no page for an owner without a slug or a known kind', () => {
     const a = auditDescriptions(SLUGS, [
       desc({ slug: null, name: null, descId: 'x', content: content('gone') }),

@@ -17,6 +17,9 @@ export interface DescriptionRow {
   descId:  string
   order:   number | null
   content: string | null
+  /** For a home-page card: the page it sits on and its id (the card has no page of its own). */
+  pageSlug?: string | null
+  cardId?:   string | null
 }
 
 export interface AuditRow extends LinkFinding {
@@ -24,7 +27,7 @@ export interface AuditRow extends LinkFinding {
   label:  string
   slug:   string | null
   name:   string
-  /** Its page, when it has one. */
+  /** Where to open it: its page, or for a card the admin editor of the page it sits on. */
   path:   string | null
   descId: string
   order:  number | null
@@ -36,6 +39,13 @@ export interface Audit {
   scanned: number
   /** Internal and person links checked, good and bad. */
   checked: number
+}
+
+function ownerPath(d: DescriptionRow): string | null {
+  if (d.label === 'Card') {
+    return d.pageSlug ? `/admin/pages/${encodeURIComponent(d.pageSlug)}${d.cardId ? `?card=${encodeURIComponent(d.cardId)}` : ''}` : null
+  }
+  return d.slug && KIND_ROUTES[d.label] ? KIND_ROUTES[d.label] + encodeURIComponent(d.slug) : null
 }
 
 const VERDICT_ORDER = { broken: 0, empty: 1, ambiguous: 2, fixable: 3, ok: 4 } as const
@@ -54,7 +64,7 @@ export function auditDescriptions(slugs: SlugRow[], descriptions: DescriptionRow
         label:  d.label,
         slug:   d.slug,
         name:   d.name || d.slug || d.descId,
-        path:   d.slug && KIND_ROUTES[d.label] ? KIND_ROUTES[d.label] + encodeURIComponent(d.slug) : null,
+        path:   ownerPath(d),
         descId: d.descId,
         order:  d.order,
       })
