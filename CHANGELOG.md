@@ -1,5 +1,43 @@
 # Changelog
 
+## [0.3.0](https://github.com/VirtueMe/forestboys/compare/v0.2.0...v0.3.0) (2026-10-05)
+
+
+### Features
+
+* **changelog:** let an admin set how many releases the page shows ([7508333](https://github.com/VirtueMe/forestboys/commit/7508333d775d8c6aadace71e69b1308b5b3bd96b))
+* **changelog:** show the changelog on its own page ([d8528e3](https://github.com/VirtueMe/forestboys/commit/d8528e33f565470c8485c79747338f2ede3f052f))
+* **footer:** show how many commits the build is past the latest release ([9b7348c](https://github.com/VirtueMe/forestboys/commit/9b7348c30849635b6272629d073a051d0e3ff149))
+* **person:** merge courses and training into «Har deltatt på» ([51e8016](https://github.com/VirtueMe/forestboys/commit/51e80161eb6aa15490db2dffdc875b7a1c168656)), closes [#70](https://github.com/VirtueMe/forestboys/issues/70)
+* **roles:** flag a role as «Har deltatt på» ([ed1d077](https://github.com/VirtueMe/forestboys/commit/ed1d077716b5702c0f168e61f0aba3511dc47c79)), closes [#70](https://github.com/VirtueMe/forestboys/issues/70)
+* **station:** edit a station's other names ([718745b](https://github.com/VirtueMe/forestboys/commit/718745b58941e28becbb488f27028296fd948563)), closes [#72](https://github.com/VirtueMe/forestboys/issues/72)
+* **station:** give a station a category and call the type its function ([a41ae74](https://github.com/VirtueMe/forestboys/commit/a41ae743871c3662ec213edb33cd0285a7e34317)), closes [#72](https://github.com/VirtueMe/forestboys/issues/72)
+* **station:** group a station's participants by role ([2cc50d1](https://github.com/VirtueMe/forestboys/commit/2cc50d120e3ee98c007c88eef4277a300b049b24)), closes [#72](https://github.com/VirtueMe/forestboys/issues/72)
+* **station:** import a station's people links with a default role ([432e7e4](https://github.com/VirtueMe/forestboys/commit/432e7e45b5b86c758bb00fa92b9c56154ab9e5dd)), closes [#70](https://github.com/VirtueMe/forestboys/issues/70)
+* **station:** one list of sources per station ([d9b3a3d](https://github.com/VirtueMe/forestboys/commit/d9b3a3d2f4fb80264a52d790450a54fa75f67662)), closes [#72](https://github.com/VirtueMe/forestboys/issues/72)
+* **station:** show a station's other names and search on them ([7542b74](https://github.com/VirtueMe/forestboys/commit/7542b747e6344111930b2d9bab6ffc33d83ef11e)), closes [#72](https://github.com/VirtueMe/forestboys/issues/72)
+* **station:** show the station on a map and pick its coordinates there ([9c70291](https://github.com/VirtueMe/forestboys/commit/9c70291979279cd86005fc11260a764f3ce92e52)), closes [#72](https://github.com/VirtueMe/forestboys/issues/72)
+* **station:** store a station's other names as Name nodes ([90f0a61](https://github.com/VirtueMe/forestboys/commit/90f0a61d695bfacab555685b0c8dcfa6f694dc52)), closes [#72](https://github.com/VirtueMe/forestboys/issues/72)
+* **sync:** save an undo file before --stamp --write adds stamps ([bd226c5](https://github.com/VirtueMe/forestboys/commit/bd226c5dd4167a60ca04f8cf3d645f04da7ebe83)), closes [#80](https://github.com/VirtueMe/forestboys/issues/80)
+* **sync:** stamp the baseline into the graph with --stamp ([39c20c4](https://github.com/VirtueMe/forestboys/commit/39c20c4967adb66733d3c6cbd6ea2b46e0793280)), closes [#80](https://github.com/VirtueMe/forestboys/issues/80)
+
+
+### Bug fixes
+
+* **footer:** fetch the tags in Cloudflare and CI builds ([cfd9a56](https://github.com/VirtueMe/forestboys/commit/cfd9a56df353a6ebe3c9016fb89a2be92cbe360a))
+* **sync:** let the syncs run without the baseline files ([dc818aa](https://github.com/VirtueMe/forestboys/commit/dc818aa934eb03813342ce84352be09308b7579f)), closes [#80](https://github.com/VirtueMe/forestboys/issues/80)
+
+
+### Refactoring
+
+* **scripts:** group the scripts by purpose ([1bc0a65](https://github.com/VirtueMe/forestboys/commit/1bc0a65325b83c321c96ea93b0543d425b18ad68)), closes [#79](https://github.com/VirtueMe/forestboys/issues/79)
+
+
+### Documentation
+
+* **migration:** say what the Clojure project is and which rounds it has ([381d122](https://github.com/VirtueMe/forestboys/commit/381d1221589e72cbcc2561e0a260659a976e6a2c)), closes [#79](https://github.com/VirtueMe/forestboys/issues/79)
+* **scripts:** point every path at the new folders and say what each is ([9e1994c](https://github.com/VirtueMe/forestboys/commit/9e1994c3fd8add30a0d92169eaf0843b5621df77)), closes [#79](https://github.com/VirtueMe/forestboys/issues/79)
+
 ## [0.2.0](https://github.com/VirtueMe/forestboys/compare/v0.1.0...v0.2.0) (2026-10-04)
 
 
