@@ -4,8 +4,8 @@
 
   <!-- Faded flag cross motif -->
   <g opacity="0.06">
-    <rect x="290" y="-100" width="140" height="700" fill="#BA0C2F"/>
-    <rect x="-100" y="200" width="1000" height="140" fill="#BA0C2F"/>
+    <rect x="330" y="-100" width="140" height="700" fill="#BA0C2F"/>
+    <rect x="-100" y="158" width="1000" height="140" fill="#BA0C2F"/>
   </g>
 
   <!-- Small flag mark, top-centre -->
@@ -42,7 +42,7 @@
   <!-- Return link -->
   <g transform="translate(400,430)">
     <a href="/">
-      <rect x="-110" y="-20" width="220" height="44" rx="2"
+      <rect x="-140" y="-20" width="280" height="44" rx="2"
             fill="#BA0C2F"/>
       <text x="0" y="8" text-anchor="middle"
             font-family="Georgia, 'Times New Roman', serif"
