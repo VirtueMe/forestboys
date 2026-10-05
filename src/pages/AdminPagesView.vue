@@ -628,6 +628,9 @@ async function load(slug: string) {
     const rows = await neo4jQuery<CardRow>(PAGE_QUERY, { slug })
     cards.value = rows.map(rowToCard)
     originalById.value = new Map(cards.value.map(c => [c.id, cloneCard(c)]))
+    // Opened from a list that points at one card (?card=<id>), e.g. /admin/quality/links.
+    const wanted = route.query.card
+    if (typeof wanted === 'string' && cards.value.some(c => c.id === wanted)) selectedId.value = wanted
   } catch {
     error.value = true
   } finally {

@@ -33,9 +33,11 @@ export const onRequestGet: PagesFunction<Env> = async ({ request, env }) => {
     const descriptions = await runCypher<DescriptionRow>(env, `
       MATCH (n)-[:HAS_CONTENT|HAS_INCIDENT_NOTE|HAS_OPERATION_NOTE]->(d:Description)
       WHERE d.content CONTAINS '"href"' OR d.content CONTAINS '"person"'
+      OPTIONAL MATCH (p:Page)-[:HAS_CARD]->(n)
       RETURN labels(n)[0] AS label, n.slug AS slug,
              coalesce(n.name, n.title, n.codeName, n.slug) AS name,
-             d.id AS descId, d.order AS order, d.content AS content
+             d.id AS descId, d.order AS order, d.content AS content,
+             p.slug AS pageSlug, CASE WHEN p IS NULL THEN null ELSE n.id END AS cardId
     `, {}, 'Read')
 
     return json(auditDescriptions(slugs, descriptions))
