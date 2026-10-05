@@ -78,4 +78,9 @@ describe('versionLabel', () => {
   it('shows just the version when the commit is unknown', () => {
     expect(versionLabel('0.2.0', '')).toBe('v0.2.0')
   })
+
+  it('shows how many commits the build is past the release', () => {
+    expect(versionLabel('0.2.0', 'c0159c5', 7)).toBe('v0.2.0 +7 · c0159c5')
+    expect(versionLabel('0.2.0', 'c0159c5', 0)).toBe('v0.2.0 · c0159c5')
+  })
 })

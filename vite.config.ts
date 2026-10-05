@@ -5,6 +5,7 @@ import { VitePWA } from 'vite-plugin-pwa'
 import { fileURLToPath, URL } from 'node:url'
 import { execSync } from 'node:child_process'
 import { readFileSync } from 'node:fs'
+import { isHousekeeping, parseCommitLog, type SinceRelease } from './src/utils/sinceRelease.ts'
 
 /** Short commit the bundle is built from: Cloudflare's variable, else git, else none. */
 function buildCommit(env: Record<string, string>): string {
@@ -17,6 +18,18 @@ function buildCommit(env: Record<string, string>): string {
   }
 }
 
+/** Latest release tag and the commits after it, or null when git cannot say (e.g. a shallow clone without tags). */
+function sinceRelease(): SinceRelease | null {
+  const git = (args: string) => execSync(`git ${args}`, { stdio: ['ignore', 'pipe', 'ignore'] }).toString().trim()
+  try {
+    const tag = git("describe --tags --abbrev=0 --match 'v*' HEAD")
+    const log = git(`log ${tag}..HEAD --no-merges --format=%h%x09%s`)
+    return { tag, commits: parseCommitLog(log).filter(c => !isHousekeeping(c.subject)).slice(0, 200) }
+  } catch {
+    return null
+  }
+}
+
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '')
 
@@ -25,6 +38,7 @@ export default defineConfig(({ mode }) => {
     define: {
       __APP_VERSION__: JSON.stringify((JSON.parse(readFileSync('./package.json', 'utf8')) as { version: string }).version),
       __APP_COMMIT__:  JSON.stringify(buildCommit(env)),
+      __APP_SINCE__:   JSON.stringify(sinceRelease()),
     },
     resolve: {
       alias: {
