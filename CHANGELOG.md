@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.5.0](https://github.com/VirtueMe/forestboys/compare/v0.4.0...v0.5.0) (2026-10-05)
+
+
+### Features
+
+* **events:** replace TimelineJS with a timeline that only draws what is in view ([d27847d](https://github.com/VirtueMe/forestboys/commit/d27847dafa4b0134589ee0232ce0855c14af7baa)), closes [#88](https://github.com/VirtueMe/forestboys/issues/88)
+
 ## [0.4.0](https://github.com/VirtueMe/forestboys/compare/v0.3.0...v0.4.0) (2026-10-05)
 
 
