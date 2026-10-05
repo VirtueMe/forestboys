@@ -63,7 +63,7 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env, params }
   if (!BUNDLE_ID_RE.test(bundleId)) return json({ error: 'bundleId malformed' }, 400)
   if (!ENTITY_ID_RE.test(entityId)) return json({ error: 'entityId malformed' }, 400)
 
-  const body = await request.json<AcceptBody>().catch(() => ({} as AcceptBody))
+  const body = await request.json<AcceptBody>().catch((): AcceptBody => ({}))
   const message = typeof body.message === 'string' ? body.message : null
   const expectedShas = isShaMap(body.expectedShas) ? body.expectedShas : {}
 

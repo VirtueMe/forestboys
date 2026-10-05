@@ -50,7 +50,7 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env, params }
   const bundleId = decodeURIComponent(String(params.bundleId))
   if (!BUNDLE_ID_RE.test(bundleId)) return json({ error: 'bundleId malformed' }, 400)
 
-  const body = await request.json<Body>().catch(() => ({} as Body))
+  const body = await request.json<Body>().catch((): Body => ({}))
   const message = typeof body.message === 'string' ? body.message : null
 
   const manifestObj = await env.PROPOSALS.get(`proposals/bundles/${bundleId}/manifest.json`)

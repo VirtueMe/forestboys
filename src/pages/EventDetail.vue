@@ -291,7 +291,7 @@ const descriptionHtml = computed<string>(() => {
       if (!s.content) continue
       try {
         const blocks = JSON.parse(s.content) as unknown[]
-        parts.push(blocksToHtml(blocks as Parameters<typeof blocksToHtml>[0]))
+        parts.push(blocksToHtml(blocks))
       } catch { /* skip */ }
     }
     return parts.join('')
@@ -308,7 +308,7 @@ const currentImageUrl = computed<string>(() => {
   const item = g[currentImageIndex.value]
   if (item.url) return item.url
   if (item.asset && '_ref' in item.asset) {
-    const path = (item.asset as { _ref: string })._ref
+    const path = item.asset._ref
       .replace(/^image-/, '').replace(/-([a-z]+)$/, '.$1')
     return `${SANITY_IMG}/${path}?w=900&auto=format`
   }

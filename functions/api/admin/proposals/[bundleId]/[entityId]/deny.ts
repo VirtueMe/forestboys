@@ -69,7 +69,7 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env, params }
   if (!idMatch) return json({ error: 'entityId malformed' }, 400)
   const [, kind] = idMatch
 
-  const body = await request.json<DenyBody>().catch(() => ({} as DenyBody))
+  const body = await request.json<DenyBody>().catch((): DenyBody => ({}))
   const reason = typeof body.reason === 'string' ? body.reason.trim() : ''
   if (!reason || reason.length < REASON_MIN) {
     return json({ error: `reason required (min ${REASON_MIN} chars, non-whitespace)` }, 400)
