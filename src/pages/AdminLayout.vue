@@ -95,6 +95,17 @@
         </div>
 
         <div class="nav-group">
+          <div class="nav-group-label">Datakvalitet</div>
+          <ul class="nav-list">
+            <li>
+              <router-link to="/admin/quality/links" class="nav-link nav-link-nested" active-class="active">
+                Ødelagte lenker
+              </router-link>
+            </li>
+          </ul>
+        </div>
+
+        <div class="nav-group">
           <div class="nav-group-label">Gjennomgang</div>
           <ul class="nav-list">
             <li>
@@ -152,6 +163,7 @@ const crumb = computed(() => {
   if (route.path.startsWith('/admin/users'))     return 'Brukere'
   if (route.path.startsWith('/admin/proposals')) return 'Forslag'
   if (route.path.startsWith('/admin/review'))    return 'Gjennomgang'
+  if (route.path.startsWith('/admin/quality'))   return 'Datakvalitet · Lenker'
   const pageSlug = String(route.params.slug ?? '')
   const page = PAGES.find(p => p.slug === pageSlug)
   if (page) return `Sider · ${page.label}`
