@@ -38,6 +38,9 @@ export interface LinkFinding {
   candidates?: SlugHit[]
 }
 
+/** What an editor needs of a finding: which link, what is wrong, and what could replace it. */
+export type LinkIssue = Pick<LinkFinding, 'source' | 'text' | 'stored' | 'verdict' | 'suggestion' | 'candidates'>
+
 /** The slugs that exist, looked up by the way a link might spell one. */
 export interface SlugIndex { rows(slug: string): SlugRow[] }
 
@@ -83,9 +86,18 @@ function parse(content: unknown): SanityBlock[] {
   return Array.isArray(content) ? content as SanityBlock[] : []
 }
 
-/** Every internal link and person link in `content` (Portable Text, or its JSON string) with a verdict. */
-export function checkLinks(content: unknown, index: SlugIndex): LinkFinding[] {
-  const out: LinkFinding[] = []
+interface Link {
+  blockKey: string
+  markKey:  string
+  source:   'link' | 'person'
+  text:     string
+  stored:   string
+  /** What it points at: a page, nothing (`empty`), or something not ours to check (`null`). */
+  target:   { route: string; slug: string } | 'empty' | null
+}
+
+/** Every link mark in `content` that some text uses, with what it points at. */
+function* links(content: unknown): Generator<Link> {
   for (const block of parse(content)) {
     if (block?._type !== 'block') continue
     for (const def of block.markDefs ?? []) {
@@ -95,18 +107,31 @@ export function checkLinks(content: unknown, index: SlugIndex): LinkFinding[] {
       if (!text) continue                       // the mark is not used: nothing shows
 
       const stored = source === 'link' ? (def.href ?? '') : (def.slug ?? '')
-      const base = { blockKey: block._key, markKey: def._key, source, text, stored } as const
-
+      const base: Omit<Link, 'target'> = { blockKey: block._key, markKey: def._key, source, text, stored }
       if (source === 'person') {
-        out.push({ ...base, ...(stored.trim() ? verdictFor(KIND_ROUTES.Person, stored, index) : { verdict: 'empty' as const }) })
+        yield { ...base, target: stored.trim() ? { route: KIND_ROUTES.Person, slug: stored } : 'empty' }
         continue
       }
-      const target = resolveLinkTarget(stored)
-      if (!target) { out.push({ ...base, verdict: 'empty' }); continue }
-      if (target.kind !== 'internal') continue
-      const page = parsePath(target.href)
-      if (page) out.push({ ...base, ...verdictFor(page.route, page.slug, index) })
+      const resolved = resolveLinkTarget(stored)
+      if (!resolved) yield { ...base, target: 'empty' }
+      else yield { ...base, target: resolved.kind === 'internal' ? parsePath(resolved.href) : null }
     }
+  }
+}
+
+/** The slugs a caller has to look up before `checkLinks` can judge `content`. */
+export function linkSlugs(content: unknown): string[] {
+  const out: string[] = []
+  for (const l of links(content)) if (l.target && l.target !== 'empty') out.push(l.target.slug)
+  return out
+}
+
+/** Every internal link and person link in `content` (Portable Text, or its JSON string) with a verdict. */
+export function checkLinks(content: unknown, index: SlugIndex): LinkFinding[] {
+  const out: LinkFinding[] = []
+  for (const { target, ...l } of links(content)) {
+    if (target === 'empty') out.push({ ...l, verdict: 'empty' })
+    else if (target) out.push({ ...l, ...verdictFor(target.route, target.slug, index) })
   }
   return out
 }

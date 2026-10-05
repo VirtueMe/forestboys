@@ -28,6 +28,7 @@ import { requireAdmin } from '~/_lib/require-admin.ts'
 import {
   applyEntityOps,
   checkDrift,
+  checkOpLinks,
   checkPropDrift,
   ENTITY_ID_RE,
   indexRemove,
@@ -96,6 +97,10 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env, params }
   if (drifted.length || driftedProps.length) {
     return json({ kind: 'drift', driftedBlocks: drifted, driftedProps }, 409)
   }
+
+  // 2c. Links the proposal adds that lead nowhere.
+  const badLinks = await checkOpLinks(env, entityId, payload.ops)
+  if (badLinks.length) return json({ kind: 'links', links: badLinks }, 422)
 
   // 3. Intent lock.
   const acceptedAt = new Date().toISOString()

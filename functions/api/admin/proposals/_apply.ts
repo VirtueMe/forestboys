@@ -28,6 +28,7 @@ import { stableSha } from '~/_lib/stable-sha.ts'
 import type { BundleOriginFields, DerivedFrom } from '~/_lib/bundle-origin.ts'
 import { ENTITY_ID_RE, nodePattern, parseNodeRef } from '~/_lib/entity-ref.ts'
 import { DEMOTE_TO_INCIDENT, PROMOTE_TO_OPERATION } from '~/_lib/event-kind.ts'
+import { judgeStored, storedContents, type LinkProblem } from '~/_lib/link-guard.ts'
 
 export { ENTITY_ID_RE }
 export const BLOCK_PATH_RE = /^section\.([a-z0-9-]+)\.block\.([A-Za-z0-9_-]+)$/
@@ -175,6 +176,24 @@ export async function readLiveBlock(
     }
   }
   return null
+}
+
+/**
+ * New links in the descriptions this entity's ops write that lead nowhere
+ * (functions/_lib/link-guard.ts). Checked on accept, before anything is
+ * applied, like drift. A link already in the stored description is left alone.
+ */
+export async function checkOpLinks(env: Neo4jEnv, entityId: string, ops: BundleOp[]): Promise<LinkProblem[]> {
+  const written: string[] = []
+  for (const op of ops) {
+    if (op.op === 'modify-block') written.push(JSON.stringify([op.newValue]))
+    else if (op.op === 'create-entity') for (const d of op.descriptions ?? []) written.push(d.content)
+  }
+  if (!written.length) return []
+  const idMatch = entityId.match(ENTITY_ID_RE)
+  if (!idMatch) return []
+  const previous = await storedContents(env, { labels: [idMatch[1]], key: idMatch[2] })
+  return (await judgeStored(env, previous, written)).blocked
 }
 
 /**

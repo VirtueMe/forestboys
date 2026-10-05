@@ -16,6 +16,7 @@
 import { requireAdmin } from '~/_lib/require-admin.ts'
 import {
   applyEntityOps,
+  checkOpLinks,
   checkPropDrift,
   ENTITY_ID_RE,
   indexRemove,
@@ -84,6 +85,12 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env, params }
     const driftedProps = await checkPropDrift(env, entityId, payload.ops)
     if (driftedProps.length) {
       results.push({ entityId, status: 'failed', reason: `drift: ${driftedProps.map(d => d.prop).join(', ')}` })
+      continue
+    }
+
+    const badLinks = await checkOpLinks(env, entityId, payload.ops)
+    if (badLinks.length) {
+      results.push({ entityId, status: 'failed', reason: `lenker som ikke fungerer: ${badLinks.map(l => `«${l.text}» → ${l.stored || '(tom)'}`).join(', ')}` })
       continue
     }
 

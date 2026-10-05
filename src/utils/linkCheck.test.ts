@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { buildIndex, checkLinks, problems } from './linkCheck.ts'
+import { buildIndex, checkLinks, linkSlugs, problems } from './linkCheck.ts'
 
 const INDEX = buildIndex([
   { label: 'Operation', slug: 'sub004' },
@@ -112,5 +112,20 @@ describe('checkLinks', () => {
     const both = [...link('sub004'), { ...link('gone')[0], _key: 'b2' }]
     expect(checkLinks(both, INDEX)).toHaveLength(2)
     expect(problems(checkLinks(both, INDEX)).map(f => f.stored)).toEqual(['gone'])
+  })
+})
+
+describe('linkSlugs', () => {
+  it('lists the slugs to look up, for links and person marks', () => {
+    expect(linkSlugs(link('../people/john-rognes'))).toEqual(['john-rognes'])
+    expect(linkSlugs(link(' sub004 '))).toEqual([' sub004 '.trim()])
+    expect(linkSlugs(person('john-rognes'))).toEqual(['john-rognes'])
+  })
+
+  it('has nothing to look up for external, empty or unknown targets', () => {
+    expect(linkSlugs(link('https://example.com'))).toEqual([])
+    expect(linkSlugs(link(undefined))).toEqual([])
+    expect(linkSlugs(link('/about'))).toEqual([])
+    expect(linkSlugs('not json')).toEqual([])
   })
 })

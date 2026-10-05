@@ -9,6 +9,7 @@
 
 import { requireAdmin } from '~/_lib/require-admin.ts'
 import { runCypher, type Neo4jEnv } from '~/_lib/neo4j.ts'
+import { guardContents } from '~/_lib/link-guard.ts'
 
 interface Env extends Neo4jEnv {
   SESSION_SECRET: string
@@ -126,6 +127,19 @@ export const onRequestPatch: PagesFunction<Env> = async ({ request, env, params 
     }))
 
   try {
+    // Before anything is written: a new link that leads nowhere refuses the whole save.
+    let warnings: Awaited<ReturnType<typeof guardContents>>['warnings'] = []
+    if (sectionItems.length) {
+      const stored = await runCypher<{ content: string | null }>(env, `
+        MATCH (:Page {slug: $slug})-[:HAS_CARD]->(c:Card) WHERE c.id IN $ids
+        MATCH (c)-[:HAS_CONTENT]->(d:Description)
+        RETURN d.content AS content
+      `, { slug, ids: sectionItems.map(it => it.id) }, 'Read')
+      const links = await guardContents(env, stored.map(r => r.content ?? ''), sectionItems.flatMap(it => it.sections.map(sec => sec.content)))
+      if (links.blocked) return links.blocked
+      warnings = links.warnings
+    }
+
     if (propItems.length) {
       const rows = await runCypher<IdRow>(env, `
         UNWIND $items AS it
@@ -167,7 +181,7 @@ export const onRequestPatch: PagesFunction<Env> = async ({ request, env, params 
       }
     }
 
-    return json({ ok: true, updated: items.length })
+    return json({ ok: true, updated: items.length, warnings })
   } catch (e) {
     return json({ error: (e as Error).message }, 502)
   }
