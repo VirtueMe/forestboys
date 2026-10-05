@@ -20,6 +20,7 @@
 /outlines/:slug            Oversikt detail
 /registre                  Registre (stub)
 /about                     Om oss
+/endringslogg              Endringslogg — releases from CHANGELOG.md + commits since the latest tag
 
 — Legacy redirects —
 /event/:slug/:child?  →  /events/:slug
@@ -48,6 +49,7 @@
 { path: '/outlines/:slug',          component: OutlineDetail },
 { path: '/registre',                component: RegistreView },
 { path: '/about',                   component: AboutView },
+{ path: '/endringslogg',            component: ChangelogView },
 ```
 
 ---

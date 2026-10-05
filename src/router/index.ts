@@ -16,6 +16,7 @@ import RegistreView  from '../pages/RegistreView.vue'
 import AboutView     from '../pages/AboutView.vue'
 import OrganizationDetail from '../pages/OrganizationDetail.vue'
 import DistrictDetail     from '../pages/DistrictDetail.vue'
+import ChangelogView from '../pages/ChangelogView.vue'
 import AccessView    from '../pages/AccessView.vue'
 import ReviewView    from '../pages/ReviewView.vue'
 import { ensureUser } from '../composables/useAuth.ts'
@@ -62,6 +63,7 @@ const router = createRouter({
     { path: '/district/:slug',           component: DistrictDetail },
     { path: '/registre',               component: RegistreView },
     { path: '/about',                   component: AboutView },
+    { path: '/endringslogg',            component: ChangelogView },
     { path: '/access',                  component: AccessView },
     {
       path:     '/admin',
