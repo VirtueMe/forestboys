@@ -18,7 +18,7 @@
 
       <p v-if="!releases.length" class="empty">Ingen utgivelser ennå.</p>
 
-      <article v-for="r in releases" :id="`v${r.version}`" :key="r.version" class="release">
+      <article v-for="r in visible" :id="`v${r.version}`" :key="r.version" class="release">
         <h2 class="release-head">
           <span class="release-version">v{{ r.version }}</span>
           <time class="release-date" :datetime="r.date">{{ r.date }}</time>
@@ -36,12 +36,17 @@
           </ul>
         </div>
       </article>
+
+      <button v-if="remaining > 0" type="button" class="more" @click="showMore">
+        Vis flere <span class="more-count">({{ remaining }} igjen)</span>
+      </button>
     </main>
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, nextTick, onMounted, ref, watch } from 'vue'
+import { useRoute } from 'vue-router'
 import changelog from '../../CHANGELOG.md?raw'
 import { parseChangelog } from '../utils/changelog.ts'
 import { commitUrl } from '../utils/sinceRelease.ts'
@@ -52,6 +57,41 @@ const since = __APP_SINCE__
 const label = versionLabel(__APP_VERSION__, __APP_COMMIT__, since?.commits.length)
 
 const releases = computed(() => parseChangelog(changelog))
+
+// Paging is set by an admin (/admin/changelog); 5 and 5 until the answer arrives or if it never does.
+const settings = ref({ initial: 5, step: 5 })
+const extra    = ref(0)
+const count    = computed(() => settings.value.initial + extra.value)
+const visible  = computed(() => releases.value.slice(0, count.value))
+const remaining = computed(() => Math.max(0, releases.value.length - count.value))
+
+function showMore() {
+  extra.value += settings.value.step
+}
+
+// #v0.1.0 opens the list far enough to include that release, then scrolls to it.
+const route = useRoute()
+async function revealHash() {
+  const index = releases.value.findIndex(r => `#v${r.version}` === route.hash)
+  if (index < 0) return
+  extra.value = Math.max(extra.value, index + 1 - settings.value.initial)
+  await nextTick()
+  document.getElementById(route.hash.slice(1))?.scrollIntoView()
+}
+watch(() => route.hash, revealHash)
+
+onMounted(async () => {
+  try {
+    const res = await fetch('/api/site-settings/changelog')
+    if (res.ok) {
+      const body = await res.json() as { initial?: number; step?: number }
+      if (Number.isInteger(body.initial) && Number.isInteger(body.step)) {
+        settings.value = { initial: body.initial!, step: body.step! }
+      }
+    }
+  } catch { /* keep the defaults */ }
+  await revealHash()
+})
 </script>
 
 <style scoped>
@@ -99,4 +139,20 @@ const releases = computed(() => parseChangelog(changelog))
 .items { margin: 0; padding-left: 1.1em; font-size: 0.9rem; line-height: 1.5; }
 .items li { margin-bottom: 4px; }
 .items a { color: var(--focus); }
+
+.more {
+  padding: 8px 16px;
+  font: inherit;
+  font-family: var(--font-sans);
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--ink);
+  background: transparent;
+  border: 1px solid var(--rule);
+  border-radius: 4px;
+  cursor: pointer;
+}
+.more:hover { border-color: var(--focus); color: var(--focus); }
+.more:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.more-count { font-weight: 400; color: var(--muted); }
 </style>
