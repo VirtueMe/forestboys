@@ -25,7 +25,7 @@
  */
 import { ref, onMounted, onBeforeUnmount, watch } from 'vue'
 import { useRouter } from 'vue-router'
-import maplibregl from 'maplibre-gl'
+import { maplibregl } from '@/utils/maplibre'
 import 'maplibre-gl/dist/maplibre-gl.css'
 
 const props = defineProps<{

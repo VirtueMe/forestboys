@@ -4,7 +4,7 @@
 
 <script setup lang="ts">
 import { ref, onMounted, onBeforeUnmount, watch } from 'vue'
-import maplibregl from 'maplibre-gl'
+import { maplibregl } from '@/utils/maplibre'
 import 'maplibre-gl/dist/maplibre-gl.css'
 import type { Feature, FeatureCollection, Point } from 'geojson'
 import type { IdbLocation, IdbStation } from '../types/idb.ts'
@@ -191,7 +191,7 @@ watch([() => props.locations, () => props.stations, () => props.showLocations, (
   if (src?.type === 'geojson') {
     const locs = props.showLocations !== false ? props.locations : []
     const stas = props.showStations !== false ? props.stations : []
-    ;(src as maplibregl.GeoJSONSource).setData(buildGeoJSON(locs, stas))
+    void (src as maplibregl.GeoJSONSource).setData(buildGeoJSON(locs, stas))
   }
 })
 
