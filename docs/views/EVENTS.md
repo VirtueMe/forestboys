@@ -49,12 +49,12 @@ One page, one filter state, two views of it.
 ### Layout
 
 ```
-.events-page                   ← max-width: 1320px, margin: 0 auto
+.events-page                   ← full width; every section but the timeline is max-width 1320px, centred
   .filters
     .search-input              ← "Søk etter hendelse…"
     CustomSelect               ← org (single-select, 22 orgs)
     CustomSelect               ← district (multi-select, all / org's districts)
-  #timeline-embed              ← Timeline3, between filters and list
+  EventTimeline                ← 100% wide, between filters and list (components/event/EventTimeline.vue)
   .list-heading                ← "Hendelser (n)"
   .scroll-container            ← event rows
 ```
@@ -143,12 +143,10 @@ const filteredEvents = computed(() =>
 
 Timeline and list always render from `filteredEvents` — same source, always in sync.
 
-### Timeline3 click → navigate to event detail
+### Timeline click → navigate to event detail
 
-```ts
-tl.on('change', ({ unique_id }) => {
-  if (unique_id) router.push({ name: 'events', params: { slug: unique_id } })
-})
+```vue
+<EventTimeline :events="filteredEvents" @select="slug => router.push({ path: `/events/${slug}`, query: route.query })" />
 ```
 
 "Se mer" in list rows also navigates to `/events/:slug`.
@@ -282,79 +280,45 @@ identical at `/events/slug` and `/events/slug#other`.
 
 ### Timeline interaction
 
-```ts
-tl.on('change', ({ unique_id }) => {
-  if (!unique_id) return
-  if (unique_id === route.params.slug) {
-    router.replace({ hash: '' })              // slug event → clear hash
-  } else {
-    router.replace({ hash: '#' + unique_id }) // sibling → show sibling detail
-  }
-})
-```
+`EventTimeline` takes `filteredEvents` and emits one event, `select(slug)`:
+on a click on a dot or title box, or on Enter for the arrow-key cursor.
+Opening an event is the only thing that changes the timeline's scope
+(org + district, see above). Everything else is local to the component:
 
-`router.replace` — hash swaps don't pollute browser history.
+- Drag the line sideways with a mouse (or pen — a mouse in a virtual machine
+  is reported as a pen, so pointer handling never tests for `"mouse"`);
+  touch swipes natively. There is no scrollbar.
+- `←` `→` move a **cursor** over everything on the timeline and change
+  nothing else (not the URL, not the filters, not the detail panel). `Enter`
+  opens the cursor's event, `Escape` drops the cursor.
+- `+` `−` zoom. The open event (or the cursor) keeps its place on screen.
+- A new slug or `#hash` from outside (a link, back/forward) scrolls the
+  timeline to that event **without** emitting anything, so nothing loops and
+  no `externalChange`-style flag is needed: only a click ever emits `select`.
 
-#### externalChange flag
-
-When the hash changes via browser back/forward, the code calls
-`tlInstance.goToId(target)` to sync the timeline's visible position.
-`goToId()` fires Timeline3's `change` event internally, which would trigger
-`router.replace` again — an infinite loop. `externalChange` breaks this:
-
-```ts
-// hash watcher
-externalChange = true
-tlInstance.goToId(target)   // fires 'change' internally
-
-// change handler
-if (externalChange) { externalChange = false; return }  // swallow it, reset
-```
-
-One-shot boolean: set immediately before the programmatic call, consumed and
-cleared on the very next `change` event. Never set for user-driven timeline
-clicks — those must route normally.
+Why only the visible slice is drawn: positions are computed once per zoom
+level for all events, but only the markers inside the scroll view go into
+the DOM (binary search over the x-sorted list). TimelineJS built a slide and
+a marker for every event (44,000 DOM nodes on `/events`) and rebuilt them on
+every filter change.
 
 ### Timeline highlighting
 
-- Slug event: always highlighted (page anchor)
-- Hash event: highlighted differently when present
+- Slug event: red box and ring (page anchor)
+- Hash event: blue box and ring
+- Arrow-key cursor: black outline, always the whole title
+- Hover or focus: the box grows to the whole title
+- The **header** above the line shows the focused event (cursor first, else the
+  open one): its picture or its organisation's colour, title, date, org, district
 
 ### Image strategy
 
-Timeline3 renders all slide DOM elements upfront — passing `media.url` for
-every event would trigger thousands of image requests on init and stall
-rendering. Media is therefore passed selectively:
+The timeline draws no picture per event. Its header shows the focused
+event's thumbnail, one request at a time, or its organisation's colour when
+there is none; list rows lazy-load thumbnails as the user scrolls.
 
-| Route | Timeline3 `media.url` | List row thumbnails |
-| --- | --- | --- |
-| `/events` | First event only (index 0 — visible on load) | 40×40 `loading="lazy"` for all events |
-| `/events/:slug` | Slug + hash event only (the hero slides) | Not shown (list hidden) |
-
-On `/events` users get visual coverage from both layers: the timeline slide
-shows the first event's image as a preview, and the list below shows
-thumbnails for every event as the user scrolls. Clicking any marker navigates
-to `/events/:slug` where that event's image becomes the slide hero.
-
-On `/events/:slug` the slide area is the **visual heading** for the selected
-event — `text.headline` (title) + `media.url` (gallery image) together form
-the hero. `EventPanel` below is secondary content.
-
-`thumbnailUrl` on `IdbEvent` is the first gallery image pre-resolved to a
-Sanity CDN URL (`?w=400&auto=format`) by `galleryThumb()` during IDB cache
-build. `buildTimelineData` upgrades it to `?w=1280&h=720&fit=crop` for the
-slide area; list rows use `?w=80&h=80&fit=crop`.
-
-**Trap:** `media` must be `undefined` when there is no image — never `''` or
-`{ url: '' }`. Timeline3 treats any `media` object as "media is present" and
-renders a broken `<img src="">`. The guard is:
-
-```ts
-media: showMedia && e.thumbnailUrl ? { url: ... } : undefined
-```
-
-`showMedia && e.thumbnailUrl` short-circuits to `undefined` (not `''`) when
-either condition is false.
+`thumbnailUrl` on `IdbEvent` is the first gallery image, resolved to a Sanity
+CDN URL. Both the header and the list rows use `?w=80&h=80&fit=crop`.
 
 ### Detail panel
 

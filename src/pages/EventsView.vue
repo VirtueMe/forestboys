@@ -39,7 +39,13 @@
 
     <!-- Timeline — always visible -->
     <div class="timeline-wrap">
-      <div id="timeline-embed"></div>
+      <EventTimeline
+        :events="filteredEvents"
+        :selected-slug="(route.params.slug as string | undefined) ?? ''"
+        :hash-slug="eventHash(route.hash)"
+        :color-for="e => (e.organization ? orgColor(e.organization) : '')"
+        @select="slug => router.push({ path: `/events/${slug}`, query: route.query })"
+      />
     </div>
 
     <!-- Detail panel -->
@@ -124,8 +130,7 @@ import AppModal   from '../components/AppModal.vue'
 import DatePanel  from '../components/DatePanel.vue'
 import CustomSelect from '../components/CustomSelect.vue'
 import AdminEventNewView from './AdminEventNewView.vue'
-import { Timeline } from '@knight-lab/timelinejs'
-import '@knight-lab/timelinejs/dist/css/timeline.css'
+import EventTimeline from '../components/event/EventTimeline.vue'
 import type { IdbEvent } from '../types/idb.ts'
 
 const route  = useRoute()
@@ -158,61 +163,11 @@ const {
   org, districts, setOrg, setDistricts, availableDistricts, allOrgs,
   districtColorMap, searchQuery, hasFilter, resetFilters,
   filteredEvents, visibleDetail, loadingDetail, detailError, renameEvent, slugNotFound,
-  orgColor, buildTimelineData,
+  orgColor,
 } = useEventsContext()
 
-// ── Timeline (DOM-level) ──────────────────────────────────────
-let tlInstance: Timeline | null = null
-let externalChange = false
-
-function mountTimeline(evts: IdbEvent[]) {
-  const el = document.getElementById('timeline-embed')
-  if (!el) return
-  el.innerHTML = ''
-  tlInstance = null
-  if (!evts.length) return
-
-  const slugVal   = (route.params.slug as string | undefined) ?? ''
-  const hashVal   = eventHash(route.hash)
-  const startSlug = hashVal || slugVal
-  const startAtSlide = Math.max(0, startSlug ? evts.findIndex(e => e.slug === startSlug) : 0)
-
-  const timelineData = buildTimelineData(evts)
-
-  const tl = new Timeline('timeline-embed', timelineData, {
-    language:         'no',
-    timenav_position: 'bottom',
-    initial_zoom:     2,
-    start_at_slide:   startAtSlide,
-  })
-
-  tlInstance = tl
-  const slugSet = new Set(evts.map(e => e.slug))
-
-  tl.on('ready', () => {
-    let initFired = false
-    tl.on('change', ({ unique_id }) => {
-      if (!initFired) { initFired = true; return }   // skip post-ready init event
-      if (externalChange) { externalChange = false; return }
-      if (!unique_id || !slugSet.has(unique_id)) return
-      const currentSlug = (route.params.slug as string | undefined) ?? ''
-      if (unique_id === currentSlug) return
-      void router.push({ path: `/events/${unique_id}`, query: route.query })
-    })
-  })
-}
-
-watch(() => route.hash, (hash) => {
-  if (!tlInstance) return
-  const slug   = eventHash(hash)
-  const target = slug || ((route.params.slug as string | undefined) ?? '')
-  if (!target) return
-  externalChange = true
-  tlInstance.goToId(target)
-})
-
-watch(filteredEvents, async (evts) => {
-  mountTimeline(evts)
+// The timeline's height is fixed, but the list below it moves when the events change.
+watch(filteredEvents, async () => {
   await nextTick()
   computeListOffset()
 }, { flush: 'post' })
@@ -317,9 +272,16 @@ onUnmounted(() => {
   display: flex;
   flex-direction: column;
   background: var(--paper);
-  max-width: 1320px;
-  margin: 0 auto;
   width: 100%;
+}
+/* Everything but the timeline stays in a centred column. The timeline is simply
+ * 100% wide: no viewport units, which do not follow the app's CSS zoom (.shell
+ * is zoomed from 1600 px up) and made the page overshoot and grow scrollbars. */
+.events-page > :not(.timeline-wrap) {
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 1320px;
+  margin-inline: auto;
 }
 
 /* ── Filters (/events) ──────────────────────────────────────── */
@@ -329,6 +291,9 @@ onUnmounted(() => {
   flex-direction: column;
   gap: 6px;
   padding: 10px 12px;
+  /* A strip of the page background between the filters and the timeline, so the
+   * timeline clearly is not part of the filter block. */
+  margin-bottom: 16px;
   background: var(--paper-raised);
   border-bottom: 1px solid var(--rule);
 }
@@ -361,7 +326,6 @@ onUnmounted(() => {
 
 /* ── Not found (/events/<slug> that is no event) ─────────────── */
 .notfound {
-  margin-top: 12px;
   margin-bottom: 16px;
   padding: 10px 12px;
   background: var(--paper-raised);
@@ -376,15 +340,8 @@ onUnmounted(() => {
 .timeline-wrap {
   flex-shrink: 0;
   border-bottom: 1px solid var(--rule);
-  width: 100vw;
-  margin-left: calc(-50vw + 50%);
-}
-
-#timeline-embed {
   width: 100%;
-  height: 400px;
 }
-
 /* ── Event panel (/events/:slug) ────────────────────────────── */
 .panels {
   flex: 1;

@@ -278,38 +278,6 @@ export function useEventsContext() {
     }
   }
 
-  // ── Timeline data builder ─────────────────────────────────────────────────
-  function buildTimelineData(evts: IdbEvent[]): Record<string, unknown> {
-    const slugVal = (route.params.slug as string | undefined) ?? ''
-    const hashVal = eventHash(route.hash)
-    const data: Record<string, unknown> = {
-      events: evts.map((e, i) => {
-        const [year, month, day] = (e.date ?? '').split('-')
-        const isSlug    = e.slug === slugVal
-        const isHash    = e.slug === hashVal
-        const showMedia = slugVal ? (isSlug || isHash) : i === 0
-        return {
-          unique_id:  e.slug,
-          start_date: { year: year || '1940', month: month || '01', day: day || '01' },
-          text:       { headline: e.title.replace(/\t/g, ' ').trim(), text: '' },
-          ...(showMedia && e.thumbnailUrl
-            ? { media: {
-                url:       e.thumbnailUrl.replace(/\?.*$/, '') + '?h=200&fit=max&auto=format',
-                thumbnail: e.thumbnailUrl,
-              } }
-            : {}),
-          ...(slugVal
-            ? { group: e.organization ?? e.district ?? '' }
-            : {}),
-          ...(isHash ? { background: { color: '#1e3a5f' } }
-            : isSlug ? { background: { color: '#8b1a1a' } }
-            : {}),
-        }
-      }),
-    }
-    return data
-  }
-
   return {
     // cache init
     loading,
@@ -340,6 +308,5 @@ export function useEventsContext() {
     // colours
     orgColor,
     // timeline
-    buildTimelineData,
   }
 }
