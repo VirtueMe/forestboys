@@ -254,7 +254,7 @@ async function fetchFromNeo4j(): Promise<IdbCache> {
     organization: e.organization ?? undefined,
     district: e.district ?? undefined,
     thumbnailUrl: undefined,
-  } as unknown as IdbEvent))
+  }))
 
   return {
     version: 1,

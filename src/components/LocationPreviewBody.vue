@@ -31,7 +31,7 @@ const descriptionHtml = computed<string>(() => {
     if (!s.content) continue
     try {
       const blocks = JSON.parse(s.content) as unknown[]
-      parts.push(blocksToHtml(blocks as Parameters<typeof blocksToHtml>[0]))
+      parts.push(blocksToHtml(blocks))
     } catch { /* skip */ }
   }
   return parts.join('')
