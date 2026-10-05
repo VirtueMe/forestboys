@@ -84,6 +84,17 @@
         </div>
 
         <div class="nav-group">
+          <div class="nav-group-label">Nettsted</div>
+          <ul class="nav-list">
+            <li>
+              <router-link to="/admin/changelog" class="nav-link nav-link-nested" active-class="active">
+                Endringslogg
+              </router-link>
+            </li>
+          </ul>
+        </div>
+
+        <div class="nav-group">
           <div class="nav-group-label">Gjennomgang</div>
           <ul class="nav-list">
             <li>
