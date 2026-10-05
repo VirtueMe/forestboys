@@ -6,6 +6,7 @@
 
 import { requireAdmin } from '~/_lib/require-admin.ts'
 import { runCypher, type Neo4jEnv } from '~/_lib/neo4j.ts'
+import { guardSections } from '~/_lib/link-guard.ts'
 
 interface Env extends Neo4jEnv {
   SESSION_SECRET: string
@@ -62,6 +63,9 @@ export const onRequestPatch: PagesFunction<Env> = async ({ request, env, params 
   }))
 
   try {
+    const links = await guardSections(env, { labels: ['EquipmentType'], key: slug }, sections.map(s => s.content))
+    if (links.blocked) return links.blocked
+
     await runCypher(env, `
       MATCH (s:EquipmentType {slug: $slug})-[r:HAS_CONTENT]->(d:Description)
       DETACH DELETE d
@@ -86,7 +90,7 @@ export const onRequestPatch: PagesFunction<Env> = async ({ request, env, params 
       `, { slug, sections: payload })
     }
 
-    return json({ ok: true, count: payload.length })
+    return json({ ok: true, count: payload.length, warnings: links.warnings })
   } catch (e) {
     return json({ error: (e as Error).message }, 502)
   }
