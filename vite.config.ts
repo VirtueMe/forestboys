@@ -18,14 +18,29 @@ function buildCommit(env: Record<string, string>): string {
   }
 }
 
-/** Latest release tag and the commits after it, or null when git cannot say (e.g. a shallow clone without tags). */
+/**
+ * Latest release tag and the commits after it, or null when git cannot say.
+ * Cloudflare (and CI) clone shallow and without tags, so there the build first
+ * fetches the tags and the missing history. Locally nothing is fetched.
+ */
 function sinceRelease(): SinceRelease | null {
-  const git = (args: string) => execSync(`git ${args}`, { stdio: ['ignore', 'pipe', 'ignore'] }).toString().trim()
+  const git = (args: string) => execSync(`git ${args}`, { stdio: ['ignore', 'pipe', 'pipe'] }).toString().trim()
+  const latestTag = () => git("describe --tags --abbrev=0 --match 'v*' HEAD")
   try {
-    const tag = git("describe --tags --abbrev=0 --match 'v*' HEAD")
+    let tag: string
+    try {
+      tag = latestTag()
+    } catch (e) {
+      if (!process.env.CF_PAGES && !process.env.CI) throw e
+      const shallow = git('rev-parse --is-shallow-repository') === 'true'
+      git(`fetch --tags --force${shallow ? ' --unshallow' : ''}`)
+      tag = latestTag()
+    }
     const log = git(`log ${tag}..HEAD --no-merges --format=%h%x09%s`)
     return { tag, commits: parseCommitLog(log).filter(c => !isHousekeeping(c.subject)).slice(0, 200) }
-  } catch {
+  } catch (e) {
+    const err = e as { stderr?: Buffer; message: string }
+    console.warn(`[since-release] no release info: ${err.stderr?.toString().trim() || err.message}`)
     return null
   }
 }
