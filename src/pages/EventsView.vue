@@ -31,6 +31,12 @@
       />
     </div>
 
+    <!-- The link that brought you here named something that does not exist -->
+    <div v-if="slugNotFound" class="notfound" role="status">
+      <strong>Fant ikke «{{ slugNotFound }}».</strong>
+      Lenken peker på noe som ikke finnes, eller som er skrevet på en måte vi ikke kjenner igjen. Her er alle hendelsene.
+    </div>
+
     <!-- Timeline — always visible -->
     <div class="timeline-wrap">
       <div id="timeline-embed"></div>
@@ -151,7 +157,7 @@ const {
   isDetail,
   org, districts, setOrg, setDistricts, availableDistricts, allOrgs,
   districtColorMap, searchQuery, hasFilter, resetFilters,
-  filteredEvents, visibleDetail, loadingDetail, detailError, renameEvent,
+  filteredEvents, visibleDetail, loadingDetail, detailError, renameEvent, slugNotFound,
   orgColor, buildTimelineData,
 } = useEventsContext()
 
@@ -352,6 +358,19 @@ onUnmounted(() => {
   text-decoration: none;
 }
 .back-link:hover { text-decoration: underline; }
+
+/* ── Not found (/events/<slug> that is no event) ─────────────── */
+.notfound {
+  margin-top: 12px;
+  margin-bottom: 16px;
+  padding: 10px 12px;
+  background: var(--paper-raised);
+  border: 1px solid var(--rule);
+  border-left: 3px solid var(--faded-red);
+  font-size: 13px;
+  line-height: 1.45;
+  color: var(--ink);
+}
 
 /* ── Timeline ───────────────────────────────────────────────── */
 .timeline-wrap {
