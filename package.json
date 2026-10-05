@@ -18,7 +18,6 @@
     "prompts:test": "tsx scripts/prompts/test.ts"
   },
   "dependencies": {
-    "@knight-lab/timelinejs": "^3.9.10",
     "@portabletext/editor": "^6.6.2",
     "dotenv": "^18.0.5",
     "idb": "^8.0.3",

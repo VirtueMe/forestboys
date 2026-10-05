@@ -227,8 +227,12 @@ widescreen prose at 1200px is unreadable for Norwegian long-form.
 - `AppNav` is `nav-height` (48px), flex-shrink: 0.
 - `.page-content` is `flex: 1; min-height: 0; overflow: hidden` and itself
   a flex column — internal scroll lives in a child with `overflow-y: auto`.
-- Timeline and hero images break out with `width: 100vw; margin-left:
-  calc(-50vw + 50%)` inside a constrained page.
+- Never break a full-width element out of a column with viewport units
+  (`width: 100vw; margin-left: calc(-50vw + 50%)`): the shell is wrapped in
+  `zoom: var(--page-zoom)` (1.125 from 1600px, 1.25 from 1920, 1.5 from 2400)
+  and `vw` does not follow CSS zoom, so the element overshoots the page and
+  grows scrollbars. Make the full-width element 100% of a full-width parent
+  and constrain its siblings instead (`.events-page` in `EventsView.vue`).
 
 Breakpoints:
 - `<640px` — single column, stacked cards, bottom drawer
@@ -321,18 +325,27 @@ Destructive actions look like `primary` but use `danger` color naming in
 code; same hex. Always confirm destructive actions in a modal — the admin
 surface has no undo.
 
-### Timeline (Knight Lab Timeline3)
+### Timeline (`EventTimeline.vue`)
 
-External CSS-in-CDN library. Override via:
+Our own component, no library. One baseline with every event on it, title
+boxes in up to four rows above, joined to their dot by a leader line.
 
-- Slide background: `paper`
-- Slide text: `ink` in `body`
-- Marker (normal): `muted`
-- Marker (slug event): `faded-red`
-- Marker (hash event): `focus`
-- Timeline axis: `rule`
-
-Timeline breaks out of page container at `100vw`. See `EventsView.vue`.
+- Axis: `ink-soft`, 2px; month and year ticks in `muted` mono
+- Dot (normal): the organisation's colour, else `ink-soft`
+- Title box: `paper-raised`, 1px `rule`, 3px organisation colour on the left, 11px sans
+- Slug event: `faded-red` box and ring; hash event: `focus` (both tokens, so both modes follow)
+- Arrow-key cursor: 2px `ink` outline, bold, whole title
+- Count bubble (events that overlap): `paper-raised`, 1px `ink-soft`
+- Popover: `paper-raised`, `shadow-lg`
+- Header: `paper-raised`, picture or colour dot, title in the serif face
+  (`--font-serif`, 15px 600), date · org · district in `muted`
+- Dark mode: no hard-coded colours; everything is a token. The organisation
+  colours come from data and some are too dark for dark paper (`#2f146e`,
+  `#724a11`), so dots, the box's left edge and its leader line are mixed 62/38
+  with `ink` in dark mode only (`color-mix`). The header picture gets the warm
+  photo filter from `DESIGN-dark.md`.
+- Content of the header sits in the same centred column and 12px padding as the
+  filters; a strip of page background (16px) separates the filters from it
 
 ### Portable Text rendering
 

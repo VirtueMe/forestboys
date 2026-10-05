@@ -78,7 +78,7 @@ export default defineConfig(({ mode }) => {
         manifest: false, // we supply public/manifest.json
         workbox: {
           globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
-          // The app is one 2.5 MB entry chunk: rolldown 1.x no longer splits the
+          // The app is one 2.4 MB entry chunk: rolldown 1.x no longer splits the
           // shared editor code the pages import statically into separate files.
           // The total is unchanged, but the default 2 MiB precache limit now
           // rejects the file and the build fails.
