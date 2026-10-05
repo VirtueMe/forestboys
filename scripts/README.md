@@ -20,8 +20,8 @@ A script talks to the local Neo4j (`.env`, which must be `localhost`) unless you
 `--production`, which uses `.env.production` and prints the target first. Production
 writes need your say-so each time.
 
-Most scripts that write are a **dry run unless you pass `--write`**. Not all: a few
-(`seed-roles`, `flatten-page-cards`, `promote-heading-text-cards`) write
-unless you pass `--dry`, and the banner
-printed for `--production` is wrong for those. Until the convention is unified
-(#78), read the script's header before running it, and pass `--dry` first where it exists.
+Every script that can write is a **dry run unless you pass `--write`**, and the
+`--production` banner says `read only` or `WRITING` from that same flag. `--dry`,
+`--dry-run` and `--apply` are refused (exit 2), not ignored. `lib/env.ts` enforces
+this at start-up, and `scripts/convention.test.ts` fails if a script reads an old
+switch or opens a graph connection without going through `loadEnv`.
