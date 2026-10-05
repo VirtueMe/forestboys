@@ -116,7 +116,7 @@ export async function fetchEventDetailFromNeo4j(slug: string): Promise<IdbEventD
   const stFromEdge    = kindLabel === 'Operation' ? '[:FROM_STATION]' : '[:AT_STATION]'
   const stToEdge      = kindLabel === 'Operation' ? '[:TO_STATION]'   : '[:AT_STATION]'
 
-  const [descRows, locFromRows, locToRows, stFromRows, stToRows, peopleRows, galleryRows] = await Promise.all([
+  const [descRows, locFromRows, locToRows, stFromRows, stToRows, peopleRows, galleryRows, linkRows] = await Promise.all([
     neo4jQuery<{ content: string | null }>(
       `MATCH (:\`${kindLabel}\` {slug: $slug})-[:HAS_CONTENT]->(d:Description)
        RETURN d.content AS content
@@ -160,6 +160,15 @@ export async function fetchEventDetailFromNeo4j(slug: string): Promise<IdbEventD
        ORDER BY coalesce(r.order, 9999), s.id`,
       { slug },
     ),
+    // «Nyttige lenker»: the sources the event is referenced in (books, schedules,
+    // archive items). The relationship stores no order, so they come by title.
+    neo4jQuery<{ id: string | null; title: string | null; url: string | null }>(
+      `MATCH (:\`${kindLabel}\` {slug: $slug})-[:REFERENCED_IN]->(src:Source)
+       WHERE src.url IS NOT NULL AND trim(src.url) <> ''
+       RETURN DISTINCT src.id AS id, src.title AS title, src.url AS url
+       ORDER BY coalesce(src.title, src.url), src.url`,
+      { slug },
+    ),
   ])
 
   // Synthesize PT description blocks from the Description content
@@ -172,6 +181,13 @@ export async function fetchEventDetailFromNeo4j(slug: string): Promise<IdbEventD
       for (const b of blocks) description.push(b)
     } catch { /* skip malformed */ }
   }
+
+  // Same shape as Sanity's `links` array, which is what EventPanel reads.
+  const links = linkRows.map(l => ({
+    _key:  l.id ?? l.url!,
+    title: l.title?.trim() || undefined,
+    link:  l.url!.trim(),
+  }))
 
   // Gallery shape mirrors Sanity's; consumers read .url first, asset second.
   const gallery = galleryRows.map((g) => ({
@@ -195,6 +211,7 @@ export async function fetchEventDetailFromNeo4j(slug: string): Promise<IdbEventD
     stationTo:    stToRows[0]    ?? undefined,
     people:       peopleRows.length ? peopleRows : undefined,
     gallery:      gallery.length    ? gallery    : undefined,
+    links:        links.length      ? links      : undefined,
     thumbnailUrl: gallery[0]?.url ?? undefined,
   } as IdbEventDetail
 }
