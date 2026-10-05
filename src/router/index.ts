@@ -19,6 +19,7 @@ import DistrictDetail     from '../pages/DistrictDetail.vue'
 import ChangelogView from '../pages/ChangelogView.vue'
 import AccessView    from '../pages/AccessView.vue'
 import ReviewView    from '../pages/ReviewView.vue'
+import AdminQualityLinksView from '../pages/AdminQualityLinksView.vue'
 import { ensureUser } from '../composables/useAuth.ts'
 
 // Admin routes are lazy-loaded so their chunks (including @portabletext/editor,
@@ -80,6 +81,8 @@ const router = createRouter({
         { path: 'users',                component: AdminUsersView },
         { path: 'changelog',            component: AdminChangelogView },
         { path: 'review',                                    component: ReviewView },
+        { path: 'quality',                                   redirect: '/admin/quality/links' },
+        { path: 'quality/links',                             component: AdminQualityLinksView },
         { path: 'proposals',                                 component: AdminProposalListView },
         { path: 'proposals/:bundleId',                       component: AdminProposalBundleView },
         { path: 'proposals/:bundleId/preview/:kind/:slug',   component: AdminProposalEntityPreview },
