@@ -11,7 +11,7 @@
  *
  * Relations:
  *  - (:Person)-[:STATIONED_AT]->(s)  — Deltakere
- *  - (e:Event)-[:DEPARTED_FROM_STATION|ARRIVED_AT_STATION]->(s) — Hendelser
+ *  - (e:Operation|Incident)-[:FROM_STATION|TO_STATION]->(s) — Hendelser
  *  - (s)-[:HAS_IMAGE]->(:Source)     — Galleri
  *  - (s)-[:REFERENCED_IN]->(:Source) — Lenker
  */
@@ -191,12 +191,12 @@ export function useStationData() {
         // Direction marks departures vs arrivals; both surface in the
         // same Hendelser list, separately labelled.
         neo4jQuery<StationEvent>(
-          `MATCH (e:Event)-[r:DEPARTED_FROM_STATION|ARRIVED_AT_STATION]->(:Station {slug: $slug})
+          `MATCH (e:Operation|Incident)-[r:FROM_STATION|TO_STATION]->(:Station {slug: $slug})
            WHERE e.slug IS NOT NULL
            RETURN DISTINCT e.slug AS slug,
-                  coalesce(e.title, e.canonicalName) AS title,
+                  coalesce(e.title, e.codeName, e.canonicalName) AS title,
                   e.date AS date,
-                  CASE type(r) WHEN 'DEPARTED_FROM_STATION' THEN 'departed' ELSE 'arrived' END AS direction
+                  CASE type(r) WHEN 'FROM_STATION' THEN 'departed' ELSE 'arrived' END AS direction
            ORDER BY date`,
           { slug },
         ),

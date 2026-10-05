@@ -9,7 +9,7 @@
  *
  * Relations:
  *  - (:Person)-[:CREW_OF {role}]->(t)  — Mannskap, role from controlled vocab
- *  - (e:Event)-[:USED]->(t)            — Hendelser
+ *  - (e:Operation|Incident)-[:USED]->(t) — Hendelser
  *  - (t)-[:HAS_IMAGE]->(:Source)       — Galleri
  *  - (t)-[:REFERENCED_IN]->(:Source)   — Lenker
  */
@@ -158,10 +158,10 @@ export function useTransportData() {
           { slug },
         ),
         neo4jQuery<TransportEvent>(
-          `MATCH (e:Event)-[:USED]->(:Transport {slug: $slug})
+          `MATCH (e:Operation|Incident)-[:USED]->(:Transport {slug: $slug})
            WHERE e.slug IS NOT NULL
            RETURN DISTINCT e.slug AS slug,
-                  coalesce(e.title, e.canonicalName) AS title,
+                  coalesce(e.title, e.codeName, e.canonicalName) AS title,
                   e.date AS date
            ORDER BY date`,
           { slug },
