@@ -331,9 +331,10 @@ function formatDate(iso?: string | null): string {
 .section-link:hover { background: var(--paper); text-decoration: underline; }
 
 .event-item {
-  display: flex;
+  display: grid;
+  grid-template-columns: 9.5rem 5rem minmax(0, 1fr);
   align-items: baseline;
-  gap: 10px;
+  column-gap: 10px;
   padding: 6px 8px;
   margin: 0 -8px;
   text-decoration: none;
@@ -360,11 +361,15 @@ function formatDate(iso?: string | null): string {
   text-transform: uppercase;
   padding: 1px 6px;
   border-radius: 3px;
-  flex-shrink: 0;
+  justify-self: start;
 }
 .event-direction--departed { background: var(--paper); color: var(--focus); border: 1px solid var(--rule); }
 .event-direction--arrived  { background: var(--paper); color: var(--moss);  border: 1px solid var(--rule); }
-.event-title { font-size: 13px; color: var(--focus); flex: 1; min-width: 0; }
+.event-title { font-size: 13px; color: var(--focus); min-width: 0; }
+@media (max-width: 520px) {
+  .event-item { grid-template-columns: 1fr auto; row-gap: 2px; }
+  .event-title { grid-column: 1 / -1; }
+}
 
 .role-group + .role-group { margin-top: var(--space-md); }
 .role-group-heading {
