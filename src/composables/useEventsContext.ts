@@ -3,6 +3,8 @@ import { useRoute, useRouter } from 'vue-router'
 import { useLocationCache, fetchEventDetailBySlug, clearEventDetailCache } from './useLocationCache.ts'
 import { cacheVersion } from './cacheFreshness.ts'
 import { useEventsList, fetchEventDetailFromNeo4j } from './useEventsList.ts'
+import { neo4jQuery } from './useNeo4j.ts'
+import { resolveSlug } from '../utils/slugResolver.ts'
 import type { IdbEvent, IdbEventDetail } from '../types/idb.ts'
 
 // ── Fallback colour maps ──────────────────────────────────────────────────────
@@ -77,6 +79,24 @@ export function useEventsContext() {
   const visibleEvent = computed<IdbEvent | null>(() => hashEvent.value ?? slugEvent.value)
 
   const isDetail = computed(() => !!slugEvent.value)
+
+  // The URL names a slug that is no event. Most such links are written a little
+  // differently from their page, or mean a person or a vessel: send the reader
+  // where the link meant to go, or, when no single page fits, say it was not found
+  // instead of quietly showing the whole list.
+  const slugNotFound = ref<string | null>(null)
+  watch([() => route.params.slug, () => route.hash, loading], async ([slug, hash, isLoading]) => {
+    slugNotFound.value = null
+    if (typeof slug !== 'string' || !slug || hash === '#new' || isLoading || slugEvent.value) return
+    try {
+      const hit = await resolveSlug(slug, neo4jQuery)
+      if (route.params.slug !== slug) return          // the reader went elsewhere meanwhile
+      if (hit && hit.path !== route.path) void router.replace({ path: hit.path, query: route.query })
+      else if (!hit) slugNotFound.value = slug
+    } catch {
+      if (route.params.slug === slug) slugNotFound.value = slug
+    }
+  }, { immediate: true })
 
   // ── List filter state (URL-synced) ────────────────────────────────────────
   const selectedOrg       = ref((route.query.org as string) ?? '')
@@ -297,6 +317,7 @@ export function useEventsContext() {
     // route context
     isDetail,
     slugEvent,
+    slugNotFound,
     visibleEvent,
     // filter API (single surface, mode-aware internally)
     org,

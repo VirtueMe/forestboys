@@ -44,6 +44,49 @@ describe('blocksToHtml', () => {
     expect(link('operasjon-freshman')).toBe('<p><a href="/events/operasjon-freshman" class="internal-link">x</a></p>')
   })
 
+  describe('link targets as they were typed in Sanity', () => {
+    const link = (href: string) => blocksToHtml([{
+      _key: 'b', _type: 'block',
+      markDefs: [{ _key: 'l', _type: 'link', href }],
+      children: [{ _key: 's', _type: 'span', text: 'x', marks: ['l'] }],
+    }])
+
+    it('ignores spaces around the target', () => {
+      expect(link('mtb-x037 ')).toBe('<p><a href="/events/mtb-x037" class="internal-link">x</a></p>')
+      expect(link('  https://nb.no/x ')).toContain('href="https://nb.no/x"')
+    })
+
+    it('turns ../kind/slug into the page of that kind', () => {
+      expect(link('../people/harry-sporborg')).toContain('href="/person/harry-sporborg"')
+      expect(link('../locations/88-chiltern-court')).toContain('href="/map/88-chiltern-court"')
+      expect(link('../outlines/soe-operasjon-foscott')).toContain('href="/outlines/soe-operasjon-foscott"')
+      expect(link('../../people/x')).toContain('href="/person/x"')
+    })
+
+    it('treats a ../ path of an unknown kind as an event slug', () => {
+      expect(link('../things/abc')).toContain('href="/events/abc"')
+    })
+
+    it('makes mailto: a plain link and finds a URL buried in other text', () => {
+      expect(link('mailto:a@b.no')).toBe('<p><a href="mailto:a@b.no" class="external-link">x</a></p>')
+      expect(link('Se https://example.org/a/b.')).toContain('href="https://example.org/a/b"')
+      expect(link('(https://example.org/a')).toContain('target="_blank"')
+    })
+
+    it('encodes a slug with a space and a slash', () => {
+      expect(link('East BOAC/BALDER-040445')).toContain('href="/events/East%20BOAC%2FBALDER-040445"')
+    })
+
+    it('does not let a quote in the target out of the attribute', () => {
+      expect(link('a" onmouseover="x')).not.toContain('onmouseover="x"')
+    })
+
+    it('renders a link with nothing in it as plain text', () => {
+      expect(link('')).toBe('<p>x</p>')
+      expect(link('   ')).toBe('<p>x</p>')
+    })
+  })
+
   it('links person marks to /person/<slug>', () => {
     const html = blocksToHtml([{
       _key: 'b', _type: 'block',
