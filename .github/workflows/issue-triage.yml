@@ -29,7 +29,7 @@ jobs:
       !contains(github.event.issue.labels.*.name, 'bot-deny-analysis')
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Run triage
         uses: anthropics/claude-code-action@v1
