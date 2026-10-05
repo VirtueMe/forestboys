@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest'
 import { baselineSha, classifyEvent, eventsToStamp, sha, stampsFor, verifyEventStamps, type GraphEvent } from './event-sync.ts'
 import type { Doc } from './person-sync.ts'
 import type { Lookups } from './event-rule.ts'
+import { linkArchiveBlocks } from '../../src/utils/archiveRefs.ts'
+import { stableJson } from './sanity-sha.ts'
 
 const lookups = (): Lookups => ({
   Organization: new Map(), Unit: new Map(), Location: new Map(),
@@ -67,6 +69,44 @@ describe('classifyEvent without a baseline file (CI)', () => {
     const g = graphEvent({ name: 'Landing at dawn', stamps: stampsFor(doc(), l) })
     const v = classifyEvent(g, doc({ title: 'Landing at dawn' }), undefined, l)
     expect(verdictOf(v, 'title')).toBe('already')
+  })
+})
+
+describe('classifyEvent with archive references in the description (#106)', () => {
+  const l = lookups()
+  const raw = [{ _key: 'b1', _type: 'block', markDefs: [], children: [{ _key: 's1', _type: 'span', marks: [], text: 'Se AIR-27-1068-2 p13' }] }]
+  const linked = linkArchiveBlocks(raw)
+  const graphWith = (description: unknown, stamps: Record<string, string> = {}) =>
+    graphEvent({ description: JSON.stringify(description), stamps })
+  const oldStamp = { description_sha: sha(stableJson(raw)) }   // stamped before the links existed
+
+  it('takes the links in on the first run as an ordinary change: the graph still holds the stamped text', () => {
+    const v = classifyEvent(graphWith(raw, oldStamp), doc({ description: raw }), undefined, l)
+    expect(verdictOf(v, 'description')).toBe('clean')
+  })
+
+  it('leaves a graph that holds the links, stamped from Sanity, alone', () => {
+    const stamps = stampsFor(doc({ description: raw }), l)
+    expect(classifyEvent(graphWith(linked, stamps), doc({ description: raw }), undefined, l)).toEqual([])
+  })
+
+  it('applies a later Sanity edit cleanly: the links are not a graph edit', () => {
+    const stamps = stampsFor(doc({ description: raw }), l)
+    const edited = [{ ...raw[0], children: [{ ...raw[0].children[0], text: 'Se AIR-27-1068-2 p14' }] }]
+    const v = classifyEvent(graphWith(linked, stamps), doc({ description: edited }), undefined, l)
+    expect(verdictOf(v, 'description')).toBe('clean')
+  })
+
+  it('still calls a description edited in the graph a conflict', () => {
+    const editedInGraph = [{ ...raw[0], children: [{ ...raw[0].children[0], text: 'Rettet i grafen AIR-27-1068-2' }] }]
+    const v = classifyEvent(graphWith(editedInGraph, oldStamp), doc({ description: raw }), undefined, l)
+    expect(verdictOf(v, 'description')).toBe('conflict')
+  })
+
+  it('leaves a description with no reference as it was: its old stamp still holds', () => {
+    const plain = [{ _key: 'b1', _type: 'block', markDefs: [], children: [{ _key: 's1', _type: 'span', marks: [], text: 'Ingenting her' }] }]
+    const stamp = { description_sha: sha(stableJson(plain)) }
+    expect(classifyEvent(graphWith(plain, stamp), doc({ description: plain }), undefined, l)).toEqual([])
   })
 })
 

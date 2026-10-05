@@ -27,7 +27,7 @@
 
 import { createHash } from 'node:crypto'
 import { stableJson } from './sanity-sha.ts'
-import type { Lookups } from './event-rule.ts'
+import { eventDescription, type Lookups } from './event-rule.ts'
 import { isImportableUrl } from './person-rule.ts'
 import { API, neo4jDriver, type Doc } from './person-sync.ts'
 import { loadBaselineFile } from './baseline.ts'
@@ -107,7 +107,7 @@ export const EVENT_FIELDS: EventField[] = [
     fromSanity: d => set(((d.links as { link?: string }[] | undefined) ?? []).map(l => l.link ?? '').filter(isImportableUrl)),
     fromGraph:  g => set(g.links) },
   { name: 'description',
-    fromSanity: d => (d.description ? stableJson(d.description) : ''),
+    fromSanity: d => (d.description ? stableJson(eventDescription(d)) : ''),
     fromGraph:  g => (g.description ? stableJson(JSON.parse(g.description)) : '') },
 ]
 
