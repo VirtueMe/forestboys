@@ -138,3 +138,26 @@ export function checkLinks(content: unknown, index: SlugIndex): LinkFinding[] {
 
 /** The findings that need a person's attention. */
 export const problems = (findings: LinkFinding[]) => findings.filter(f => f.verdict !== 'ok')
+
+/**
+ * `content` with the link that stored `from.stored` pointed at `to` instead.
+ * A plain link gets the page's path as its target. A person mark whose page is
+ * another kind of page becomes a plain link; one that is a person stays a
+ * person mark with the right slug. Content that is not JSON is returned as it is.
+ */
+export function rewriteLink(content: string, from: Pick<LinkIssue, 'source' | 'stored'>, to: SlugHit): string {
+  let blocks: SanityBlock[]
+  try { blocks = JSON.parse(content) } catch { return content }
+  if (!Array.isArray(blocks)) return content
+  for (const block of blocks) {
+    block?.markDefs?.forEach((def, i) => {
+      if (from.source === 'link' && def._type === 'link' && (def.href ?? '').trim() === from.stored.trim()) {
+        def.href = to.path
+      } else if (from.source === 'person' && def._type === 'person' && def.slug === from.stored) {
+        if (to.label === 'Person') def.slug = to.slug
+        else block.markDefs![i] = { _key: def._key, _type: 'link', href: to.path }
+      }
+    })
+  }
+  return JSON.stringify(blocks)
+}

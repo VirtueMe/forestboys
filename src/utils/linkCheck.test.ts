@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { buildIndex, checkLinks, linkSlugs, problems } from './linkCheck.ts'
+import { buildIndex, checkLinks, linkSlugs, problems, rewriteLink } from './linkCheck.ts'
 
 const INDEX = buildIndex([
   { label: 'Operation', slug: 'sub004' },
@@ -127,5 +127,42 @@ describe('linkSlugs', () => {
     expect(linkSlugs(link(undefined))).toEqual([])
     expect(linkSlugs(link('/about'))).toEqual([])
     expect(linkSlugs('not json')).toEqual([])
+  })
+})
+
+describe('rewriteLink', () => {
+  const to = { path: '/events/sub004', label: 'Operation', slug: 'sub004' }
+
+  it('points the link at the page it should name', () => {
+    const out = rewriteLink(JSON.stringify(link('SUB004')), { source: 'link', stored: 'SUB004' }, to)
+    expect(checkLinks(out, INDEX)[0].verdict).toBe('ok')
+    expect(JSON.parse(out)[0].markDefs[0].href).toBe('/events/sub004')
+  })
+
+  it('finds the link through spaces around the stored target', () => {
+    const out = rewriteLink(JSON.stringify(link('SUB004 ')), { source: 'link', stored: 'SUB004 ' }, to)
+    expect(JSON.parse(out)[0].markDefs[0].href).toBe('/events/sub004')
+  })
+
+  it('leaves other links alone', () => {
+    const blocks = JSON.stringify([...link('SUB004'), { ...link('gone')[0], _key: 'b2' }])
+    const out = JSON.parse(rewriteLink(blocks, { source: 'link', stored: 'SUB004' }, to))
+    expect(out[0].markDefs[0].href).toBe('/events/sub004')
+    expect(out[1].markDefs[0].href).toBe('gone')
+  })
+
+  it('turns a person mark into a plain link when the page is another kind', () => {
+    const out = JSON.parse(rewriteLink(JSON.stringify(person('sub004')), { source: 'person', stored: 'sub004' }, to))
+    expect(out[0].markDefs[0]).toEqual({ _key: 'p1', _type: 'link', href: '/events/sub004' })
+  })
+
+  it('keeps a person mark a person mark when the page is a person', () => {
+    const p = { path: '/person/john-rognes', label: 'Person', slug: 'john-rognes' }
+    const out = JSON.parse(rewriteLink(JSON.stringify(person('John-Rognes')), { source: 'person', stored: 'John-Rognes' }, p))
+    expect(out[0].markDefs[0]).toMatchObject({ _type: 'person', slug: 'john-rognes' })
+  })
+
+  it('returns content that is not JSON as it is', () => {
+    expect(rewriteLink('nope', { source: 'link', stored: 'x' }, to)).toBe('nope')
   })
 })

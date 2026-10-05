@@ -12,6 +12,30 @@
     <button type="button" class="edit-link-revert" :disabled="saving" @click="revert">Angre</button>
   </footer>
   <div v-if="displayError" class="edit-save-error">{{ displayError }}</div>
+  <div v-if="linkIssues.length" class="edit-link-issues" :class="{ refused: linksRefused }">
+    <p class="edit-link-issues-lead">
+      {{ linksRefused ? 'Lenker som ikke fungerer:' : 'Lagret. Disse lenkene fungerer ikke:' }}
+    </p>
+    <ul class="edit-link-issues-list">
+      <li v-for="(l, i) in linkIssues" :key="`${l.source}:${l.stored}:${i}`">
+        <span>
+          «{{ l.text }}»
+          <template v-if="l.verdict === 'empty'">har ingen mål.</template>
+          <template v-else>peker til <code>{{ l.stored.trim() }}</code>.</template>
+        </span>
+        <button
+          v-for="c in fixes(l)"
+          :key="c.path"
+          type="button"
+          class="edit-link-fix"
+          :title="`Pek lenken til ${c.path}`"
+          @click="applyFix(l, c)"
+        >
+          Bruk {{ c.slug }}
+        </button>
+      </li>
+    </ul>
+  </div>
 </template>
 
 <script setup lang="ts">
@@ -28,6 +52,8 @@
 import { ref, computed, watch } from 'vue'
 import { authFetch } from '@/composables/useAuth.ts'
 import SectionsEditor, { type Section } from '@/components/SectionsEditor.vue'
+import { rewriteLink, type LinkIssue } from '@/utils/linkCheck.ts'
+import type { SlugHit } from '@/utils/slugResolver.ts'
 
 const props = withDefaults(defineProps<{
   /** Authoritative saved sections (sorted, hydrated). */
@@ -78,11 +104,15 @@ const draft    = ref<Section[]>([])
 const baseline = ref<Section[]>([])
 const saving   = ref(false)
 const error    = ref<string | null>(null)
+/** Links the server refused (the save did not happen) or saved with a warning. */
+const linkIssues  = ref<LinkIssue[]>([])
+const linksRefused = ref(false)
 
 function snapshot() {
   draft.value    = props.saved.map(cloneSection)
   baseline.value = props.saved.map(cloneSection)
   error.value    = null
+  linkIssues.value = []
 }
 
 // Mount: if the parent passed an `initialDirtyDraft`, seed the editor
@@ -129,11 +159,22 @@ const displayError = computed(() => error.value ?? props.externalError ?? null)
 function revert() {
   draft.value = baseline.value.map(cloneSection)
   error.value = null
+  linkIssues.value = []
+}
+
+/** The pages a link could be pointed at: the one it should name, or those that fit equally well. */
+const fixes = (l: LinkIssue): SlugHit[] => l.suggestion ? [l.suggestion] : l.candidates ?? []
+
+/** Point the link at `to` in every section; the draft becomes dirty and is saved with Lagre. */
+function applyFix(l: LinkIssue, to: SlugHit) {
+  for (const s of draft.value) s.content = rewriteLink(s.content, l, to)
+  linkIssues.value = linkIssues.value.filter(x => x !== l)
 }
 
 async function save() {
   saving.value = true
   error.value  = null
+  linkIssues.value = []
   try {
     const payload = {
       sections: [...draft.value]
@@ -151,10 +192,15 @@ async function save() {
       body:    JSON.stringify(payload),
     })
     if (!res.ok) {
-      const body = await res.json().catch(() => ({})) as { error?: string }
+      const body = await res.json().catch(() => ({})) as { error?: string; links?: LinkIssue[] }
       error.value = body.error ?? `HTTP ${res.status}`
+      linksRefused.value = true
+      linkIssues.value = body.links ?? []
       return
     }
+    const done = await res.json().catch(() => ({})) as { warnings?: LinkIssue[] }
+    linksRefused.value = false
+    linkIssues.value = done.warnings ?? []
     const saved = draft.value.map(cloneSection)
     baseline.value = saved
     holdingRecoveredDraft.value = false
@@ -229,6 +275,32 @@ defineExpose({ draft, dirty })
 }
 .edit-link-revert:hover { color: var(--faded-red); text-decoration-color: var(--faded-red); }
 .edit-link-revert:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.edit-link-issues {
+  margin-top: var(--space-sm);
+  padding: var(--space-sm) var(--space-md);
+  background: var(--paper-sunken);
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-md);
+  font-family: var(--font-sans);
+  font-size: var(--size-label);
+  color: var(--ink-soft);
+}
+.edit-link-issues.refused { border-color: var(--danger); }
+.edit-link-issues-lead { margin: 0 0 var(--space-xs); font-weight: 600; color: var(--ink); }
+.edit-link-issues-list { margin: 0; padding-left: 1.2em; display: flex; flex-direction: column; gap: 4px; }
+.edit-link-issues code { font-size: 0.9em; }
+.edit-link-fix {
+  margin-left: 8px;
+  font: inherit;
+  color: var(--focus);
+  background: none;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-md);
+  padding: 1px 8px;
+  cursor: pointer;
+}
+.edit-link-fix:hover { border-color: var(--focus); }
 
 .edit-save-error {
   margin-top: var(--space-sm);
