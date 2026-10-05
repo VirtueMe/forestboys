@@ -335,6 +335,17 @@ bundles.
   with the import's rule (`scripts/lib/event-rule.ts`, shared with the
   re-import), `already` only moves the stamp, `conflict` (graph edited too)
   is left and listed.
+- Descriptions are compared, stamped and saved with their AIR 27 references
+  made links to the National Archives search (`eventDescription()` in
+  `event-rule.ts`, `linkArchiveBlocks()` in `src/utils/archiveRefs.ts`, #106).
+  `AIR-27-2159-22 p24` becomes a span with an ordinary `link` mark; the page
+  stays text, `_2` and `+24` are linked but not searched for, and spans that
+  are already links or people are left alone. The links are never Sanity's, so
+  they are not a graph edit: the stamp is the hash of the linked text, and a
+  later Sanity edit is `clean`. The first run after the change takes them into
+  every description that has a reference (718 on 2026-10-05) as an ordinary
+  `clean` change; a description edited in the graph is a `conflict` as before.
+  Only AIR 27 — the HS series are left alone (Jan).
 - People compare on the import's links only — editor additions
   (`sourceRef: admin-edit`) stay and don't count as a graph edit; removing
   an imported link does. Links to targets the graph doesn't have yet are

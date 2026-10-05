@@ -19,6 +19,7 @@
 import type { ManagedTransaction, Session } from 'neo4j-driver'
 import { imageSources, isImportableUrl, linkSource, type ImageSource, type LinkSource } from './person-rule.ts'
 import type { Doc } from './person-sync.ts'
+import { linkArchiveBlocks } from '../../src/utils/archiveRefs.ts'
 
 export const str  = (v: unknown): string => (typeof v === 'string' ? v : '')
 export const ref  = (v: unknown): string => str((v as { _ref?: string } | undefined)?._ref)
@@ -64,10 +65,18 @@ export interface EventPlan {
   unresolved:   { field: string; id: string }[]
 }
 
+/**
+ * The description as the graph holds it: Sanity's, with its AIR 27 references made links to the
+ * National Archives search (src/utils/archiveRefs.ts, #106). The import saves this, and the sync
+ * compares and stamps this — never Sanity's raw value — so the graph and "Sanity imported" are
+ * the same text and the links are not a graph edit.
+ */
+export const eventDescription = (d: Doc): unknown => linkArchiveBlocks(d.description)
+
 export function descriptionProps(d: Doc): Record<string, unknown> | null {
   if (!Array.isArray(d.description) || !d.description.length) return null
   return {
-    id: `desc:event:${d._id}`, content: JSON.stringify(d.description), order: 1,
+    id: `desc:event:${d._id}`, content: JSON.stringify(eventDescription(d)), order: 1,
     recordedDate: d._updatedAt, author: 'sanity-event-migration', confidence: 'verified', sanityEventId: d._id,
   }
 }
