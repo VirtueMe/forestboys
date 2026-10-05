@@ -1,5 +1,23 @@
 # Changelog
 
+## [0.4.0](https://github.com/VirtueMe/forestboys/compare/v0.3.0...v0.4.0) (2026-10-05)
+
+
+### Features
+
+* **admin:** list of description links that lead nowhere ([db482b6](https://github.com/VirtueMe/forestboys/commit/db482b639ec9c044f0e7b75e4f40aabb1ca0408c)), closes [#95](https://github.com/VirtueMe/forestboys/issues/95)
+* **admin:** open a home-page card from the dead-link list ([7e15379](https://github.com/VirtueMe/forestboys/commit/7e153796ba35df9f5c03e618d7ca09a4e1d99c3a)), closes [#95](https://github.com/VirtueMe/forestboys/issues/95)
+* **admin:** refuse new description links that lead nowhere ([4697bed](https://github.com/VirtueMe/forestboys/commit/4697bedd38089479ff51a54f55f6ed86c2cc9fa7)), closes [#95](https://github.com/VirtueMe/forestboys/issues/95)
+* **admin:** show link problems in the description editor ([ec48b81](https://github.com/VirtueMe/forestboys/commit/ec48b81d35a6fc041c47a86664a24080e2705603)), closes [#95](https://github.com/VirtueMe/forestboys/issues/95)
+* **links:** check description links against the pages that exist ([4cbd715](https://github.com/VirtueMe/forestboys/commit/4cbd7155a26e4999e5f5d0761ed89dbe8f59de3b)), closes [#95](https://github.com/VirtueMe/forestboys/issues/95)
+
+
+### Bug fixes
+
+* **events:** links in descriptions lead somewhere, or say they don't ([f454082](https://github.com/VirtueMe/forestboys/commit/f4540823c087eb14a49042e225410fda8085a222)), closes [#90](https://github.com/VirtueMe/forestboys/issues/90)
+* **events:** show the event's «Nyttige lenker» section ([05a8791](https://github.com/VirtueMe/forestboys/commit/05a87916e4748c58be69d18bb0f0babf6bd218db)), closes [#93](https://github.com/VirtueMe/forestboys/issues/93)
+* **events:** transport and station pages list their operations ([ac7713e](https://github.com/VirtueMe/forestboys/commit/ac7713e51b413b3c347b93a803eda840a1b3f749)), closes [#97](https://github.com/VirtueMe/forestboys/issues/97)
+
 ## [0.3.0](https://github.com/VirtueMe/forestboys/compare/v0.2.0...v0.3.0) (2026-10-05)
 
 
