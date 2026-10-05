@@ -78,6 +78,11 @@ export default defineConfig(({ mode }) => {
         manifest: false, // we supply public/manifest.json
         workbox: {
           globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
+          // The app is one 2.5 MB entry chunk: rolldown 1.x no longer splits the
+          // shared editor code the pages import statically into separate files.
+          // The total is unchanged, but the default 2 MiB precache limit now
+          // rejects the file and the build fails.
+          maximumFileSizeToCacheInBytes: 3 * 1024 * 1024,
           // Server routes (Pages Functions) must reach the network. Without
           // this the service worker answers their navigations with index.html:
           // /auth/github then shows the app's blank 404 instead of redirecting.
