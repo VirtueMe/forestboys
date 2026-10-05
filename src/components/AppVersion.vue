@@ -47,7 +47,7 @@ import { parseChangelog } from '../utils/changelog.ts'
 import { versionLabel } from '../utils/versionLabel.ts'
 
 const commit = __APP_COMMIT__
-const label  = versionLabel(__APP_VERSION__, commit)
+const label  = versionLabel(__APP_VERSION__, commit, __APP_SINCE__?.commits.length)
 const open   = ref(false)
 
 const releases = computed(() => parseChangelog(changelog))
