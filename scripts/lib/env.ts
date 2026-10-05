@@ -8,14 +8,37 @@
  *                   the environment win — CI secrets). The target is
  *                   printed before anything runs.
  *
- * Writing still needs the script's own --write.
+ * Writing still needs --write: every script that can write is a dry run unless it
+ * is given --write, and the banner above comes from that same flag. The older
+ * --dry, --dry-run and --apply are refused (#78).
  */
 
 import * as dotenv from 'dotenv'
 
 export const PRODUCTION = process.argv.includes('--production')
 
+/** The one switch: a script is a dry run unless it is given --write (#78). */
+export const WRITE = process.argv.includes('--write')
+
+/** Switches the scripts used before there was one convention. They are refused, not ignored. */
+export const OLD_WRITE_FLAGS = ['--dry', '--dry-run', '--apply'] as const
+
+/** The old write/dry switches present in `argv`. */
+export function oldFlagsIn(argv: readonly string[]): string[] {
+  return OLD_WRITE_FLAGS.filter(f => argv.includes(f))
+}
+
+/** What a script says first when it talks to production. */
+export function productionBanner(host: string, write: boolean): string {
+  return `▶ PRODUCTION ${host}${write ? ' — WRITING' : ' — read only'}`
+}
+
 export function loadEnv(): { production: boolean; host: string } {
+  const old = oldFlagsIn(process.argv)
+  if (old.length) {
+    console.error(`${old.join(', ')} ${old.length > 1 ? 'are not flags' : 'is not a flag'} any more: a script is a dry run unless you pass --write.`)
+    process.exit(2)
+  }
   dotenv.config({ path: PRODUCTION ? '.env.production' : '.env', quiet: true })
   // Production credentials are PRODUCTION_NEO4J_* (file or CI secrets) — they
   // win over any NEO4J_* the file still holds for other uses.
@@ -42,7 +65,7 @@ export function loadEnv(): { production: boolean; host: string } {
     process.exit(2)
   }
   if (PRODUCTION) {
-    console.error(`▶ PRODUCTION ${host}${process.argv.includes('--write') ? ' — WRITING' : ' — read only'}`)
+    console.error(productionBanner(host, WRITE))
   }
   return { production: PRODUCTION, host }
 }
