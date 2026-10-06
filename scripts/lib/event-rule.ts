@@ -17,7 +17,7 @@
  */
 
 import type { ManagedTransaction, Session } from 'neo4j-driver'
-import { imageSources, isImportableUrl, linkSource, type ImageSource, type LinkSource } from './person-rule.ts'
+import { imageSources, importableLinks, linkSource, type ImageSource, type LinkSource } from './person-rule.ts'
 import type { Doc } from './person-sync.ts'
 import { linkArchiveBlocks } from '../../src/utils/archiveRefs.ts'
 
@@ -82,8 +82,7 @@ export function descriptionProps(d: Doc): Record<string, unknown> | null {
 }
 
 export function eventLinks(d: Doc): LinkSource[] {
-  const titles = new Map(((d.links as { link?: string; title?: string }[] | undefined) ?? []).map(l => [l.link ?? '', l.title]))
-  return [...new Set([...titles.keys()].filter(isImportableUrl))].map(url => linkSource(url, titles.get(url)))
+  return importableLinks(d.links).map(l => linkSource(l.url, l.title))
 }
 
 export function eventImages(d: Doc): EventImage[] {
