@@ -1,5 +1,34 @@
 # Changelog
 
+## [0.6.0](https://github.com/VirtueMe/forestboys/compare/v0.5.0...v0.6.0) (2026-10-06)
+
+
+### Features
+
+* **editor:** bound the text area so the toolbar stays in view ([248a4b1](https://github.com/VirtueMe/forestboys/commit/248a4b14f9591f08a8c29baa935e3caee83d146f)), closes [#123](https://github.com/VirtueMe/forestboys/issues/123)
+* **editor:** check the heading outline of a description ([ca8087c](https://github.com/VirtueMe/forestboys/commit/ca8087c3e43cd8f337dd6a2065c2c322edca9be9)), closes [#127](https://github.com/VirtueMe/forestboys/issues/127)
+* **editor:** edit the link text in the link popup ([9ac9083](https://github.com/VirtueMe/forestboys/commit/9ac9083cc226ee3d242f0784dfb244b0f4f64102)), closes [#126](https://github.com/VirtueMe/forestboys/issues/126)
+* **editor:** expand the editor to the full window and show the link as an icon ([70f8261](https://github.com/VirtueMe/forestboys/commit/70f8261d049a9a7132a4c86f22413fcb5dc0e84b)), closes [#123](https://github.com/VirtueMe/forestboys/issues/123)
+* **editor:** group H3 with its menu, and let outside changes reach the editor ([f55b376](https://github.com/VirtueMe/forestboys/commit/f55b37636e3c926b0e66f0d62da9ab15f26a5ff5)), closes [#127](https://github.com/VirtueMe/forestboys/issues/127)
+* **editor:** H4 to H6 in the description editor ([247eaa1](https://github.com/VirtueMe/forestboys/commit/247eaa12705d73868550a720a8e8866986d58f7e)), closes [#127](https://github.com/VirtueMe/forestboys/issues/127)
+* **editor:** refuse to save headings that break the outline ([1ad80aa](https://github.com/VirtueMe/forestboys/commit/1ad80aa0b7821339d7ba0ee2c78dd84904788a04)), closes [#127](https://github.com/VirtueMe/forestboys/issues/127)
+* **editor:** show, add, change and remove links in the description editor ([c0c89db](https://github.com/VirtueMe/forestboys/commit/c0c89dbbabe24b227c14f66ede4b8ad978f35096)), closes [#110](https://github.com/VirtueMe/forestboys/issues/110)
+* **editor:** support bullet and numbered lists ([6981a6a](https://github.com/VirtueMe/forestboys/commit/6981a6a4bc077ff2f91c6595154becf204841715)), closes [#124](https://github.com/VirtueMe/forestboys/issues/124)
+* **sync:** store TNA links for AIR 27 references in event descriptions ([38266d1](https://github.com/VirtueMe/forestboys/commit/38266d1593d9bd4716fdeb2e8bd0c847bd7b7ebf)), closes [#106](https://github.com/VirtueMe/forestboys/issues/106)
+* **sync:** sync transport name, type, unit and regser from Sanity ([8652ccd](https://github.com/VirtueMe/forestboys/commit/8652ccdd15dbd55177cbad05ffc3f64496ed3934)), closes [#112](https://github.com/VirtueMe/forestboys/issues/112)
+
+
+### Bug fixes
+
+* **editor:** hang the link and person popups from the toolbar ([c3b8464](https://github.com/VirtueMe/forestboys/commit/c3b8464e9a2913d209f81dc82f39236abff517ff)), closes [#123](https://github.com/VirtueMe/forestboys/issues/123)
+* **sync:** import links written with a leading or trailing space ([c1f246f](https://github.com/VirtueMe/forestboys/commit/c1f246f5663b94e519b977febc842094f6d94e83)), closes [#113](https://github.com/VirtueMe/forestboys/issues/113)
+* **sync:** import location descriptions from Sanity and keep them in step ([03e5be6](https://github.com/VirtueMe/forestboys/commit/03e5be668433663980b9f68c1015334980dc0ccd)), closes [#99](https://github.com/VirtueMe/forestboys/issues/99)
+* **sync:** import station descriptions from Sanity and keep them in step ([f0e46c2](https://github.com/VirtueMe/forestboys/commit/f0e46c22b6af3c1e4100e0ff78ddffb79fb75add)), closes [#99](https://github.com/VirtueMe/forestboys/issues/99)
+* **sync:** import transport descriptions from Sanity and keep them in step ([c2324a5](https://github.com/VirtueMe/forestboys/commit/c2324a58afd5e24227443a9ae11918600ee035a7)), closes [#99](https://github.com/VirtueMe/forestboys/issues/99)
+* **sync:** rewrite an event description edited in the graph from Sanity ([fd82cc2](https://github.com/VirtueMe/forestboys/commit/fd82cc235c6fdb16645a96f8cc6a88a4f82062c5)), closes [#119](https://github.com/VirtueMe/forestboys/issues/119)
+* **transport:** let the editor's unit win over the imported rawUnit ([0d09fbf](https://github.com/VirtueMe/forestboys/commit/0d09fbfe146fd9526cd4b06aef2616c43969097f)), closes [#112](https://github.com/VirtueMe/forestboys/issues/112)
+* **transport:** show the unit line and tidy whitespace in transport fields ([951feda](https://github.com/VirtueMe/forestboys/commit/951feda2922d61f8f3ba48f2f26b609e422485f0)), closes [#112](https://github.com/VirtueMe/forestboys/issues/112)
+
 ## [0.5.0](https://github.com/VirtueMe/forestboys/compare/v0.4.0...v0.5.0) (2026-10-05)
 
 
