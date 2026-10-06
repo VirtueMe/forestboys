@@ -39,7 +39,7 @@
 
       <!-- Article -->
       <article class="article">
-        <h2 class="event-title">{{ displayName }}</h2>
+        <h1 class="event-title">{{ displayName }}</h1>
         <p v-if="displayDate" class="event-date">{{ displayDate }}</p>
 
         <!-- Beskrivelse -->

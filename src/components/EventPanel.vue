@@ -2,7 +2,7 @@
   <div class="event-panel">
     <div class="panel-header">
       <p v-if="displayDate" class="event-date">{{ formatDate(displayDate) }}</p>
-      <h2 class="event-title">{{ displayName }}</h2>
+      <h1 class="event-title">{{ displayName }}</h1>
       <p v-if="meta" class="event-meta">{{ meta }}</p>
     </div>
 
@@ -38,7 +38,7 @@
     <template v-else>
       <!-- Beskrivelse -->
       <section v-if="event.description?.length" class="section">
-        <h3 class="section-heading">Beskrivelse</h3>
+        <h2 class="section-heading">Beskrivelse</h2>
         <!-- eslint-disable vue/no-v-html -->
         <div
           class="portable-text"
@@ -50,7 +50,7 @@
 
       <!-- Sted (incident: AT) / Fra Sted (operation: FROM) -->
       <section v-if="event.locationFrom" class="section">
-        <h3 class="section-heading">{{ event.kind === 'operation' ? 'Fra Sted' : 'Sted' }}</h3>
+        <h2 class="section-heading">{{ event.kind === 'operation' ? 'Fra Sted' : 'Sted' }}</h2>
         <RouterLink :to="placeRoute(event.locationFrom.slug)" class="section-link">
           {{ event.locationFrom.title }}
         </RouterLink>
@@ -58,7 +58,7 @@
 
       <!-- Til Sted — operation only -->
       <section v-if="event.kind === 'operation' && event.locationTo" class="section">
-        <h3 class="section-heading">Til Sted</h3>
+        <h2 class="section-heading">Til Sted</h2>
         <RouterLink :to="placeRoute(event.locationTo.slug)" class="section-link">
           {{ event.locationTo.title }}
         </RouterLink>
@@ -66,7 +66,7 @@
 
       <!-- Base (incident: AT_STATION) / Stasjoner (operation: FROM/TO_STATION) -->
       <section v-if="event.stationFrom || event.stationTo" class="section">
-        <h3 class="section-heading">{{ stationHeading }}</h3>
+        <h2 class="section-heading">{{ stationHeading }}</h2>
         <RouterLink v-if="event.stationFrom" :to="`/station/${event.stationFrom.slug}`" class="section-link">
           {{ event.stationFrom.title }}
         </RouterLink>
@@ -77,7 +77,7 @@
 
       <!-- Deltakere -->
       <section v-if="event.people?.length" class="section">
-        <h3 class="section-heading">Deltakere</h3>
+        <h2 class="section-heading">Deltakere</h2>
         <div class="link-list">
           <RouterLink
             v-for="person in event.people"
@@ -92,7 +92,7 @@
 
       <!-- Transportmiddel -->
       <section v-if="event.transport?.length" class="section">
-        <h3 class="section-heading">Transportmiddel</h3>
+        <h2 class="section-heading">Transportmiddel</h2>
         <div class="link-list">
           <RouterLink
             v-for="t in event.transport"
@@ -107,7 +107,7 @@
 
       <!-- Galleri (images still served from Sanity by asset ref) -->
       <section v-if="event.gallery?.length" class="section">
-        <h3 class="section-heading">Galleri</h3>
+        <h2 class="section-heading">Galleri</h2>
         <div class="carousel">
           <button v-if="event.gallery.length > 1" class="carousel-btn" @click="prevImage">&#x2039;</button>
           <img :src="currentImageUrl" :alt="`${event.title} bilde ${currentImageIndex + 1}`" class="carousel-img" />
@@ -121,7 +121,7 @@
 
       <!-- Nyttige lenker -->
       <section v-if="event.links?.length" class="section">
-        <h3 class="section-heading">Nyttige lenker</h3>
+        <h2 class="section-heading">Nyttige lenker</h2>
         <div class="link-list">
           <a
             v-for="link in event.links"
