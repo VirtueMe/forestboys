@@ -16,7 +16,7 @@
         <button v-if="hasFilter" class="reset-btn" @click="resetFilters">Nullstill</button>
       </div>
 
-      <select :value="org" :disabled="isDetail" class="filter-select" @change="setOrg(($event.target as HTMLSelectElement).value)">
+      <select :value="org" :disabled="isDetail" class="filter-select" aria-label="Organisasjon" @change="setOrg(($event.target as HTMLSelectElement).value)">
         <option value="">Alle Organisasjoner</option>
         <option v-for="o in allOrgs" :key="o" :value="o">{{ o }}</option>
       </select>
