@@ -75,6 +75,7 @@
         :saved="savedSections"
         :endpoint="`/api/admin/roles/${encodeURIComponent(role!.key)}/sections`"
         label="Beskrivelse"
+        :check-headings="false"
         @saved="onSectionsSaved"
       />
     </div>

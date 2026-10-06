@@ -21,7 +21,12 @@ import type { SanityBlock } from './portableText.ts'
 
 export type HeadingReason = 'empty' | 'too-shallow' | 'too-deep'
 
+/** The line above the list of refused headings, in the editor and in the server's answer. */
+export const HEADINGS_REFUSED = 'Noen overskrifter følger ikke strukturen. Rett dem og lagre på nytt.'
+
 export interface HeadingProblem {
+  /** Where it is in the list of blocks that was checked. */
+  index:     number
   blockKey:  string
   /** The words of the heading. */
   text:      string
@@ -50,16 +55,16 @@ export function headingLevel(style: string | undefined): number | null {
 
 const textOf = (block: SanityBlock) => (block.children ?? []).map(c => c.text ?? '').join('')
 
-interface Heading { block: SanityBlock; level: number; text: string }
+interface Heading { index: number; block: SanityBlock; level: number; text: string }
 
 function headingsOf(blocks: unknown): Heading[] {
   if (!Array.isArray(blocks)) return []
   const out: Heading[] = []
-  for (const b of blocks as SanityBlock[]) {
-    if (b?._type !== 'block') continue
+  ;(blocks as SanityBlock[]).forEach((b, index) => {
+    if (b?._type !== 'block') return
     const level = headingLevel(b.style)
-    if (level !== null) out.push({ block: b, level, text: textOf(b) })
-  }
+    if (level !== null) out.push({ index, block: b, level, text: textOf(b) })
+  })
   return out
 }
 
@@ -72,14 +77,14 @@ const sectionOf = (o?: OutlineOptions) => o?.sectionLevel ?? DEFAULT_SECTION_LEV
  * the stack, capped at h6. An empty heading gets null (a plain paragraph) and is not part of the
  * nesting. Always satisfies the rules.
  */
-function repair(headings: Heading[], section: number): Map<string, number | null> {
-  const out = new Map<string, number | null>()
+function repair(headings: Heading[], section: number): Map<number, number | null> {
+  const out = new Map<number, number | null>()
   const stack: number[] = []
   for (const h of headings) {
-    if (h.text.trim() === '') { out.set(h.block._key, null); continue }
+    if (h.text.trim() === '') { out.set(h.index, null); continue }
     while (stack.length > 0 && stack[stack.length - 1] >= h.level) stack.pop()
     stack.push(h.level)
-    out.set(h.block._key, Math.min(section + stack.length, MAX_LEVEL))
+    out.set(h.index, Math.min(section + stack.length, MAX_LEVEL))
   }
   return out
 }
@@ -95,7 +100,7 @@ export function checkHeadings(blocks: unknown, options?: OutlineOptions): Headin
   let before = section
 
   for (const h of headings) {
-    const base = { blockKey: h.block._key, text: h.text.trim(), level: h.level, suggested: suggested.get(h.block._key) ?? null }
+    const base = { index: h.index, blockKey: h.block._key, text: h.text.trim(), level: h.level, suggested: suggested.get(h.index) ?? null }
     if (h.text.trim() === '') {
       problems.push({ ...base, reason: 'empty', allowed: null })
       continue
@@ -118,11 +123,63 @@ export function checkHeadings(blocks: unknown, options?: OutlineOptions): Headin
 export function fixHeadings<T>(blocks: T, options?: OutlineOptions): T {
   if (!Array.isArray(blocks)) return blocks
   const levels = repair(headingsOf(blocks), sectionOf(options))
-  return (blocks as SanityBlock[]).map(b => {
-    if (!levels.has(b?._key)) return b
-    const level = levels.get(b._key)
-    return { ...b, style: level === null || level === undefined ? 'normal' : `h${level}` }
-  }) as unknown as T
+  return (blocks as SanityBlock[]).map((b, i) => (levels.has(i) ? withLevel(b, levels.get(i) ?? null) : b)) as unknown as T
+}
+
+/** A heading block at another level; null makes it a plain paragraph. The same block when it already is. */
+const withLevel = (b: SanityBlock, level: number | null): SanityBlock => {
+  const style = level === null ? 'normal' : `h${level}`
+  return b.style === style ? b : { ...b, style }
+}
+
+/**
+ * The same, for a description kept as several sections, each a JSON string of blocks (the shape
+ * the editor and the endpoints hold). The sections are read in order as one outline, because the
+ * page shows them one after another under one section heading. Content that is not JSON, or not a
+ * list, counts as no blocks.
+ */
+export interface ContentHeadingProblem extends HeadingProblem {
+  /** Which of the contents it is in, and where among that content's blocks. */
+  content: number
+  local:   number
+}
+
+const parse = (content: string): unknown[] => {
+  try { const v = JSON.parse(content) as unknown; return Array.isArray(v) ? v : [] } catch { return [] }
+}
+
+function join(contents: string[]) {
+  const blocks: unknown[] = []
+  const origin: { content: number; local: number }[] = []
+  contents.forEach((c, content) => parse(c).forEach((b, local) => { blocks.push(b); origin.push({ content, local }) }))
+  return { blocks, origin }
+}
+
+export function checkContents(contents: string[], options?: OutlineOptions): ContentHeadingProblem[] {
+  const { blocks, origin } = join(contents)
+  return checkHeadings(blocks, options).map(p => ({ ...p, ...origin[p.index] }))
+}
+
+/** The contents with the repair applied. A content that did not change comes back as the same string. */
+export function fixContents(contents: string[], options?: OutlineOptions): string[] {
+  const { blocks, origin } = join(contents)
+  const fixed = fixHeadings(blocks, options)
+  const changed = new Set<number>()
+  fixed.forEach((b, i) => { if (b !== blocks[i]) changed.add(origin[i].content) })
+  return contents.map((c, i) => {
+    if (!changed.has(i)) return c
+    return JSON.stringify(fixed.filter((_, j) => origin[j].content === i))
+  })
+}
+
+/** One heading moved to `level` (null: a plain paragraph), the rest as it was. */
+export function setContentHeading(contents: string[], at: { content: number; local: number }, level: number | null): string[] {
+  return contents.map((c, i) => {
+    if (i !== at.content) return c
+    const blocks = parse(c) as SanityBlock[]
+    if (!blocks[at.local]) return c
+    return JSON.stringify(blocks.map((b, j) => (j === at.local ? withLevel(b, level) : b)))
+  })
 }
 
 /** One line for a refused save, in Norwegian like the link problems. */

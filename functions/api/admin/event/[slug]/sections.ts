@@ -13,6 +13,7 @@
 import { requireAdmin } from '~/_lib/require-admin.ts'
 import { runCypher, type Neo4jEnv } from '~/_lib/neo4j.ts'
 import { guardSections } from '~/_lib/link-guard.ts'
+import { guardHeadings } from '~/_lib/heading-guard.ts'
 import { planSections, validateSections } from '~/_lib/event-sections.ts'
 
 interface Env extends Neo4jEnv {
@@ -34,6 +35,9 @@ export const onRequestPatch: PagesFunction<Env> = async ({ request, env, params 
   try {
     const found = await runCypher<{ slug: string }>(env, `MATCH ${EVENT} RETURN e.slug AS slug`, { slug })
     if (!found.length) return json({ error: `Fant ikke hendelsen ${slug}.` }, 404)
+
+    const outline = guardHeadings(checked.sections)
+    if (outline) return outline
 
     const links = await guardSections(env, { labels: ['Operation', 'Incident'], key: slug }, checked.sections.map(s => s.content))
     if (links.blocked) return links.blocked

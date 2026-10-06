@@ -15,6 +15,7 @@
 import { requireAdmin } from '~/_lib/require-admin.ts'
 import { runCypher, type Neo4jEnv } from '~/_lib/neo4j.ts'
 import { guardSections } from '~/_lib/link-guard.ts'
+import { guardHeadings } from '~/_lib/heading-guard.ts'
 
 interface Env extends Neo4jEnv {
   SESSION_SECRET: string
@@ -71,6 +72,8 @@ export const onRequestPatch: PagesFunction<Env> = async ({ request, env, params 
   }))
 
   try {
+    const outline = guardHeadings(sections)
+    if (outline) return outline
     const links = await guardSections(env, { labels: ['Person'], key: slug }, sections.map(s => s.content))
     if (links.blocked) return links.blocked
 
