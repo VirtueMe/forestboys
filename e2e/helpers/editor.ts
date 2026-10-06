@@ -67,3 +67,46 @@ export async function pressAndWait(page: Page, key: string) {
 
 /** The block's list kind and level, or null when it is not a list item. */
 export const listOf = (b: Block) => (b.listItem ? { kind: b.listItem, level: b.level ?? 1 } : null)
+
+/** The span whose text is `text`, with its block. */
+export function findSpan(blocks: Block[], text: string) {
+  for (const block of blocks) {
+    const span = (block.children ?? []).find(c => c.text === text)
+    if (span) return { block, span }
+  }
+  return null
+}
+
+/** The address of the link on a span, or null when it has none. */
+export function linkHref(block: Block, span: { marks?: string[] }) {
+  const def = (block.markDefs ?? []).find(d => d._type === 'link' && (span.marks ?? []).includes(d._key))
+  return def ? (def.href as string) : null
+}
+
+/**
+ * Wait for the editor to take over a selection that was made with the keyboard or a double-click. The
+ * link box reads the editor's own selection when it opens, and that follows the browser's with a delay
+ * (slate throttles selection changes, about 100 ms): opening the box inside that gap shows the old
+ * selection. Nothing on the page says when the editor has caught up, so this is a fixed wait, kept in
+ * one place. A click does not need it where the caret is placed at the end of the text (caretAtEndOf).
+ */
+export const settleSelection = (page: Page) => page.waitForTimeout(250)
+
+/**
+ * One undo step, as the browser's own undo asks for it: a `beforeinput` event of type `historyUndo`, which
+ * is what Ctrl/Cmd+Z produces and what the editor listens for. Pressing the shortcut itself is not used:
+ * in the headless Chromium these tests run in it undid typed text but not a change made through the link
+ * box, while in a real, windowed browser on the real page both are undone by the shortcut (checked by hand).
+ *
+ * The editor reports an undo about a second after it, against about 0.3 s for typed text, so wait for it
+ * with `expect.poll` (5 s) and not with a short fixed wait.
+ */
+export const undo = (page: Page) => page.locator('.pt-editable').evaluate(el => {
+  type Dispatcher = { dispatchEvent(e: unknown): boolean }
+  const InputEvent = (globalThis as unknown as { InputEvent: new (type: string, init: object) => unknown }).InputEvent
+  ;(el as unknown as Dispatcher).dispatchEvent(new InputEvent('beforeinput', { inputType: 'historyUndo', bubbles: true, cancelable: true }))
+})
+
+/** Put the caret inside the words of `text` (the middle of it), with a real click. */
+export const caretInside = (page: Page, text: string) =>
+  page.locator('.pt-editable').getByText(text, { exact: false }).first().click()

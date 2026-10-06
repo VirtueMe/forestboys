@@ -3,9 +3,16 @@ import { blocksOf, caretAtEndOf, listOf, openEditor, pressAndWait, reportedTexts
 
 // Lists in the editor (#124): they survive, they continue, they end, they indent.
 test.describe('lists', () => {
+  // The bullet button lights up from the editor's own selection, not the browser's. Waiting for it
+  // proves the editor has the caret in a bullet item before a key such as Tab or Enter is pressed;
+  // under load the click's selection reaches the editor late, and the key would find no caret.
+  const editorHasCaretInBullet = (page: import('@playwright/test').Page) =>
+    expect(page.getByRole('button', { name: 'Punktliste' })).toHaveClass(/active/)
+
   test('a stored list is kept as it is when text is added to it', async ({ page }) => {
     await openEditor(page, 'lists')
     await caretAtEndOf(page, 'Andre punkt')
+    await editorHasCaretInBullet(page)
     await page.keyboard.type(' (endret)')
     await expect.poll(() => reportedTexts(page)).toContain('Andre punkt (endret)')
     const blocks = await blocksOf(page)
@@ -21,6 +28,7 @@ test.describe('lists', () => {
   test('Enter continues a list with a new item of the same kind and level', async ({ page }) => {
     await openEditor(page, 'lists')
     await caretAtEndOf(page, 'Underpunkt')
+    await editorHasCaretInBullet(page)
     await pressAndWait(page, 'Enter')
     await page.keyboard.type('Nytt underpunkt')
     await expect.poll(() => reportedTexts(page)).toContain('Nytt underpunkt')
@@ -42,6 +50,7 @@ test.describe('lists', () => {
   test('Tab indents an item and Shift+Tab takes it back', async ({ page }) => {
     await openEditor(page, 'lists')
     await caretAtEndOf(page, 'Andre punkt')
+    await editorHasCaretInBullet(page)
     await pressAndWait(page, 'Tab')
     await expect.poll(async () => listOf((await blocksOf(page))[1])).toEqual({ kind: 'bullet', level: 2 })
     await pressAndWait(page, 'Shift+Tab')
