@@ -9,6 +9,9 @@
  *   already   → only the stamp moves
  *   conflict  → left alone, listed (Sanity changed and the graph was edited)
  *   review    → left alone, listed (no baseline)
+ *   reset     → applied like clean, and listed: a description edited in the graph is rewritten from
+ *               Sanity, the master until the cutover (#119, RESET_FROM_SANITY in scripts/lib/event-sync.ts).
+ *               The overwritten text is in the backup below. `--keep-graph-edits` switches that off for a run.
  * New events are created as Operations. Events deleted in Sanity are
  * listed; `--accept-delete=<slug>,…` deletes them, unless something was
  * added to them in the graph.
@@ -22,7 +25,7 @@
  * affected events (node, edges, description) are saved to
  * data/sanity-delta/event-before-<time>.json.
  *
- * Usage: npx tsx scripts/sync/sync-event.ts [--write] [--accept-delete=<slug>,…]
+ * Usage: npx tsx scripts/sync/sync-event.ts [--write] [--accept-delete=<slug>,…] [--keep-graph-edits]
  *        npx tsx scripts/sync/sync-event.ts --stamp [--write]   stamp the baseline into the graph, nothing else (#80)
  */
 
@@ -33,7 +36,7 @@ import neo4j, { type ManagedTransaction } from 'neo4j-driver'
 import { loadEnv } from '../lib/env.ts'
 import { neo4jDriver, type Doc } from '../lib/person-sync.ts'
 import {
-  EVENT_FIELDS, calibrateEvents, classifyEvent, fetchGraphEvents, fetchSanityEvents,
+  EVENT_FIELDS, RESET_FROM_SANITY, calibrateEvents, classifyEvent, fetchGraphEvents, fetchSanityEvents,
   eventsToStamp, loadAprilEvents, stampsFor, verifyEventStamps, type EventVerdict, type GraphEvent,
 } from '../lib/event-sync.ts'
 import {
@@ -44,6 +47,7 @@ loadEnv()
 
 const write = process.argv.includes('--write')
 const stampOnly = process.argv.includes('--stamp')
+const reset: ReadonlySet<string> = process.argv.includes('--keep-graph-edits') ? new Set() : RESET_FROM_SANITY
 const acceptDelete = new Set(
   (process.argv.find(a => a.startsWith('--accept-delete='))?.slice('--accept-delete='.length) ?? '')
     .split(',').map(x => x.trim()).filter(Boolean))
@@ -160,7 +164,7 @@ async function main() {
   const errors: string[] = []
   try {
     const l = await loadLookups(read)
-    const calib = calibrateEvents(graph, sanity, base, l)
+    const calib = calibrateEvents(graph, sanity, base, l, reset)
     const off = Object.entries(calib).filter(([, c]) => c.agree !== c.total)
     console.log(`Calibration: ${off.length ? off.map(([n, c]) => `${n} ${c.total - c.agree} differ`).join(', ') : `${Object.values(calib)[0]?.total ? `graph equals its stamps${base.size ? ' and baseline' : ''} (${Object.values(calib)[0].total} events)` : 'nothing to check — no stamped event, and no baseline file'}`}`)
 
@@ -197,16 +201,18 @@ async function main() {
     const skipped: string[] = []
     const changed: Plan[] = []
     const verdictCount: Record<string, Record<EventVerdict, number>> = {}
+    const rewritten: string[] = []
     for (const g of graph.values()) {
       const s = sanity.get(g.sanityId)
       if (!s) continue
-      const fields = classifyEvent(g, s, base.get(g.sanityId), l)
+      const fields = classifyEvent(g, s, base.get(g.sanityId), l, reset)
       if (!fields.length) continue
       const plan: Plan = { id: g.sanityId, slug: g.slug, summary: [], stmts: [] }
       for (const { field, verdict } of fields) {
-        ;(verdictCount[field] ??= { already: 0, clean: 0, conflict: 0, review: 0 })[verdict]++
+        ;(verdictCount[field] ??= { already: 0, clean: 0, conflict: 0, review: 0, reset: 0 })[verdict]++
         if (verdict === 'conflict' || verdict === 'review') { skipped.push(`${g.slug}: ${field} (${verdict})`); continue }
-        if (verdict === 'clean') { plan.stmts.push(...applyField(field, g, s, l)); plan.summary.push(field) }
+        if (verdict === 'clean' || verdict === 'reset') { plan.stmts.push(...applyField(field, g, s, l)); plan.summary.push(field) }
+        if (verdict === 'reset') rewritten.push(`${g.slug}: ${field}`)
       }
       // Stamp the fields taken in; a conflict or review field keeps its old stamp.
       const held = new Set(fields.filter(f => f.verdict === 'conflict' || f.verdict === 'review').map(f => f.field))
@@ -245,6 +251,8 @@ async function main() {
     console.log(`\nFirst-run stamps: ${toStamp.length} events`)
     console.log(`Changed in Sanity: ${changed.length}`)
     for (const [f, v] of Object.entries(verdictCount).sort()) console.log(`  ${f.padEnd(13)} ${Object.entries(v).filter(([, n]) => n).map(([k, n]) => `${k} ${n}`).join(', ')}`)
+    console.log(`Rewritten from Sanity, a graph edit overwritten: ${rewritten.length}${reset.size ? '' : ' (off: --keep-graph-edits)'}`)
+    for (const r of rewritten) console.log(`  ↺ ${r}`)
     console.log(`New in Sanity: ${created.length}`)
     for (const c of created) console.log(`  + ${slugOf(c.doc)} — ${str(c.doc.title).slice(0, 70)}${c.plan.unresolved.length ? ` (${c.plan.unresolved.length} unresolved refs)` : ''}`)
     console.log(`Deleted in Sanity: ${deleted.length}`)
@@ -259,7 +267,7 @@ async function main() {
     mkdirSync(resolve(OUT, '..'), { recursive: true })
     writeFileSync(OUT, JSON.stringify({
       generatedAt: new Date().toISOString(), calibration: calib, errors, skipped,
-      changed: changed.map(c => ({ slug: c.slug, summary: c.summary })),
+      changed: changed.map(c => ({ slug: c.slug, summary: c.summary })), rewritten,
       created: created.map(c => ({ slug: slugOf(c.doc), title: c.doc.title, unresolved: c.plan.unresolved })),
       deleted: deleted.map(g => ({ slug: g.slug, name: g.name, additions: additions.get(g.sanityId) ?? [], accepted: acceptDelete.has(g.slug) })),
     }, null, 2) + '\n')

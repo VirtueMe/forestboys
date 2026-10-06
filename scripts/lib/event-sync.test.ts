@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { baselineSha, classifyEvent, eventsToStamp, sha, stampsFor, verifyEventStamps, type GraphEvent } from './event-sync.ts'
+import { baselineSha, calibrateEvents, classifyEvent, eventsToStamp, sha, stampsFor, verifyEventStamps, type GraphEvent } from './event-sync.ts'
 import type { Doc } from './person-sync.ts'
 import type { Lookups } from './event-rule.ts'
 import { linkArchiveBlocks } from '../../src/utils/archiveRefs.ts'
@@ -97,9 +97,15 @@ describe('classifyEvent with archive references in the description (#106)', () =
     expect(verdictOf(v, 'description')).toBe('clean')
   })
 
-  it('still calls a description edited in the graph a conflict', () => {
+  it('rewrites a description edited in the graph from Sanity instead of calling it a conflict (#119)', () => {
     const editedInGraph = [{ ...raw[0], children: [{ ...raw[0].children[0], text: 'Rettet i grafen AIR-27-1068-2' }] }]
     const v = classifyEvent(graphWith(editedInGraph, oldStamp), doc({ description: raw }), undefined, l)
+    expect(verdictOf(v, 'description')).toBe('reset')
+  })
+
+  it('still calls a description edited in the graph a conflict when nothing is reset from Sanity', () => {
+    const editedInGraph = [{ ...raw[0], children: [{ ...raw[0].children[0], text: 'Rettet i grafen AIR-27-1068-2' }] }]
+    const v = classifyEvent(graphWith(editedInGraph, oldStamp), doc({ description: raw }), undefined, l, new Set())
     expect(verdictOf(v, 'description')).toBe('conflict')
   })
 
@@ -136,5 +142,48 @@ describe('eventsToStamp / verifyEventStamps', () => {
     const { checked, differ } = check(g, s)
     expect(checked).toBe(1)
     expect(differ).toEqual([])
+  })
+})
+
+describe('a description edited in the graph while Sanity is unchanged (#119)', () => {
+  const l = lookups()
+  const text = (t: string) => [{ _key: 'b1', _type: 'block', markDefs: [], children: [{ _key: 's1', _type: 'span', marks: [], text: t }] }]
+  const sanityDoc = doc({ description: text('Original') })
+  const stamps = stampsFor(sanityDoc, l)
+  const edited = graphEvent({ description: JSON.stringify(text('Test i grafen')), stamps })
+  const clean = graphEvent({ description: JSON.stringify(text('Original')), stamps })
+  const calibration = (g: GraphEvent, reset?: ReadonlySet<string>) =>
+    calibrateEvents(new Map([['e1', g]]), new Map([['e1', sanityDoc]]), new Map(), l, reset)
+
+  it('is a reset: Sanity has not changed, the graph differs', () => {
+    expect(verdictOf(classifyEvent(edited, sanityDoc, undefined, l), 'description')).toBe('reset')
+  })
+
+  it('is not a reset when the graph holds Sanity\'s text', () => {
+    expect(classifyEvent(clean, sanityDoc, undefined, l)).toEqual([])
+  })
+
+  it('is a reset with no stamp and no baseline too: Sanity is the master', () => {
+    const v = classifyEvent({ ...edited, stamps: {} }, sanityDoc, undefined, l)
+    expect(verdictOf(v, 'description')).toBe('reset')
+  })
+
+  it('does not fail calibration', () => {
+    const c = calibration(edited)
+    expect(c.description).toBeUndefined()
+    expect(Object.values(calibration(clean)).every(x => x.agree === x.total)).toBe(true)
+  })
+
+  it('fails calibration when nothing is reset from Sanity (the cutover)', () => {
+    const c = calibration(edited, new Set())
+    expect(c.description.agree).toBe(0)
+    expect(c.description.total).toBe(1)
+  })
+
+  it('leaves other fields alone: an edited title is still a conflict, not a reset', () => {
+    const g = graphEvent({ name: 'Landing (edited)', stamps })
+    const v = classifyEvent(g, doc({ title: 'Landing at dawn', description: text('Original') }), undefined, l)
+    expect(verdictOf(v, 'title')).toBe('conflict')
+    expect(calibration(graphEvent({ name: 'Landing (edited)', stamps })).title.agree).toBe(0)
   })
 })
