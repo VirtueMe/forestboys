@@ -3,9 +3,12 @@ import type { Block, Harness } from '../harness/types.ts'
 
 type WithHarness = { __harness: Harness }
 
-/** Open the harness with a named fixture (e2e/harness/fixtures.ts) and wait for the editor to be there. */
-export async function openEditor(page: Page, fixture = 'empty') {
-  await page.goto(`/e2e/harness/editor.html?fixture=${fixture}`)
+/**
+ * Open the harness with a named fixture (e2e/harness/fixtures.ts) and wait for the editor to be there.
+ * `scroller` puts the editor in a scroll container like the app's page, for the tests of where a scroll goes.
+ */
+export async function openEditor(page: Page, fixture = 'empty', options: { scroller?: boolean } = {}) {
+  await page.goto(`/e2e/harness/editor.html?fixture=${fixture}${options.scroller ? '&scroller=1' : ''}`)
   await expect(page.locator('.pt-editable')).toBeVisible()
 }
 
