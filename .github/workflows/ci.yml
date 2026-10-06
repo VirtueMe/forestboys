@@ -44,12 +44,12 @@ jobs:
           VITE_SANITY_PROJECT_ID: ${{ vars.VITE_SANITY_PROJECT_ID }}
           VITE_SANITY_DATASET: ${{ vars.VITE_SANITY_DATASET }}
 
-      # The editor harness for the e2e tests (#129) is a dev-only page; the build has one entry, index.html.
-      # This fails if it ever gets into the build.
+      # The harness pages for the e2e tests (#129, #139) are dev-only; the build has one entry, index.html.
+      # This fails if any of them ever gets into the build. A new harness page names itself here.
       - name: The e2e harness is not in the build
         run: |
-          if grep -rlE '__harness|Editor harness' dist; then
-            echo "::error::the e2e harness is in the build"
+          if grep -rlE '__harness|Editor harness|Contrast harness|Outline harness' dist; then
+            echo "::error::an e2e harness page is in the build"
             exit 1
           fi
 

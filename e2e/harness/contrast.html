@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="nb">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Contrast harness</title>
+    <!--
+      A dev-only page for the design-check tests (#139): text in colours whose right verdict is known, so the
+      browser collector is tested against known answers, not against a real page. Texts say what they are:
+      ok-… passes, bad-… fails, notjudged-… cannot be judged, skipped-… must not be reported at all.
+    -->
+    <style>
+      body { margin: 0; font: 16px sans-serif; background: #fff; color: #000; }
+      #placeholder-field::placeholder { color: #aaa; }
+    </style>
+  </head>
+  <body>
+    <p>ok-black-on-white</p>
+    <p style="color: #777">bad-grey-on-white</p>
+    <p>ok <span style="color: #777">bad-inline-grey</span></p>
+    <p style="color: #777; font-size: 24px">ok-large-grey</p>
+    <p style="color: #777; font-size: 19px; font-weight: 700">ok-bold-large-grey</p>
+    <p style="color: rgba(0, 0, 0, 0.5)">bad-alpha-black</p>
+    <p style="opacity: 0.5">bad-opacity-half</p>
+    <div style="background: #222"><div style="background: rgba(255, 255, 255, 0.1)"><p style="color: #e6e6e6">ok-layered</p></div></div>
+    <div style="background: linear-gradient(#fff, #000)"><p style="color: #fff">notjudged-gradient</p></div>
+    <div style="background: url(data:image/gif;base64,R0lGODlhAQABAAAAACw=)"><p>notjudged-image</p></div>
+    <input id="placeholder-field" placeholder="bad-placeholder" />
+    <p style="display: none">skipped-display-none</p>
+    <p style="visibility: hidden">skipped-visibility</p>
+    <p style="opacity: 0">skipped-opacity-zero</p>
+    <button disabled style="color: #aaa; background: #fff">skipped-disabled</button>
+    <svg width="40" height="20"><text x="0" y="15" fill="#ccc">skipped-svg</text></svg>
+    <!-- Stands in for the Vue devtools that Vite adds to every page in development: not the app, not judged. -->
+    <div id="__vue-devtools-container__"><p style="color: #ccc">skipped-tooling</p></div>
+  </body>
+</html>
