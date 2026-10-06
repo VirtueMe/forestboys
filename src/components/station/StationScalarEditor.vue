@@ -1,6 +1,6 @@
 <template>
   <section class="edit-section">
-    <h3 class="edit-section-heading">{{ createMode ? 'Ny stasjon' : 'Stasjon' }}</h3>
+    <h2 class="edit-section-heading">{{ createMode ? 'Ny stasjon' : 'Stasjon' }}</h2>
 
     <div class="edit-row">
       <label class="edit-label" for="edit-station-name">Navn</label>

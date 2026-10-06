@@ -1,7 +1,7 @@
 <template>
   <section class="edit-section">
     <div class="edit-section-head">
-      <h3 class="edit-section-heading">{{ label }}</h3>
+      <h2 class="edit-section-heading">{{ label }}</h2>
       <button type="button" class="edit-btn-outline" @click="addEntry">{{ addLabel }}</button>
     </div>
     <div v-if="!entries.length" class="edit-empty">{{ emptyLabel }}</div>

@@ -1,6 +1,6 @@
 <template>
   <section class="edit-section">
-    <h3 class="edit-section-heading">{{ createMode ? 'Ny person' : 'Grunnleggende' }}</h3>
+    <h2 class="edit-section-heading">{{ createMode ? 'Ny person' : 'Grunnleggende' }}</h2>
     <div class="edit-row">
       <label class="edit-label">Type</label>
       <div class="type-seg">

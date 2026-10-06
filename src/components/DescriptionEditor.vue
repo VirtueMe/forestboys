@@ -1,6 +1,6 @@
 <template>
   <section class="edit-section">
-    <h3 class="edit-section-heading">{{ label }}</h3>
+    <h2 class="edit-section-heading">{{ label }}</h2>
     <SectionsEditor :sections="draft" />
   </section>
 
