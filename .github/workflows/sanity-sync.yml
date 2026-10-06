@@ -56,6 +56,11 @@ jobs:
       - name: Person sync
         run: npx tsx scripts/sync/sync-person.ts --production ${{ (github.event_name == 'schedule' || inputs.write) && '--write' || '' }}
 
+      # Before the events: a transport new in Sanity must have its node when an event links it.
+      - name: Transport sync
+        if: ${{ !cancelled() }}
+        run: npx tsx scripts/sync/sync-transport.ts --production ${{ (github.event_name == 'schedule' || inputs.write) && '--write' || '' }}
+
       - name: Event sync
         if: ${{ !cancelled() }}
         run: npx tsx scripts/sync/sync-event.ts --production ${{ (github.event_name == 'schedule' || inputs.write) && '--write' || '' }}
