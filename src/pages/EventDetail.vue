@@ -151,7 +151,7 @@
               target="_blank"
               rel="noopener noreferrer"
               class="ext-link"
-            >{{ link.title || link.link }} <span class="ext-icon">↗</span></a>
+            >{{ link.title || link.link }} <span class="ext-icon" aria-hidden="true">↗</span></a>
           </div>
         </section>
 
