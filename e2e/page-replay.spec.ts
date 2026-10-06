@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test'
-import { replayPage } from './helpers/replay.ts'
+import { openRecordedEditMode, replayPage } from './helpers/replay.ts'
 import { PAGES } from './pages.ts'
 
 // The recorded pages render from their recordings alone (#139). If these fail, the design checks on the pages
@@ -11,6 +11,14 @@ test.describe('the recorded pages', () => {
       await page.goto(target.path)
       await expect(page.locator('h1').first()).toContainText(target.title)
       await page.waitForLoadState('networkidle')
+      expect(replay.misses()).toEqual([])
+    })
+  }
+
+  // Edit mode asks for more (the lists its pickers offer): the recording holds them too (#140).
+  for (const target of PAGES.filter(t => t.edit !== false)) {
+    test(`${target.kind} «${target.slug}» renders in edit mode from its recording, with nothing missing`, async ({ page }) => {
+      const replay = await openRecordedEditMode(page, target)
       expect(replay.misses()).toEqual([])
     })
   }

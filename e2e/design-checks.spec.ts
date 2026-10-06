@@ -2,7 +2,7 @@ import { expect, test } from '@playwright/test'
 import { judgeText, type Violation } from '../src/utils/contrast.ts'
 import { checkPageOutline } from '../src/utils/pageOutline.ts'
 import { collectHeadings, collectTextSamples } from './helpers/collect.ts'
-import { openRecordedPage } from './helpers/replay.ts'
+import { openRecordedEditMode, openRecordedPage } from './helpers/replay.ts'
 import { PAGES } from './pages.ts'
 
 // The design checks on the real pages (#139), rendered from their recordings. They judge what the page
@@ -40,6 +40,19 @@ test.describe('the heading outline', () => {
       const headings = await collectHeadings(page)
       expect(checkPageOutline(headings).map(p => p.message)).toEqual([])
       expect(headings.length).toBeGreaterThanOrEqual(target.minHeadings ?? 2)   // it rendered more than a title
+    })
+  }
+})
+
+// The same outline in the edit mode an admin sees (#140): the page is opened with `/auth/me` answered as an
+// admin and «Rediger» chosen. Only what is visible counts, and in edit mode that is the edit pane, not the preview.
+test.describe('the heading outline in edit mode', () => {
+  for (const target of PAGES.filter(t => t.edit !== false)) {
+    test(`${target.kind} «${target.slug}»: one h1, and no skipped level`, async ({ page }) => {
+      await openRecordedEditMode(page, target)
+      const headings = await collectHeadings(page)
+      expect(checkPageOutline(headings).map(p => p.message)).toEqual([])
+      expect(headings.length).toBeGreaterThanOrEqual(target.minHeadings ?? 2)
     })
   }
 })

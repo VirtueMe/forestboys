@@ -581,6 +581,113 @@
    ]
   },
   {
+   "query": "\n        MATCH (p:Person)\n        RETURN p.slug AS slug,\n               p.canonicalName + CASE WHEN p.birthYear IS NOT NULL THEN ' (' + toString(p.birthYear) + ')' ELSE '' END AS name\n        ORDER BY p.canonicalName\n      ",
+   "params": {},
+   "rows": [
+    {
+     "slug": "1-mekanikar-2-piloter-en-uk-officer-en-britisk-soldat-en-britisk-predikant-og-en-tysk-jode",
+     "name": "1 mekanikar ,2 piloter, en UK Officer, en britisk soldat, en britisk predikant og en tysk Jøde."
+    },
+    {
+     "slug": "1-britiske-soldater",
+     "name": "1 nordmann og 11 britiske soldater"
+    },
+    {
+     "slug": "1-officer-lorentzen",
+     "name": "1. Officer Lorentzen"
+    },
+    {
+     "slug": "1-officer-abney",
+     "name": "1.Officer Abney"
+    },
+    {
+     "slug": "10-flyktniner-fra-djupevag-og-3-juletraer",
+     "name": "10 Flyktniner fra Djupevåg og 3 juletrær"
+    },
+    {
+     "slug": "10-norwegian-marine-special-force",
+     "name": "10 Norwegian Marine Special Force"
+    },
+    {
+     "slug": "11-flyktninger",
+     "name": "11 flyktninger"
+    },
+    {
+     "slug": "11-mann-motig-i",
+     "name": "11 mann MK Motig I"
+    },
+    {
+     "slug": "11-omkomne-war-bride",
+     "name": "11 omkomne \"WAR BRIDE\""
+    },
+    {
+     "slug": "12-flyktninger-med-mk-bofjord",
+     "name": "12 flyktninger med MK Bøfjord"
+    },
+    {
+     "slug": "12-flyktninger-med-mk-traust-stjernen",
+     "name": "12 flyktninger med MK Traust/Stjernen"
+    },
+    {
+     "slug": "13-flyktninger-mk-glinmt",
+     "name": "13 Flyktninger MK GLINMT"
+    },
+    {
+     "slug": "13-flyktninger",
+     "name": "13 Flyktninger"
+    },
+    {
+     "slug": "14-flyktinger-fedje",
+     "name": "14 flyktinger Fedje"
+    },
+    {
+     "slug": "16-totalt-dro-over",
+     "name": "16 totalt dro over"
+    },
+    {
+     "slug": "16-flyktninger-fra-vefsn",
+     "name": "17 flyktninger fra Vefsn"
+    },
+    {
+     "slug": "19-flyktinger-tananger-til-aberdeen",
+     "name": "19 flyktinger Tananger til Aberdeen"
+    },
+    {
+     "slug": "19-flyktninger-ms-arnafjord",
+     "name": "19 flyktninger MS Arnafjord"
+    },
+    {
+     "slug": "19-flyktninger-fra-hernar",
+     "name": "19 flyktninger fra Hernar"
+    },
+    {
+     "slug": "19-kjente",
+     "name": "19 kjente"
+    },
+    {
+     "slug": "1st-officer-campbell",
+     "name": "1st Officer Campbell"
+    },
+    {
+     "slug": "1st-offiser-fowler",
+     "name": "1st Offiser Fowler"
+    },
+    {
+     "slug": "1st-off-tennyson",
+     "name": "1st off Tennyson BOAC"
+    },
+    {
+     "slug": "2-barn-aud-og-maria-dronen",
+     "name": "2 barn, Aud og Marta Drønen"
+    },
+    {
+     "slug": "2-britiske-offiserer",
+     "name": "2 britiske offiserer"
+    }
+   ],
+   "truncatedFrom": 3957
+  },
+  {
    "query": "\n    MATCH (p:Person)-[r:STATIONED_AT]->(t:Station {slug: $slug})\n    OPTIONAL MATCH (p)-[:HAS_STATIONED_NOTE]->(d:Description {stayId: r.id})\n    OPTIONAL MATCH (d)-[:SOURCED_FROM]->(from:Source)\n    WITH p, r, t, d, from\n    OPTIONAL MATCH (d)-[cites:CITES]->(src:Source)\n    WITH p, r, t, d, from,\n         collect(CASE WHEN src IS NULL THEN NULL ELSE {\n           inline:       coalesce(cites.inline, false),\n           sourceId:     src.id,\n           sourceTitle:  src.title,\n           sourceUrl:    src.url,\n           sourceAuthor: src.authorFreeText\n         } END) AS rawCites\n    WITH p, r, t,\n         CASE WHEN d IS NULL THEN NULL ELSE {\n           order:     coalesce(d.order, 1),\n           content:   d.content,\n           citations: [x IN rawCites WHERE x IS NOT NULL],\n           sourcedFrom: CASE WHEN from IS NULL THEN NULL ELSE {\n             id:             from.id,\n             title:          from.title,\n             url:            from.url,\n             authorFreeText: from.authorFreeText,\n             license:        from.license,\n             attribution:    from.attribution\n           } END\n         } END AS section\n    WITH p, r, t, collect(section) AS rawSections\n    RETURN r.id AS edgeId, r.state AS state, coalesce(r.sourceRefs, []) AS sourceRefs, p.slug AS targetSlug, p.canonicalName AS targetName, r.role AS role, r.startDate AS startDate, r.endDate AS endDate,\n           [x IN rawSections WHERE x IS NOT NULL] AS sections\n    ORDER BY startDate, targetName\n  ",
    "params": {
     "slug": "raf-harrington"

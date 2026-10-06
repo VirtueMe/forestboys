@@ -17,6 +17,8 @@ export interface PageTarget {
   title: string
   /** How many headings the page has at least; two (a title and a section) unless it is a list. */
   minHeadings?: number
+  /** Has an edit mode (the «Rediger» tab an admin sees). True unless it says false: the events list has none. */
+  edit?: boolean
 }
 
 export const PAGES: PageTarget[] = [
@@ -29,7 +31,7 @@ export const PAGES: PageTarget[] = [
   { kind: 'transport', slug: '37-fly',           path: '/transport/37-fly',       title: '37 fly' },
   { kind: 'outline',   slug: 'eksportgruppe-torsvik', path: '/outlines/eksportgruppe-torsvik', title: 'Eksportgruppe' },
   { kind: 'event',     slug: 'forste-mote-om-mostandsbevegelse-i-london', path: '/events/forste-mote-om-mostandsbevegelse-i-london', title: 'Første møte' },
-  { kind: 'events',    slug: 'list',             path: '/events',                 title: 'Hendelser', minHeadings: 1 },
+  { kind: 'events',    slug: 'list',             path: '/events',                 title: 'Hendelser', minHeadings: 1, edit: false },
 ]
 
 /** Where the recording of a page is kept. */
