@@ -108,7 +108,7 @@ describe('classifyDescription', () => {
 })
 
 describe('the types it covers', () => {
-  it.each(['transport', 'station'])('%s: the graph label, the Sanity type and the id the editor uses', key => {
+  it.each(['transport', 'station', 'location'])('%s: the graph label, the Sanity type and the id the editor uses', key => {
     const kind = KINDS[key]
     expect(kind.key).toBe(key)
     expect(kind.sanityType).toBe(key)
