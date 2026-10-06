@@ -102,6 +102,13 @@ export default tseslint.config(
     },
   },
 
+  // ── the e2e editor harness (browser code, #129) ───────────────────────────
+  {
+    files: ['e2e/harness/**/*.ts'],
+    languageOptions: { globals: { ...globals.browser, ...globals.es2022 } },
+    rules: { 'no-undef': 'off' },
+  },
+
   // ── functions (Cloudflare Pages Functions — Workers runtime) ──────────
   {
     files: ['functions/**/*.ts'],

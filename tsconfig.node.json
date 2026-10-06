@@ -20,5 +20,6 @@
     "erasableSyntaxOnly": true,
     "noFallthroughCasesInSwitch": true
   },
-  "include": ["vite.config.ts", "vitest.config.ts", "eslint.config.ts", "playwright.config.ts", "scripts/**/*.ts", "e2e/**/*.ts"]
+  "include": ["vite.config.ts", "vitest.config.ts", "eslint.config.ts", "playwright.config.ts", "scripts/**/*.ts", "e2e/**/*.ts"],
+  "exclude": ["e2e/harness"]
 }
