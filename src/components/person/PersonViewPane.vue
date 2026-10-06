@@ -2,7 +2,7 @@
   <!-- Single root so the page's v-show applies. -->
   <div class="view-pane">
     <section v-if="previewSections.length || person.descriptionHtml || person.description" class="section">
-      <h3 class="section-heading">Beskrivelse</h3>
+      <h2 class="section-heading">Beskrivelse</h2>
       <DescriptionPreview v-if="previewSections.length" :sections="previewSections" itemprop="description" />
       <LegacyDescription v-else :html="person.descriptionHtml" :text="person.description" itemprop="description" />
     </section>
@@ -20,7 +20,7 @@
     />
 
     <section v-if="galleryImages.length" class="section">
-      <h3 class="section-heading">Galleri ({{ galleryImages.length }})</h3>
+      <h2 class="section-heading">Galleri ({{ galleryImages.length }})</h2>
       <ImageSlider :images="galleryImages" />
     </section>
 

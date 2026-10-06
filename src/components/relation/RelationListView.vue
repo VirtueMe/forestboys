@@ -1,6 +1,6 @@
 <template>
   <component :is="headless ? 'div' : 'section'" v-if="entries.length" :class="{ section: !headless }">
-    <h3 v-if="!headless" class="section-heading">{{ label }} ({{ entries.length }})</h3>
+    <h2 v-if="!headless" class="section-heading">{{ label }} ({{ entries.length }})</h2>
     <div class="relation-list">
       <div
         v-for="(e, i) in entries"
