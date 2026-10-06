@@ -1,5 +1,5 @@
 <template>
-  <div ref="host" class="pt-editor-host"></div>
+  <div ref="host" class="pt-editor-host" :class="{ 'pt-editor-host--full': expanded }"></div>
 </template>
 
 <script setup lang="ts">
@@ -15,15 +15,32 @@ const emit = defineEmits<{ 'update:modelValue': [blocks: PortableTextBlock[]] }>
 const host = ref<HTMLElement | null>(null)
 let root: Root | null = null
 
+// Full window (#123): the same editor, the same React root, only the host's size changes — so the
+// draft, the selection and the undo history are the ones the inline editor has. Not a second editor.
+const expanded = ref(false)
+
 function render() {
   if (!root) return
   root.render(
     React.createElement(PortableTextEditorReact, {
       value:    props.modelValue,
       onChange: (blocks: PortableTextBlock[]) => emit('update:modelValue', blocks),
+      expanded: expanded.value,
+      onToggleExpand: () => { expanded.value = !expanded.value },
     }),
   )
 }
+
+// Esc shrinks it again — unless something inside already used the key (the Lenke box closes on Esc).
+function onKeydown(e: KeyboardEvent) {
+  if (e.key === 'Escape' && !e.defaultPrevented) expanded.value = false
+}
+
+watch(expanded, on => {
+  render()
+  if (on) document.addEventListener('keydown', onKeydown)
+  else document.removeEventListener('keydown', onKeydown)
+})
 
 onMounted(() => {
   if (!host.value) return
@@ -33,6 +50,7 @@ onMounted(() => {
 })
 
 onBeforeUnmount(() => {
+  document.removeEventListener('keydown', onKeydown)
   root?.unmount()
   root = null
 })
@@ -78,6 +96,33 @@ onBeforeUnmount(() => {
   width: 1px;
   background: var(--rule);
   margin: 2px 4px;
+}
+
+/* Icon buttons (link, expand) centre their svg. */
+.pt-tb-btn svg { display: block; }
+
+/* Far right of the toolbar, as in Sanity. */
+.pt-tb-expand { margin-left: auto; display: inline-flex; align-items: center; gap: 4px; }
+
+/* Full window (#123): the host fills the viewport above the nav (z-index 100–200) and the save bar,
+   below anything modal. overscroll-behavior stops a scroll that reaches the end of the text from
+   moving the page behind it. */
+.pt-editor-host--full {
+  position: fixed;
+  inset: 0;
+  z-index: 500;
+  display: flex;
+  flex-direction: column;
+  padding: 12px max(12px, calc((100vw - 960px) / 2));
+  background: var(--paper);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+.pt-editor-host--full .pt-editable {
+  flex: 1;
+  min-height: 0;
+  max-height: none;
+  overscroll-behavior: contain;
 }
 
 /* The text scrolls inside its box, as in Sanity, so the toolbar above it stays in view (#123). */
