@@ -354,6 +354,47 @@ bundles.
   `--accept-delete=<slug>,…` and are blocked by graph additions.
 - Refuses to write unless calibration is 100%; backs up touched events first.
 
+### Descriptions of transports, stations and locations
+
+Their descriptions were never imported (#99); the pages showed none. One sync
+carries them, and keeps carrying Jan's edits, for the types listed in `KINDS`
+(`scripts/lib/description-sync.ts`): **transports** so far, then stations and
+locations. Only the description: their links are already `:Source` nodes
+(`(owner)-[:REFERENCED_IN]->(:Source)`, the same shape for every type) and the
+sync does not touch them.
+
+`npx tsx scripts/sync/sync-description.ts --type=transport|all [--write]` (a dry
+run unless `--write`; the daily job runs `--type=all`). Per node:
+
+```
+(n)-[:HAS_CONTENT]->(Description {id: 'desc:<kind>:<slug>:1', order: 1, content})
+```
+
+the shape the editor writes (`functions/api/admin/<kind>/[slug]/sections.ts`) and
+the person import wrote. `content` is Sanity's Portable Text with its AIR 27
+references made links (`linkArchiveBlocks`, #106), so a description is stored
+the same way for every type. The stamp sits on the parent node, as for people:
+`description_sha` (the hash of that value as last taken in), with
+`description_sourceRef`, `description_state: 'candidate'` and
+`description_sanityUpdatedAt`.
+
+| Verdict | When | What happens |
+|---|---|---|
+| unchanged | Sanity has not changed since the stamp, or neither side has text | nothing |
+| new | no stamp, nothing in the graph, text in Sanity | imported |
+| clean | Sanity changed, the graph still holds the stamped text | applied |
+| already | Sanity changed, the graph already holds the new text | only the stamp moves |
+| conflict | Sanity changed and the graph text was edited (or taken away) | left alone, listed |
+| review | no stamp, and the graph has text of its own | left alone, listed |
+
+Graph text is never overwritten: only `new` and `clean` write, and a Description
+that is already there keeps its node, id and edges (an editor's citations stay) —
+only its text changes. An edit in the
+editor (which replaces the Description and leaves the stamp) is not a conflict
+until Sanity changes the same description. Before writing, the nodes it will
+change are saved to `data/sanity-delta/description-before-<type>-<time>.json`;
+`SyncState {type: '<kind>-description'}` records the run.
+
 ### Reshaped documents — curated mappings
 
 Where the import did more than copy fields, the three-way compare has

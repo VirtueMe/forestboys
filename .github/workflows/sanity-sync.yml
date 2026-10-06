@@ -60,6 +60,10 @@ jobs:
         if: ${{ !cancelled() }}
         run: npx tsx scripts/sync/sync-event.ts --production ${{ (github.event_name == 'schedule' || inputs.write) && '--write' || '' }}
 
+      - name: Description sync
+        if: ${{ !cancelled() }}
+        run: npx tsx scripts/sync/sync-description.ts --type=all --production ${{ (github.event_name == 'schedule' || inputs.write) && '--write' || '' }}
+
       - name: Heartbeat
         if: ${{ !cancelled() }}
         run: npx tsx scripts/sync/heartbeat.ts --production ${{ (github.event_name == 'schedule' || inputs.write) && '--write' || '' }}
