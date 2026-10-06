@@ -217,7 +217,7 @@ async function fetchFromNeo4j(): Promise<IdbCache> {
                organization: org.canonicalName, district: dist.canonicalName}
             END) AS events
        RETURN t.sanityId AS _id, t.slug AS slug, t.canonicalName AS name,
-              t.type AS type, t.rawUnit AS unit, t.regser AS regser, t.reserve AS reserve,
+              t.type AS type, coalesce(t.unit, t.rawUnit) AS unit, t.regser AS regser, t.reserve AS reserve,
               [e IN events WHERE e IS NOT NULL] AS events`),
 
     // Lean events — for the global event list (timeline, filters, etc.).

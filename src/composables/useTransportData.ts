@@ -115,7 +115,7 @@ export function useTransportData() {
           `MATCH (t:Transport {slug: $slug})
            RETURN coalesce(t.canonicalName, t.name) AS name,
                   t.type        AS type,
-                  coalesce(t.rawUnit, t.unit) AS unit,
+                  coalesce(t.unit, t.rawUnit) AS unit,
                   t.regser      AS regser,
                   t.reserve     AS reserve,
                   t.description AS description,
