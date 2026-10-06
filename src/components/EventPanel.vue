@@ -66,11 +66,7 @@
 
       <!-- Base (incident: AT_STATION) / Stasjoner (operation: FROM/TO_STATION) -->
       <section v-if="event.stationFrom || event.stationTo" class="section">
-        <h3 class="section-heading">{{
-          event.kind === 'operation'
-            ? (event.stationFrom && event.stationTo ? 'Stasjoner' : (event.stationFrom ? 'Fra Base' : 'Til Base'))
-            : 'Base'
-        }}</h3>
+        <h3 class="section-heading">{{ stationHeading }}</h3>
         <RouterLink v-if="event.stationFrom" :to="`/station/${event.stationFrom.slug}`" class="section-link">
           {{ event.stationFrom.title }}
         </RouterLink>
@@ -146,6 +142,7 @@ import { ref, computed, watch } from 'vue'
 import { useRouter, RouterLink } from 'vue-router'
 import { SANITY_IMG } from '../config/sanity.ts'
 import { blocksToHtml } from '../utils/portableText.ts'
+import { stationHeading as stationHeadingFor } from '../utils/stationHeading.ts'
 import type { IdbEventDetail } from '../types/idb.ts'
 import AdminViewTabs, { type AdminViewMode } from './AdminViewTabs.vue'
 import BundleReviewPanel from './BundleReviewPanel.vue'
@@ -231,6 +228,7 @@ function onSavedScalar(out: { name?: string; date?: string | null }) {
 
 const displayName = computed(() => neoEvent.value?.canonicalName || props.event.title)
 const displayDate = computed(() => neoEvent.value?.date || props.event.date || '')
+const stationHeading = computed(() => stationHeadingFor(props.event.kind, props.event.stationFrom, props.event.stationTo))
 
 const meta = computed(() => {
   const parts: string[] = []
