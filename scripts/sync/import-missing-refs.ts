@@ -20,7 +20,7 @@
 
 import neo4j from 'neo4j-driver'
 import { loadEnv } from '../lib/env.ts'
-import { imageSources, isImportableUrl, linkSource, sanMigRef } from '../lib/person-rule.ts'
+import { imageSources, importableLinks, linkSource, sanMigRef } from '../lib/person-rule.ts'
 import { API, neo4jDriver, type Doc } from '../lib/person-sync.ts'
 import { fetchSanityEvents } from '../lib/event-sync.ts'
 loadEnv()
@@ -137,8 +137,7 @@ async function main() {
         for (const d of p.docs) {
           const props = nodeProps(p.label, d)
           const images = imageSources(d.gallery).map(i => ({ ...i, caption: i.caption ?? null }))
-          const titles = new Map(((d.links as { link?: string; title?: string }[] | undefined) ?? []).map(l => [l.link ?? '', l.title]))
-          const links = [...titles.keys()].filter(isImportableUrl).map(u => linkSource(u, titles.get(u)))
+          const links = importableLinks(d.links).map(l => linkSource(l.url, l.title))
           await ws.executeWrite(async tx => {
             await tx.run(`CREATE (n:\`${p.label}\`) SET n = $props`, { props })
             await tx.run(`

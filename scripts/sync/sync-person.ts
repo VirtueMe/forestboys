@@ -55,7 +55,7 @@ import {
   FIELDS, calibrate, classify, fetchGraphPeople, fetchSanityPeople, loadApril, neo4jDriver, stampsFromBaseline, verifyStamps,
   sanityLinks, stampFor, str, type Doc, type GraphPerson,
 } from '../lib/person-sync.ts'
-import { imageSources, linkSource, parsePerson, personClaims, rankEdge, sanMigRef } from '../lib/person-rule.ts'
+import { imageSources, importableLinks, linkSource, parsePerson, personClaims, rankEdge, sanMigRef } from '../lib/person-rule.ts'
 import { deletionStmts, deletionSummary, planDeletions } from '../lib/person-deletions.ts'
 import { writeStampUndo } from '../lib/stamp-undo.ts'
 loadEnv()
@@ -148,8 +148,7 @@ function nameStmts(id: string, name: string, setCanonical: boolean, g: GraphPers
 
 /** Replace the person's REFERENCED_IN edges with Sanity's links (only called when the graph's set is Sanity-derived). */
 function linksStmt(id: string, d: Doc): Stmt {
-  const titles = new Map(((d.links as { link?: string; title?: string }[] | undefined) ?? []).map(l => [l.link ?? '', l.title]))
-  const sources = sanityLinks(d).map(url => linkSource(url, titles.get(url)))
+  const sources = importableLinks(d.links).map(l => linkSource(l.url, l.title))
   return {
     text: `${P}
            OPTIONAL MATCH (p)-[r:REFERENCED_IN]->(s:Source) WHERE NOT s.id IN $ids DELETE r

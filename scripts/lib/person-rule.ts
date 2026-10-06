@@ -152,9 +152,27 @@ const DOMAIN_ATTRIBUTION: Record<string, string> = {
   'fanger.no': 'Fangeregisteret',
 }
 
-/** Links the original import took: the raw URL (untrimmed — a leading
- *  space made the Clojure `re-matches` fail) must be http(s) throughout. */
+/** An http(s) address, as given. The original import tested the raw, untrimmed value, and a
+ *  leading space made the Clojure `re-matches` fail: 78 links never arrived (#113). Callers go
+ *  through `importableLinks`, which trims first. */
 export const isImportableUrl = (url: string) => /^https?:\/\/.*$/i.test(url)
+
+export interface SanityLink { url: string; title: string | undefined }
+
+/**
+ * The importable links of a Sanity `links[]` field: addresses trimmed (stray whitespace is Jan's
+ * typing, not part of the address), http(s) only, one entry per address in document order, the
+ * last title of a repeated address winning. The one place that decides what a link is, so the
+ * Source id, the stored url and the sync's compare cannot disagree (#113).
+ */
+export function importableLinks(links: unknown): SanityLink[] {
+  const byUrl = new Map<string, string | undefined>()
+  for (const l of Array.isArray(links) ? links as ({ link?: unknown; title?: unknown } | null)[] : []) {
+    const url = typeof l?.link === 'string' ? l.link.trim() : ''
+    if (isImportableUrl(url)) byUrl.set(url, typeof l?.title === 'string' ? l.title : undefined)
+  }
+  return [...byUrl].map(([url, title]) => ({ url, title }))
+}
 
 export function extractDomain(url: string): string | null {
   const m = /^https?:\/\/(?:www\.)?([^/?#]+)/i.exec(url)

@@ -19,7 +19,7 @@ import { createHash } from 'node:crypto'
 import neo4j from 'neo4j-driver'
 import { stableJson } from './sanity-sha.ts'
 import { loadBaselineFile } from './baseline.ts'
-import { isImportableUrl, parsePerson, rankEdge, urlToId, imageSources } from './person-rule.ts'
+import { importableLinks, parsePerson, rankEdge, urlToId, imageSources } from './person-rule.ts'
 
 export const API      = 'https://7r6kqtqy.api.sanity.io/v2021-08-31/data/query/production'
 export const BASELINE = 'data/sanity-baseline-2026-04/sanity-person.json'
@@ -61,8 +61,7 @@ export const str = (v: unknown): string => (typeof v === 'string' || typeof v ==
 export const sha = (s: string) => createHash('sha256').update(s).digest('hex')
 const sortedJoin = (xs: string[]) => [...new Set(xs)].sort().join('\n')
 
-export const sanityLinks = (d: Doc) =>
-  ((d.links as { link?: string }[] | undefined) ?? []).map(l => l.link ?? '').filter(isImportableUrl)
+export const sanityLinks = (d: Doc) => importableLinks(d.links).map(l => l.url)
 
 /** image-<hash>-<WxH>-<ext> → <hash>-<WxH>.<ext>, the tail of the CDN url. */
 function imageKey(ref: string): string {
