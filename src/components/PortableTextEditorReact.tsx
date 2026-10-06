@@ -128,6 +128,18 @@ export interface Props {
   /** The editor fills the window (PortableTextEditor.vue sets the class on the host). */
   expanded:        boolean
   onToggleExpand:  () => void
+  /** Hands the page a way to read what the editor holds right now, not what it last reported (#145). */
+  registerReader:  (read: (() => PortableTextBlock[] | undefined) | null) => void
+}
+
+/** Renders nothing: gives `registerReader` the editor's own, synchronous snapshot of its value. */
+function ValueReader({ registerReader }: Pick<Props, 'registerReader'>) {
+  const editor = useEditor()
+  React.useEffect(() => {
+    registerReader(() => editor.getSnapshot().context.value)
+    return () => registerReader(null)
+  }, [editor, registerReader])
+  return null
 }
 
 function ToolbarButton({
@@ -607,7 +619,7 @@ function Toolbar({ expanded, onToggleExpand }: { expanded: boolean; onToggleExpa
   )
 }
 
-export function PortableTextEditorReact({ value, generation, onChange, expanded, onToggleExpand }: Props) {
+export function PortableTextEditorReact({ value, generation, onChange, expanded, onToggleExpand, registerReader }: Props) {
   return React.createElement(
     EditorProvider,
     { key: generation, initialConfig: { schemaDefinition, initialValue: value } },
@@ -616,6 +628,7 @@ export function PortableTextEditorReact({ value, generation, onChange, expanded,
         if (event.type === 'mutation' && event.value) onChange(event.value)
       },
     }),
+    React.createElement(ValueReader, { registerReader }),
     React.createElement(BehaviorPlugin, { behaviors: [replaceWords] }),
     React.createElement(Toolbar, { expanded, onToggleExpand }),
     React.createElement(PortableTextEditable, {

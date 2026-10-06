@@ -1,7 +1,7 @@
 <template>
   <section class="edit-section">
     <h2 class="edit-section-heading">{{ label }}</h2>
-    <SectionsEditor :sections="draft" />
+    <SectionsEditor ref="sectionsEditor" :sections="draft" />
   </section>
 
   <footer v-if="!hideSave && dirty" class="edit-save-bar">
@@ -124,6 +124,7 @@ function signature(arr: Section[]): string {
   )
 }
 
+const sectionsEditor = ref<InstanceType<typeof SectionsEditor> | null>(null)
 const draft    = ref<Section[]>([])
 const baseline = ref<Section[]>([])
 const saving   = ref(false)
@@ -218,6 +219,8 @@ function applyFix(l: LinkIssue, to: SlugHit) {
 }
 
 async function save() {
+  // The editors report a change late; take what is on the screen, not what they last said (#145).
+  sectionsEditor.value?.flush()
   error.value  = null
   linkIssues.value = []
   // The same check the server runs, so a refusal needs no round trip.
