@@ -43,3 +43,51 @@ jobs:
         env:
           VITE_SANITY_PROJECT_ID: ${{ vars.VITE_SANITY_PROJECT_ID }}
           VITE_SANITY_DATASET: ${{ vars.VITE_SANITY_DATASET }}
+
+      # The editor harness for the e2e tests (#129) is a dev-only page; the build has one entry, index.html.
+      # This fails if it ever gets into the build.
+      - name: The e2e harness is not in the build
+        run: |
+          if grep -rlE '__harness|Editor harness' dist; then
+            echo "::error::the e2e harness is in the build"
+            exit 1
+          fi
+
+  # End-to-end tests (#129). An ordinary job: Playwright installs the Chromium that belongs to the
+  # @playwright/test that npm ci installed, so there is no image or tag to keep in step with the package.
+  # Only the headless shell, which is what the tests run in: measured on a clean Debian, the install takes
+  # 20 s (31 s with the full Chromium) and the browser is 269 MB (662 MB), most of it apt and download that
+  # a cache would not save. If the install grows, cache ~/.cache/ms-playwright by Playwright version.
+  e2e:
+    name: End-to-end (Playwright)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - name: Install
+        run: npm ci
+
+      - name: Install the headless Chromium and the libraries it needs
+        run: npx playwright install --with-deps --only-shell chromium
+
+      - name: End-to-end tests
+        run: npm run test:e2e
+
+      # The report has the traces of failed tests (open one with `npx playwright show-trace`).
+      - name: Keep the report and the traces
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: playwright-report
+          path: |
+            playwright-report/
+            test-results/
+          retention-days: 14
+          if-no-files-found: ignore
