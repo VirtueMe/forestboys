@@ -9,7 +9,7 @@ colors:
   paper-raised: "#FBF7EE"
   paper-sunken: "#E8DFCC"
   rule: "#C8BFA9"
-  muted: "#6B6459"
+  muted: "#686257"
   faded-red: "#8B2E1F"
   faded-red-soft: "#A85A48"
   moss: "#4F5A3E"
@@ -141,7 +141,7 @@ The palette is four paper tones, one ink, one accent, plus functional utilities.
   inset regions. Reads as "below the page level."
 - **`rule` `#C8BFA9`** — hairline dividers, form-field underlines,
   card borders. 1px, always.
-- **`muted` `#6B6459`** — placeholder text, secondary caption metadata.
+- **`muted` `#686257`** — placeholder text, secondary caption metadata.
 - **`faded-red` `#8B2E1F`** — the Norwegian-flag-oxidized accent. Reserved
   for: primary call-to-action buttons, active-state indicators, the
   occasional editorial pull-quote or emphasis. Aim for **one to two** uses
@@ -156,17 +156,19 @@ The palette is four paper tones, one ink, one accent, plus functional utilities.
 ### Contrast rules
 
 The foreground/background pairs the design uses are declared under `components` in the front
-matter, and `npm run check:design` computes their contrast (WCAG 2.x, AA is 4.5:1 for normal text)
-with the linter of the DESIGN.md format, `@google/design.md`. The ratios used to be written here by
-hand and several were wrong, so none are quoted: the check is the source. A pair that is below AA
-today is listed in `scripts/design/check.ts` (`KNOWN_BELOW_AA`) until it is decided what to do with it (#134).
+matter, and **every one of them meets WCAG AA, 4.5:1 for normal text**. That is the promise of this
+document: a redesign may change the look and feel as it likes, as long as it keeps it. `npm run
+check:design` computes the ratios with the linter of the DESIGN.md format, `@google/design.md`, and
+fails the build (it runs in `npm test`) when a declared pair falls below. The ratios that used to be
+written here by hand were wrong, so none are quoted: the check is the source. A new pair of colours
+in use is declared as a `components` entry first.
 
-The rules of use stay:
+The rules of use:
 
 - `ink` on `paper` is body text; `ink-soft` is secondary text.
 - `muted` is for captions and metadata, never body prose.
-- `faded-red` as text on paper, and as a button background with `paper` text: test the pair at the
-  size it is used.
+- `faded-red` as text on paper, and as a button background with `paper` text: the pair is declared
+  and checked, but test it at the size it is used.
 
 ## Typography
 

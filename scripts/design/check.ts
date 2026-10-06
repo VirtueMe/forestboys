@@ -5,10 +5,9 @@
  * The two files declare the pairs the design uses as `components`, so the pair list is data.
  *
  * What is ours on top of the linter:
- *  - A ratchet for the pairs that are below AA today (KNOWN_BELOW_AA). The linter only warns, and
- *    its exit code is 0, so a new failing pair would pass unseen. Here a new failure fails, a listed
- *    pair that changed ratio fails, and a listed pair that now passes fails too (remove it), so the
- *    list can only shrink. What to do with those pairs is #134's last decision, not made here.
+ *  - The linter only warns and its exit code is 0, so a failing pair would pass unseen. Here a pair
+ *    below AA fails. The documents are a promise: a redesign may change the look as it likes as long
+ *    as every declared pair keeps meeting AA. There is no list of tolerated failures.
  *  - A drift check that the colours in the documents are the colours in src/assets/main.css.
  *
  * `npx tsx scripts/design/check.ts` prints the report and exits 1 on a problem. The pure functions
@@ -28,22 +27,6 @@ export const DESIGN_FILES: { theme: Theme; file: string }[] = [
   { theme: 'dark',  file: 'DESIGN-dark.md' },
 ]
 
-/**
- * Declared pairs below WCAG AA for normal text today, `theme:component` → the ratio the linter
- * reports. Found 2026-10-06 (#134); the documents' hand-written numbers had said otherwise. Not an
- * approval: each is a design decision for the stewardship (change the token, restrict where it is
- * used, or accept and document), and the entry goes when the pair passes.
- */
-export const KNOWN_BELOW_AA: Record<string, string> = {
-  'light:caption-sunken':     '4.41',
-  'dark:caption':             '3.97',
-  'dark:caption-raised':      '3.58',
-  'dark:caption-sunken':      '4.24',
-  'dark:accent-text':         '4.33',
-  'dark:accent-text-raised':  '3.91',
-  'dark:button-primary':      '4.33',
-}
-
 /** Rules the linter reports that are not failures here, and why. */
 const NOTES_ONLY = new Set(['token-summary', 'orphaned-tokens', 'token-like-ignored'])
 
@@ -56,27 +39,18 @@ export interface Verdict {
   colors: Record<string, string>
 }
 
-const RATIO = /contrast ratio ([\d.]+):1/
-
-/** Lint one document and judge the findings. `known` is the ratchet list for the document's theme. */
-export function checkDesign(theme: Theme, markdown: string, known: Record<string, string> = KNOWN_BELOW_AA): Verdict {
+/** Lint one document and judge the findings. */
+export function checkDesign(theme: Theme, markdown: string): Verdict {
   const report = lint(markdown)
   const problems: string[] = []
   const notes: string[] = []
-  const seen = new Set<string>()
 
   for (const f of report.findings) {
     const where = f.path ? ` ${f.path}` : ''
     if (f.severity === 'error' || f.rule === 'broken-ref') {
       problems.push(`${f.rule ?? 'error'}${where}: ${f.message}`)
     } else if (f.rule === 'contrast-ratio') {
-      const component = (f.path ?? '').replace(/^components\./, '')
-      const key = `${theme}:${component}`
-      const ratio = RATIO.exec(f.message)?.[1]
-      seen.add(key)
-      if (!(key in known)) problems.push(`${key} is below WCAG AA and is not a known pair: ${f.message}`)
-      else if (known[key] !== ratio) problems.push(`${key} changed from ${known[key]}:1 to ${ratio}:1; update KNOWN_BELOW_AA`)
-      else notes.push(`${key} ${ratio}:1 (known, below AA)`)
+      problems.push(`${theme}:${(f.path ?? '').replace(/^components\./, '')} is below WCAG AA: ${f.message}`)
     } else if (f.rule && NOTES_ONLY.has(f.rule)) {
       notes.push(`${f.rule}${where}: ${f.message}`)
     } else {
@@ -84,10 +58,6 @@ export function checkDesign(theme: Theme, markdown: string, known: Record<string
       notes.push(`${f.severity} ${f.rule ?? ''}${where}: ${f.message}`)
     }
   }
-  for (const key of Object.keys(known)) {
-    if (key.startsWith(`${theme}:`) && !seen.has(key)) problems.push(`${key} is in KNOWN_BELOW_AA but passes now (or is gone); remove it`)
-  }
-
   const colors: Record<string, string> = {}
   for (const [name, c] of report.designSystem.colors) colors[name] = (c as { hex: string }).hex.toUpperCase()
   return { problems, notes, colors }

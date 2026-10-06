@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { checkAll, checkDesign, colorDrift, cssColors, KNOWN_BELOW_AA } from './check.ts'
+import { checkAll, checkDesign, colorDrift, cssColors } from './check.ts'
 
 /** A small document: `ok` passes, `bad` (#999999 on white, 2.85:1) is below AA. */
 const doc = (extra = '') => `---
@@ -19,55 +19,41 @@ Test.
 `
 
 describe('the design documents', () => {
-  it.each(checkAll())('$file passes the check', ({ problems }) => {
+  it.each(checkAll())('$file keeps the promise: every declared pair meets AA, and the colours are main.css\'s', ({ problems }) => {
     expect(problems).toEqual([])
-  })
-
-  it('still lists only pairs that fail, per document', () => {
-    // a guard on the list itself: every entry is theme:component and a ratio below 4.5
-    for (const [key, ratio] of Object.entries(KNOWN_BELOW_AA)) {
-      expect(key).toMatch(/^(light|dark):[a-z-]+$/)
-      expect(Number(ratio)).toBeLessThan(4.5)
-    }
   })
 })
 
 describe('checkDesign', () => {
-  it('refuses a pair below AA that is not known', () => {
-    const v = checkDesign('light', doc(), {})
+  it('refuses a pair below AA', () => {
+    const v = checkDesign('light', doc())
     expect(v.problems).toHaveLength(1)
-    expect(v.problems[0]).toMatch(/light:bad is below WCAG AA and is not a known pair/)
+    expect(v.problems[0]).toMatch(/^light:bad is below WCAG AA: textColor \(#999999\) on backgroundColor \(#ffffff\) has contrast ratio 2\.85:1/)
   })
 
-  it('lets a known pair through, and reports it as a note', () => {
-    const v = checkDesign('light', doc(), { 'light:bad': '2.85' })
-    expect(v.problems).toEqual([])
-    expect(v.notes).toContain('light:bad 2.85:1 (known, below AA)')
-  })
-
-  it('refuses a known pair whose ratio changed', () => {
-    const v = checkDesign('light', doc(), { 'light:bad': '3.00' })
-    expect(v.problems).toEqual(['light:bad changed from 3.00:1 to 2.85:1; update KNOWN_BELOW_AA'])
-  })
-
-  it('refuses a known pair that passes now, so the list only shrinks', () => {
+  it('passes a document where every declared pair meets AA', () => {
     const fixed = doc().replace('"#999999"', '"#595959"')   // 7:1
-    const v = checkDesign('light', fixed, { 'light:bad': '2.85' })
-    expect(v.problems).toEqual(['light:bad is in KNOWN_BELOW_AA but passes now (or is gone); remove it'])
+    expect(checkDesign('light', fixed).problems).toEqual([])
   })
 
-  it('does not mix the themes: a dark entry is not judged against a light document', () => {
-    expect(checkDesign('light', doc(), { 'light:bad': '2.85', 'dark:bad': '2.00' }).problems).toEqual([])
+  it('names the theme, so a failure in the dark document says dark', () => {
+    expect(checkDesign('dark', doc()).problems[0]).toMatch(/^dark:bad /)
   })
 
   it('refuses a broken reference', () => {
     const broken = doc().replace('{colors.grey}', '{colors.nope}')
-    const v = checkDesign('light', broken, {})
+    const v = checkDesign('light', broken)
     expect(v.problems.some(p => p.startsWith('broken-ref'))).toBe(true)
   })
 
+  it('reports what else the linter says as notes, not failures', () => {
+    const v = checkDesign('light', doc().replace('"#999999"', '"#595959"'))
+    expect(v.problems).toEqual([])
+    expect(v.notes.some(n => n.startsWith('token-summary'))).toBe(true)
+  })
+
   it('returns the colours as upper-case hex', () => {
-    expect(checkDesign('light', doc(), { 'light:bad': '2.85' }).colors).toEqual({ primary: '#000000', paper: '#FFFFFF', grey: '#999999' })
+    expect(checkDesign('light', doc()).colors).toEqual({ primary: '#000000', paper: '#FFFFFF', grey: '#999999' })
   })
 })
 

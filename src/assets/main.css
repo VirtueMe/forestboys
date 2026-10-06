@@ -18,7 +18,7 @@
   --paper-raised:   #FBF7EE;
   --paper-sunken:   #E8DFCC;
   --rule:           #C8BFA9;
-  --muted:          #6B6459;
+  --muted:          #686257;
   --faded-red:      #8B2E1F;
   --faded-red-soft: #A85A48;
   --moss:           #4F5A3E;
@@ -95,12 +95,12 @@
     --paper-raised:   #252320;
     --paper-sunken:   #151311;
     --rule:           #3A352E;
-    --muted:          #807867;
-    --faded-red:      #C8604E;
+    --muted:          #928A78;
+    --faded-red:      #CE7060;
     --faded-red-soft: #A85A48;
     --moss:           #8A9672;
     --focus:          #7FA4C3;
-    --danger:         #C8604E;
+    --danger:         #CE7060;
 
     --shadow-sm:      0 1px 2px rgba(0, 0, 0, 0.30);
     --shadow-md:      0 2px 8px rgba(0, 0, 0, 0.40);

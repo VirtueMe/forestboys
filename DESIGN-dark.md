@@ -2,19 +2,19 @@
 version: alpha
 name: Milorg Utforsker — Archival Paper (dark)
 colors:
-  primary: "#C8604E"   # the spec asks for a primary; our single accent, same value as faded-red
+  primary: "#CE7060"   # the spec asks for a primary; our single accent, same value as faded-red
   ink: "#EDE6D6"
   ink-soft: "#B8B0A0"
   paper: "#1C1A17"
   paper-raised: "#252320"
   paper-sunken: "#151311"
   rule: "#3A352E"
-  muted: "#807867"
-  faded-red: "#C8604E"
+  muted: "#928A78"
+  faded-red: "#CE7060"
   faded-red-soft: "#A85A48"
   moss: "#8A9672"
   focus: "#7FA4C3"
-  danger: "#C8604E"
+  danger: "#CE7060"
 typography:
   display:
     fontFamily: Crimson Pro
@@ -125,22 +125,20 @@ lamp-lit parchment.
 | `paper-raised`    | `#FBF7EE`   | `#252320`   | One step lighter than `paper`.             |
 | `paper-sunken`    | `#E8DFCC`   | `#151311`   | One step darker than `paper`.              |
 | `rule`             | `#C8BFA9`   | `#3A352E`   | Subtle dividers, still warm.               |
-| `muted`            | `#6B6459`   | `#807867`   | Placeholder, captions.                     |
-| `faded-red`        | `#8B2E1F`   | `#C8604E`   | Lifted for contrast against dark paper.    |
+| `muted`            | `#686257`   | `#928A78`   | Placeholder, captions.                     |
+| `faded-red`        | `#8B2E1F`   | `#CE7060`   | Lifted for contrast against dark paper.    |
 | `faded-red-soft`  | `#A85A48`   | `#A85A48`   | Shared — hover state works both modes.     |
 | `moss`             | `#4F5A3E`   | `#8A9672`   | Lifted for dark contrast.                  |
 | `focus`            | `#3A5A74`   | `#7FA4C3`   | Lifted for dark contrast.                  |
-| `danger`           | `#8B2E1F`   | `#C8604E`   | Mirrors `faded-red`.                       |
+| `danger`           | `#8B2E1F`   | `#CE7060`   | Mirrors `faded-red`.                       |
 
 ## Contrast verification
 
-The pairs are declared under `components` in the front matter and checked by `npm run check:design`
-(the `@google/design.md` linter, WCAG AA 4.5:1 for normal text; see `DESIGN.md`). The ratios that
-used to be listed here were written by hand and were wrong for `muted` and `faded-red`, so none are
-quoted: the check is the source. In dark, `muted` and `faded-red` are the pairs that need care, and
-the ones below AA today are listed in `scripts/design/check.ts` (`KNOWN_BELOW_AA`) until they are
-decided (#134). `muted` is for captions only; the primary button (`paper` text on `faded-red`) and
-`faded-red` text are the open cases.
+The same promise as in `DESIGN.md`: every pair declared under `components` meets WCAG AA (4.5:1 for
+normal text), checked by `npm run check:design` (`@google/design.md`), which runs in `npm test`. No
+ratios are quoted here: the check is the source. In dark, `muted` and `faded-red` are lifted from
+their first values (`#807867`, `#C8604E`) so the captions, the red text and the primary button
+(`paper` text on `faded-red`) clear AA on all three dark surfaces (#134).
 
 ## Shadow adjustment
 
