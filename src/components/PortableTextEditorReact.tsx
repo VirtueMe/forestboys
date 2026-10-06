@@ -29,11 +29,14 @@ const DECORATORS = ['strong', 'em', 'underline'] as const
 
 const schemaDefinition = defineSchema({
   decorators: DECORATORS.map(name => ({ name })),
-  // Body content only supports h3 sub-headings — card titles are h2
-  // at the page level, and h1 is reserved for the text-block page title.
+  // Headings in a description are h3 to h6: the section already has the page's h2, and h1 is
+  // reserved for the text-block page title. h3 has a button, h4 to h6 a small menu (DeepHeadingMenu).
   styles: [
     { name: 'normal' },
     { name: 'h3' },
+    { name: 'h4' },
+    { name: 'h5' },
+    { name: 'h6' },
     { name: 'blockquote' },
   ],
   annotations: [
@@ -76,6 +79,9 @@ const renderDecorator: RenderDecoratorFunction = props => {
 const renderStyle: RenderStyleFunction = props => {
   switch (props.schemaType.value) {
     case 'h3':         return React.createElement('h3', null, props.children)
+    case 'h4':         return React.createElement('h4', null, props.children)
+    case 'h5':         return React.createElement('h5', null, props.children)
+    case 'h6':         return React.createElement('h6', null, props.children)
     case 'blockquote': return React.createElement('blockquote', null, props.children)
     default:           return React.createElement('p', null, props.children)
   }
@@ -130,6 +136,7 @@ function ToolbarButton({
   ariaLabel,
   extraClass,
   disabled,
+  expanded,
 }: {
   label:       React.ReactNode
   active:      boolean
@@ -139,6 +146,8 @@ function ToolbarButton({
   ariaLabel?:  string
   extraClass?: string
   disabled?:   boolean
+  /** For a button that opens a list: whether it is open. */
+  expanded?:   boolean
 }) {
   return React.createElement(
     'button',
@@ -148,6 +157,8 @@ function ToolbarButton({
       title,
       disabled,
       'aria-label': ariaLabel,
+      'aria-expanded': expanded,
+      'aria-haspopup': expanded === undefined ? undefined : 'true',
       onMouseDown: (e: React.MouseEvent) => e.preventDefault(), // keep selection
       onClick,
     },
@@ -231,6 +242,62 @@ function StyleButton({ name, label }: { name: string; label: string }) {
     active,
     onClick: () => editor.send({ type: 'style.toggle', style: name }),
   })
+}
+
+const DEEP_HEADINGS = ['h4', 'h5', 'h6'] as const
+
+/**
+ * H4 to H6 behind a small ▾ beside the H3 button. The ▾ lights up when the caret is in one of
+ * them; the list marks which. Esc and a click outside close it, and Esc is not passed on, so in
+ * the full window it does not also close the window (PortableTextEditor.vue).
+ */
+function DeepHeadingMenu() {
+  const editor = useEditor()
+  const active = useEditorSelector(editor, snapshot => DEEP_HEADINGS.find(h => isActiveStyle(h)(snapshot)))
+  const [open, setOpen] = React.useState(false)
+  const root = React.useRef<HTMLSpanElement>(null)
+
+  React.useEffect(() => {
+    if (!open) return
+    const onDown = (e: MouseEvent) => { if (!root.current?.contains(e.target as Node)) setOpen(false) }
+    const onKey  = (e: KeyboardEvent) => { if (e.key === 'Escape') { e.preventDefault(); setOpen(false) } }
+    document.addEventListener('mousedown', onDown)
+    document.addEventListener('keydown', onKey, true)
+    return () => {
+      document.removeEventListener('mousedown', onDown)
+      document.removeEventListener('keydown', onKey, true)
+    }
+  }, [open])
+
+  return React.createElement(
+    'span',
+    { className: 'pt-tb-menu', ref: root },
+    React.createElement(ToolbarButton, {
+      label:      '▾',
+      active:     !!active,
+      onClick:    () => setOpen(v => !v),
+      title:      'Flere overskriftsnivåer (H4–H6)',
+      ariaLabel:  'Flere overskriftsnivåer',
+      extraClass: 'pt-tb-more',
+      expanded:   open,
+    }),
+    open ? React.createElement(
+      'div',
+      { className: 'pt-menu', role: 'group', 'aria-label': 'Overskriftsnivå' },
+      DEEP_HEADINGS.map(h => React.createElement(
+        'button',
+        {
+          key:           h,
+          type:          'button',
+          'aria-pressed': active === h,
+          className:     `pt-menu-item${active === h ? ' active' : ''}`,
+          onMouseDown:   (e: React.MouseEvent) => e.preventDefault(), // keep selection
+          onClick:       () => { editor.send({ type: 'style.toggle', style: h }); setOpen(false) },
+        },
+        h.toUpperCase(),
+      )),
+    ) : null,
+  )
 }
 
 interface PersonHit { slug: string; name: string }
@@ -519,6 +586,7 @@ function Toolbar({ expanded, onToggleExpand }: { expanded: boolean; onToggleExpa
     { className: 'pt-toolbar' },
     React.createElement(StyleButton,     { name: 'normal',     label: 'P' }),
     React.createElement(StyleButton,     { name: 'h3',         label: 'H3' }),
+    React.createElement(DeepHeadingMenu),
     React.createElement(StyleButton,     { name: 'blockquote', label: '❝' }),
     React.createElement('span',          { className: 'pt-tb-sep' }),
     React.createElement(DecoratorButton, { name: 'strong',    label: 'B' }),

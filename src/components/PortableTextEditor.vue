@@ -89,6 +89,39 @@ onBeforeUnmount(() => {
   font-family: inherit;
 }
 .pt-tb-btn:hover  { background: var(--paper-raised); }
+.pt-tb-menu { position: relative; display: inline-block; }
+/* The ▾ sits against the H3 button: narrow, and no gap between them. */
+.pt-tb-more { min-width: 20px; padding: 0 4px; font-size: 13px; }
+
+.pt-menu {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  z-index: 20;
+  min-width: 64px;
+  display: flex;
+  flex-direction: column;
+  background: var(--paper-raised);
+  border: 1px solid var(--rule);
+  border-radius: 4px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  padding: 4px;
+}
+.pt-menu-item {
+  padding: 5px 10px;
+  font-size: 12px;
+  font-weight: 600;
+  font-family: inherit;
+  text-align: left;
+  color: var(--ink);
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 3px;
+  cursor: pointer;
+}
+.pt-menu-item:hover  { background: var(--paper); }
+.pt-menu-item.active { background: var(--focus); color: #fff; border-color: var(--focus); }
+
 .pt-tb-btn:disabled { opacity: 0.4; cursor: default; }
 .pt-tb-btn:disabled:hover { background: transparent; }
 .pt-tb-btn.active { background: var(--focus); color: #fff; border-color: var(--focus); }
@@ -174,6 +207,9 @@ onBeforeUnmount(() => {
 .pt-editable h1         { font-size: 24px; font-weight: 700; margin: 0 0 0.5em; color: var(--focus); }
 .pt-editable h2         { font-size: 20px; font-weight: 700; margin: 0 0 0.5em; color: var(--focus); }
 .pt-editable h3         { font-size: 17px; font-weight: 700; margin: 0 0 0.5em; color: var(--focus); }
+.pt-editable h4         { font-size: 15.5px; font-weight: 700; margin: 0 0 0.5em; color: var(--focus); }
+.pt-editable h5         { font-size: 14px; font-weight: 700; margin: 0 0 0.5em; color: var(--focus); }
+.pt-editable h6         { font-size: 12px; font-weight: 700; margin: 0 0 0.5em; color: var(--focus); text-transform: uppercase; letter-spacing: 0.06em; }
 .pt-editable blockquote {
   border-left: 3px solid var(--rule);
   padding-left: 12px;

@@ -148,7 +148,9 @@ function sectionFootnoteCitesOf(s: Section): (Citation & { footnoteNumber: numbe
 .portable-text :deep(h1),
 .portable-text :deep(h2),
 .portable-text :deep(h3),
-.portable-text :deep(h4) {
+.portable-text :deep(h4),
+.portable-text :deep(h5),
+.portable-text :deep(h6) {
   font-family: var(--font-serif);
   font-size: var(--size-h3);
   font-weight: 600;
