@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { checkHeadings, fixHeadings, headingLevel, headingMessage } from './headingOutline.ts'
+import { checkContents, checkHeadings, fixContents, fixHeadings, headingLevel, headingMessage, setContentHeading } from './headingOutline.ts'
 import type { SanityBlock } from './portableText.ts'
 
 let n = 0
@@ -62,7 +62,7 @@ describe('checkHeadings, section heading at h2 (the default)', () => {
   it('reports the heading, its level and the level it may have', () => {
     const blocks = [b('h3', 'Start'), b('h5', 'For dypt')]
     expect(checkHeadings(blocks)).toEqual([{
-      blockKey: blocks[1]._key, text: 'For dypt', level: 5, reason: 'too-deep', allowed: 4, suggested: 4,
+      index: 1, blockKey: blocks[1]._key, text: 'For dypt', level: 5, reason: 'too-deep', allowed: 4, suggested: 4,
     }])
   })
 
@@ -147,5 +147,49 @@ describe('headingMessage', () => {
   it('says it when the heading has no text', () => {
     const p = checkHeadings([b('h3', '')])[0]
     expect(headingMessage(p)).toBe('Tom overskrift (H3) har ingen tekst. Skriv en tekst eller gjør den om til vanlig tekst.')
+  })
+})
+
+describe('descriptions kept as several sections (JSON strings)', () => {
+  /** A section's content from 'h3 h4 p', with the text of each block as its position. */
+  const content = (spec: string) => JSON.stringify(seq(spec))
+  const styles = (c: string) => (JSON.parse(c) as SanityBlock[]).map(x => x.style)
+
+  it('reads the sections as one outline, in order', () => {
+    // the h5 is fine in the second section only if the first ended deep enough
+    expect(checkContents([content('h3 h4'), content('h5')]).map(p => p.reason)).toEqual([])
+    expect(checkContents([content('h3'), content('h5')]).map(p => [p.reason, p.content, p.local])).toEqual([['too-deep', 1, 0]])
+  })
+
+  it('says which section and which block a problem is in, with keys that repeat between sections', () => {
+    const same = JSON.stringify([{ _key: 'a', _type: 'block', style: 'h1', children: [{ _key: 's', _type: 'span', text: 'X' }] }])
+    expect(checkContents([same, same]).map(p => [p.content, p.local])).toEqual([[0, 0], [1, 0]])
+  })
+
+  it('treats content that is not JSON, or not a list, as no blocks', () => {
+    expect(checkContents(['not json', '{}', content('h3')])).toEqual([])
+  })
+
+  it('fixes across sections and leaves an unchanged section as the same string', () => {
+    const [a, b2] = [content('h3 h4'), content('h6 h6')]
+    const out = fixContents([a, b2])
+    expect(out[0]).toBe(a)
+    expect(styles(out[1])).toEqual(['h5', 'h5'])
+    expect(checkContents(out)).toEqual([])
+  })
+
+  it('does not re-serialise a section it did not change, however its JSON was written', () => {
+    const spaced = JSON.stringify(seq('h3 h4'), null, 2)
+    const out = fixContents([spaced, content('h6')])
+    expect(out[0]).toBe(spaced)
+    expect(styles(out[1])).toEqual(['h5'])
+  })
+
+  it('moves one heading and leaves the others', () => {
+    const c = [content('h3'), content('h5 h4')]
+    const out = setContentHeading(c, { content: 1, local: 0 }, 4)
+    expect(out[0]).toBe(c[0])
+    expect(styles(out[1])).toEqual(['h4', 'h4'])
+    expect(styles(setContentHeading(c, { content: 1, local: 1 }, null)[1])).toEqual(['h5', 'normal'])
   })
 })

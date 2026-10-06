@@ -36,6 +36,22 @@
       </li>
     </ul>
   </div>
+  <div v-if="headingIssues.length" class="edit-link-issues refused">
+    <p class="edit-link-issues-lead">Overskrifter som ikke følger strukturen:</p>
+    <ul class="edit-link-issues-list">
+      <li v-for="h in headingIssues" :key="`${h.content}:${h.local}`">
+        <span>
+          <template v-if="sorted.length > 1">Seksjon {{ h.content + 1 }}: </template>{{ headingMessage(h) }}
+        </span>
+        <button type="button" class="edit-link-fix" @click="applyHeading(h)">
+          {{ h.suggested === null ? 'Gjør om til vanlig tekst' : `Bruk H${h.suggested}` }}
+        </button>
+      </li>
+    </ul>
+    <button v-if="headingIssues.length > 1" type="button" class="edit-link-fix fix-all" @click="fixAllHeadings">
+      Rett opp alle
+    </button>
+  </div>
 </template>
 
 <script setup lang="ts">
@@ -52,6 +68,9 @@
 import { ref, computed, watch } from 'vue'
 import { authFetch } from '@/composables/useAuth.ts'
 import SectionsEditor, { type Section } from '@/components/SectionsEditor.vue'
+import {
+  checkContents, fixContents, HEADINGS_REFUSED, headingMessage, setContentHeading, type ContentHeadingProblem,
+} from '@/utils/headingOutline.ts'
 import { rewriteLink, type LinkIssue } from '@/utils/linkCheck.ts'
 import type { SlugHit } from '@/utils/slugResolver.ts'
 
@@ -75,8 +94,13 @@ const props = withDefaults(defineProps<{
    *  Used to surface a "couldn't save during create" notice from the
    *  parent so the user knows why the editor opened pre-filled-and-dirty. */
   externalError?: string | null
+  /** Check the headings on save (headingOutline.ts). Off for a description that is not shown under
+   *  a section heading (a role's, in a popover). The level they are checked against is the same
+   *  here and in the endpoints, so it is not a prop. */
+  checkHeadings?: boolean
 }>(), {
   label: 'Beskrivelse',
+  checkHeadings: true,
 })
 
 const emit = defineEmits<{ saved: [sections: Section[]] }>()
@@ -107,6 +131,8 @@ const error    = ref<string | null>(null)
 /** Links the server refused (the save did not happen) or saved with a warning. */
 const linkIssues  = ref<LinkIssue[]>([])
 const linksRefused = ref(false)
+/** A save was stopped for its headings: the list below then follows the draft as it is repaired. */
+const headingsRefused = ref(false)
 
 function snapshot() {
   draft.value    = props.saved.map(cloneSection)
@@ -154,12 +180,32 @@ watch(() => props.initialDirtyDraft, (v, prev) => {
 
 const dirty = computed(() => signature(draft.value) !== signature(baseline.value))
 
+const sorted  = computed(() => [...draft.value].sort((a, b) => a.order - b.order))
+const headingProblems = () => (props.checkHeadings ? checkContents(sorted.value.map(s => s.content)) : [])
+const headingIssues = computed<ContentHeadingProblem[]>(() => (headingsRefused.value ? headingProblems() : []))
+
+/** Write changed contents back into the draft, in the order they were read. */
+function writeContents(next: string[]) {
+  sorted.value.forEach((s, i) => { if (s.content !== next[i]) s.content = next[i] })
+  if (!headingProblems().length) error.value = null
+}
+const contents = () => sorted.value.map(s => s.content)
+
+/** Move one heading to the level it should have; the draft becomes dirty and is saved with Lagre. */
+function applyHeading(h: ContentHeadingProblem) {
+  writeContents(setContentHeading(contents(), h, h.suggested))
+}
+function fixAllHeadings() {
+  writeContents(fixContents(contents()))
+}
+
 const displayError = computed(() => error.value ?? props.externalError ?? null)
 
 function revert() {
   draft.value = baseline.value.map(cloneSection)
   error.value = null
   linkIssues.value = []
+  headingsRefused.value = false
 }
 
 /** The pages a link could be pointed at: the one it should name, or those that fit equally well. */
@@ -172,9 +218,15 @@ function applyFix(l: LinkIssue, to: SlugHit) {
 }
 
 async function save() {
-  saving.value = true
   error.value  = null
   linkIssues.value = []
+  // The same check the server runs, so a refusal needs no round trip.
+  headingsRefused.value = headingProblems().length > 0
+  if (headingsRefused.value) {
+    error.value = HEADINGS_REFUSED
+    return
+  }
+  saving.value = true
   try {
     const payload = {
       sections: [...draft.value]
@@ -192,8 +244,9 @@ async function save() {
       body:    JSON.stringify(payload),
     })
     if (!res.ok) {
-      const body = await res.json().catch(() => ({})) as { error?: string; links?: LinkIssue[] }
+      const body = await res.json().catch(() => ({})) as { error?: string; links?: LinkIssue[]; headings?: unknown[] }
       error.value = body.error ?? `HTTP ${res.status}`
+      headingsRefused.value = !!body.headings
       linksRefused.value = true
       linkIssues.value = body.links ?? []
       return
@@ -301,6 +354,7 @@ defineExpose({ draft, dirty })
   cursor: pointer;
 }
 .edit-link-fix:hover { border-color: var(--focus); }
+.edit-link-fix.fix-all { margin: var(--space-xs) 0 0; }
 
 .edit-save-error {
   margin-top: var(--space-sm);
