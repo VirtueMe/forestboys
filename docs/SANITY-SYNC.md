@@ -394,6 +394,66 @@ until Sanity changes the same description. Before writing, the nodes it will
 change are saved to `data/sanity-delta/description-before-<type>-<time>.json`;
 `SyncState {type: '<kind>-description'}` records the run.
 
+### Transports — their own fields
+
+`name`, `type`, `unit` and `regser` were imported once (April, and
+`import-missing-refs.ts` for the new ones) and never again (#112). One sync
+carries them: `npx tsx scripts/sync/sync-transport.ts [--write]
+[--accept-review=<slug>,…]` (a dry run unless `--write`; the daily job runs it
+before the event sync, so a new transport has its node when an event links it).
+`reserve` is not synced.
+
+Where the graph keeps each field:
+
+| Sanity | Graph |
+|---|---|
+| `name` | `canonicalName` |
+| `type` | `type` (+ `type_state`, `type_sourceRef`) |
+| `regser` | `regser` (+ `regser_state`, `regser_sourceRef`) |
+| `unit` | `rawUnit` (+ `rawUnit_state`, `rawUnit_sourceRef`) |
+
+The import stores the unit as `rawUnit`; the transport editor writes `unit`
+(`functions/api/admin/transport/[slug]`). Where a node has `unit`, that is its
+value: the page and the lists read `coalesce(unit, rawUnit)`, and the sync treats
+it as a graph edit. When the sync applies Sanity's unit it writes `rawUnit` and
+removes `unit`.
+
+**Whitespace.** Sanity values carry stray whitespace (`regser` is `" 42-7612"`,
+names have runs of spaces and tabs). Values are compared tidied (trimmed, runs of
+whitespace collapsed to one space; `src/utils/tidyText.ts`), the graph gets the
+tidied value, and the stamp is the hash of it. A value that differs only in
+whitespace is therefore `already` — and is rewritten tidied. Slugs are not
+touched (#96, #115).
+
+Stamps: `<field>_sha` per field on the node (`name_sha`, `type_sha`, `unit_sha`,
+`regser_sha`), the hash of the tidied Sanity value last taken in. Per field:
+
+| Verdict | When | What happens |
+|---|---|---|
+| unchanged | Sanity still holds what the stamp says | nothing |
+| clean | Sanity changed, the graph still holds the stamped value | applied |
+| already | the graph already holds Sanity's value (also the first run, with no stamp) | the stamp moves; the value is rewritten only to tidy it |
+| conflict | Sanity changed and the graph value was edited | left alone, listed |
+| kept | no stamp, Sanity unchanged since the import, the graph differs | the graph edit stays, the stamp moves |
+| review | no stamp, Sanity changed since the import, the graph differs | left alone, listed; `--accept-review=<slug>` applies Sanity's |
+
+Without a stamp there is no baseline for a field: the export is not kept for
+transports, and the editor does not mark its edits. `sanityUpdatedAt` stands in
+for it — it tells whether Sanity changed since the import — and so it does not
+move on a node that still has a field held for review. A name that is empty in
+Sanity is never applied.
+
+New transports (a Sanity document with no node) are created with the import's
+rule, tidied and stamped; a slug already taken is an error. Nodes with no Sanity
+document are listed. Before writing, the nodes it will change are saved to
+`data/sanity-delta/transport-before-<time>.json`; `SyncState {type: 'transport'}`
+records the run.
+
+First dry run (2026-10-06, local copy of production): 1,058 in Sanity, 1,056 in
+the graph; 3 new; every stamp-less field is `already` except 5 fields on 4
+transports that go to review — the unit of the Nona Rhea
+(`ford-liberator-b-24h-1-fo-42-7612`) among them.
+
 ### Reshaped documents — curated mappings
 
 Where the import did more than copy fields, the three-way compare has
