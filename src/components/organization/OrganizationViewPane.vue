@@ -3,7 +3,7 @@
   <div class="view-pane">
     <details v-if="!hideEditable && previewSections.length" class="section" open>
       <summary class="section-summary">
-        <h3 class="section-heading">Beskrivelse</h3>
+        <h2 class="section-heading">Beskrivelse</h2>
       </summary>
       <div class="section-body">
         <DescriptionPreview :sections="previewSections" />
@@ -12,7 +12,7 @@
 
     <details v-if="!hideEditable && unitEntries.length" class="section" open>
       <summary class="section-summary">
-        <h3 class="section-heading">Underavdelinger ({{ unitEntries.length }})</h3>
+        <h2 class="section-heading">Underavdelinger ({{ unitEntries.length }})</h2>
       </summary>
       <div class="section-body">
         <div class="relation-list">
@@ -41,7 +41,7 @@
 
     <details v-if="!hideEditable && operationEntries.length" class="section" open>
       <summary class="section-summary">
-        <h3 class="section-heading">Operasjoner ({{ operationEntries.length }})</h3>
+        <h2 class="section-heading">Operasjoner ({{ operationEntries.length }})</h2>
       </summary>
       <div class="section-body">
         <div class="relation-list">
@@ -55,7 +55,7 @@
 
     <details v-if="!hideEditable && incidentEntries.length" class="section" open>
       <summary class="section-summary">
-        <h3 class="section-heading">Hendelser ({{ incidentEntries.length }})</h3>
+        <h2 class="section-heading">Hendelser ({{ incidentEntries.length }})</h2>
       </summary>
       <div class="section-body">
         <div class="relation-list">
@@ -69,7 +69,7 @@
 
     <details v-if="galleryImages.length" class="section" open>
       <summary class="section-summary">
-        <h3 class="section-heading">Galleri ({{ galleryImages.length }})</h3>
+        <h2 class="section-heading">Galleri ({{ galleryImages.length }})</h2>
       </summary>
       <div class="section-body">
         <ImageSlider :images="galleryImages" />
@@ -78,7 +78,7 @@
 
     <details v-if="people.length" class="section" open>
       <summary class="section-summary">
-        <h3 class="section-heading">Deltakere ({{ people.length }})</h3>
+        <h2 class="section-heading">Deltakere ({{ people.length }})</h2>
       </summary>
       <div class="section-body">
         <div class="link-list">
@@ -97,7 +97,7 @@
 
     <details class="section" open>
       <summary class="section-summary">
-        <h3 class="section-heading">Lenker<span v-if="externalRefs.length"> ({{ externalRefs.length }})</span></h3>
+        <h2 class="section-heading">Lenker<span v-if="externalRefs.length"> ({{ externalRefs.length }})</span></h2>
       </summary>
       <div class="section-body">
         <div v-if="externalRefs.length" class="link-list">

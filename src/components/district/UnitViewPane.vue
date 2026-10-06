@@ -3,7 +3,7 @@
   <div class="view-pane">
     <details v-if="!hideEditable && previewSections.length" class="section" open>
       <summary class="section-summary">
-        <h3 class="section-heading">Beskrivelse</h3>
+        <h2 class="section-heading">Beskrivelse</h2>
       </summary>
       <div class="section-body">
         <DescriptionPreview :sections="previewSections" />
@@ -14,7 +14,7 @@
          until a future migration converts them to HAS_CONTENT. -->
     <details v-if="legacyDescriptions.length" class="section" open>
       <summary class="section-summary">
-        <h3 class="section-heading">Beskrivelse (arkiv)<span v-if="legacyDescriptions.length > 1"> ({{ legacyDescriptions.length }})</span></h3>
+        <h2 class="section-heading">Beskrivelse (arkiv)<span v-if="legacyDescriptions.length > 1"> ({{ legacyDescriptions.length }})</span></h2>
       </summary>
       <div class="section-body">
         <article
@@ -38,7 +38,7 @@
     </details>
 
     <details v-if="subUnits.length" class="section" open>
-      <summary class="section-summary"><h3 class="section-heading">Underavdelinger ({{ subUnits.length }})</h3></summary>
+      <summary class="section-summary"><h2 class="section-heading">Underavdelinger ({{ subUnits.length }})</h2></summary>
       <div class="section-body">
         <div class="link-list">
           <RouterLink
@@ -54,7 +54,7 @@
     </details>
 
     <details v-if="courses.length" class="section" open>
-      <summary class="section-summary"><h3 class="section-heading">Kurs ({{ courses.length }})</h3></summary>
+      <summary class="section-summary"><h2 class="section-heading">Kurs ({{ courses.length }})</h2></summary>
       <div class="section-body">
         <div class="course-table-wrap">
           <table class="course-table">
@@ -91,7 +91,7 @@
     </details>
 
     <details v-if="events.length" class="section" open>
-      <summary class="section-summary"><h3 class="section-heading">Hendelser ({{ events.length }})</h3></summary>
+      <summary class="section-summary"><h2 class="section-heading">Hendelser ({{ events.length }})</h2></summary>
       <div class="section-body">
         <div class="section-tools">
           <button class="sort-btn" @click="eventSortAsc = !eventSortAsc">Dato {{ eventSortAsc ? '↑' : '↓' }}</button>
@@ -111,14 +111,14 @@
     </details>
 
     <details v-if="galleryImages.length" class="section" open>
-      <summary class="section-summary"><h3 class="section-heading">Galleri ({{ galleryImages.length }})</h3></summary>
+      <summary class="section-summary"><h2 class="section-heading">Galleri ({{ galleryImages.length }})</h2></summary>
       <div class="section-body">
         <ImageSlider :images="galleryImages" />
       </div>
     </details>
 
     <details v-if="!hideEditable && members.length" class="section" open>
-      <summary class="section-summary"><h3 class="section-heading">Medlemmer ({{ members.length }})</h3></summary>
+      <summary class="section-summary"><h2 class="section-heading">Medlemmer ({{ members.length }})</h2></summary>
       <div class="section-body">
         <div class="relation-list">
           <div v-for="p in members" :key="p.slug" class="relation-row member-row">
@@ -149,7 +149,7 @@
 
     <details class="section" open>
       <summary class="section-summary">
-        <h3 class="section-heading">Lenker<span v-if="externalRefs.length"> ({{ externalRefs.length }})</span></h3>
+        <h2 class="section-heading">Lenker<span v-if="externalRefs.length"> ({{ externalRefs.length }})</span></h2>
       </summary>
       <div class="section-body">
         <div v-if="externalRefs.length" class="link-list">

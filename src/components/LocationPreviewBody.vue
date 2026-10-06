@@ -2,14 +2,14 @@
   <article v-if="location" class="loc-preview">
     <header class="loc-head">
       <span class="loc-kind">Sted</span>
-      <h2 class="loc-name">{{ location.canonicalName }}</h2>
+      <h1 class="loc-name">{{ location.canonicalName }}</h1>
       <span v-if="location.lat != null && location.lng != null" class="loc-coords">
         {{ location.lat.toFixed(4) }}, {{ location.lng.toFixed(4) }}
       </span>
     </header>
 
     <section v-if="descriptionHtml" class="loc-section">
-      <h3 class="loc-section-heading">Beskrivelse</h3>
+      <h2 class="loc-section-heading">Beskrivelse</h2>
       <!-- eslint-disable vue/no-v-html -->
       <div class="portable-text" v-html="descriptionHtml"></div>
       <!-- eslint-enable vue/no-v-html -->
