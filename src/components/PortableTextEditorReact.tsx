@@ -122,6 +122,8 @@ const renderAnnotation: RenderAnnotationFunction = props => {
 
 export interface Props {
   value:    PortableTextBlock[]
+  /** Changes when the value was replaced from outside: the editor starts over with it (see PortableTextEditor.vue). */
+  generation: number
   onChange: (blocks: PortableTextBlock[]) => void
   /** The editor fills the window (PortableTextEditor.vue sets the class on the host). */
   expanded:        boolean
@@ -585,8 +587,11 @@ function Toolbar({ expanded, onToggleExpand }: { expanded: boolean; onToggleExpa
     'div',
     { className: 'pt-toolbar' },
     React.createElement(StyleButton,     { name: 'normal',     label: 'P' }),
-    React.createElement(StyleButton,     { name: 'h3',         label: 'H3' }),
-    React.createElement(DeepHeadingMenu),
+    // H3 and the ▾ with H4 to H6 are one control: a split button.
+    React.createElement('span', { className: 'pt-tb-split' },
+      React.createElement(StyleButton, { name: 'h3', label: 'H3' }),
+      React.createElement(DeepHeadingMenu),
+    ),
     React.createElement(StyleButton,     { name: 'blockquote', label: '❝' }),
     React.createElement('span',          { className: 'pt-tb-sep' }),
     React.createElement(DecoratorButton, { name: 'strong',    label: 'B' }),
@@ -602,10 +607,10 @@ function Toolbar({ expanded, onToggleExpand }: { expanded: boolean; onToggleExpa
   )
 }
 
-export function PortableTextEditorReact({ value, onChange, expanded, onToggleExpand }: Props) {
+export function PortableTextEditorReact({ value, generation, onChange, expanded, onToggleExpand }: Props) {
   return React.createElement(
     EditorProvider,
-    { initialConfig: { schemaDefinition, initialValue: value } },
+    { key: generation, initialConfig: { schemaDefinition, initialValue: value } },
     React.createElement(EventListenerPlugin, {
       on: (event: { type: string; value?: PortableTextBlock[] }) => {
         if (event.type === 'mutation' && event.value) onChange(event.value)
