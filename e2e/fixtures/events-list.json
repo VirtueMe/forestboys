@@ -1,0 +1,229 @@
+{
+ "path": "/events",
+ "queries": [
+  {
+   "query": "MATCH (e) WHERE e:Incident OR e:Operation\n         OPTIONAL MATCH (e)-[:ORCHESTRATED_BY]->(org:Organization)\n         OPTIONAL MATCH (e)-[:IN_DISTRICT]->(dist:Unit)\n         OPTIONAL MATCH (e)-[:HAS_IMAGE]->(img:Source)\n           WHERE coalesce(img.kind, 'photograph') = 'photograph'\n         WITH e, org, dist, img ORDER BY coalesce(img.id, '')\n         WITH e, org, dist, head(collect(img)) AS firstImg\n         RETURN e.slug AS slug,\n                coalesce(e.codeName, e.canonicalName, e.title) AS title,\n                e.date AS date,\n                org.canonicalName AS organization,\n                dist.canonicalName AS district,\n                firstImg.url AS thumbnailUrl\n         ORDER BY e.date ASC, title ASC",
+   "params": {},
+   "rows": [
+    {
+     "slug": "gulltransporten-1940",
+     "title": "GULLTRANSPORTEN 1940",
+     "date": "1940-04-09",
+     "organization": "Norge",
+     "district": "Norge",
+     "thumbnailUrl": "https://cdn.sanity.io/images/7r6kqtqy/production/f0838951baae0532e550001f82b3dc73569bcda9-1200x1093.png"
+    },
+    {
+     "slug": "nrk-1",
+     "title": "NRK Første sending fra BBC",
+     "date": "1940-04-09",
+     "organization": "Norge i United Kingdom",
+     "district": "United Kingdom",
+     "thumbnailUrl": "https://cdn.sanity.io/images/7r6kqtqy/production/3421e989e5f028f10dd4b23bc7403524659865e5-1040x776.png"
+    },
+    {
+     "slug": "mk-x48",
+     "title": "MK X48 MK LIVLIG",
+     "date": "1940-04-28",
+     "organization": "MK Skøyter",
+     "district": "06 Skøyter ikke organisert",
+     "thumbnailUrl": null
+    },
+    {
+     "slug": "mk-x60",
+     "title": "MK X60 BERGHOLM SF-3-SV",
+     "date": "1940-05-02",
+     "organization": "MK Skøyter",
+     "district": "06 Skøyter ikke organisert",
+     "thumbnailUrl": null
+    },
+    {
+     "slug": "heinkel-he115-fra-olden-til-dornough",
+     "title": "HEINKEL He115 fra Olden til Dornough",
+     "date": "1940-05-02",
+     "organization": "Homefleet",
+     "district": "Flukt",
+     "thumbnailUrl": "https://cdn.sanity.io/images/7r6kqtqy/production/c967c4314108e1c0ab8ed6978fbde4d89c4774c8-728x501.png"
+    },
+    {
+     "slug": "mk-x24",
+     "title": "MK X24 MK Jåbek til Baltasound",
+     "date": "1940-05-02",
+     "organization": "MK Skøyter",
+     "district": "Norge",
+     "thumbnailUrl": null
+    },
+    {
+     "slug": "mk-x010",
+     "title": "MK X010 MK DISKO og MK KORALEN I ",
+     "date": "1940-05-03",
+     "organization": "MK Skøyter",
+     "district": "06 Skøyter ikke organisert",
+     "thumbnailUrl": "https://cdn.sanity.io/images/7r6kqtqy/production/ca21215c9a308aa7aeba62d2437ac3b35043f47c-1199x884.png"
+    },
+    {
+     "slug": "mk-x011",
+     "title": "MK X011 MS BOMMA til Shetland",
+     "date": "1940-05-03",
+     "organization": "MK Skøyter",
+     "district": "06 Skøyter ikke organisert",
+     "thumbnailUrl": "https://cdn.sanity.io/images/7r6kqtqy/production/34cfb14449a62ffaba9f7308307612d782c41314-600x877.jpg"
+    },
+    {
+     "slug": "mk-x25",
+     "title": "MK X25 DS UTVÆR M-164-A  til Torshavn",
+     "date": "1940-05-03",
+     "organization": "MK Skøyter",
+     "district": "Norge",
+     "thumbnailUrl": "https://cdn.sanity.io/images/7r6kqtqy/production/7b3fe9141904cf8513c26a28a78dd9cfaca56a7a-982x631.png"
+    },
+    {
+     "slug": "mk-x007",
+     "title": "MK X007 MK JUVEL M-102-S",
+     "date": "1940-05-04",
+     "organization": "MK Skøyter",
+     "district": "06 Skøyter ikke organisert",
+     "thumbnailUrl": "https://cdn.sanity.io/images/7r6kqtqy/production/1d4db56e339665a72c40b5b32d0469d59fec3865-542x412.png"
+    },
+    {
+     "slug": "ds-01",
+     "title": "DS 01  DS AKABAHRA \"kapret\" til Kirkwall",
+     "date": "1940-05-05",
+     "organization": "MK Skøyter",
+     "district": "Norge",
+     "thumbnailUrl": "https://cdn.sanity.io/images/7r6kqtqy/production/2cc011fc563268553ee77aa4e1dd9c0f4fe12215-999x423.png"
+    },
+    {
+     "slug": "mk-x17",
+     "title": "MK X17 MK SJØGUTTEN",
+     "date": "1940-05-06",
+     "organization": "MK Skøyter",
+     "district": "Norge",
+     "thumbnailUrl": "https://cdn.sanity.io/images/7r6kqtqy/production/3378c0a196d3ea9fbbceae891eb4de74599be2e3-542x412.png"
+    },
+    {
+     "slug": "mk-x18",
+     "title": "MK X18 MK Sandvikshorn og MK Vestern med flyktninger",
+     "date": "1940-05-07",
+     "organization": "Grupper",
+     "district": "Norge",
+     "thumbnailUrl": "https://cdn.sanity.io/images/7r6kqtqy/production/3378c0a196d3ea9fbbceae891eb4de74599be2e3-542x412.png"
+    },
+    {
+     "slug": "mk-x19",
+     "title": "MK X19 Flere båter til Lerwick",
+     "date": "1940-05-07",
+     "organization": "Grupper",
+     "district": "Norge",
+     "thumbnailUrl": "https://cdn.sanity.io/images/7r6kqtqy/production/3378c0a196d3ea9fbbceae891eb4de74599be2e3-542x412.png"
+    },
+    {
+     "slug": "mk-x26",
+     "title": "MK X26 DORY fra  M-164-A  til Ålesund og Flekkefjord",
+     "date": "1940-05-07",
+     "organization": "MK Skøyter",
+     "district": "Norge",
+     "thumbnailUrl": "https://cdn.sanity.io/images/7r6kqtqy/production/a2138f5769d3cbb03e5ca3e86978afd684316fe2-642x521.png"
+    },
+    {
+     "slug": "mk-x27",
+     "title": "MK X27 M/S «ELDØY» M-286-A til Torshavn",
+     "date": "1940-05-07",
+     "organization": "MK Skøyter",
+     "district": "Norge",
+     "thumbnailUrl": "https://cdn.sanity.io/images/7r6kqtqy/production/25e6153d642a0fb9e642db6aeddc591d521d8cef-888x446.png"
+    },
+    {
+     "slug": "mk-x33",
+     "title": "MK X33 \"Torsvik\" 1 MK NYO M-9-B",
+     "date": "1940-05-08",
+     "organization": "Grupper",
+     "district": "Norge",
+     "thumbnailUrl": null
+    },
+    {
+     "slug": "mk-x20",
+     "title": "MK X20 MK VITA H-95-B",
+     "date": "1940-05-08",
+     "organization": "MK Skøyter",
+     "district": "Norge",
+     "thumbnailUrl": null
+    },
+    {
+     "slug": "mk-x39",
+     "title": "MK X39 MK PORAT H-21-S",
+     "date": "1940-05-09",
+     "organization": "MK Skøyter",
+     "district": "06 Skøyter ikke organisert",
+     "thumbnailUrl": null
+    },
+    {
+     "slug": "mk-x21",
+     "title": "MK X21 \"Storemark\" 1 MK WAILET V-2-S",
+     "date": "1940-05-09",
+     "organization": "Grupper",
+     "district": "Norge",
+     "thumbnailUrl": "https://cdn.sanity.io/images/7r6kqtqy/production/3378c0a196d3ea9fbbceae891eb4de74599be2e3-542x412.png"
+    },
+    {
+     "slug": "mk-x23",
+     "title": "MK X23 MK Reidar til Lerwick",
+     "date": "1940-05-10",
+     "organization": "MK Skøyter",
+     "district": "Norge",
+     "thumbnailUrl": null
+    },
+    {
+     "slug": "sis-section-d-involveres-i-motstandsbevegelsen-i-england",
+     "title": "SIS Section D involveres i motstandsbevegelsen  i England",
+     "date": "1940-05-15",
+     "organization": "SIS",
+     "district": "01- SIS-XU",
+     "thumbnailUrl": "https://cdn.sanity.io/images/7r6kqtqy/production/b12f5fed03a2e2ead16fd67cc2918e65428085e2-5448x1618.png"
+    },
+    {
+     "slug": "msp-nid01",
+     "title": "MSP-NID01 SIS Operation HARDWARE ( gitt navn senere)",
+     "date": "1940-05-17",
+     "organization": "MSP Marinens skøyteavdeling Petershead",
+     "district": "01- SIS-XU",
+     "thumbnailUrl": "https://cdn.sanity.io/images/7r6kqtqy/production/160f6be8cbd156c1004d491bf6643f6fee1def22-2000x667.png"
+    },
+    {
+     "slug": "mk-snal-h-50-am",
+     "title": "MK SNÅL H-50-AM",
+     "date": "1940-05-19",
+     "organization": "Flyktninger",
+     "district": "06 Skøyter ikke organisert",
+     "thumbnailUrl": "https://cdn.sanity.io/images/7r6kqtqy/production/13a9b670feb9385079514b84cb96ed5749c8fbf2-542x412.png"
+    },
+    {
+     "slug": "mk-x003",
+     "title": "MK X003 MS Vega til Balta",
+     "date": "1940-05-20",
+     "organization": "MK Skøyter",
+     "district": "Norge",
+     "thumbnailUrl": "https://cdn.sanity.io/images/7r6kqtqy/production/60bd5dc3f82fb8ca0e5d2d3b8061f32ece699e73-1190x731.png"
+    },
+    {
+     "slug": "mtb-020",
+     "title": "MTB 020 Hente forliste mannskaper fra HERON ( MK BERGHOLM Forlis)",
+     "date": "1943-04-11",
+     "organization": "MTB flåten",
+     "district": "02-SOE",
+     "thumbnailUrl": "https://cdn.sanity.io/images/7r6kqtqy/production/2237faa7ec7e44f4b5f322e627b5d54cf01b6dfc-1280x720.png"
+    },
+    {
+     "slug": "planet-callisto-se",
+     "title": "Planet CALLISTO (SE)",
+     "date": "1944-09-20",
+     "organization": "FO IV - MI 4",
+     "district": "Milorg D24",
+     "thumbnailUrl": "https://cdn.sanity.io/images/7r6kqtqy/production/b409278825e01ddbcebb4b77c6612cc4e843fa9d-1920x1053.jpg"
+    }
+   ],
+   "truncatedFrom": 2284
+  }
+ ],
+ "gets": []
+}

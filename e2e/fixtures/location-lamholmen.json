@@ -2,20 +2,6 @@
  "path": "/location/lamholmen",
  "queries": [
   {
-   "query": "MATCH (l:Location {slug: $slug})\n           RETURN l.slug AS slug,\n                  coalesce(l.canonicalName, l.title) AS canonicalName,\n                  l.lat AS lat, l.lng AS lng",
-   "params": {
-    "slug": "lamholmen"
-   },
-   "rows": [
-    {
-     "slug": "lamholmen",
-     "canonicalName": "Lamholmen",
-     "lat": 59.74666666666667,
-     "lng": 5.216666666666667
-    }
-   ]
-  },
-  {
    "query": "MATCH (e)-[r:AT|FROM|TO]->(:Location {slug: $slug})\n           WHERE (e:Incident OR e:Operation) AND e.slug IS NOT NULL\n           RETURN DISTINCT e.slug AS slug,\n                  coalesce(e.title, e.codeName, e.canonicalName) AS title,\n                  coalesce(e.date, e.startDate) AS date,\n                  toLower(type(r)) AS role\n           ORDER BY date",
    "params": {
     "slug": "lamholmen"
@@ -30,11 +16,18 @@
    ]
   },
   {
-   "query": "MATCH (l:Location {slug: $slug})-[h:HAS_IMAGE]->(src:Source)\n           RETURN src.url AS url, h.caption AS caption,\n                  coalesce(l.canonicalName, l.title) AS subjectName,\n                  l.slug AS subjectSlug\n           ORDER BY coalesce(h.order, 0)\n           LIMIT 200",
+   "query": "MATCH (l:Location {slug: $slug})\n           RETURN l.slug AS slug,\n                  coalesce(l.canonicalName, l.title) AS canonicalName,\n                  l.lat AS lat, l.lng AS lng",
    "params": {
     "slug": "lamholmen"
    },
-   "rows": []
+   "rows": [
+    {
+     "slug": "lamholmen",
+     "canonicalName": "Lamholmen",
+     "lat": 59.74666666666667,
+     "lng": 5.216666666666667
+    }
+   ]
   },
   {
    "query": "MATCH (l:Location {slug: $slug})-[:HAS_CONTENT]->(d:Description)\n           OPTIONAL MATCH (d)-[:SOURCED_FROM]->(from:Source)\n           WITH d, from\n           OPTIONAL MATCH (d)-[cites:CITES]->(src:Source)\n           WITH d, from,\n                collect(CASE WHEN src IS NULL THEN NULL ELSE {\n                  inline:       coalesce(cites.inline, false),\n                  sourceId:     src.id,\n                  sourceTitle:  src.title,\n                  sourceUrl:    src.url,\n                  sourceAuthor: src.authorFreeText\n                } END) AS rawCites\n           RETURN coalesce(d.order, 1) AS `order`,\n                  d.content AS content,\n                  [x IN rawCites WHERE x IS NOT NULL] AS citations,\n                  CASE WHEN from IS NULL THEN NULL ELSE {\n                    id:             from.id,\n                    title:          from.title,\n                    url:            from.url,\n                    authorFreeText: from.authorFreeText,\n                    license:        from.license,\n                    attribution:    from.attribution\n                  } END AS sourcedFrom\n           ORDER BY `order`",
@@ -51,14 +44,21 @@
    ]
   },
   {
-   "query": "\n    MATCH (p:Person)-[r:STATIONED_AT]->(t:Location {slug: $slug})\n    OPTIONAL MATCH (p)-[:HAS_STATIONED_NOTE]->(d:Description {stayId: r.id})\n    OPTIONAL MATCH (d)-[:SOURCED_FROM]->(from:Source)\n    WITH p, r, t, d, from\n    OPTIONAL MATCH (d)-[cites:CITES]->(src:Source)\n    WITH p, r, t, d, from,\n         collect(CASE WHEN src IS NULL THEN NULL ELSE {\n           inline:       coalesce(cites.inline, false),\n           sourceId:     src.id,\n           sourceTitle:  src.title,\n           sourceUrl:    src.url,\n           sourceAuthor: src.authorFreeText\n         } END) AS rawCites\n    WITH p, r, t,\n         CASE WHEN d IS NULL THEN NULL ELSE {\n           order:     coalesce(d.order, 1),\n           content:   d.content,\n           citations: [x IN rawCites WHERE x IS NOT NULL],\n           sourcedFrom: CASE WHEN from IS NULL THEN NULL ELSE {\n             id:             from.id,\n             title:          from.title,\n             url:            from.url,\n             authorFreeText: from.authorFreeText,\n             license:        from.license,\n             attribution:    from.attribution\n           } END\n         } END AS section\n    WITH p, r, t, collect(section) AS rawSections\n    RETURN r.id AS edgeId, r.state AS state, coalesce(r.sourceRefs, []) AS sourceRefs, p.slug AS targetSlug, p.canonicalName AS targetName, r.role AS role, r.startDate AS startDate, r.endDate AS endDate,\n           [x IN rawSections WHERE x IS NOT NULL] AS sections\n    ORDER BY startDate, targetName\n  ",
+   "query": "MATCH (l:Location {slug: $slug})-[:REFERENCED_IN]->(src:Source)\n           RETURN src.id AS id, src.title AS title, src.url AS url,\n                  src.type AS type, src.domain AS domain,\n                  coalesce(src.nbBacked, false) AS nbBacked\n           ORDER BY nbBacked DESC, src.type, coalesce(src.title, src.url)",
    "params": {
     "slug": "lamholmen"
    },
    "rows": []
   },
   {
-   "query": "MATCH (l:Location {slug: $slug})-[:REFERENCED_IN]->(src:Source)\n           RETURN src.id AS id, src.title AS title, src.url AS url,\n                  src.type AS type, src.domain AS domain,\n                  coalesce(src.nbBacked, false) AS nbBacked\n           ORDER BY nbBacked DESC, src.type, coalesce(src.title, src.url)",
+   "query": "MATCH (l:Location {slug: $slug})-[h:HAS_IMAGE]->(src:Source)\n           RETURN src.url AS url, h.caption AS caption,\n                  coalesce(l.canonicalName, l.title) AS subjectName,\n                  l.slug AS subjectSlug\n           ORDER BY coalesce(h.order, 0)\n           LIMIT 200",
+   "params": {
+    "slug": "lamholmen"
+   },
+   "rows": []
+  },
+  {
+   "query": "\n    MATCH (p:Person)-[r:STATIONED_AT]->(t:Location {slug: $slug})\n    OPTIONAL MATCH (p)-[:HAS_STATIONED_NOTE]->(d:Description {stayId: r.id})\n    OPTIONAL MATCH (d)-[:SOURCED_FROM]->(from:Source)\n    WITH p, r, t, d, from\n    OPTIONAL MATCH (d)-[cites:CITES]->(src:Source)\n    WITH p, r, t, d, from,\n         collect(CASE WHEN src IS NULL THEN NULL ELSE {\n           inline:       coalesce(cites.inline, false),\n           sourceId:     src.id,\n           sourceTitle:  src.title,\n           sourceUrl:    src.url,\n           sourceAuthor: src.authorFreeText\n         } END) AS rawCites\n    WITH p, r, t,\n         CASE WHEN d IS NULL THEN NULL ELSE {\n           order:     coalesce(d.order, 1),\n           content:   d.content,\n           citations: [x IN rawCites WHERE x IS NOT NULL],\n           sourcedFrom: CASE WHEN from IS NULL THEN NULL ELSE {\n             id:             from.id,\n             title:          from.title,\n             url:            from.url,\n             authorFreeText: from.authorFreeText,\n             license:        from.license,\n             attribution:    from.attribution\n           } END\n         } END AS section\n    WITH p, r, t, collect(section) AS rawSections\n    RETURN r.id AS edgeId, r.state AS state, coalesce(r.sourceRefs, []) AS sourceRefs, p.slug AS targetSlug, p.canonicalName AS targetName, r.role AS role, r.startDate AS startDate, r.endDate AS endDate,\n           [x IN rawSections WHERE x IS NOT NULL] AS sections\n    ORDER BY startDate, targetName\n  ",
    "params": {
     "slug": "lamholmen"
    },

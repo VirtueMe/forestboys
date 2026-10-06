@@ -43,12 +43,11 @@ describe('describeRequest', () => {
 })
 
 describe('capRows', () => {
-  const rows = (n: number) => Array.from({ length: n }, (_, i) => ({ i }))
+  const rows = (n: number) => Array.from({ length: n }, (_, i) => ({ slug: `row-${String(i).padStart(4, '0')}` }))
 
   it('cuts a registry-wide query (no parameters) to its first rows and says how many there were', () => {
     const r = capRows('MATCH (p:Person) RETURN p', {}, rows(4000))
     expect(r.rows).toHaveLength(CAP_ROWS)
-    expect(r.rows[0]).toEqual({ i: 0 })
     expect(r.truncatedFrom).toBe(4000)
   })
 
@@ -62,5 +61,17 @@ describe('capRows', () => {
     const r = capRows('MATCH (p:Person {slug: $slug})-[:X]->(e) RETURN e', { slug: 'a' }, rows(500))
     expect(r.rows).toHaveLength(500)
     expect('truncatedFrom' in r).toBe(false)
+  })
+
+  it('keeps the same rows however the graph happened to order them, so a recording does not change by itself', () => {
+    const forwards = rows(300)
+    const shuffled = [...forwards].sort((a, b) => (a.slug.charCodeAt(5) * 7 + a.slug.length) - (b.slug.charCodeAt(5) * 7 + b.slug.length) || (a.slug < b.slug ? 1 : -1))
+    expect(capRows('q', {}, shuffled).rows).toEqual(capRows('q', {}, forwards).rows)
+  })
+
+  it('also keeps the rows that mention the page itself, wherever they were, so the page can find itself', () => {
+    const r = capRows('q', {}, rows(300), 'row-0250')
+    expect(r.rows).toHaveLength(CAP_ROWS + 1)
+    expect(r.rows).toContainEqual({ slug: 'row-0250' })
   })
 })

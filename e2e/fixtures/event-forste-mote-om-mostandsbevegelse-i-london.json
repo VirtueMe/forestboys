@@ -1,0 +1,1187 @@
+{
+ "path": "/events/forste-mote-om-mostandsbevegelse-i-london",
+ "queries": [
+  {
+   "query": "MATCH (:`Operation` {slug: $slug})-[:FROM]->(l:Location)\n       RETURN l.slug AS slug, coalesce(l.canonicalName, l.title) AS title",
+   "params": {
+    "slug": "forste-mote-om-mostandsbevegelse-i-london"
+   },
+   "rows": []
+  },
+  {
+   "query": "MATCH (:`Operation` {slug: $slug})-[:FROM]->(l:Location)\n         RETURN l.slug AS slug, coalesce(l.canonicalName, l.title) AS title, l.lat AS lat, l.lng AS lng",
+   "params": {
+    "slug": "forste-mote-om-mostandsbevegelse-i-london"
+   },
+   "rows": []
+  },
+  {
+   "query": "MATCH (:`Operation` {slug: $slug})-[:FROM_STATION]->(s:Station)\n         RETURN s.slug AS slug, coalesce(s.canonicalName, s.title) AS title",
+   "params": {
+    "slug": "forste-mote-om-mostandsbevegelse-i-london"
+   },
+   "rows": []
+  },
+  {
+   "query": "MATCH (:`Operation` {slug: $slug})-[:HAS_CONTENT]->(d:Description)\n       RETURN d.content AS content\n       ORDER BY coalesce(d.order, 1) ASC",
+   "params": {
+    "slug": "forste-mote-om-mostandsbevegelse-i-london"
+   },
+   "rows": [
+    {
+     "content": "[{\"_key\":\"917af4b7f61c\",\"_type\":\"block\",\"children\":[{\"_key\":\"96a5cb6a9bcc\",\"_type\":\"span\",\"marks\":[],\"text\":\"Martin Linge var kommet over som såret etter trefningene ved Åndalsnes. Han var fortsatt på krykker en lang periode. \"}],\"markDefs\":[],\"style\":\"normal\"},{\"_key\":\"4924ce3c1fba\",\"_type\":\"block\",\"children\":[{\"_key\":\"c9ea5c063bc6\",\"_type\":\"span\",\"marks\":[],\"text\":\"Lørdag 22 juni 1940 avholdt  Utenriksdept nyopprettede Etteretningskontor, et møte, hvor temaet var å få igang en mostandsbevegelse. \\nTiIstede på dette møtet var :\"}],\"markDefs\":[],\"style\":\"normal\"},{\"_key\":\"8b55739915f4\",\"_type\":\"block\",\"children\":[{\"_key\":\"fcf1da5596a9\",\"_type\":\"span\",\"marks\":[],\"text\":\"Sverre Midtskau UD's Etteretningskontor\"}],\"level\":1,\"listItem\":\"bullet\",\"markDefs\":[],\"style\":\"normal\"},{\"_key\":\"37687233b3e6\",\"_type\":\"block\",\"children\":[{\"_key\":\"360affac7814\",\"_type\":\"span\",\"marks\":[],\"text\":\"Skuespiller Gerd Nissen (Samboer Nordahl Grieg)\"}],\"level\":1,\"listItem\":\"bullet\",\"markDefs\":[],\"style\":\"normal\"},{\"_key\":\"557158b2a56a\",\"_type\":\"block\",\"children\":[{\"_key\":\"fc062db02bf3\",\"_type\":\"span\",\"marks\":[],\"text\":\"Dikteren Johan Nordahl Brun Grieg (Var og med på Gulltransporten)\"}],\"level\":1,\"listItem\":\"bullet\",\"markDefs\":[],\"style\":\"normal\"},{\"_key\":\"41b811c188f6\",\"_type\":\"block\",\"children\":[{\"_key\":\"1f113f56b4ed\",\"_type\":\"span\",\"marks\":[],\"text\":\"Skuespiller og vernepliktig offiser  Martin Linge (Lt. L) \"}],\"level\":1,\"listItem\":\"bullet\",\"markDefs\":[],\"style\":\"normal\"},{\"_key\":\"f0686b7958fb\",\"_type\":\"block\",\"children\":[{\"_key\":\"4f19c74de3e9\",\"_type\":\"span\",\"marks\":[],\"text\":\"Unni Diesen Utenrikesdepartementet, Koht's sekretær.\"}],\"level\":1,\"listItem\":\"bullet\",\"markDefs\":[],\"style\":\"normal\"},{\"_key\":\"0419f03c4b95\",\"_type\":\"block\",\"children\":[{\"_key\":\"b7b7574ccf66\",\"_type\":\"span\",\"marks\":[],\"text\":\"Journalist Olav Rytter (Hr R.) NRK  - BBC norske send fra 17 april 40.\"}],\"level\":1,\"listItem\":\"bullet\",\"markDefs\":[],\"style\":\"normal\"},{\"_key\":\"b58db79735b4\",\"_type\":\"block\",\"children\":[{\"_key\":\"98d1e18bbe88\",\"_type\":\"span\",\"marks\":[],\"text\":\"Den norske sendemannen i London, Eric Colban, insisterer på at det er usømmelig at Gerd Nissen og Nordahl Grieg har samme romnummer på South Kensington hotel, uten å være lovformelig gidt, og dagen derpå blir de gift - i Den Norske Legasjon i Palace Green nr 10. med den danske journalist Tillge-Rasmussen som forlover og Halvdan Koht som forlover for bruden. Dermed fikk moralens voktere sitt!\\n\\nMan behandlet spørsmålene om: \\n1. Propagandaen pr. radio. \\n2. Propagandaen gjennom flyveblad og andre trykksaker. \\n3. Forbindelse med Norge gjennem hemmelige kurerer. \\n4. Forbindelse med hr. G. i St.hlm. \\n5. Våben og ammunisjon.\\n\\nAd. 1. Det blev fremhevet ønskeligheten av en egen sender uavhengig av  B.B.C., helst en sådan at folk i Norge som har Radio som kun tar Oslo også kan opfange den. \\nLtn L. opplyste at man visstnok ved enkel forandring, som kan foretaes selv, kan opfange kortbølge på slike apparater, og påpekte ønskeligheten av at oplysning om dette blev utbredt i Norge gjennem de kanaler som nedenfor nevnt. Diskuterer Kurerer - radiosendere - motpropaganda etc.\\n\\nNordahl Grieg opptrådte militært til fingerspissene, mens Martin Linge var avslappet og rolig, som en skuespiller.\\n\\nVed det nyetablerte etteretningskontor jobbet Sverre Midtskau og Bjørn Holtedahl, med litt praktisk hjelp fra Kohts sekretær, Unni Diesen.\"}],\"markDefs\":[],\"style\":\"normal\"},{\"_key\":\"2f9827dc5870\",\"_type\":\"block\",\"children\":[{\"_key\":\"903d2951dd5d\",\"_type\":\"span\",\"marks\":[\"strong\",\"underline\"],\"text\":\"Les mere i \\\"Martin Linge - min morfar : familieroman med fotografier\\\" undere.\"}],\"markDefs\":[],\"style\":\"normal\"},{\"_key\":\"c2bedc9b489e\",\"_type\":\"block\",\"children\":[{\"_key\":\"1d81190d3507\",\"_type\":\"span\",\"marks\":[\"underline\"],\"text\":\"Dette skriver også Svein Linge om i Biografien om Martin Linge.\"}],\"markDefs\":[],\"style\":\"normal\"}]"
+    }
+   ]
+  },
+  {
+   "query": "MATCH (:`Operation` {slug: $slug})-[:HAS_CONTENT]->(d:Description)\n         RETURN d.order AS order, d.content AS content\n         ORDER BY coalesce(d.order, 1) ASC",
+   "params": {
+    "slug": "forste-mote-om-mostandsbevegelse-i-london"
+   },
+   "rows": [
+    {
+     "order": 1,
+     "content": "[{\"_key\":\"917af4b7f61c\",\"_type\":\"block\",\"children\":[{\"_key\":\"96a5cb6a9bcc\",\"_type\":\"span\",\"marks\":[],\"text\":\"Martin Linge var kommet over som såret etter trefningene ved Åndalsnes. Han var fortsatt på krykker en lang periode. \"}],\"markDefs\":[],\"style\":\"normal\"},{\"_key\":\"4924ce3c1fba\",\"_type\":\"block\",\"children\":[{\"_key\":\"c9ea5c063bc6\",\"_type\":\"span\",\"marks\":[],\"text\":\"Lørdag 22 juni 1940 avholdt  Utenriksdept nyopprettede Etteretningskontor, et møte, hvor temaet var å få igang en mostandsbevegelse. \\nTiIstede på dette møtet var :\"}],\"markDefs\":[],\"style\":\"normal\"},{\"_key\":\"8b55739915f4\",\"_type\":\"block\",\"children\":[{\"_key\":\"fcf1da5596a9\",\"_type\":\"span\",\"marks\":[],\"text\":\"Sverre Midtskau UD's Etteretningskontor\"}],\"level\":1,\"listItem\":\"bullet\",\"markDefs\":[],\"style\":\"normal\"},{\"_key\":\"37687233b3e6\",\"_type\":\"block\",\"children\":[{\"_key\":\"360affac7814\",\"_type\":\"span\",\"marks\":[],\"text\":\"Skuespiller Gerd Nissen (Samboer Nordahl Grieg)\"}],\"level\":1,\"listItem\":\"bullet\",\"markDefs\":[],\"style\":\"normal\"},{\"_key\":\"557158b2a56a\",\"_type\":\"block\",\"children\":[{\"_key\":\"fc062db02bf3\",\"_type\":\"span\",\"marks\":[],\"text\":\"Dikteren Johan Nordahl Brun Grieg (Var og med på Gulltransporten)\"}],\"level\":1,\"listItem\":\"bullet\",\"markDefs\":[],\"style\":\"normal\"},{\"_key\":\"41b811c188f6\",\"_type\":\"block\",\"children\":[{\"_key\":\"1f113f56b4ed\",\"_type\":\"span\",\"marks\":[],\"text\":\"Skuespiller og vernepliktig offiser  Martin Linge (Lt. L) \"}],\"level\":1,\"listItem\":\"bullet\",\"markDefs\":[],\"style\":\"normal\"},{\"_key\":\"f0686b7958fb\",\"_type\":\"block\",\"children\":[{\"_key\":\"4f19c74de3e9\",\"_type\":\"span\",\"marks\":[],\"text\":\"Unni Diesen Utenrikesdepartementet, Koht's sekretær.\"}],\"level\":1,\"listItem\":\"bullet\",\"markDefs\":[],\"style\":\"normal\"},{\"_key\":\"0419f03c4b95\",\"_type\":\"block\",\"children\":[{\"_key\":\"b7b7574ccf66\",\"_type\":\"span\",\"marks\":[],\"text\":\"Journalist Olav Rytter (Hr R.) NRK  - BBC norske send fra 17 april 40.\"}],\"level\":1,\"listItem\":\"bullet\",\"markDefs\":[],\"style\":\"normal\"},{\"_key\":\"b58db79735b4\",\"_type\":\"block\",\"children\":[{\"_key\":\"98d1e18bbe88\",\"_type\":\"span\",\"marks\":[],\"text\":\"Den norske sendemannen i London, Eric Colban, insisterer på at det er usømmelig at Gerd Nissen og Nordahl Grieg har samme romnummer på South Kensington hotel, uten å være lovformelig gidt, og dagen derpå blir de gift - i Den Norske Legasjon i Palace Green nr 10. med den danske journalist Tillge-Rasmussen som forlover og Halvdan Koht som forlover for bruden. Dermed fikk moralens voktere sitt!\\n\\nMan behandlet spørsmålene om: \\n1. Propagandaen pr. radio. \\n2. Propagandaen gjennom flyveblad og andre trykksaker. \\n3. Forbindelse med Norge gjennem hemmelige kurerer. \\n4. Forbindelse med hr. G. i St.hlm. \\n5. Våben og ammunisjon.\\n\\nAd. 1. Det blev fremhevet ønskeligheten av en egen sender uavhengig av  B.B.C., helst en sådan at folk i Norge som har Radio som kun tar Oslo også kan opfange den. \\nLtn L. opplyste at man visstnok ved enkel forandring, som kan foretaes selv, kan opfange kortbølge på slike apparater, og påpekte ønskeligheten av at oplysning om dette blev utbredt i Norge gjennem de kanaler som nedenfor nevnt. Diskuterer Kurerer - radiosendere - motpropaganda etc.\\n\\nNordahl Grieg opptrådte militært til fingerspissene, mens Martin Linge var avslappet og rolig, som en skuespiller.\\n\\nVed det nyetablerte etteretningskontor jobbet Sverre Midtskau og Bjørn Holtedahl, med litt praktisk hjelp fra Kohts sekretær, Unni Diesen.\"}],\"markDefs\":[],\"style\":\"normal\"},{\"_key\":\"2f9827dc5870\",\"_type\":\"block\",\"children\":[{\"_key\":\"903d2951dd5d\",\"_type\":\"span\",\"marks\":[\"strong\",\"underline\"],\"text\":\"Les mere i \\\"Martin Linge - min morfar : familieroman med fotografier\\\" undere.\"}],\"markDefs\":[],\"style\":\"normal\"},{\"_key\":\"c2bedc9b489e\",\"_type\":\"block\",\"children\":[{\"_key\":\"1d81190d3507\",\"_type\":\"span\",\"marks\":[\"underline\"],\"text\":\"Dette skriver også Svein Linge om i Biografien om Martin Linge.\"}],\"markDefs\":[],\"style\":\"normal\"}]"
+    }
+   ]
+  },
+  {
+   "query": "MATCH (:`Operation` {slug: $slug})-[:REFERENCED_IN]->(src:Source)\n       WHERE src.url IS NOT NULL AND trim(src.url) <> ''\n       RETURN DISTINCT src.id AS id, src.title AS title, src.url AS url\n       ORDER BY coalesce(src.title, src.url), src.url",
+   "params": {
+    "slug": "forste-mote-om-mostandsbevegelse-i-london"
+   },
+   "rows": [
+    {
+     "id": "nb-no-items-urn-nbn-no-nb-digibok-2013110508013-215b2eb9",
+     "title": "Martin Linge - min morfar : familieroman med fotografier",
+     "url": "https://www.nb.no/items/URN:NBN:no-nb_digibok_2013110508013?page=125"
+    },
+    {
+     "id": "ark-no-produkt-boker-dokumentar-og-faktaboker-martin-linge-9788230020067-3a18f219",
+     "title": "Martin Linge : biografi",
+     "url": "https://www.ark.no/produkt/boker/dokumentar-og-faktaboker/martin-linge-9788230020067"
+    }
+   ]
+  },
+  {
+   "query": "MATCH (:`Operation` {slug: $slug})-[:TO]->(l:Location)\n           RETURN l.slug AS slug, coalesce(l.canonicalName, l.title) AS title",
+   "params": {
+    "slug": "forste-mote-om-mostandsbevegelse-i-london"
+   },
+   "rows": [
+    {
+     "slug": "london-uk",
+     "title": "London UK"
+    }
+   ]
+  },
+  {
+   "query": "MATCH (:`Operation` {slug: $slug})-[:TO]->(l:Location)\n         RETURN l.slug AS slug, coalesce(l.canonicalName, l.title) AS title, l.lat AS lat, l.lng AS lng",
+   "params": {
+    "slug": "forste-mote-om-mostandsbevegelse-i-london"
+   },
+   "rows": [
+    {
+     "slug": "london-uk",
+     "title": "London UK",
+     "lat": 51.530488,
+     "lng": -0.156018
+    }
+   ]
+  },
+  {
+   "query": "MATCH (:`Operation` {slug: $slug})-[:TO_STATION]->(s:Station)\n         RETURN s.slug AS slug, coalesce(s.canonicalName, s.title) AS title",
+   "params": {
+    "slug": "forste-mote-om-mostandsbevegelse-i-london"
+   },
+   "rows": []
+  },
+  {
+   "query": "MATCH (:`Operation` {slug: $slug})-[r:HAS_IMAGE]->(s:Source)\n         WHERE coalesce(s.kind, 'photograph') = 'photograph'\n         RETURN s.id AS id, s.url AS url, coalesce(r.caption, s.title) AS caption\n         ORDER BY coalesce(r.order, 9999), s.id",
+   "params": {
+    "slug": "forste-mote-om-mostandsbevegelse-i-london"
+   },
+   "rows": []
+  },
+  {
+   "query": "MATCH (e {slug: $slug}) WHERE e:Incident OR e:Operation\n     OPTIONAL MATCH (e)-[:ORCHESTRATED_BY]->(org:Organization)\n     OPTIONAL MATCH (e)-[:IN_DISTRICT]->(dist:Unit)\n     RETURN CASE WHEN 'Operation' IN labels(e) THEN 'operation' ELSE 'incident' END AS kind,\n            coalesce(e.codeName, e.canonicalName, e.title) AS title,\n            e.date AS date,\n            org.canonicalName AS organization,\n            dist.canonicalName AS district",
+   "params": {
+    "slug": "forste-mote-om-mostandsbevegelse-i-london"
+   },
+   "rows": [
+    {
+     "kind": "operation",
+     "title": "Første møte om Motstandsbevegelse i London",
+     "date": "1940-06-22",
+     "organization": "Norge i United Kingdom",
+     "district": "United Kingdom"
+    }
+   ]
+  },
+  {
+   "query": "MATCH (e) WHERE e:Incident OR e:Operation\n         OPTIONAL MATCH (e)-[:ORCHESTRATED_BY]->(org:Organization)\n         OPTIONAL MATCH (e)-[:IN_DISTRICT]->(dist:Unit)\n         OPTIONAL MATCH (e)-[:HAS_IMAGE]->(img:Source)\n           WHERE coalesce(img.kind, 'photograph') = 'photograph'\n         WITH e, org, dist, img ORDER BY coalesce(img.id, '')\n         WITH e, org, dist, head(collect(img)) AS firstImg\n         RETURN e.slug AS slug,\n                coalesce(e.codeName, e.canonicalName, e.title) AS title,\n                e.date AS date,\n                org.canonicalName AS organization,\n                dist.canonicalName AS district,\n                firstImg.url AS thumbnailUrl\n         ORDER BY e.date ASC, title ASC",
+   "params": {},
+   "rows": [
+    {
+     "slug": "gulltransporten-1940",
+     "title": "GULLTRANSPORTEN 1940",
+     "date": "1940-04-09",
+     "organization": "Norge",
+     "district": "Norge",
+     "thumbnailUrl": "https://cdn.sanity.io/images/7r6kqtqy/production/f0838951baae0532e550001f82b3dc73569bcda9-1200x1093.png"
+    },
+    {
+     "slug": "nrk-1",
+     "title": "NRK Første sending fra BBC",
+     "date": "1940-04-09",
+     "organization": "Norge i United Kingdom",
+     "district": "United Kingdom",
+     "thumbnailUrl": "https://cdn.sanity.io/images/7r6kqtqy/production/3421e989e5f028f10dd4b23bc7403524659865e5-1040x776.png"
+    },
+    {
+     "slug": "mk-x48",
+     "title": "MK X48 MK LIVLIG",
+     "date": "1940-04-28",
+     "organization": "MK Skøyter",
+     "district": "06 Skøyter ikke organisert",
+     "thumbnailUrl": null
+    },
+    {
+     "slug": "mk-x60",
+     "title": "MK X60 BERGHOLM SF-3-SV",
+     "date": "1940-05-02",
+     "organization": "MK Skøyter",
+     "district": "06 Skøyter ikke organisert",
+     "thumbnailUrl": null
+    },
+    {
+     "slug": "heinkel-he115-fra-olden-til-dornough",
+     "title": "HEINKEL He115 fra Olden til Dornough",
+     "date": "1940-05-02",
+     "organization": "Homefleet",
+     "district": "Flukt",
+     "thumbnailUrl": "https://cdn.sanity.io/images/7r6kqtqy/production/c967c4314108e1c0ab8ed6978fbde4d89c4774c8-728x501.png"
+    },
+    {
+     "slug": "mk-x24",
+     "title": "MK X24 MK Jåbek til Baltasound",
+     "date": "1940-05-02",
+     "organization": "MK Skøyter",
+     "district": "Norge",
+     "thumbnailUrl": null
+    },
+    {
+     "slug": "mk-x010",
+     "title": "MK X010 MK DISKO og MK KORALEN I ",
+     "date": "1940-05-03",
+     "organization": "MK Skøyter",
+     "district": "06 Skøyter ikke organisert",
+     "thumbnailUrl": "https://cdn.sanity.io/images/7r6kqtqy/production/ca21215c9a308aa7aeba62d2437ac3b35043f47c-1199x884.png"
+    },
+    {
+     "slug": "mk-x011",
+     "title": "MK X011 MS BOMMA til Shetland",
+     "date": "1940-05-03",
+     "organization": "MK Skøyter",
+     "district": "06 Skøyter ikke organisert",
+     "thumbnailUrl": "https://cdn.sanity.io/images/7r6kqtqy/production/34cfb14449a62ffaba9f7308307612d782c41314-600x877.jpg"
+    },
+    {
+     "slug": "mk-x25",
+     "title": "MK X25 DS UTVÆR M-164-A  til Torshavn",
+     "date": "1940-05-03",
+     "organization": "MK Skøyter",
+     "district": "Norge",
+     "thumbnailUrl": "https://cdn.sanity.io/images/7r6kqtqy/production/7b3fe9141904cf8513c26a28a78dd9cfaca56a7a-982x631.png"
+    },
+    {
+     "slug": "mk-x007",
+     "title": "MK X007 MK JUVEL M-102-S",
+     "date": "1940-05-04",
+     "organization": "MK Skøyter",
+     "district": "06 Skøyter ikke organisert",
+     "thumbnailUrl": "https://cdn.sanity.io/images/7r6kqtqy/production/1d4db56e339665a72c40b5b32d0469d59fec3865-542x412.png"
+    },
+    {
+     "slug": "ds-01",
+     "title": "DS 01  DS AKABAHRA \"kapret\" til Kirkwall",
+     "date": "1940-05-05",
+     "organization": "MK Skøyter",
+     "district": "Norge",
+     "thumbnailUrl": "https://cdn.sanity.io/images/7r6kqtqy/production/2cc011fc563268553ee77aa4e1dd9c0f4fe12215-999x423.png"
+    },
+    {
+     "slug": "mk-x17",
+     "title": "MK X17 MK SJØGUTTEN",
+     "date": "1940-05-06",
+     "organization": "MK Skøyter",
+     "district": "Norge",
+     "thumbnailUrl": "https://cdn.sanity.io/images/7r6kqtqy/production/3378c0a196d3ea9fbbceae891eb4de74599be2e3-542x412.png"
+    },
+    {
+     "slug": "mk-x18",
+     "title": "MK X18 MK Sandvikshorn og MK Vestern med flyktninger",
+     "date": "1940-05-07",
+     "organization": "Grupper",
+     "district": "Norge",
+     "thumbnailUrl": "https://cdn.sanity.io/images/7r6kqtqy/production/3378c0a196d3ea9fbbceae891eb4de74599be2e3-542x412.png"
+    },
+    {
+     "slug": "mk-x19",
+     "title": "MK X19 Flere båter til Lerwick",
+     "date": "1940-05-07",
+     "organization": "Grupper",
+     "district": "Norge",
+     "thumbnailUrl": "https://cdn.sanity.io/images/7r6kqtqy/production/3378c0a196d3ea9fbbceae891eb4de74599be2e3-542x412.png"
+    },
+    {
+     "slug": "mk-x26",
+     "title": "MK X26 DORY fra  M-164-A  til Ålesund og Flekkefjord",
+     "date": "1940-05-07",
+     "organization": "MK Skøyter",
+     "district": "Norge",
+     "thumbnailUrl": "https://cdn.sanity.io/images/7r6kqtqy/production/a2138f5769d3cbb03e5ca3e86978afd684316fe2-642x521.png"
+    },
+    {
+     "slug": "mk-x27",
+     "title": "MK X27 M/S «ELDØY» M-286-A til Torshavn",
+     "date": "1940-05-07",
+     "organization": "MK Skøyter",
+     "district": "Norge",
+     "thumbnailUrl": "https://cdn.sanity.io/images/7r6kqtqy/production/25e6153d642a0fb9e642db6aeddc591d521d8cef-888x446.png"
+    },
+    {
+     "slug": "mk-x33",
+     "title": "MK X33 \"Torsvik\" 1 MK NYO M-9-B",
+     "date": "1940-05-08",
+     "organization": "Grupper",
+     "district": "Norge",
+     "thumbnailUrl": null
+    },
+    {
+     "slug": "mk-x20",
+     "title": "MK X20 MK VITA H-95-B",
+     "date": "1940-05-08",
+     "organization": "MK Skøyter",
+     "district": "Norge",
+     "thumbnailUrl": null
+    },
+    {
+     "slug": "mk-x39",
+     "title": "MK X39 MK PORAT H-21-S",
+     "date": "1940-05-09",
+     "organization": "MK Skøyter",
+     "district": "06 Skøyter ikke organisert",
+     "thumbnailUrl": null
+    },
+    {
+     "slug": "mk-x21",
+     "title": "MK X21 \"Storemark\" 1 MK WAILET V-2-S",
+     "date": "1940-05-09",
+     "organization": "Grupper",
+     "district": "Norge",
+     "thumbnailUrl": "https://cdn.sanity.io/images/7r6kqtqy/production/3378c0a196d3ea9fbbceae891eb4de74599be2e3-542x412.png"
+    },
+    {
+     "slug": "mk-x23",
+     "title": "MK X23 MK Reidar til Lerwick",
+     "date": "1940-05-10",
+     "organization": "MK Skøyter",
+     "district": "Norge",
+     "thumbnailUrl": null
+    },
+    {
+     "slug": "sis-section-d-involveres-i-motstandsbevegelsen-i-england",
+     "title": "SIS Section D involveres i motstandsbevegelsen  i England",
+     "date": "1940-05-15",
+     "organization": "SIS",
+     "district": "01- SIS-XU",
+     "thumbnailUrl": "https://cdn.sanity.io/images/7r6kqtqy/production/b12f5fed03a2e2ead16fd67cc2918e65428085e2-5448x1618.png"
+    },
+    {
+     "slug": "msp-nid01",
+     "title": "MSP-NID01 SIS Operation HARDWARE ( gitt navn senere)",
+     "date": "1940-05-17",
+     "organization": "MSP Marinens skøyteavdeling Petershead",
+     "district": "01- SIS-XU",
+     "thumbnailUrl": "https://cdn.sanity.io/images/7r6kqtqy/production/160f6be8cbd156c1004d491bf6643f6fee1def22-2000x667.png"
+    },
+    {
+     "slug": "mk-snal-h-50-am",
+     "title": "MK SNÅL H-50-AM",
+     "date": "1940-05-19",
+     "organization": "Flyktninger",
+     "district": "06 Skøyter ikke organisert",
+     "thumbnailUrl": "https://cdn.sanity.io/images/7r6kqtqy/production/13a9b670feb9385079514b84cb96ed5749c8fbf2-542x412.png"
+    },
+    {
+     "slug": "mk-x003",
+     "title": "MK X003 MS Vega til Balta",
+     "date": "1940-05-20",
+     "organization": "MK Skøyter",
+     "district": "Norge",
+     "thumbnailUrl": "https://cdn.sanity.io/images/7r6kqtqy/production/60bd5dc3f82fb8ca0e5d2d3b8061f32ece699e73-1190x731.png"
+    },
+    {
+     "slug": "forste-mote-om-mostandsbevegelse-i-london",
+     "title": "Første møte om Motstandsbevegelse i London",
+     "date": "1940-06-22",
+     "organization": "Norge i United Kingdom",
+     "district": "United Kingdom",
+     "thumbnailUrl": null
+    }
+   ],
+   "truncatedFrom": 2284
+  },
+  {
+   "query": "\n    MATCH (i:Incident)\n    RETURN i.slug AS slug,\n           i.title + CASE WHEN i.date IS NOT NULL THEN ' · ' + i.date ELSE '' END AS name\n    ORDER BY i.date DESC, i.title\n  ",
+   "params": {},
+   "rows": []
+  },
+  {
+   "query": "\n    MATCH (l:Location)\n    RETURN l.slug AS slug, coalesce(l.canonicalName, l.title) AS name\n    ORDER BY name\n  ",
+   "params": {},
+   "rows": [
+    {
+     "slug": "finneru ",
+     "name": " Mærratjern"
+    },
+    {
+     "slug": "1-fjellbu",
+     "name": "1 Fjellbu"
+    },
+    {
+     "slug": "10-regnbuen",
+     "name": "10 Regnbuen"
+    },
+    {
+     "slug": "11-elgebu",
+     "name": "11 Elgebu"
+    },
+    {
+     "slug": "12-krementsjug",
+     "name": "12 Krementsjug"
+    },
+    {
+     "slug": "13-holmetjernshytta",
+     "name": "13 Holmetjernshytta"
+    },
+    {
+     "slug": "14-eriksbu",
+     "name": "14 Eriksbu"
+    },
+    {
+     "slug": "15-hauketo",
+     "name": "15 Hauketo"
+    },
+    {
+     "slug": "154-chiltern-court-baker-street",
+     "name": "154 Chiltern Court, Baker Street"
+    },
+    {
+     "slug": "16-hakonshallen",
+     "name": "16 Håkonshallen"
+    },
+    {
+     "slug": "17-oskarsborg",
+     "name": "17 Oskarsborg"
+    },
+    {
+     "slug": "17th-oxford-square",
+     "name": "17th Oxford Square"
+    },
+    {
+     "slug": "18-flagstua",
+     "name": "18 Flagstua"
+    },
+    {
+     "slug": "19-putten",
+     "name": "19 Putten"
+    },
+    {
+     "slug": "2-bbb",
+     "name": "2 BBB"
+    },
+    {
+     "slug": "20-kollbu",
+     "name": "20 Kollbu"
+    },
+    {
+     "slug": "21-polan",
+     "name": "21 Polan"
+    },
+    {
+     "slug": "22-lauvkollen",
+     "name": "22 Lauvkollen"
+    },
+    {
+     "slug": "23-bjerkeli-ikke-funnet",
+     "name": "23 Bjerkeli (ikke funnet)"
+    },
+    {
+     "slug": "24-frisko",
+     "name": "24 Frisko"
+    },
+    {
+     "slug": "25-jeger-bu",
+     "name": "25 Jeger bu"
+    },
+    {
+     "slug": "26-fjellsetra",
+     "name": "26 Fjellsetra"
+    },
+    {
+     "slug": "27-holastua",
+     "name": "27 Hølastua"
+    },
+    {
+     "slug": "28-gryte",
+     "name": "28 Gryte"
+    },
+    {
+     "slug": "29-cella",
+     "name": "29 Cella"
+    }
+   ],
+   "truncatedFrom": 1156
+  },
+  {
+   "query": "MATCH (n {slug: $slug})\n       WHERE n:Incident OR n:Operation\n       RETURN CASE WHEN 'Operation' IN labels(n) THEN 'operation' ELSE 'incident' END AS kind,\n              coalesce(n.codeName, n.canonicalName, n.title) AS name,\n              n.date AS date",
+   "params": {
+    "slug": "forste-mote-om-mostandsbevegelse-i-london"
+   },
+   "rows": [
+    {
+     "kind": "operation",
+     "name": "Første møte om Motstandsbevegelse i London",
+     "date": "1940-06-22"
+    }
+   ]
+  },
+  {
+   "query": "\n  MATCH (n) WHERE n.slug IS NOT NULL AND (n:Operation OR n:Incident OR n:Person OR n:Location OR n:Transport OR n:Station OR n:Outline OR n:Organization OR n:EquipmentType)\n    AND (n.slug = $exact OR toLower(replace(replace(replace(replace(replace(n.slug, '-', ''), ' ', ''), '_', ''), '.', ''), '/', '')) IN $keys)\n  RETURN labels(n)[0] AS label, n.slug AS slug\n  LIMIT 40",
+   "params": {
+    "exact": "forste-mote-om-mostandsbevegelse-i-london",
+    "keys": [
+     "forstemoteommostandsbevegelseilondon"
+    ]
+   },
+   "rows": [
+    {
+     "label": "Operation",
+     "slug": "forste-mote-om-mostandsbevegelse-i-london"
+    }
+   ]
+  },
+  {
+   "query": "\n    MATCH (o:Organization)\n    RETURN o.slug AS slug, o.canonicalName AS name\n    ORDER BY o.canonicalName\n  ",
+   "params": {},
+   "rows": [
+    {
+     "slug": "boac-balder",
+     "name": "BOAC/BALDER"
+    },
+    {
+     "slug": "british-commandos",
+     "name": "British Commandos"
+    },
+    {
+     "slug": "catalina-trafikken",
+     "name": "Catalina trafikken"
+    },
+    {
+     "slug": "regjeringen",
+     "name": "Den norske regjering i London"
+    },
+    {
+     "slug": "fo-iv-mi-4",
+     "name": "FO IV - MI 4"
+    },
+    {
+     "slug": "flyktninger",
+     "name": "Flyktninger"
+    },
+    {
+     "slug": "grupper",
+     "name": "Grupper"
+    },
+    {
+     "slug": "homefleet",
+     "name": "Homefleet"
+    },
+    {
+     "slug": "haeren",
+     "name": "Hæren"
+    },
+    {
+     "slug": "haerens-overkommando-i-london-hok",
+     "name": "Hærens Overkommando i London HOK"
+    },
+    {
+     "slug": "mk-skoyter",
+     "name": "MK Skøyter"
+    },
+    {
+     "slug": "msp-marinens-skoyteavdeling-petershead",
+     "name": "MSP Marinens skøyteavdeling Petershead"
+    },
+    {
+     "slug": "mtb-flaaten",
+     "name": "MTB flåten"
+    },
+    {
+     "slug": "marinen",
+     "name": "Marinen"
+    },
+    {
+     "slug": "milorg",
+     "name": "Milorg"
+    },
+    {
+     "slug": "nniu-norwegian-naval-independent-unit",
+     "name": "NNIU - Norwegian Naval Independent Unit"
+    },
+    {
+     "slug": "norge-i-united-kingdom",
+     "name": "Norge i United Kingdom"
+    },
+    {
+     "slug": "norge",
+     "name": "Norge"
+    },
+    {
+     "slug": "nortraship",
+     "name": "Nortraship"
+    },
+    {
+     "slug": "raf",
+     "name": "RAF"
+    },
+    {
+     "slug": "raf-rcaf-raaf-rnzaf",
+     "name": "RAF/RCAF/RAAF/RNZAF"
+    },
+    {
+     "slug": "rnnsu-royal-norwegian-naval-special-unit",
+     "name": "RNNSU  Royal Norwegian Naval Special Unit "
+    },
+    {
+     "slug": "shaef",
+     "name": "SHAEF"
+    },
+    {
+     "slug": "sis",
+     "name": "SIS"
+    },
+    {
+     "slug": "soe",
+     "name": "SOE"
+    }
+   ],
+   "truncatedFrom": 30
+  },
+  {
+   "query": "\n    MATCH (op:Operation {slug: $slug})-[:FROM]->(l:Location)\n    RETURN l.slug AS targetSlug, coalesce(l.canonicalName, l.title) AS targetName\n    LIMIT 1\n  ",
+   "params": {
+    "slug": "forste-mote-om-mostandsbevegelse-i-london"
+   },
+   "rows": []
+  },
+  {
+   "query": "\n    MATCH (op:Operation {slug: $slug})-[:FROM_STATION]->(s:Station)\n    RETURN s.slug AS targetSlug, coalesce(s.canonicalName, s.title) AS targetName\n    LIMIT 1\n  ",
+   "params": {
+    "slug": "forste-mote-om-mostandsbevegelse-i-london"
+   },
+   "rows": []
+  },
+  {
+   "query": "\n      MATCH (op:Operation {slug: $slug})-[:ORCHESTRATED_BY]->(o:Organization)\n      RETURN o.slug AS targetSlug, o.canonicalName AS targetName\n      ORDER BY targetName\n    ",
+   "params": {
+    "slug": "forste-mote-om-mostandsbevegelse-i-london"
+   },
+   "rows": [
+    {
+     "targetSlug": "norge-i-united-kingdom",
+     "targetName": "Norge i United Kingdom"
+    }
+   ]
+  },
+  {
+   "query": "\n      MATCH (op:Operation {slug: $slug})-[:RELATED_TO {kind:'contains'}]->(i:Incident)\n      RETURN i.slug AS targetSlug,\n             i.title + CASE WHEN i.date IS NOT NULL THEN ' · ' + i.date ELSE '' END AS targetName\n      ORDER BY i.date, targetName\n    ",
+   "params": {
+    "slug": "forste-mote-om-mostandsbevegelse-i-london"
+   },
+   "rows": []
+  },
+  {
+   "query": "\n    MATCH (op:Operation {slug: $slug})-[:TO]->(l:Location)\n    RETURN l.slug AS targetSlug, coalesce(l.canonicalName, l.title) AS targetName\n    LIMIT 1\n  ",
+   "params": {
+    "slug": "forste-mote-om-mostandsbevegelse-i-london"
+   },
+   "rows": [
+    {
+     "targetSlug": "london-uk",
+     "targetName": "London UK"
+    }
+   ]
+  },
+  {
+   "query": "\n    MATCH (op:Operation {slug: $slug})-[:TO_STATION]->(s:Station)\n    RETURN s.slug AS targetSlug, coalesce(s.canonicalName, s.title) AS targetName\n    LIMIT 1\n  ",
+   "params": {
+    "slug": "forste-mote-om-mostandsbevegelse-i-london"
+   },
+   "rows": []
+  },
+  {
+   "query": "\n    MATCH (op:Operation)\n    RETURN op.slug AS slug, op.codeName AS name\n    ORDER BY op.codeName\n  ",
+   "params": {},
+   "rows": [
+    {
+     "slug": "aba-141142",
+     "name": "ABA 141142"
+    },
+    {
+     "slug": "aba-150843",
+     "name": "ABA 150843"
+    },
+    {
+     "slug": "am-001",
+     "name": "AM 001 SOE Operation CHEESE I / FASTING "
+    },
+    {
+     "slug": "am-018",
+     "name": "AM 018 SOE Operation PUFFIN"
+    },
+    {
+     "slug": "am-024",
+     "name": "AM 024 SOE Operation CHAIN"
+    },
+    {
+     "slug": "am-026",
+     "name": "AM 026 SOE Operation GROUSE  I"
+    },
+    {
+     "slug": "am-027",
+     "name": "AM 027 SOE Operation RAVEN A+B"
+    },
+    {
+     "slug": "am-028",
+     "name": "AM 028 SOE Operation COCEREL"
+    },
+    {
+     "slug": "am-029-1",
+     "name": "AM 029 SOE Operation CHEESE 1"
+    },
+    {
+     "slug": "am-029-2",
+     "name": "AM 029 SOE Operation CHEESE 2"
+    },
+    {
+     "slug": "am-029-3",
+     "name": "AM 029 SOE Operation CHEESE 3"
+    },
+    {
+     "slug": "am-033-1",
+     "name": "AM 033 SOE Operation GROUSE II  1"
+    },
+    {
+     "slug": "am-033-2",
+     "name": "AM 033 SOE Operation GROUSE II 2"
+    },
+    {
+     "slug": "am-035-1",
+     "name": "AM 035 SOE Operation GUNNERSIDE 1"
+    },
+    {
+     "slug": "am-035-2",
+     "name": "AM 035 SOE Operation GUNNERSIDE 2"
+    },
+    {
+     "slug": "am-038-1",
+     "name": "AM 038 SOE Operation BITTERN 1"
+    },
+    {
+     "slug": "am-038-2",
+     "name": "AM 038 SOE Operation BITTERN 2"
+    },
+    {
+     "slug": "am-038-3",
+     "name": "AM 038 SOE Operation BITTERN 3"
+    },
+    {
+     "slug": "am-039-1",
+     "name": "AM 039 SOE Operation GANNET 1 Anvil"
+    },
+    {
+     "slug": "am-039-2",
+     "name": "AM 039 SOE Operation GANNET 2 Anvil"
+    },
+    {
+     "slug": "am-039-3",
+     "name": "AM 039 SOE Operation GANNET 3 Anvil"
+    },
+    {
+     "slug": "am-046-1",
+     "name": "AM 046  SOE Operation Chaffinch 1"
+    },
+    {
+     "slug": "am-046-2",
+     "name": "AM 046  SOE Operation Chaffinch 2"
+    },
+    {
+     "slug": "am-048",
+     "name": "AM 048 SOE Operation GANNET I Anvil"
+    },
+    {
+     "slug": "am-050-1",
+     "name": "AM 050 SOE Operation CARHAMPTON 1"
+    },
+    {
+     "slug": "forste-mote-om-mostandsbevegelse-i-london",
+     "name": "Første møte om Motstandsbevegelse i London"
+    }
+   ],
+   "truncatedFrom": 2284
+  },
+  {
+   "query": "\n      MATCH (p:Person)\n      RETURN p.slug AS slug,\n             p.canonicalName + CASE WHEN p.birthYear IS NOT NULL THEN ' (' + toString(p.birthYear) + ')' ELSE '' END AS name\n      ORDER BY p.canonicalName\n    ",
+   "params": {},
+   "rows": [
+    {
+     "slug": "1-mekanikar-2-piloter-en-uk-officer-en-britisk-soldat-en-britisk-predikant-og-en-tysk-jode",
+     "name": "1 mekanikar ,2 piloter, en UK Officer, en britisk soldat, en britisk predikant og en tysk Jøde."
+    },
+    {
+     "slug": "1-britiske-soldater",
+     "name": "1 nordmann og 11 britiske soldater"
+    },
+    {
+     "slug": "1-officer-lorentzen",
+     "name": "1. Officer Lorentzen"
+    },
+    {
+     "slug": "1-officer-abney",
+     "name": "1.Officer Abney"
+    },
+    {
+     "slug": "10-flyktniner-fra-djupevag-og-3-juletraer",
+     "name": "10 Flyktniner fra Djupevåg og 3 juletrær"
+    },
+    {
+     "slug": "10-norwegian-marine-special-force",
+     "name": "10 Norwegian Marine Special Force"
+    },
+    {
+     "slug": "11-flyktninger",
+     "name": "11 flyktninger"
+    },
+    {
+     "slug": "11-mann-motig-i",
+     "name": "11 mann MK Motig I"
+    },
+    {
+     "slug": "11-omkomne-war-bride",
+     "name": "11 omkomne \"WAR BRIDE\""
+    },
+    {
+     "slug": "12-flyktninger-med-mk-bofjord",
+     "name": "12 flyktninger med MK Bøfjord"
+    },
+    {
+     "slug": "12-flyktninger-med-mk-traust-stjernen",
+     "name": "12 flyktninger med MK Traust/Stjernen"
+    },
+    {
+     "slug": "13-flyktninger-mk-glinmt",
+     "name": "13 Flyktninger MK GLINMT"
+    },
+    {
+     "slug": "13-flyktninger",
+     "name": "13 Flyktninger"
+    },
+    {
+     "slug": "14-flyktinger-fedje",
+     "name": "14 flyktinger Fedje"
+    },
+    {
+     "slug": "16-totalt-dro-over",
+     "name": "16 totalt dro over"
+    },
+    {
+     "slug": "16-flyktninger-fra-vefsn",
+     "name": "17 flyktninger fra Vefsn"
+    },
+    {
+     "slug": "19-flyktinger-tananger-til-aberdeen",
+     "name": "19 flyktinger Tananger til Aberdeen"
+    },
+    {
+     "slug": "19-flyktninger-ms-arnafjord",
+     "name": "19 flyktninger MS Arnafjord"
+    },
+    {
+     "slug": "19-flyktninger-fra-hernar",
+     "name": "19 flyktninger fra Hernar"
+    },
+    {
+     "slug": "19-kjente",
+     "name": "19 kjente"
+    },
+    {
+     "slug": "1st-officer-campbell",
+     "name": "1st Officer Campbell"
+    },
+    {
+     "slug": "1st-offiser-fowler",
+     "name": "1st Offiser Fowler"
+    },
+    {
+     "slug": "1st-off-tennyson",
+     "name": "1st off Tennyson BOAC"
+    },
+    {
+     "slug": "2-barn-aud-og-maria-dronen",
+     "name": "2 barn, Aud og Marta Drønen"
+    },
+    {
+     "slug": "2-britiske-offiserer",
+     "name": "2 britiske offiserer"
+    }
+   ],
+   "truncatedFrom": 3957
+  },
+  {
+   "query": "MATCH (p:Person)-[:INVOLVED_IN|PARTICIPATED_IN]->(:`Operation` {slug: $slug})\n       RETURN DISTINCT p.slug AS slug, p.canonicalName AS name\n       ORDER BY name",
+   "params": {
+    "slug": "forste-mote-om-mostandsbevegelse-i-london"
+   },
+   "rows": [
+    {
+     "slug": "eric-colban",
+     "name": "Eric Colban Sendemann i London"
+    },
+    {
+     "slug": "gerd-egede-nissen-skuespiller",
+     "name": "Gerd Egede Nissen, skuespiller"
+    },
+    {
+     "slug": "johan-nordahl-brun-grieg",
+     "name": "Johan Nordahl Brun Grieg"
+    },
+    {
+     "slug": "martin-jensen-linge",
+     "name": "Martin Jensen Linge"
+    },
+    {
+     "slug": "olav-rytter-nrk",
+     "name": "Olav Rytter"
+    },
+    {
+     "slug": "sverre-midtskau",
+     "name": "Sverre Midtskau"
+    },
+    {
+     "slug": "unni-diesen-ud",
+     "name": "Unni Diesen UD"
+    }
+   ]
+  },
+  {
+   "query": "\n      MATCH (p:Person)-[:PARTICIPATED_IN]->(op:Operation {slug: $slug})\n      OPTIONAL MATCH (p)-[:HAS_OPERATION_NOTE]->(d:Description)-[:ABOUT_OPERATION]->(op)\n      OPTIONAL MATCH (d)-[:SOURCED_FROM]->(from:Source)\n      WITH p, d, from\n      OPTIONAL MATCH (d)-[cites:CITES]->(src:Source)\n      WITH p, d, from,\n           collect(CASE WHEN src IS NULL THEN NULL ELSE {\n             inline:       coalesce(cites.inline, false),\n             sourceId:     src.id,\n             sourceTitle:  src.title,\n             sourceUrl:    src.url,\n             sourceAuthor: src.authorFreeText\n           } END) AS rawCites\n      WITH p, d, from,\n           CASE WHEN d IS NULL THEN NULL ELSE {\n             order:     coalesce(d.order, 1),\n             content:   d.content,\n             citations: [x IN rawCites WHERE x IS NOT NULL],\n             sourcedFrom: CASE WHEN from IS NULL THEN NULL ELSE {\n               id:             from.id,\n               title:          from.title,\n               url:             from.url,\n               authorFreeText: from.authorFreeText,\n               license:        from.license,\n               attribution:    from.attribution\n             } END\n           } END AS section\n      WITH p, collect(section) AS rawSections\n      RETURN p.slug AS targetSlug, p.canonicalName AS targetName,\n             [x IN rawSections WHERE x IS NOT NULL] AS sections\n      ORDER BY targetName\n    ",
+   "params": {
+    "slug": "forste-mote-om-mostandsbevegelse-i-london"
+   },
+   "rows": [
+    {
+     "targetSlug": "eric-colban",
+     "targetName": "Eric Colban Sendemann i London",
+     "sections": []
+    },
+    {
+     "targetSlug": "gerd-egede-nissen-skuespiller",
+     "targetName": "Gerd Egede Nissen, skuespiller",
+     "sections": []
+    },
+    {
+     "targetSlug": "johan-nordahl-brun-grieg",
+     "targetName": "Johan Nordahl Brun Grieg",
+     "sections": []
+    },
+    {
+     "targetSlug": "martin-jensen-linge",
+     "targetName": "Martin Jensen Linge",
+     "sections": []
+    },
+    {
+     "targetSlug": "olav-rytter-nrk",
+     "targetName": "Olav Rytter",
+     "sections": []
+    },
+    {
+     "targetSlug": "sverre-midtskau",
+     "targetName": "Sverre Midtskau",
+     "sections": []
+    },
+    {
+     "targetSlug": "unni-diesen-ud",
+     "targetName": "Unni Diesen UD",
+     "sections": []
+    }
+   ]
+  },
+  {
+   "query": "\n      MATCH (parent:Operation {slug: $slug})-[:RELATED_TO {kind:'contains'}]->(child:Operation)\n      RETURN child.slug AS targetSlug, child.codeName AS targetName\n      ORDER BY targetName\n    ",
+   "params": {
+    "slug": "forste-mote-om-mostandsbevegelse-i-london"
+   },
+   "rows": []
+  },
+  {
+   "query": "\n    MATCH (s:Station)\n    RETURN s.slug AS slug, coalesce(s.canonicalName, s.title) AS name,\n           [(s)-[:HAS_NAME]->(n:Name) | n.value] AS aliases\n    ORDER BY name\n  ",
+   "params": {},
+   "rows": [
+    {
+     "slug": "aberdeen",
+     "name": "Aberdeen",
+     "aliases": []
+    },
+    {
+     "slug": "bromma",
+     "name": "BROMMA",
+     "aliases": []
+    },
+    {
+     "slug": "baltasound",
+     "name": "Baltasound",
+     "aliases": []
+    },
+    {
+     "slug": "buckie",
+     "name": "Buckie",
+     "aliases": []
+    },
+    {
+     "slug": "burghead-shgj",
+     "name": "Burghead SHGJ",
+     "aliases": []
+    },
+    {
+     "slug": "cmwtc",
+     "name": "Commando Mountain and Snow Warfare Training Centre (CMWTC)",
+     "aliases": []
+    },
+    {
+     "slug": "dumfries",
+     "name": "Dumfries ",
+     "aliases": []
+    },
+    {
+     "slug": "dundee",
+     "name": "Dundee",
+     "aliases": []
+    },
+    {
+     "slug": "dyce-airfied",
+     "name": "Dyce Airfied",
+     "aliases": []
+    },
+    {
+     "slug": "glasgow-port",
+     "name": "Glasgow Port",
+     "aliases": []
+    },
+    {
+     "slug": "great-yarmouth",
+     "name": "Great Yarmouth ",
+     "aliases": []
+    },
+    {
+     "slug": "greenock-clyde",
+     "name": "Greenock  Clyde",
+     "aliases": []
+    },
+    {
+     "slug": "hms-mantis-lowestoft",
+     "name": "HMS Mantis  Lowestoft",
+     "aliases": []
+    },
+    {
+     "slug": "hatfield-house",
+     "name": "Hatfield House",
+     "aliases": []
+    },
+    {
+     "slug": "invergordon",
+     "name": "Invergordon",
+     "aliases": []
+    },
+    {
+     "slug": "kallax-flygplats",
+     "name": "Kallax Flygplats",
+     "aliases": []
+    },
+    {
+     "slug": "knoll-school-camberley-reception-depot-crd",
+     "name": "Knoll School (Camberley Reception Depot (CRD)",
+     "aliases": []
+    },
+    {
+     "slug": "kola-inlet",
+     "name": "Kola Inlet",
+     "aliases": []
+    },
+    {
+     "slug": "laleham-church-farm",
+     "name": "Laleham Church Farm",
+     "aliases": []
+    },
+    {
+     "slug": "larne",
+     "name": "Larne Nord Irland",
+     "aliases": []
+    },
+    {
+     "slug": "lerwick-shgj",
+     "name": "Lerwick SHGJ",
+     "aliases": []
+    },
+    {
+     "slug": "lerwick",
+     "name": "Lerwick",
+     "aliases": []
+    },
+    {
+     "slug": "liverpool",
+     "name": "Liverpool",
+     "aliases": []
+    },
+    {
+     "slug": "loch-ewe",
+     "name": "Loch Ewe",
+     "aliases": []
+    },
+    {
+     "slug": "lunna-voe",
+     "name": "Lunna Voe  SHGJ",
+     "aliases": []
+    }
+   ],
+   "truncatedFrom": 145
+  },
+  {
+   "query": "\n    MATCH (u:Unit)\n    RETURN u.slug AS slug, u.canonicalName AS name\n    ORDER BY u.canonicalName\n  ",
+   "params": {},
+   "rows": [
+    {
+     "slug": "01-sis-xu",
+     "name": "01- SIS-XU"
+    },
+    {
+     "slug": "02-soe",
+     "name": "02-SOE"
+    },
+    {
+     "slug": "06-skoyter-ikke-organisert",
+     "name": "06 Skøyter ikke organisert"
+    },
+    {
+     "slug": "a-u-patrol",
+     "name": "A/U Patrol"
+    },
+    {
+     "slug": "anglo-norwegian-collaboration-committee",
+     "name": "ANGLO-NORWEGIAN COLLABORATION COMMITTEE"
+    },
+    {
+     "slug": "cossac",
+     "name": "COSSAC"
+    },
+    {
+     "slug": "den-norske-regjering",
+     "name": "Den norske regjering"
+    },
+    {
+     "slug": "eksportgruppene",
+     "name": "EXPORT grupper "
+    },
+    {
+     "slug": "eksportgruppe-torsvik",
+     "name": "Eksportgruppe  Torsvik"
+    },
+    {
+     "slug": "eksportgruppe-kvalen",
+     "name": "Eksportgruppe Kvalen"
+    },
+    {
+     "slug": "eksportgruppe-nielsen",
+     "name": "Eksportgruppe Nielsen"
+    },
+    {
+     "slug": "eksportgruppe-skytterholm",
+     "name": "Eksportgruppe Skytterholm"
+    },
+    {
+     "slug": "eksportgruppe-walle",
+     "name": "Eksportgruppe Walle"
+    },
+    {
+     "slug": "flukt",
+     "name": "Flukt"
+    },
+    {
+     "slug": "grupper",
+     "name": "Grupper"
+    },
+    {
+     "slug": "holland",
+     "name": "Holland"
+    },
+    {
+     "slug": "hurtigruten",
+     "name": "Hurtigruten"
+    },
+    {
+     "slug": "linge-course-a",
+     "name": "Kompani Linge — Kurs A"
+    },
+    {
+     "slug": "linge-course-aa",
+     "name": "Kompani Linge — Kurs AA"
+    },
+    {
+     "slug": "linge-course-b",
+     "name": "Kompani Linge — Kurs B"
+    },
+    {
+     "slug": "linge-course-c",
+     "name": "Kompani Linge — Kurs C"
+    },
+    {
+     "slug": "linge-course-cc",
+     "name": "Kompani Linge — Kurs CC"
+    },
+    {
+     "slug": "linge-course-d",
+     "name": "Kompani Linge — Kurs D"
+    },
+    {
+     "slug": "linge-course-dd",
+     "name": "Kompani Linge — Kurs DD"
+    },
+    {
+     "slug": "linge-course-e",
+     "name": "Kompani Linge — Kurs E"
+    }
+   ],
+   "truncatedFrom": 84
+  },
+  {
+   "query": "\n      MATCH (u:Unit)-[:PARTICIPATED_IN]->(op:Operation {slug: $slug})\n      RETURN u.slug AS targetSlug, u.canonicalName AS targetName\n      ORDER BY targetName\n    ",
+   "params": {
+    "slug": "forste-mote-om-mostandsbevegelse-i-london"
+   },
+   "rows": []
+  }
+ ],
+ "gets": []
+}

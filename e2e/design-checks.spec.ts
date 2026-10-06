@@ -39,7 +39,7 @@ test.describe('the heading outline', () => {
       await openRecordedPage(page, target)
       const headings = await collectHeadings(page)
       expect(checkPageOutline(headings).map(p => p.message)).toEqual([])
-      expect(headings.length).toBeGreaterThan(1)             // an h1 and at least one section
+      expect(headings.length).toBeGreaterThanOrEqual(target.minHeadings ?? 2)   // it rendered more than a title
     })
   }
 })

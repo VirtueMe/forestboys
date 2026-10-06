@@ -8,7 +8,8 @@
  * It opens each page in a browser, as a visitor who is not logged in, and keeps every
  * `POST /api/neo4j/query` and every same-origin `/sanity/` GET with its answer. The registry-wide queries
  * the app runs on start-up (no parameters, thousands of rows) are kept to their first rows, and say so
- * (`truncatedFrom`); a query with parameters is kept whole. Run it again when a page's
+ * (`truncatedFrom`), in a fixed order and with the rows that mention the page's own slug kept as well; a
+ * query with parameters is kept whole. Run it again when a page's
  * queries change: the replay then finds nothing for the new query and the test says which.
  * It only ever talks to a local worker.
  */
@@ -28,7 +29,7 @@ if (host !== 'localhost' && host !== '127.0.0.1') {
   process.exit(2)
 }
 
-async function record(path: string, browser: Awaited<ReturnType<typeof chromium.launch>>): Promise<PageRecording> {
+async function record(path: string, slug: string, browser: Awaited<ReturnType<typeof chromium.launch>>): Promise<PageRecording> {
   const page = await browser.newPage({ viewport: { width: 1280, height: 900 } })
   const queries = new Map<string, RecordedQuery>()
   const gets = new Map<string, RecordedGet>()
@@ -42,7 +43,7 @@ async function record(path: string, browser: Awaited<ReturnType<typeof chromium.
       pending.push((async () => {
         const body = req.postDataJSON() as { query: string; params?: Record<string, unknown> }
         const json = (await r.json()) as { rows?: unknown[] }
-        if (r.ok() && json.rows) queries.set(requestKey(body.query, body.params), capRows(body.query, body.params ?? {}, json.rows))
+        if (r.ok() && json.rows) queries.set(requestKey(body.query, body.params), capRows(body.query, body.params ?? {}, json.rows, slug))
       })())
     } else if (req.method() === 'GET' && url.pathname.startsWith('/sanity/')) {
       pending.push((async () => {
@@ -60,13 +61,16 @@ async function record(path: string, browser: Awaited<ReturnType<typeof chromium.
   await page.waitForLoadState('networkidle')
   await Promise.all(pending)
   await page.close()
-  return { path, queries: [...queries.values()], gets: [...gets.values()] }
+  // In the order of their keys, not of their arrival: responses come back in whatever order the timing gives,
+  // and a recording that is written in a different order every time shows a change where there is none.
+  const byKey = <T,>(m: Map<string, T>) => [...m.entries()].sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0)).map(([, v]) => v)
+  return { path, queries: byKey(queries), gets: byKey(gets) }
 }
 
 const browser = await chromium.launch()
 try {
   for (const target of PAGES) {
-    const recording = await record(target.path, browser)
+    const recording = await record(target.path, target.slug, browser)
     const text = JSON.stringify(recording, null, 1) + '\n'
     console.log(`${target.path.padEnd(28)} ${String(recording.queries.length).padStart(3)} queries, ${recording.gets.length} sanity gets, ${(text.length / 1024).toFixed(0)} KB`)
     if (recording.queries.length === 0) throw new Error(`${target.path}: no queries were seen. Is the worker running on ${BASE}?`)
