@@ -1,0 +1,3662 @@
+{
+ "path": "/person/bernt-balchen",
+ "queries": [
+  {
+   "query": "MATCH (o:Organization) WHERE o.color IS NOT NULL\n       RETURN o.canonicalName AS name, o.color AS color",
+   "params": {},
+   "rows": [
+    {
+     "name": "SOE",
+     "color": "#276a8b"
+    },
+    {
+     "name": "Catalina trafikken",
+     "color": "#627202"
+    },
+    {
+     "name": "MSP Marinens skøyteavdeling Petershead",
+     "color": "#31789b"
+    },
+    {
+     "name": "Norge i United Kingdom",
+     "color": "#d6e324"
+    },
+    {
+     "name": "RAF/RCAF/RAAF/RNZAF",
+     "color": "#24a3e3"
+    },
+    {
+     "name": "Homefleet",
+     "color": "#e38924"
+    },
+    {
+     "name": "Nortraship",
+     "color": "#24a3e3"
+    },
+    {
+     "name": "MK Skøyter",
+     "color": "#747b7e"
+    },
+    {
+     "name": "Milorg",
+     "color": "#0aa50a"
+    },
+    {
+     "name": "NNIU - Norwegian Naval Independent Unit",
+     "color": "#7b080e"
+    },
+    {
+     "name": "Stockholm",
+     "color": "#277b14"
+    },
+    {
+     "name": "SIS",
+     "color": "#090288"
+    },
+    {
+     "name": "Norge",
+     "color": "#e324ae"
+    },
+    {
+     "name": "Ubåtene",
+     "color": "#2f146e"
+    },
+    {
+     "name": "Flyktninger",
+     "color": "#a1166a"
+    },
+    {
+     "name": "USSR",
+     "color": "#e3245b"
+    },
+    {
+     "name": "RNNSU  Royal Norwegian Naval Special Unit ",
+     "color": "#e324cc"
+    },
+    {
+     "name": "FO IV - MI 4",
+     "color": "#e9748b"
+    },
+    {
+     "name": "Grupper",
+     "color": "#724a11"
+    },
+    {
+     "name": "BOAC/BALDER",
+     "color": "#a2a00b"
+    },
+    {
+     "name": "MTB flåten",
+     "color": "#047485"
+    },
+    {
+     "name": "Hærens Overkommando i London HOK",
+     "color": "#ce3f06"
+    }
+   ]
+  },
+  {
+   "query": "MATCH (s:Station)\n       OPTIONAL MATCH (s)<-[:FROM_STATION|TO_STATION]-(i:Incident|Operation)\n       OPTIONAL MATCH (i)-[:ORCHESTRATED_BY]->(org:Organization)\n       OPTIONAL MATCH (i)-[:IN_DISTRICT]->(dist:Unit)\n       WITH s,\n            collect(CASE WHEN i IS NOT NULL THEN\n              {_id: i.sanityId, slug: i.slug, title: coalesce(i.title, i.codeName), date: i.date,\n               organization: org.canonicalName, district: dist.canonicalName}\n            END) AS events\n       RETURN s.sanityId AS _id, s.slug AS slug, s.canonicalName AS title,\n              s.type AS type, s.lat AS lat, s.lng AS lng,\n              [(s)-[:HAS_NAME]->(n:Name) | n.value] AS names,\n              [e IN events WHERE e IS NOT NULL] AS events",
+   "params": {},
+   "rows": [
+    {
+     "_id": "246b0fe4-e91a-4497-9125-1c9ec1dfe855",
+     "slug": "kallax-flygplats",
+     "title": "Kallax Flygplats",
+     "type": "Airfield ",
+     "lat": 65.550026,
+     "lng": 22.123643,
+     "names": [],
+     "events": [
+      {
+       "date": "1945-01-15",
+       "_id": "1416bbd5-18d5-4d4b-9626-b275aa62cb02",
+       "title": "Frigjøringen av Finnmark 1945",
+       "slug": "frigjoringen-av-finnmark-1945",
+       "organization": "Norge i United Kingdom",
+       "district": "Sverige"
+      }
+     ]
+    },
+    {
+     "_id": "56ac077d-a6b6-4058-968d-88fe24ac461d",
+     "slug": "raf-dornough",
+     "title": "RAF DORNOUGH",
+     "type": "Airfield ",
+     "lat": 57.869306,
+     "lng": -4.023272,
+     "names": [],
+     "events": [
+      {
+       "date": "1940-05-02",
+       "_id": "b6dc371e-73d6-46b0-8dea-665841280e80",
+       "title": "HEINKEL He115 fra Olden til Dornough",
+       "slug": "heinkel-he115-fra-olden-til-dornough",
+       "organization": "Homefleet",
+       "district": "Flukt"
+      }
+     ]
+    },
+    {
+     "_id": "0c3aafc1-e4ef-41d8-99df-a37870df8a02",
+     "slug": "specialskole-aehlby-gard-ekero",
+     "title": "Specialskole Ählby Gård Ekerø",
+     "type": "Skole",
+     "lat": 59.28052807361824,
+     "lng": 17.71290453869824,
+     "names": [],
+     "events": []
+    },
+    {
+     "_id": "0f40a7ac-1d17-4787-b0e0-d95fc1f2aeaf",
+     "slug": "hatfield-house",
+     "title": "Hatfield House",
+     "type": "SIS Training School",
+     "lat": 51.76119,
+     "lng": -0.2107,
+     "names": [],
+     "events": []
+    },
+    {
+     "_id": "36678bbc-81ec-46a5-86e8-cec98af0dd26",
+     "slug": "wt-opplaering-goteborg",
+     "title": "WT opplæring GØTEBORG",
+     "type": "Training school",
+     "lat": 57.676294,
+     "lng": 11.872544,
+     "names": [],
+     "events": []
+    },
+    {
+     "_id": "6dd48c5a-4c99-4089-904c-88c828646016",
+     "slug": "specialskole-aelgberget",
+     "title": "Specialskole Älgberget",
+     "type": "Skole",
+     "lat": 60.603792,
+     "lng": 14.608968,
+     "names": [],
+     "events": []
+    },
+    {
+     "_id": "6e53cefc-c68d-489e-8858-5ad19568c719",
+     "slug": "salamander-advanced-shetland",
+     "title": "Salamander Advanced Shetland",
+     "type": "SOE Training School",
+     "lat": 50.762996,
+     "lng": -2.451461,
+     "names": [],
+     "events": []
+    },
+    {
+     "_id": "7047c8d5-e824-422b-98ba-bb2666a2d113",
+     "slug": "torpet-gottrora",
+     "title": "Torpet GOTTRØRA",
+     "type": "Training school",
+     "lat": 59.734418,
+     "lng": 18.185177,
+     "names": [],
+     "events": []
+    },
+    {
+     "_id": "a2321a41-19e6-4a4e-83dd-f44de98e1fd4",
+     "slug": "spesialist-skole-aehlby-gard",
+     "title": "Spesialist skole Ählby Gård",
+     "type": "Training School",
+     "lat": 59.28040769811957,
+     "lng": 17.712930002185978,
+     "names": [],
+     "events": []
+    },
+    {
+     "_id": "01cfe31d-18c3-4af0-9176-93b94e42c7ae",
+     "slug": "raf-bassingbourn",
+     "title": "RAF Bassingbourn",
+     "type": "Airfield",
+     "lat": 52.096667,
+     "lng": -0.053056,
+     "names": [],
+     "events": [
+      {
+       "date": "1944-03-07",
+       "_id": "4182d1ba-dc89-47ff-9496-a75750c19c39",
+       "title": "AM 107 SOE Operation GOLDFINCH VI",
+       "slug": "am-107",
+       "organization": "SOE",
+       "district": "Milorg D15"
+      }
+     ]
+    },
+    {
+     "_id": "02850df5-63b2-48fc-9074-5b4c6fee24d6",
+     "slug": "sis-hendon-physical-training-school",
+     "title": "SIS Hendon Physical Training School",
+     "type": "SIS Training School",
+     "lat": 51.601,
+     "lng": -0.245,
+     "names": [],
+     "events": []
+    },
+    {
+     "_id": "039170da-7723-4552-b772-cc6e3a00cd7e",
+     "slug": "raf-peterhead",
+     "title": "RAF Peterhead",
+     "type": "Airfield",
+     "lat": 57.517,
+     "lng": -1.875,
+     "names": [],
+     "events": [
+      {
+       "date": "1942-09-12",
+       "_id": "ef156730-30a2-4083-83da-11b7edc6ef99",
+       "title": "AM 033 SOE Operation GROUSE II  1",
+       "slug": "am-033-1",
+       "organization": "SOE",
+       "district": "Milorg D17"
+      },
+      {
+       "date": "1944-12-31",
+       "_id": "b5248336-af1c-4516-a191-267ac2a6fc42",
+       "title": "AM 260 SOE Operation HOCH I 2 Vestige IV",
+       "slug": "am-260-2",
+       "organization": "SOE",
+       "district": "Milorg D19"
+      },
+      {
+       "date": "1942-10-18",
+       "_id": "3c92e74a-1485-49bc-a24f-2c1a7dd78948",
+       "title": "AM 033 SOE Operation GROUSE II 2",
+       "slug": "am-033-2",
+       "organization": "SOE",
+       "district": "Milorg D17"
+      },
+      {
+       "date": "1945-03-24",
+       "_id": "949a9559-273e-474a-9e66-2cad30a692e4",
+       "title": "AM 358 SOE Operation WITHERS V 3 Woodpecker",
+       "slug": "am-358-3",
+       "organization": "SOE",
+       "district": "Milorg D22"
+      },
+      {
+       "date": "1945-03-24",
+       "_id": "5da8c1a8-7c5f-4cad-ac54-1d600fa2c513",
+       "title": "AM 484 SOE Operation BRIDLE XVIII Cramlington",
+       "slug": "am-484",
+       "organization": "SOE",
+       "district": "Milorg D22"
+      }
+     ]
+    },
+    {
+     "_id": "06b730eb-19f6-4fee-9c87-0effdf1a6a9e",
+     "slug": "buckie",
+     "title": "Buckie",
+     "type": "Buckie Shipwarf ",
+     "lat": 57.67976162169913,
+     "lng": -2.952174226584742,
+     "names": [],
+     "events": [
+      {
+       "date": "1940-07-06",
+       "_id": "b0bfd6f5-378d-4a34-88f5-2473d2433a3e",
+       "title": "MSP-NID03 SIS Operation HARDWARE ",
+       "slug": "msp-nid03",
+       "organization": "MSP Marinens skøyteavdeling Petershead",
+       "district": "01- SIS-XU"
+      },
+      {
+       "date": "1940-11-10",
+       "_id": "5c0b2e1c-d6d6-4aa8-8ed1-fcdada21b4b1",
+       "title": "NNIU 001 Landsetting agenter",
+       "slug": "nniu-001",
+       "organization": "NNIU - Norwegian Naval Independent Unit",
+       "district": "Norge"
+      },
+      {
+       "date": "1940-08-07",
+       "_id": "6ebd2551-1ef4-47b4-ab7a-f392ac0948de",
+       "title": "MSP-NID04 SIS Operation HARDWARE ",
+       "slug": "msp-nid04",
+       "organization": "MSP Marinens skøyteavdeling Petershead",
+       "district": "01- SIS-XU"
+      },
+      {
+       "date": "1940-08-14",
+       "_id": "f286d90b-97b1-4a57-9f60-125d5d73b1fc",
+       "title": "MSP-SOK05 Organisering nettverk",
+       "slug": "msp-sok05",
+       "organization": "MSP Marinens skøyteavdeling Petershead",
+       "district": "Grupper"
+      },
+      {
+       "date": "1940-05-17",
+       "_id": "2e0eea65-2da6-4462-8076-976e004cb148",
+       "title": "MSP-NID01 SIS Operation HARDWARE ( gitt navn senere)",
+       "slug": "msp-nid01",
+       "organization": "MSP Marinens skøyteavdeling Petershead",
+       "district": "01- SIS-XU"
+      },
+      {
+       "date": "1940-06-04",
+       "_id": "04c31903-1621-4661-ace0-b1350bb59514",
+       "title": "MSP-NID02 SIS Operation HARDWARE",
+       "slug": "msp-nid02",
+       "organization": "MSP Marinens skøyteavdeling Petershead",
+       "district": "01- SIS-XU"
+      }
+     ]
+    },
+    {
+     "_id": "0e221b59-e1e8-4bbe-952e-2b1b28c927ba",
+     "slug": "sis-radio-school-brompton-square",
+     "title": "SIS Radio School Brompton Square",
+     "type": "SIS Training School",
+     "lat": 51.497831587412115,
+     "lng": -0.1688611984202811,
+     "names": [],
+     "events": []
+    },
+    {
+     "_id": "0e4eaf83-a600-445f-a8fe-e1c976322fdd",
+     "slug": "raf-tain",
+     "title": "RAF TAIN",
+     "type": "Airfiel",
+     "lat": 57.80929554761544,
+     "lng": -3.9761301779517724,
+     "names": [],
+     "events": [
+      {
+       "date": "1944-07-24",
+       "_id": "20d5b713-6a11-4552-bfd2-169df47f8108",
+       "title": "AM 146 SOE Operation LEATHER I 1 Lapwing I A",
+       "slug": "am-146-1",
+       "organization": "SOE",
+       "district": "Milorg D22"
+      },
+      {
+       "date": "1944-10-16",
+       "_id": "e9e18f59-7ff8-4fc8-bb43-ca3c12d78d38",
+       "title": "AM 241 SOE Operation (SFHQ/SHAEF) QUAVER  Daylight",
+       "slug": "am-241",
+       "organization": "SOE",
+       "district": "Milorg D40"
+      }
+     ]
+    },
+    {
+     "_id": "0ebdb754-9b8a-4671-baf6-311c367ce89f",
+     "slug": "hartlepool",
+     "title": "West Hartlepool",
+     "type": "Town",
+     "lat": 54.69009800411239,
+     "lng": -1.2060277354360491,
+     "names": [],
+     "events": [
+      {
+       "date": "1943-03-13",
+       "_id": "6fc652c2-14c8-4c35-bc23-a55943121e23",
+       "title": "MK  X22- Flukten fra Flekkefjord   England  Etter Carhampton",
+       "slug": "mk-x22",
+       "organization": "SOE",
+       "district": "02-SOE"
+      }
+     ]
+    },
+    {
+     "_id": "0ec44032-1e5e-4114-b607-3b33e374118c",
+     "slug": "raf-waterbeach",
+     "title": "RAF Waterbeach",
+     "type": "Airfield",
+     "lat": 52.27779530225657,
+     "lng": 0.1857621412462472,
+     "names": [],
+     "events": [
+      {
+       "date": "1944-11-01",
+       "_id": "5a8ab88c-db62-449b-b1c7-296ce6301b87",
+       "title": "AM 265 SOE Operation BIT XVII 1 Chaffinch Blue",
+       "slug": "am-265-1",
+       "organization": "SOE",
+       "district": "Milorg D17"
+      },
+      {
+       "date": "1944-11-01",
+       "_id": "1df70b45-71ba-47d3-ac84-f646ad04947c",
+       "title": "AM 237 SOE Operation SADDLE X Sandpiper",
+       "slug": "am-237",
+       "organization": "SOE",
+       "district": "Milorg D18"
+      },
+      {
+       "date": "1942-11-25",
+       "_id": "8e2d0487-48a3-4233-9f94-f715fb468502",
+       "title": "AX 04 SIS Operation Orion I 3",
+       "slug": "ax-04-3",
+       "organization": "SIS",
+       "district": "01- SIS-XU"
+      },
+      {
+       "date": "1942-11-25",
+       "_id": "0fc9c30b-1039-43cf-8b66-bf78c73d89a9",
+       "title": "AX 45 SOE Operation THRUSH 2",
+       "slug": "ax-45-2",
+       "organization": "SOE",
+       "district": "02-SOE"
+      },
+      {
+       "date": "1944-12-30",
+       "_id": "225ce3df-118b-478c-9410-b2692ec9fc8d",
+       "title": "AM 303 SOE Operation Crupper XXX 2 Golden Eagle",
+       "slug": "am-303-2",
+       "organization": "SOE",
+       "district": "Milorg D14.2"
+      }
+     ]
+    },
+    {
+     "_id": "0ed536dd-5cb9-432b-b543-a127db9abdcf",
+     "slug": "lunna-voe",
+     "title": "Lunna Voe  SHGJ",
+     "type": "Fiskeskøytebase 41-42",
+     "lat": 60.406514969888406,
+     "lng": -1.127389616767259,
+     "names": [],
+     "events": [
+      {
+       "date": "1942-05-07",
+       "_id": "9ca25429-db59-4b8f-8b2f-83db6b739704",
+       "title": "NNIU 056 SIS Operation LEPORIS",
+       "slug": "nniu-056",
+       "organization": "NNIU - Norwegian Naval Independent Unit",
+       "district": "01- SIS-XU"
+      },
+      {
+       "date": "1942-04-10",
+       "_id": "6189cd70-54ca-42d8-a2af-7a1d7f439070",
+       "title": "SOE Operation MALLARD",
+       "slug": "soe-operation-mallard",
+       "organization": "SOE",
+       "district": "Norge"
+      },
+      {
+       "date": "1942-03-26",
+       "_id": "5af592e6-3d66-44c8-a7ff-dd8fa254a593",
+       "title": "NNIU 045 SIS Operation LERKEN NC",
+       "slug": "nniu-045",
+       "organization": "NNIU - Norwegian Naval Independent Unit",
+       "district": "01- SIS-XU"
+      },
+      {
+       "date": "1942-04-07",
+       "_id": "80eab400-5bab-4a00-accb-4091b2e368cf",
+       "title": "NNIU 047 R. OCEAN SOE Operation MALLARD",
+       "slug": "nniu-047",
+       "organization": "NNIU - Norwegian Naval Independent Unit",
+       "district": "02-SOE"
+      },
+      {
+       "date": "1942-02-08",
+       "_id": "6b9d04bb-70a6-4c2b-8da4-6ce2478f4d45",
+       "title": "NNIU 039 R.-- SIS/SOE Lerken  / LARK",
+       "slug": "nniu-039",
+       "organization": "NNIU - Norwegian Naval Independent Unit",
+       "district": "02-SOE"
+      },
+      {
+       "date": "1942-10-18",
+       "_id": "7a0e8ad8-682c-435a-ab5d-36b38afe4fb4",
+       "title": "NNIU 061 SOE Operation MARSHFIELD",
+       "slug": "nniu-061",
+       "organization": "SOE",
+       "district": "02-SOE"
+      },
+      {
+       "date": "1942-02-21",
+       "_id": "675d6a24-486d-4606-a1b2-c2286a96bb96",
+       "title": "NNIU 041 R.HABIT SOE Operation ANCHOR",
+       "slug": "nniu-041",
+       "organization": "NNIU - Norwegian Naval Independent Unit",
+       "district": "02-SOE"
+      },
+      {
+       "date": "1942-04-17",
+       "_id": "79520960-d097-4ce4-bb09-5e218a200eec",
+       "title": "NNIU 052 R. KANKIN   SOE Operation  PENGUIN / ARCHER",
+       "slug": "nniu-052",
+       "organization": "NNIU - Norwegian Naval Independent Unit",
+       "district": "02-SOE"
+      },
+      {
+       "date": "1942-04-18",
+       "_id": "54a3e1fc-d2fa-49f7-8f46-1dfb9589d0e7",
+       "title": "NNIU 055 R. BREVET SOE Operation LARK",
+       "slug": "nniu-055",
+       "organization": "SOE",
+       "district": "02-SOE"
+      },
+      {
+       "date": "1942-08-22",
+       "_id": "5e583b94-5a83-4e87-bbee-7571da468f40",
+       "title": "NNIU 057 R.XX  SOE Operation CYGNET ",
+       "slug": "nniu-057",
+       "organization": "SOE",
+       "district": "02-SOE"
+      },
+      {
+       "date": "1941-08-30",
+       "_id": "3ca5e96d-dba7-44eb-952c-f5dbfbe90bce",
+       "title": "NNIU 015 Land Messenger Ospa",
+       "slug": "nniu-015",
+       "organization": "NNIU - Norwegian Naval Independent Unit",
+       "district": "02-SOE"
+      },
+      {
+       "date": "1942-02-04",
+       "_id": "dbc5562d-d007-420e-9bf7-c1ea0fb82604",
+       "title": "NNIU 037 R.-- SOE Operation CHEESE",
+       "slug": "nniu-037",
+       "organization": "NNIU - Norwegian Naval Independent Unit",
+       "district": "02-SOE"
+      },
+      {
+       "date": "1942-03-05",
+       "_id": "2e18a472-d8a3-40ed-a386-b83f9b87cd42",
+       "title": "NNIU 042  R. GIBRALTAR SOE Operation HERON I",
+       "slug": "nniu-042",
+       "organization": "NNIU - Norwegian Naval Independent Unit",
+       "district": "02-SOE"
+      },
+      {
+       "date": "1942-04-09",
+       "_id": "be70c36d-8e18-409b-afca-043682d2f4c9",
+       "title": "NNIU 050 SIS Operation LERKEN",
+       "slug": "nniu-050",
+       "organization": "NNIU - Norwegian Naval Independent Unit",
+       "district": "02-SOE"
+      },
+      {
+       "date": "1942-03-12",
+       "_id": "05ebee64-9118-4792-b654-092f5f684cbf",
+       "title": "NNIU 043   R. IMPREST   SOE operation ANVIL NC",
+       "slug": "nniu-043",
+       "organization": "NNIU - Norwegian Naval Independent Unit",
+       "district": "02-SOE"
+      },
+      {
+       "date": "1941-05-14",
+       "_id": "04ad5c97-6e96-428d-9805-7d90d0a4d5e4",
+       "title": "MSP-SOK09 SIS Operation OLDELL (resume)",
+       "slug": "msp-sok09",
+       "organization": "MSP Marinens skøyteavdeling Petershead",
+       "district": "01- SIS-XU"
+      },
+      {
+       "date": "1941-10-14",
+       "_id": "c02d6d7e-f61d-4179-a29d-bc195a88902d",
+       "title": "NNIU 026 Land SOE ARQUEBUS party",
+       "slug": "nniu-026",
+       "organization": "NNIU - Norwegian Naval Independent Unit",
+       "district": "02-SOE"
+      },
+      {
+       "date": "1941-09-18",
+       "_id": "fc5bf23c-5212-4247-a2bd-e875a75645ec",
+       "title": "NNIU 021  Land SIS party  GAMMA ",
+       "slug": "nniu-021",
+       "organization": "NNIU - Norwegian Naval Independent Unit",
+       "district": "01- SIS-XU"
+      },
+      {
+       "date": "1942-03-07",
+       "_id": "2dc49310-eef8-4da7-9dfe-bb8a014c5a7f",
+       "title": "ANCC meeting nr 03.2 Inspection Shetland Base 7-12/3-1941",
+       "slug": "ancc-03-2",
+       "organization": "SOE",
+       "district": "ANGLO-NORWEGIAN COLLABORATION COMMITTEE"
+      },
+      {
+       "date": "1942-02-25",
+       "_id": "e4bf5c32-0159-4784-bb30-b5d8b56cf934",
+       "title": "MK X16  MK HELAND flyktninger til Shetland",
+       "slug": "mk-x16",
+       "organization": "NNIU - Norwegian Naval Independent Unit",
+       "district": "02-SOE"
+      },
+      {
+       "date": "1942-03-12",
+       "_id": "d17ece62-8783-47d4-a929-ea2c4d1ade37",
+       "title": "NNIU 044 R. KOBIE SOE Operation LARK NC",
+       "slug": "nniu-044",
+       "organization": "NNIU - Norwegian Naval Independent Unit",
+       "district": "02-SOE"
+      },
+      {
+       "date": "1942-01-23",
+       "_id": "c6a03805-a5e8-4cf6-b487-fcbe0d915968",
+       "title": "NNIU 035 R.-- SIS Operation LERKEN",
+       "slug": "nniu-035",
+       "organization": "SIS",
+       "district": "01- SIS-XU"
+      },
+      {
+       "date": "1941-09-22",
+       "_id": "1d0cea26-c357-4f11-9a74-76dbfed15a62",
+       "title": "NNIU 022  Pick up Trondheim party (Sørli gang)",
+       "slug": "nniu-022",
+       "organization": "NNIU - Norwegian Naval Independent Unit",
+       "district": "02-SOE"
+      },
+      {
+       "date": "1942-04-18",
+       "_id": "cfabaf27-3f76-48af-a28c-3753a8aa79a4",
+       "title": "NNIU 054 R. KOHIE SOE Operation LARK",
+       "slug": "nniu-054",
+       "organization": "SOE",
+       "district": "02-SOE"
+      },
+      {
+       "date": "1941-09-22",
+       "_id": "fbf749e5-a3bc-40fc-b681-94064869712b",
+       "title": "NNIU 020  SIS Operation SKYLARK B / Trondheim party",
+       "slug": "nniu-020",
+       "organization": "NNIU - Norwegian Naval Independent Unit",
+       "district": "01- SIS-XU"
+      },
+      {
+       "date": "1941-11-04",
+       "_id": "0c62324c-6888-4e89-878a-746ba2a3333d",
+       "title": "MK X15  MK HELAND Roald til Shetland og tilbake",
+       "slug": "mk-x15",
+       "organization": "NNIU - Norwegian Naval Independent Unit",
+       "district": "02-SOE"
+      },
+      {
+       "date": "1942-02-05",
+       "_id": "0a44d716-9953-43e7-aa3f-9061d714cbea",
+       "title": "NNIU 040 R. ECHELON SOE Operation CROW",
+       "slug": "nniu-040",
+       "organization": "NNIU - Norwegian Naval Independent Unit",
+       "district": "02-SOE"
+      },
+      {
+       "date": "1942-04-08",
+       "_id": "1d873d25-e6dc-45cd-8052-5f465bb28921",
+       "title": "NNIU 049 SOE R. LIMBERED SOE Operation HERON",
+       "slug": "nniu-049",
+       "organization": "NNIU - Norwegian Naval Independent Unit",
+       "district": "02-SOE"
+      },
+      {
+       "date": "1942-04-07",
+       "_id": "e4d4ed51-db31-4045-b8f8-4059bc6ad350",
+       "title": "NNIU 048 SOE R. ADVOCAT  Operation RAVEN",
+       "slug": "nniu-048",
+       "organization": "NNIU - Norwegian Naval Independent Unit",
+       "district": "02-SOE"
+      },
+      {
+       "date": "1941-11-09",
+       "_id": "f75bcde2-8ddf-482b-905f-b34f56add7b1",
+       "title": "NNIU 030 R.-- SIS / SOE Operation GAMMA / ARQUEBUS",
+       "slug": "nniu-030",
+       "organization": "NNIU - Norwegian Naval Independent Unit",
+       "district": "01- SIS-XU"
+      },
+      {
+       "date": "1942-04-16",
+       "_id": "3a6a87cc-00d1-495a-b0b4-1918d7318474",
+       "title": "NNIU 051 R. SHEIK SOE Operation ARCHER / HERON ",
+       "slug": "nniu-051",
+       "organization": "NNIU - Norwegian Naval Independent Unit",
+       "district": "02-SOE"
+      },
+      {
+       "date": "1942-01-28",
+       "_id": "b029463a-5dc7-4a76-96b4-b3bbfc97803b",
+       "title": "NNIU 036 R. DEMOBILYSE SOE Operation Antrum",
+       "slug": "nniu-036",
+       "organization": "SOE",
+       "district": "02-SOE"
+      },
+      {
+       "date": "1942-02-05",
+       "_id": "36a9820d-b65a-44ea-8e10-934ee151031a",
+       "title": "NNIU 038 R. FEDERAL SOE Operation ANVIL",
+       "slug": "nniu-038",
+       "organization": "NNIU - Norwegian Naval Independent Unit",
+       "district": "02-SOE"
+      },
+      {
+       "date": "1942-03-27",
+       "_id": "c6786e39-e9c6-47d6-9aae-ef58ab56cb4a",
+       "title": "NNIU 046 R. IMPEST/JAMAICA   SOE Operation ANVIL / CROW ",
+       "slug": "nniu-046",
+       "organization": "NNIU - Norwegian Naval Independent Unit",
+       "district": "02-SOE"
+      },
+      {
+       "date": "1942-04-17",
+       "_id": "e182f71c-56d5-4094-bde5-e9d0ac31a05d",
+       "title": "NNIU 053 R.--SOE Operation REDSHANK",
+       "slug": "nniu-053",
+       "organization": "SOE",
+       "district": "02-SOE"
+      }
+     ]
+    },
+    {
+     "_id": "11a6213f-ab98-4c3b-8950-21fe6e1f2555",
+     "slug": "mtb-712-condemned",
+     "title": "MTB 712 Condemned ✝",
+     "type": "Scrapped",
+     "lat": 60.205028,
+     "lng": -1.162491,
+     "names": [],
+     "events": [
+      {
+       "date": "1945-01-26",
+       "_id": "9912be0b-adb9-470e-99e8-22102151541e",
+       "title": "MTB X29 Condemned  MTB 712",
+       "slug": "mtb-x29",
+       "organization": "MTB flåten",
+       "district": "United Kingdom"
+      }
+     ]
+    },
+    {
+     "_id": "11ebdf70-ed9a-434c-838f-e80b5e3e62d0",
+     "slug": "larne",
+     "title": "Larne Nord Irland",
+     "type": "MTB base",
+     "lat": 54.849392797406615,
+     "lng": -5.813294487193074,
+     "names": [],
+     "events": [
+      {
+       "date": "1944-03-15",
+       "_id": "c6225fd0-08e0-491b-b571-a655249d7ee4",
+       "title": "MTB X15 Forlytning til Larne i Nord Irland",
+       "slug": "mtb-x15",
+       "organization": "MTB flåten",
+       "district": "United Kingdom"
+      }
+     ]
+    },
+    {
+     "_id": "124addce-89b5-4a3b-b445-6d2aa93d4414",
+     "slug": "raf-banff",
+     "title": "RAF Banff",
+     "type": "Airfield",
+     "lat": 57.666667,
+     "lng": -2.64,
+     "names": [],
+     "events": [
+      {
+       "date": "1944-09-19",
+       "_id": "35155b8f-e234-4412-8e94-87288aed7c33",
+       "title": "AM 185 SOE Operation CRUPPER 9 Golden Eagle 1",
+       "slug": "am-185-1",
+       "organization": "SOE",
+       "district": "Milorg D14.2"
+      },
+      {
+       "date": "1945-04-22",
+       "_id": "8f197190-75dc-420e-b360-b9b2a7e02733",
+       "title": "AM 364  Soe Operation CRUPPER XXXX 3 Greenfinch",
+       "slug": "am-364-3",
+       "organization": "SOE",
+       "district": "Milorg D14.2"
+      }
+     ]
+    },
+    {
+     "_id": "129eea16-d440-4ed6-9ff6-d5a3be0c8f40",
+     "slug": "sts-43",
+     "title": "STS 43 Group C Audley End House",
+     "type": "SOE Training School",
+     "lat": 52.020813,
+     "lng": 0.220572,
+     "names": [],
+     "events": []
+    },
+    {
+     "_id": "1661d329-7f18-42c8-95c9-f6bebc958160",
+     "slug": "dyce-airfied",
+     "title": "Dyce Airfied",
+     "type": "Airfield",
+     "lat": 57.198995,
+     "lng": -2.20419,
+     "names": [],
+     "events": [
+      {
+       "date": "1944-02-25",
+       "_id": "986eb0b2-9b30-44d9-a27c-e05c43ba1a84",
+       "title": "AM 296 SOE Operation REINS VII 4 Rosy Bullfinch Red",
+       "slug": "am-296-4",
+       "organization": "SOE",
+       "district": "Milorg D15"
+      }
+     ]
+    },
+    {
+     "_id": "16f6aae3-5c03-4792-87dc-819b35aaabfc",
+     "slug": "sts-22-b",
+     "title": "STS 22-B Group A Glasnacardoch Lodge, Mallaig, Inverness-shire",
+     "type": "SOE Training School",
+     "lat": 56.995359,
+     "lng": -5.801294,
+     "names": [],
+     "events": []
+    },
+    {
+     "_id": "1dc37841-e3b9-48ae-ac90-13e5663798dc",
+     "slug": "sts-45",
+     "title": "STS 45 Group C Hatherop Castle",
+     "type": "SOE Training School",
+     "lat": 51.744645,
+     "lng": -1.779603,
+     "names": [],
+     "events": []
+    }
+   ],
+   "truncatedFrom": 145
+  },
+  {
+   "query": "MATCH (i:Incident|Operation)\n       OPTIONAL MATCH (i)-[:ORCHESTRATED_BY]->(org:Organization)\n       OPTIONAL MATCH (i)-[:IN_DISTRICT]->(dist:Unit)\n       RETURN i.sanityId AS _id, i.slug AS slug, coalesce(i.title, i.codeName) AS title, i.date AS date,\n              org.canonicalName AS organization, dist.canonicalName AS district\n       ORDER BY i.date",
+   "params": {},
+   "rows": [
+    {
+     "_id": "075fe6db-d15a-4015-a5a2-ce3dd2aa5533",
+     "slug": "gulltransporten-1940",
+     "title": "GULLTRANSPORTEN 1940",
+     "date": "1940-04-09",
+     "organization": "Norge",
+     "district": "Norge"
+    },
+    {
+     "_id": "7f5eed41-8fde-47ef-b799-883abf4e7cdd",
+     "slug": "nrk-1",
+     "title": "NRK Første sending fra BBC",
+     "date": "1940-04-09",
+     "organization": "Norge i United Kingdom",
+     "district": "United Kingdom"
+    },
+    {
+     "_id": "dd1642aa-6f24-470a-978f-7402920a57ef",
+     "slug": "mk-x48",
+     "title": "MK X48 MK LIVLIG",
+     "date": "1940-04-28",
+     "organization": "MK Skøyter",
+     "district": "06 Skøyter ikke organisert"
+    },
+    {
+     "_id": "9d5ed7ff-8bad-4b6c-9384-8793a439da6a",
+     "slug": "mk-x24",
+     "title": "MK X24 MK Jåbek til Baltasound",
+     "date": "1940-05-02",
+     "organization": "MK Skøyter",
+     "district": "Norge"
+    },
+    {
+     "_id": "9fb2821e-25e7-40bf-9f07-562cb5074221",
+     "slug": "mk-x60",
+     "title": "MK X60 BERGHOLM SF-3-SV",
+     "date": "1940-05-02",
+     "organization": "MK Skøyter",
+     "district": "06 Skøyter ikke organisert"
+    },
+    {
+     "_id": "b6dc371e-73d6-46b0-8dea-665841280e80",
+     "slug": "heinkel-he115-fra-olden-til-dornough",
+     "title": "HEINKEL He115 fra Olden til Dornough",
+     "date": "1940-05-02",
+     "organization": "Homefleet",
+     "district": "Flukt"
+    },
+    {
+     "_id": "36a2eb5f-068b-4147-8489-df943ec9cda4",
+     "slug": "mk-x25",
+     "title": "MK X25 DS UTVÆR M-164-A  til Torshavn",
+     "date": "1940-05-03",
+     "organization": "MK Skøyter",
+     "district": "Norge"
+    },
+    {
+     "_id": "a71c9568-d18a-42e8-8d65-24c239784aa2",
+     "slug": "mk-x010",
+     "title": "MK X010 MK DISKO og MK KORALEN I ",
+     "date": "1940-05-03",
+     "organization": "MK Skøyter",
+     "district": "06 Skøyter ikke organisert"
+    },
+    {
+     "_id": "ce363950-4e54-4d84-bdb2-4d46bb611a3a",
+     "slug": "mk-x011",
+     "title": "MK X011 MS BOMMA til Shetland",
+     "date": "1940-05-03",
+     "organization": "MK Skøyter",
+     "district": "06 Skøyter ikke organisert"
+    },
+    {
+     "_id": "042c4f33-57b3-4471-913e-6da6a9f93b9e",
+     "slug": "mk-x007",
+     "title": "MK X007 MK JUVEL M-102-S",
+     "date": "1940-05-04",
+     "organization": "MK Skøyter",
+     "district": "06 Skøyter ikke organisert"
+    },
+    {
+     "_id": "965f8be9-3d36-4069-9642-8a5775908283",
+     "slug": "ds-01",
+     "title": "DS 01  DS AKABAHRA \"kapret\" til Kirkwall",
+     "date": "1940-05-05",
+     "organization": "MK Skøyter",
+     "district": "Norge"
+    },
+    {
+     "_id": "ba571edf-2a6d-4733-8393-e6f75937d747",
+     "slug": "mk-x17",
+     "title": "MK X17 MK SJØGUTTEN",
+     "date": "1940-05-06",
+     "organization": "MK Skøyter",
+     "district": "Norge"
+    },
+    {
+     "_id": "2d4ccff3-f07f-4ddd-8fe1-5c19515bafbe",
+     "slug": "mk-x19",
+     "title": "MK X19 Flere båter til Lerwick",
+     "date": "1940-05-07",
+     "organization": "Grupper",
+     "district": "Norge"
+    },
+    {
+     "_id": "3ff76701-1bd3-4a11-9080-32b6c35575be",
+     "slug": "mk-x26",
+     "title": "MK X26 DORY fra  M-164-A  til Ålesund og Flekkefjord",
+     "date": "1940-05-07",
+     "organization": "MK Skøyter",
+     "district": "Norge"
+    },
+    {
+     "_id": "4642f521-44aa-4ac9-accb-cbfc2faef4e8",
+     "slug": "mk-x18",
+     "title": "MK X18 MK Sandvikshorn og MK Vestern med flyktninger",
+     "date": "1940-05-07",
+     "organization": "Grupper",
+     "district": "Norge"
+    },
+    {
+     "_id": "5bb1194a-f552-4bdc-aeb5-855014764dd7",
+     "slug": "mk-x27",
+     "title": "MK X27 M/S «ELDØY» M-286-A til Torshavn",
+     "date": "1940-05-07",
+     "organization": "MK Skøyter",
+     "district": "Norge"
+    },
+    {
+     "_id": "dcb6fed3-d06e-4499-99be-12661041a469",
+     "slug": "mk-x20",
+     "title": "MK X20 MK VITA H-95-B",
+     "date": "1940-05-08",
+     "organization": "MK Skøyter",
+     "district": "Norge"
+    },
+    {
+     "_id": "dce7bf4b-d682-4094-afb0-a31f2445c71c",
+     "slug": "mk-x33",
+     "title": "MK X33 \"Torsvik\" 1 MK NYO M-9-B",
+     "date": "1940-05-08",
+     "organization": "Grupper",
+     "district": "Norge"
+    },
+    {
+     "_id": "53a4bdb7-62a3-4e70-bda9-6ed3b411a533",
+     "slug": "mk-x39",
+     "title": "MK X39 MK PORAT H-21-S",
+     "date": "1940-05-09",
+     "organization": "MK Skøyter",
+     "district": "06 Skøyter ikke organisert"
+    },
+    {
+     "_id": "97c3f41c-3989-4522-9ce7-5ea1765c1204",
+     "slug": "mk-x21",
+     "title": "MK X21 \"Storemark\" 1 MK WAILET V-2-S",
+     "date": "1940-05-09",
+     "organization": "Grupper",
+     "district": "Norge"
+    },
+    {
+     "_id": "55d6cdbd-35d2-4d2c-bd48-df11f6c6209c",
+     "slug": "mk-x23",
+     "title": "MK X23 MK Reidar til Lerwick",
+     "date": "1940-05-10",
+     "organization": "MK Skøyter",
+     "district": "Norge"
+    },
+    {
+     "_id": "c7dff3c6-8c5b-417c-ae3c-a67948c4f7d6",
+     "slug": "sis-section-d-involveres-i-motstandsbevegelsen-i-england",
+     "title": "SIS Section D involveres i motstandsbevegelsen  i England",
+     "date": "1940-05-15",
+     "organization": "SIS",
+     "district": "01- SIS-XU"
+    },
+    {
+     "_id": "2e0eea65-2da6-4462-8076-976e004cb148",
+     "slug": "msp-nid01",
+     "title": "MSP-NID01 SIS Operation HARDWARE ( gitt navn senere)",
+     "date": "1940-05-17",
+     "organization": "MSP Marinens skøyteavdeling Petershead",
+     "district": "01- SIS-XU"
+    },
+    {
+     "_id": "a67660b0-7d5d-4e20-8c18-bc801d67ae53",
+     "slug": "mk-snal-h-50-am",
+     "title": "MK SNÅL H-50-AM",
+     "date": "1940-05-19",
+     "organization": "Flyktninger",
+     "district": "06 Skøyter ikke organisert"
+    },
+    {
+     "_id": "a48570d2-d6ab-49ea-8170-97b7cce9282a",
+     "slug": "mk-x003",
+     "title": "MK X003 MS Vega til Balta",
+     "date": "1940-05-20",
+     "organization": "MK Skøyter",
+     "district": "Norge"
+    }
+   ],
+   "truncatedFrom": 2284
+  },
+  {
+   "query": "MATCH (i:Incident|Operation)-[:IN_DISTRICT]->(d:Unit)\n       MATCH (i)-[:ORCHESTRATED_BY]->(o:Organization)\n       WHERE d.canonicalName IS NOT NULL AND o.color IS NOT NULL\n       WITH d.canonicalName AS district, o.color AS color, count(*) AS n\n       ORDER BY district, n DESC\n       RETURN district, head(collect(color)) AS color",
+   "params": {},
+   "rows": [
+    {
+     "district": "01- SIS-XU",
+     "color": "#090288"
+    },
+    {
+     "district": "02-SOE",
+     "color": "#7b080e"
+    },
+    {
+     "district": "06 Skøyter ikke organisert",
+     "color": "#747b7e"
+    },
+    {
+     "district": "A/U Patrol",
+     "color": "#24a3e3"
+    },
+    {
+     "district": "ANGLO-NORWEGIAN COLLABORATION COMMITTEE",
+     "color": "#276a8b"
+    },
+    {
+     "district": "Den norske regjering",
+     "color": "#627202"
+    },
+    {
+     "district": "Flukt",
+     "color": "#747b7e"
+    },
+    {
+     "district": "Grupper",
+     "color": "#747b7e"
+    },
+    {
+     "district": "Holland",
+     "color": "#047485"
+    },
+    {
+     "district": "Hurtigruten",
+     "color": "#e38924"
+    },
+    {
+     "district": "Milorg D11",
+     "color": "#276a8b"
+    },
+    {
+     "district": "Milorg D12",
+     "color": "#276a8b"
+    },
+    {
+     "district": "Milorg D13",
+     "color": "#276a8b"
+    },
+    {
+     "district": "Milorg D14.1",
+     "color": "#276a8b"
+    },
+    {
+     "district": "Milorg D14.2",
+     "color": "#276a8b"
+    },
+    {
+     "district": "Milorg D14.3",
+     "color": "#276a8b"
+    },
+    {
+     "district": "Milorg D15",
+     "color": "#276a8b"
+    },
+    {
+     "district": "Milorg D16.1",
+     "color": "#276a8b"
+    },
+    {
+     "district": "Milorg D16.2",
+     "color": "#276a8b"
+    },
+    {
+     "district": "Milorg D16.3",
+     "color": "#276a8b"
+    },
+    {
+     "district": "Milorg D17",
+     "color": "#276a8b"
+    },
+    {
+     "district": "Milorg D18",
+     "color": "#276a8b"
+    },
+    {
+     "district": "Milorg D19",
+     "color": "#276a8b"
+    },
+    {
+     "district": "Milorg D20.1",
+     "color": "#276a8b"
+    },
+    {
+     "district": "Milorg D20.2",
+     "color": "#276a8b"
+    }
+   ],
+   "truncatedFrom": 41
+  },
+  {
+   "query": "MATCH (t:Transport)\n       OPTIONAL MATCH (t)<-[:USED]-(i:Incident|Operation)\n       OPTIONAL MATCH (i)-[:ORCHESTRATED_BY]->(org:Organization)\n       OPTIONAL MATCH (i)-[:IN_DISTRICT]->(dist:Unit)\n       WITH t,\n            collect(CASE WHEN i IS NOT NULL THEN\n              {_id: i.sanityId, slug: i.slug, title: coalesce(i.title, i.codeName), date: i.date,\n               organization: org.canonicalName, district: dist.canonicalName}\n            END) AS events\n       RETURN t.sanityId AS _id, t.slug AS slug, t.canonicalName AS name,\n              t.type AS type, coalesce(t.unit, t.rawUnit) AS unit, t.regser AS regser, t.reserve AS reserve,\n              [e IN events WHERE e IS NOT NULL] AS events",
+   "params": {},
+   "rows": [
+    {
+     "_id": "0daa3e07-0d8a-443b-9341-0b9138bf2b66",
+     "slug": "stirling-n3674-ls-t",
+     "name": "Short Stirling N3674 LS-T",
+     "type": "Four-engined heavy bomber",
+     "unit": "RAF 15",
+     "regser": "N3674 LS-T",
+     "reserve": null,
+     "events": [
+      {
+       "date": "1942-01-28",
+       "_id": "2e55c033-2441-4d7f-ac4a-7787f519e232",
+       "title": "Tirpitz 01 SOE Operation OILED",
+       "slug": "tirpitz-01",
+       "organization": "SOE",
+       "district": "02-SOE"
+      }
+     ]
+    },
+    {
+     "_id": "13f6e54e-50d7-42ce-82b9-e0e79c580334",
+     "slug": "handley-page-halifax-ii-l9617-mp-a",
+     "name": "Handley Page Halifax II L9617 MP-A",
+     "type": "Four-engined heavy bomber",
+     "unit": "RAF 76",
+     "regser": "L9617 MP-A",
+     "reserve": null,
+     "events": [
+      {
+       "date": "1942-01-28",
+       "_id": "2e55c033-2441-4d7f-ac4a-7787f519e232",
+       "title": "Tirpitz 01 SOE Operation OILED",
+       "slug": "tirpitz-01",
+       "organization": "SOE",
+       "district": "02-SOE"
+      }
+     ]
+    },
+    {
+     "_id": "1866193a-6140-4e75-a145-e73e829467d4",
+     "slug": "handley-page-halifax-ii-v9985-za-vff",
+     "name": "Handley Page Halifax II V9985 ZA-V",
+     "type": "Four-engined heavy bomber",
+     "unit": "10 Sqdn",
+     "regser": "V9985 ZA-V",
+     "reserve": null,
+     "events": [
+      {
+       "date": "1942-03-30",
+       "_id": "ace7cc29-20c8-4e05-a357-a5b3cb7f63b9",
+       "title": "Tirpitz 03.1 RAF 1",
+       "slug": "tirpitz-03-1",
+       "organization": "SOE",
+       "district": "RAF"
+      },
+      {
+       "date": "1942-01-28",
+       "_id": "2e55c033-2441-4d7f-ac4a-7787f519e232",
+       "title": "Tirpitz 01 SOE Operation OILED",
+       "slug": "tirpitz-01",
+       "organization": "SOE",
+       "district": "02-SOE"
+      }
+     ]
+    },
+    {
+     "_id": "28c20352-5941-4b9b-9578-4bdbb63939ec",
+     "slug": "handley-page-halifax-ii-l9621-za-p",
+     "name": "Handley Page Halifax II L9621 ZA-P",
+     "type": "Four-engined heavy bomber",
+     "unit": "RAF 10",
+     "regser": "L9621 ZA-P",
+     "reserve": null,
+     "events": [
+      {
+       "date": "1942-01-28",
+       "_id": "2e55c033-2441-4d7f-ac4a-7787f519e232",
+       "title": "Tirpitz 01 SOE Operation OILED",
+       "slug": "tirpitz-01",
+       "organization": "SOE",
+       "district": "02-SOE"
+      }
+     ]
+    },
+    {
+     "_id": "2acc5c58-45b3-4349-8330-08476932668e",
+     "slug": "douglas-dc-3-skytrain-c-47a-30-dk-43-48252",
+     "name": "Douglas DC-3 Skytrain C-47A-30-DK 43-48252",
+     "type": "Transport/Passenger",
+     "unit": "86th. TCS E AC",
+     "regser": "C/N 14068/25513",
+     "reserve": " ",
+     "events": [
+      {
+       "date": "1945-01-15",
+       "_id": "1416bbd5-18d5-4d4b-9626-b275aa62cb02",
+       "title": "Frigjøringen av Finnmark 1945",
+       "slug": "frigjoringen-av-finnmark-1945",
+       "organization": "Norge i United Kingdom",
+       "district": "Sverige"
+      }
+     ]
+    },
+    {
+     "_id": "2e13dbf6-e846-41eb-b671-ab02f3700484",
+     "slug": "handley-page-halifax-ii-r9455-mp-c",
+     "name": "Handley Page Halifax II R9455 MP-C",
+     "type": "Four-engined heavy bomber",
+     "unit": "RAF 76",
+     "regser": "R9455 MP-C",
+     "reserve": null,
+     "events": [
+      {
+       "date": "1942-03-30",
+       "_id": "ace7cc29-20c8-4e05-a357-a5b3cb7f63b9",
+       "title": "Tirpitz 03.1 RAF 1",
+       "slug": "tirpitz-03-1",
+       "organization": "SOE",
+       "district": "RAF"
+      }
+     ]
+    },
+    {
+     "_id": "2e8a6ed8-03b9-4d53-8a56-48b47766e519",
+     "slug": "handley-page-halifax-iii-mz974-al-b",
+     "name": "Handley Page Halifax III MZ974 AL-B ✬",
+     "type": "Four-engined heavy bomber",
+     "unit": "RAF 429",
+     "regser": "MZ974 AL-B",
+     "reserve": null,
+     "events": [
+      {
+       "date": "1944-12-28",
+       "_id": "b6911bda-9095-46e5-98bc-8e7abce8a47d",
+       "title": "GARDENING SANDEFJORD",
+       "slug": "gardening-sandefjord",
+       "organization": "RAF/RCAF/RAAF/RNZAF",
+       "district": "RAF"
+      }
+     ]
+    },
+    {
+     "_id": "2eb52030-a823-4400-9d0b-3e060b9003ee",
+     "slug": "mk-havtor-m-1-h",
+     "name": "MK HAVTOR M-1-H",
+     "type": "Fiskefartøy",
+     "unit": null,
+     "regser": "M-1-H",
+     "reserve": null,
+     "events": [
+      {
+       "date": "1941-05-07",
+       "_id": "87240969-d847-4833-8d10-92c11535b831",
+       "title": "MK X025 \"Skytterhom\" 1 MK Havtor til Shetland",
+       "slug": "mk-x026",
+       "organization": "MK Skøyter",
+       "district": "Grupper"
+      }
+     ]
+    },
+    {
+     "_id": "361cdc58-5b85-44ae-a9f9-41970395c172",
+     "slug": "douglas-dc-3-skytrain-c-47a-25-dk-42-93703",
+     "name": "Douglas DC-3 Skytrain C-47A-25-DK 42-93703",
+     "type": "Transport/Passenger",
+     "unit": "86th. TCS E AC",
+     "regser": "C/N 13644",
+     "reserve": " ",
+     "events": [
+      {
+       "date": "1945-01-15",
+       "_id": "1416bbd5-18d5-4d4b-9626-b275aa62cb02",
+       "title": "Frigjøringen av Finnmark 1945",
+       "slug": "frigjoringen-av-finnmark-1945",
+       "organization": "Norge i United Kingdom",
+       "district": "Sverige"
+      }
+     ]
+    },
+    {
+     "_id": "39f3a438-e707-441a-8448-3f057a488d22",
+     "slug": "stirling-n6092-o",
+     "name": "Short Stirling I N6092 LS-O",
+     "type": "Four-engined heavy bomber",
+     "unit": "RAF 15",
+     "regser": "N6092 LS-O",
+     "reserve": null,
+     "events": [
+      {
+       "date": "1942-01-28",
+       "_id": "2e55c033-2441-4d7f-ac4a-7787f519e232",
+       "title": "Tirpitz 01 SOE Operation OILED",
+       "slug": "tirpitz-01",
+       "organization": "SOE",
+       "district": "02-SOE"
+      }
+     ]
+    },
+    {
+     "_id": "3a9971c5-7b3d-4688-b698-9c3afac1656f",
+     "slug": "douglas-dc-3-skytrain-c-47a-30-dk-43-48345",
+     "name": "Douglas DC-3 Skytrain C-47A-30-DK 43-48345",
+     "type": "Transport/Passenger",
+     "unit": "86th. TCS E AC",
+     "regser": "C/N 14061/25506",
+     "reserve": " ",
+     "events": [
+      {
+       "date": "1945-01-15",
+       "_id": "1416bbd5-18d5-4d4b-9626-b275aa62cb02",
+       "title": "Frigjøringen av Finnmark 1945",
+       "slug": "frigjoringen-av-finnmark-1945",
+       "organization": "Norge i United Kingdom",
+       "district": "Sverige"
+      }
+     ]
+    },
+    {
+     "_id": "3b66103e-d4fe-4955-8ee2-af3d91209b52",
+     "slug": "handley-page-halifax-ii-w1043-za-f",
+     "name": "Handley Page Halifax II W1043 ZA-F ✝",
+     "type": "Four-engined heavy bomber",
+     "unit": "RAF 10",
+     "regser": "W1043 ZA-F",
+     "reserve": null,
+     "events": [
+      {
+       "date": "1942-03-30",
+       "_id": "ace7cc29-20c8-4e05-a357-a5b3cb7f63b9",
+       "title": "Tirpitz 03.1 RAF 1",
+       "slug": "tirpitz-03-1",
+       "organization": "SOE",
+       "district": "RAF"
+      }
+     ]
+    },
+    {
+     "_id": "3d631091-5551-42d2-b8b8-4a57ee2bb14f",
+     "slug": "handley-page-halifax-ii-w1003-za",
+     "name": "Handley Page Halifax II W1003 ZA-?",
+     "type": "Four-engined heavy bomber",
+     "unit": "RAF 10",
+     "regser": "W1003 ZA-?",
+     "reserve": null,
+     "events": [
+      {
+       "date": "1942-03-30",
+       "_id": "ace7cc29-20c8-4e05-a357-a5b3cb7f63b9",
+       "title": "Tirpitz 03.1 RAF 1",
+       "slug": "tirpitz-03-1",
+       "organization": "SOE",
+       "district": "RAF"
+      }
+     ]
+    },
+    {
+     "_id": "3de69e7a-0d80-4ff4-8919-c7cd6e6cf172",
+     "slug": "handley-page-halifax-ii-r9434-mp-s",
+     "name": "Handley Page Halifax II R9434 MP-S",
+     "type": "Four-engined heavy bomber",
+     "unit": "RAF 76",
+     "regser": "R9434 MP-S",
+     "reserve": null,
+     "events": [
+      {
+       "date": "1942-03-30",
+       "_id": "ace7cc29-20c8-4e05-a357-a5b3cb7f63b9",
+       "title": "Tirpitz 03.1 RAF 1",
+       "slug": "tirpitz-03-1",
+       "organization": "SOE",
+       "district": "RAF"
+      }
+     ]
+    },
+    {
+     "_id": "435802a9-ad50-4720-bc70-7c74bddd46c8",
+     "slug": "ms-alcides",
+     "name": "MS Alcides",
+     "type": "Lasteskip med passasjerlugarer",
+     "unit": null,
+     "regser": null,
+     "reserve": null,
+     "events": [
+      {
+       "date": "1941-04-18",
+       "_id": "a99a3960-d74f-4ece-ad1e-7eb5ff5f3282",
+       "title": "Jorden rundt på 170 dager",
+       "slug": "earth-210",
+       "organization": "Flyktninger",
+       "district": "Norge"
+      }
+     ]
+    },
+    {
+     "_id": "471f1e88-31df-49ce-a77d-49aabc6a1041",
+     "slug": "mb-smart",
+     "name": "MB SMART",
+     "type": null,
+     "unit": null,
+     "regser": null,
+     "reserve": null,
+     "events": [
+      {
+       "date": "1942-08-10",
+       "_id": "9f29cc77-11ac-4434-b010-a9bb188fb9ef",
+       "title": "MX-X021 MK SMART",
+       "slug": "mk-x021",
+       "organization": "Flyktninger",
+       "district": "06 Skøyter ikke organisert"
+      }
+     ]
+    },
+    {
+     "_id": "48e14ebc-d723-4880-bf08-e1d380678937",
+     "slug": "mk-bobb-h-31-bo",
+     "name": "MK BOBB H-31-BO",
+     "type": "Fiskefartøy",
+     "unit": null,
+     "regser": "H-31-BO",
+     "reserve": null,
+     "events": [
+      {
+       "date": "1941-07-20",
+       "_id": "6c619bb7-99c9-40a1-9676-d39a683b9f6e",
+       "title": "MX-X025 MK BOB ",
+       "slug": "mk-x025",
+       "organization": "Flyktninger",
+       "district": "06 Skøyter ikke organisert"
+      }
+     ]
+    },
+    {
+     "_id": "4f906bde-c1a0-4ca6-8ae4-8c69fe46bbb3",
+     "slug": "ms-haugland-i",
+     "name": "MS HAUGLAND I",
+     "type": null,
+     "unit": null,
+     "regser": null,
+     "reserve": null,
+     "events": [
+      {
+       "date": "1941-11-27",
+       "_id": "3c092f18-b3b9-4842-b42d-25df1aad821d",
+       "title": "MX-X022 \"Bremnes\" 8 MS Haugland I",
+       "slug": "mk-x022",
+       "organization": "Flyktninger",
+       "district": "06 Skøyter ikke organisert"
+      }
+     ]
+    },
+    {
+     "_id": "510e29cd-40b6-41f4-ac20-79fb025af8e6",
+     "slug": "handley-page-halifax-ii- ",
+     "name": "Handley Page Halifax II",
+     "type": "Four-engined heavy bomber",
+     "unit": "RAF 76",
+     "regser": "R9447 MP-R",
+     "reserve": null,
+     "events": [
+      {
+       "date": "1942-03-30",
+       "_id": "ace7cc29-20c8-4e05-a357-a5b3cb7f63b9",
+       "title": "Tirpitz 03.1 RAF 1",
+       "slug": "tirpitz-03-1",
+       "organization": "SOE",
+       "district": "RAF"
+      }
+     ]
+    },
+    {
+     "_id": "53ea1e56-5eb5-479b-a1a6-6e283f4ef5cf",
+     "slug": "handley-page-halifax-ii-l9624-za-c",
+     "name": "Handley Page Halifax II L9624 ZA-C",
+     "type": "Four-engined heavy bomber",
+     "unit": "RAF 10",
+     "regser": "L9624 ZA-C",
+     "reserve": null,
+     "events": [
+      {
+       "date": "1942-01-28",
+       "_id": "2e55c033-2441-4d7f-ac4a-7787f519e232",
+       "title": "Tirpitz 01 SOE Operation OILED",
+       "slug": "tirpitz-01",
+       "organization": "SOE",
+       "district": "02-SOE"
+      }
+     ]
+    },
+    {
+     "_id": "57a4def1-9c99-45f3-8b86-5b89a8fcbea2",
+     "slug": "handley-page-halifax-ii-r9453-mp-k",
+     "name": "Handley Page Halifax II R9453 MP-K ✝",
+     "type": "Four-engined heavy bomber",
+     "unit": "RAF 76",
+     "regser": "R9453 MP-K",
+     "reserve": null,
+     "events": [
+      {
+       "date": "1942-03-30",
+       "_id": "ace7cc29-20c8-4e05-a357-a5b3cb7f63b9",
+       "title": "Tirpitz 03.1 RAF 1",
+       "slug": "tirpitz-03-1",
+       "organization": "SOE",
+       "district": "RAF"
+      }
+     ]
+    },
+    {
+     "_id": "5ac0503c-a906-4e27-ae44-7ee097d7bad5",
+     "slug": "mk-ulstein-m-27-u",
+     "name": "MK ULSTEIN M-27-U",
+     "type": "Fiskefartøy",
+     "unit": null,
+     "regser": "M-27-U",
+     "reserve": null,
+     "events": [
+      {
+       "date": "1941-06-16",
+       "_id": "e61dfb9e-456d-4a77-b1e2-9c585ce84070",
+       "title": "MK X71 MK ULSTEIN M-27-U",
+       "slug": "mk-x86",
+       "organization": "Flyktninger",
+       "district": "06 Skøyter ikke organisert"
+      }
+     ]
+    },
+    {
+     "_id": "5b6af789-317c-495c-84f9-e3eb9c9fb10d",
+     "slug": "douglas-dc-3",
+     "name": "Douglas DC-3",
+     "type": "Coastal reconnaissance aircraft",
+     "unit": "BOAC",
+     "regser": null,
+     "reserve": " ",
+     "events": [
+      {
+       "date": "1943-08-15",
+       "_id": "820f03d1-b771-428c-92bc-b3ea69f90bfb",
+       "title": "ABA 150843",
+       "slug": "aba-150843",
+       "organization": "BOAC/BALDER",
+       "district": "Sverige-Air"
+      }
+     ]
+    },
+    {
+     "_id": "5e72969f-9291-4ef1-9319-ecb25ac87ab5",
+     "slug": "douglas-dc-3-skytrain-c-47a-30-dk-43-48248",
+     "name": "Douglas DC-3 Skytrain C-47A-30-DK 43-48248",
+     "type": "Transport/Passenger",
+     "unit": "86th. TCS E AC",
+     "regser": "C/N 14064/25509",
+     "reserve": " ",
+     "events": [
+      {
+       "date": "1945-01-15",
+       "_id": "1416bbd5-18d5-4d4b-9626-b275aa62cb02",
+       "title": "Frigjøringen av Finnmark 1945",
+       "slug": "frigjoringen-av-finnmark-1945",
+       "organization": "Norge i United Kingdom",
+       "district": "Sverige"
+      }
+     ]
+    },
+    {
+     "_id": "5ffee1fe-1f25-4160-9936-e22300d3c306",
+     "slug": "short-stirling-n3673-ls-d",
+     "name": "Short Stirling N3673 LS-D",
+     "type": "Four-engined heavy bomber",
+     "unit": "RAF 15",
+     "regser": "N3673 LS-D",
+     "reserve": null,
+     "events": [
+      {
+       "date": "1942-01-28",
+       "_id": "2e55c033-2441-4d7f-ac4a-7787f519e232",
+       "title": "Tirpitz 01 SOE Operation OILED",
+       "slug": "tirpitz-01",
+       "organization": "SOE",
+       "district": "02-SOE"
+      }
+     ]
+    }
+   ],
+   "truncatedFrom": 1059
+  },
+  {
+   "query": "MATCH (l:Location)\n       OPTIONAL MATCH (l)<-[:FROM|TO]-(i:Incident|Operation)\n       OPTIONAL MATCH (i)-[:ORCHESTRATED_BY]->(org:Organization)\n       OPTIONAL MATCH (i)-[:IN_DISTRICT]->(dist:Unit)\n       WITH l,\n            collect(CASE WHEN i IS NOT NULL THEN\n              {_id: i.sanityId, slug: i.slug, title: coalesce(i.title, i.codeName), date: i.date,\n               organization: org.canonicalName, district: dist.canonicalName}\n            END) AS events\n       RETURN l.sanityId AS _id, l.slug AS slug, l.canonicalName AS title,\n              l.lat AS lat, l.lng AS lng,\n              [e IN events WHERE e IS NOT NULL] AS events",
+   "params": {},
+   "rows": [
+    {
+     "_id": "015f1142-f73b-4424-b776-07250b1b86d2",
+     "slug": "gunhildsrudseter",
+     "title": "Gunhildsrudseter",
+     "lat": 59.6431,
+     "lng": 9.85511,
+     "events": [
+      {
+       "date": "1945-02-21",
+       "_id": "1a0e912c-7f39-4314-bd4c-b0a8933cc19a",
+       "title": "SOE Operation CHACEWATER",
+       "slug": "soe-operation-chacewater",
+       "organization": "SOE",
+       "district": "Milorg D16.1"
+      }
+     ]
+    },
+    {
+     "_id": "01d74865-6a7a-4848-beef-a2cca6a6b8e8",
+     "slug": "vikafjord",
+     "title": "Vikafjord",
+     "lat": 59.6309449,
+     "lng": 5.1821891,
+     "events": [
+      {
+       "date": "1941-07-20",
+       "_id": "6c619bb7-99c9-40a1-9676-d39a683b9f6e",
+       "title": "MX-X025 MK BOB ",
+       "slug": "mk-x025",
+       "organization": "Flyktninger",
+       "district": "06 Skøyter ikke organisert"
+      }
+     ]
+    },
+    {
+     "_id": "04c3ad8d-ccf4-4ba5-91dd-5eb7311faf4d",
+     "slug": "drobak",
+     "title": "Drøbak",
+     "lat": 59.66332,
+     "lng": 10.62974,
+     "events": [
+      {
+       "date": "1943-03-13",
+       "_id": "27be4674-0b38-4c8b-8d68-f27fb1228eb6",
+       "title": "SIS Station CASTOR S: 12/3-43 - 01/4-43 ",
+       "slug": "sis-station-castor",
+       "organization": "SIS",
+       "district": "01- SIS-XU"
+      }
+     ]
+    },
+    {
+     "_id": "05857125-4491-4e07-a534-5ebcd700edee",
+     "slug": "overbygd-biri",
+     "title": "Øverbygd BIRI",
+     "lat": 61.00643,
+     "lng": 10.35615,
+     "events": [
+      {
+       "date": "1945-04-18",
+       "_id": "9c094bf3-8f5e-4213-866a-927f68cd7c23",
+       "title": "AM 483 SOE Operation PELHAM X 1 Pheasant",
+       "slug": "am-483-1",
+       "organization": "SOE",
+       "district": "Milorg D14.3"
+      }
+     ]
+    },
+    {
+     "_id": "0e48485d-74eb-4f28-949d-ee2c3ecf6a3c",
+     "slug": "minnesund-eidsvoll-broer",
+     "title": "Minnesund - Eidsvoll broer",
+     "lat": 60.3972209,
+     "lng": 11.233728,
+     "events": [
+      {
+       "date": "1945-05-01",
+       "_id": "513fd71e-a134-4ecd-ae70-362d865e413b",
+       "title": "SOE Operation ANTIPODES 2",
+       "slug": "soe-operation-antipodes-2",
+       "organization": "SOE",
+       "district": "Milorg D12"
+      }
+     ]
+    },
+    {
+     "_id": "120c0e1c-21ac-44f4-b0cd-2c1b24ed8e7f",
+     "slug": "skreisja",
+     "title": "Skreisjå",
+     "lat": 60.58879,
+     "lng": 11.25629,
+     "events": [
+      {
+       "date": "1944-09-13",
+       "_id": "23705923-868a-4022-abe9-6d50863c2c66",
+       "title": "WT Station CONDOR S: 13/9-44 - 12/6-45",
+       "slug": "wt-station-condor",
+       "organization": "SOE",
+       "district": "Milorg D25"
+      }
+     ]
+    },
+    {
+     "_id": "1300cebc-63f5-49f3-b7fe-74eea11ead25",
+     "slug": "nordmarka",
+     "title": "Nordmarka",
+     "lat": 60.13472,
+     "lng": 10.57166,
+     "events": [
+      {
+       "date": "1944-08-08",
+       "_id": "a40a3dcd-1f3d-4855-a27d-cec9049fc25f",
+       "title": "WT Station CORMORANT  S: 8/8-44 - 12/6-45",
+       "slug": "wt-station-cormorant",
+       "organization": "SOE",
+       "district": "Milorg D11"
+      },
+      {
+       "date": "1944-09-08",
+       "_id": "070fb2a3-9294-4684-9877-840301fe94a5",
+       "title": "WT Station CROSSBILL  S: 8/9-44 - 13/6-45",
+       "slug": "wt-station-crossbill",
+       "organization": "SOE",
+       "district": "Milorg D11"
+      }
+     ]
+    },
+    {
+     "_id": "1471c9d8-0285-4fa7-8bb8-0bc14844fa28",
+     "slug": "trosvika-tangen",
+     "title": "Trosvika, Tangen",
+     "lat": 60.5937439,
+     "lng": 11.248347,
+     "events": [
+      {
+       "date": "1944-09-13",
+       "_id": "23705923-868a-4022-abe9-6d50863c2c66",
+       "title": "WT Station CONDOR S: 13/9-44 - 12/6-45",
+       "slug": "wt-station-condor",
+       "organization": "SOE",
+       "district": "Milorg D25"
+      }
+     ]
+    },
+    {
+     "_id": "2e3a28e1-b618-4b58-9df2-f5cc533bcc74",
+     "slug": "simavik",
+     "title": "Simavik ",
+     "lat": 69.8354686,
+     "lng": 19.0111702,
+     "events": [
+      {
+       "date": "1945-05-08",
+       "_id": "f28246d0-9632-4738-86d9-cbaba385769a",
+       "title": "SOE Operation BRACKNELL",
+       "slug": "soe-operation-bracknell",
+       "organization": "SOE",
+       "district": "Milorg D40"
+      }
+     ]
+    },
+    {
+     "_id": "311639d1-a3b6-40e3-9093-7dd7c8417710",
+     "slug": "whale-firth",
+     "title": "Whale Firth",
+     "lat": 60.6223103434539,
+     "lng": -1.1419650867293047,
+     "events": [
+      {
+       "date": "1941-06-16",
+       "_id": "e61dfb9e-456d-4a77-b1e2-9c585ce84070",
+       "title": "MK X71 MK ULSTEIN M-27-U",
+       "slug": "mk-x86",
+       "organization": "Flyktninger",
+       "district": "06 Skøyter ikke organisert"
+      }
+     ]
+    },
+    {
+     "_id": "348a0727-9fc7-47cd-857f-b51157c2e3d7",
+     "slug": "unna-allakats",
+     "title": "Unna Allakats",
+     "lat": 68.20429757151082,
+     "lng": 18.185462102746083,
+     "events": [
+      {
+       "date": "1944-08-14",
+       "_id": "b22365d7-50b2-4f0b-92c0-c6292b577093",
+       "title": "SFHQ Operation SEPALS II \"ANNA\"",
+       "slug": "sfhq-operation-sepals-ii",
+       "organization": "SOE",
+       "district": "Milorg D40"
+      }
+     ]
+    },
+    {
+     "_id": "36c180cc-756e-4e59-be27-056630807186",
+     "slug": "hoybuktmoen",
+     "title": "Høybuktmoen",
+     "lat": 69.721291,
+     "lng": 29.883022,
+     "events": [
+      {
+       "date": "1945-01-15",
+       "_id": "1416bbd5-18d5-4d4b-9626-b275aa62cb02",
+       "title": "Frigjøringen av Finnmark 1945",
+       "slug": "frigjoringen-av-finnmark-1945",
+       "organization": "Norge i United Kingdom",
+       "district": "Sverige"
+      }
+     ]
+    },
+    {
+     "_id": "3ef44f0e-5a45-4428-b02f-15c96965af9e",
+     "slug": "altevann-leinavann",
+     "title": "Altevann - Leinavann",
+     "lat": 68.378301,
+     "lng": 19.967518,
+     "events": [
+      {
+       "date": "1945-09-14",
+       "_id": "631a31af-b3c0-403a-8a6e-1911dd464796",
+       "title": "WT Station KITE S: 22/4-45 - 14/6-45",
+       "slug": "wt-station-kite",
+       "organization": "SOE",
+       "district": "Milorg D40"
+      }
+     ]
+    },
+    {
+     "_id": "496dbbc2-1bdf-4182-99f6-c7782947eb1d",
+     "slug": "finnas",
+     "title": "Finnås",
+     "lat": 59.7378481,
+     "lng": 5.2299463,
+     "events": [
+      {
+       "date": "1941-11-27",
+       "_id": "3c092f18-b3b9-4842-b42d-25df1aad821d",
+       "title": "MX-X022 \"Bremnes\" 8 MS Haugland I",
+       "slug": "mk-x022",
+       "organization": "Flyktninger",
+       "district": "06 Skøyter ikke organisert"
+      }
+     ]
+    },
+    {
+     "_id": "4ec40be3-47f7-43ad-b76c-563d324df92e",
+     "slug": "eikerum-og-laagen",
+     "title": "Eikerum og Laagen",
+     "lat": 59.6949105,
+     "lng": 9.714982,
+     "events": [
+      {
+       "date": "1945-02-21",
+       "_id": "1a0e912c-7f39-4314-bd4c-b0a8933cc19a",
+       "title": "SOE Operation CHACEWATER",
+       "slug": "soe-operation-chacewater",
+       "organization": "SOE",
+       "district": "Milorg D16.1"
+      }
+     ]
+    },
+    {
+     "_id": "51b03e80-34d8-4c93-834d-7c0e57031a72",
+     "slug": "saltdal",
+     "title": "Saltdal",
+     "lat": 67.10221,
+     "lng": 15.40694,
+     "events": [
+      {
+       "date": "1945-03-02",
+       "_id": "e194ca1a-0c5f-4f09-b988-0883a2d25f23",
+       "title": "WT Station SEPALS BLUE S: 31/12-44 - 30-45",
+       "slug": "wt-station-sepals-blue",
+       "organization": "SOE",
+       "district": "Milorg D40"
+      }
+     ]
+    },
+    {
+     "_id": "5428d79d-745c-4ba4-bc5c-92464b3a255d",
+     "slug": "snasa",
+     "title": "Snåsa",
+     "lat": 64.24557,
+     "lng": 12.38181,
+     "events": [
+      {
+       "date": "1945-04-01",
+       "_id": "baab6f18-5348-4ac9-8d89-94c5fa3bf5d7",
+       "title": "WT Station QUAIL S: 1/4-45 - 4/4-45",
+       "slug": "wt-station-quail",
+       "organization": "SOE",
+       "district": "Milorg D22"
+      }
+     ]
+    },
+    {
+     "_id": "54b030f7-7792-4586-aca6-ccc35b20933d",
+     "slug": "hjonnevag-i-solund",
+     "title": "Hjønnevåg i Solund",
+     "lat": 61.043044,
+     "lng": 4.664231,
+     "events": [
+      {
+       "date": "1940-07-04",
+       "_id": "f1828278-182f-4962-8530-bdb824cab2fd",
+       "title": "MK X023 MK Hospitz til ",
+       "slug": "mk-x023",
+       "organization": "SIS",
+       "district": "United Kingdom"
+      }
+     ]
+    },
+    {
+     "_id": "5eb31f50-c671-4254-a47d-a01dfd078575",
+     "slug": "arneberg-bro",
+     "title": "Arneberg bro",
+     "lat": 60.55842,
+     "lng": 12.03211,
+     "events": [
+      {
+       "date": "1945-05-08",
+       "_id": "8e942f10-d832-48d1-a97c-f7bc0d6fde86",
+       "title": "SOE Operation ANTIPODES 7",
+       "slug": "soe-operation-antipodes-7",
+       "organization": "SOE",
+       "district": "Milorg D12"
+      }
+     ]
+    },
+    {
+     "_id": "65c72822-5800-4a74-909b-d85a9bda8883",
+     "slug": "solbergfoss",
+     "title": "Solbergfoss",
+     "lat": 59.63655,
+     "lng": 11.1542,
+     "events": [
+      {
+       "date": "1945-03-02",
+       "_id": "2d78bd2a-a4f1-46a6-9f56-0ca38efc1e65",
+       "title": "SOE Operation CLOTHALL/ANTIPODES",
+       "slug": "soe-operation-clothall-antipodes",
+       "organization": "SOE",
+       "district": "Milorg D11"
+      }
+     ]
+    },
+    {
+     "_id": "69ecf51e-a581-4cc8-99d5-9f840d188ae5",
+     "slug": "lovoya-molen-omr",
+     "title": "Løvøya-Mølen omr",
+     "lat": 59.4666667,
+     "lng": 10.4833333,
+     "events": [
+      {
+       "date": "1944-12-28",
+       "_id": "73d90a42-eb46-4e35-98c7-f01901dddebd",
+       "title": "U 735 sunk",
+       "slug": "u-735-sunk",
+       "organization": "Norge",
+       "district": "RAF"
+      }
+     ]
+    },
+    {
+     "_id": "69f23da0-7d54-4c3a-992c-c8a63c3ab10a",
+     "slug": "nybergsund-aamot-stai-bruer",
+     "title": "Nybergsund - Aamot - Stai bruer",
+     "lat": 61.26025,
+     "lng": 12.31785,
+     "events": [
+      {
+       "date": "1945-05-14",
+       "_id": "c8e102f8-a2d1-45b9-8e5f-3ec6aee6a1e9",
+       "title": "SOE Operation ANTIPODES D-24",
+       "slug": "soe-operation-antipodes-d-24",
+       "organization": "SOE",
+       "district": "Milorg D24"
+      }
+     ]
+    },
+    {
+     "_id": "76da90f1-842f-45db-b571-69bf71b79601",
+     "slug": "paeltstugan-i-sverige",
+     "title": "Pältstugan i Sverige",
+     "lat": 68.97375327908442,
+     "lng": 20.368261148881214,
+     "events": [
+      {
+       "date": "1944-08-14",
+       "_id": "20efe471-7019-45f6-971f-be36819b2c1e",
+       "title": "SFHQ Operation SEPALS I \"MONS\"",
+       "slug": "sfhq-operation-sepals-i",
+       "organization": "SOE",
+       "district": "Milorg D40"
+      }
+     ]
+    },
+    {
+     "_id": "8593e7b0-52e9-4eb1-b478-96de3a99c90c",
+     "slug": "leinavann",
+     "title": "Leinavann",
+     "lat": 68.380089,
+     "lng": 19.966518,
+     "events": [
+      {
+       "date": "1945-01-15",
+       "_id": "e7b24169-5f39-4e45-bf31-6211a9e333bb",
+       "title": "SFHQ Operation SEPALS GORGON \"MARIT\"",
+       "slug": "sfhq-operation-sepals-gorgon",
+       "organization": "SOE",
+       "district": "Milorg D40"
+      }
+     ]
+    },
+    {
+     "_id": "906a8f8c-1774-486b-9f63-8c51f15aba1e",
+     "slug": "skoganvarre",
+     "title": "Skoganvarre",
+     "lat": 69.83981,
+     "lng": 25.07822,
+     "events": [
+      {
+       "date": "1945-04-10",
+       "_id": "29de033f-9c74-4c3d-aed3-8558f58eda0a",
+       "title": "Avdeling 550",
+       "slug": "avdeling-550",
+       "organization": "SIS",
+       "district": "01- SIS-XU"
+      }
+     ]
+    }
+   ],
+   "truncatedFrom": 1156
+  },
+  {
+   "query": "MATCH (p:Person)\n       OPTIONAL MATCH (p)-[:INVOLVED_IN|PARTICIPATED_IN]->(i:Incident|Operation)\n       OPTIONAL MATCH (i)-[:ORCHESTRATED_BY]->(org:Organization)\n       OPTIONAL MATCH (i)-[:IN_DISTRICT]->(dist:Unit)\n       WITH p,\n            collect(CASE WHEN i IS NOT NULL THEN\n              {_id: i.sanityId, slug: i.slug, title: coalesce(i.title, i.codeName), date: i.date,\n               organization: org.canonicalName, district: dist.canonicalName}\n            END) AS events\n       RETURN p.sanityId AS _id, p.slug AS slug, p.canonicalName AS name,\n              p.secretName AS secretName, p.home AS home, p.birthYear AS birthYear,\n              [e IN events WHERE e IS NOT NULL] AS events",
+   "params": {},
+   "rows": [
+    {
+     "_id": "027c1001-28f2-4c57-9bd8-4fd4201d7d1d",
+     "slug": "jan-nicolai-gaare",
+     "name": "Jan Nicolai Gaare",
+     "secretName": "\"Nikolai Ståle\",",
+     "home": "Selbustrand",
+     "birthYear": 1916,
+     "events": [
+      {
+       "date": "1945-01-15",
+       "_id": "e7b24169-5f39-4e45-bf31-6211a9e333bb",
+       "title": "SFHQ Operation SEPALS GORGON \"MARIT\"",
+       "slug": "sfhq-operation-sepals-gorgon",
+       "organization": "SOE",
+       "district": "Milorg D40"
+      }
+     ]
+    },
+    {
+     "_id": "028a0e27-45c5-42ba-a744-ca1a33d931ea",
+     "slug": "abraham-hagtvedt",
+     "name": "Abraham Hagtvedt",
+     "secretName": "\"Halvor\"",
+     "home": "Brunlanes",
+     "birthYear": 1904,
+     "events": [
+      {
+       "date": "1945-02-01",
+       "_id": "a0b04a1b-9b15-4e4d-903a-91d14c627bba",
+       "title": "Planet ACHILLLES (NO)",
+       "slug": "planet-achillles-no",
+       "organization": "FO IV - MI 4",
+       "district": "Milorg D23"
+      }
+     ]
+    },
+    {
+     "_id": "03ebe539-4aab-4f0f-bc0b-a16e204255dc",
+     "slug": "p-o-fink-pilot",
+     "name": "Fink Pilot",
+     "secretName": null,
+     "home": null,
+     "birthYear": null,
+     "events": [
+      {
+       "date": "1942-01-28",
+       "_id": "2e55c033-2441-4d7f-ac4a-7787f519e232",
+       "title": "Tirpitz 01 SOE Operation OILED",
+       "slug": "tirpitz-01",
+       "organization": "SOE",
+       "district": "02-SOE"
+      }
+     ]
+    },
+    {
+     "_id": "062d688c-9212-49f5-9867-6201801960e3",
+     "slug": "karl-johan-sorheller",
+     "name": "Karl Johan Sørheller",
+     "secretName": null,
+     "home": "Borgund",
+     "birthYear": 1922,
+     "events": [
+      {
+       "date": "1941-05-07",
+       "_id": "87240969-d847-4833-8d10-92c11535b831",
+       "title": "MK X025 \"Skytterhom\" 1 MK Havtor til Shetland",
+       "slug": "mk-x026",
+       "organization": "MK Skøyter",
+       "district": "Grupper"
+      }
+     ]
+    },
+    {
+     "_id": "066f2a05-5453-4988-bcc2-3d42a7fc6961",
+     "slug": "f-o-grey-c-b",
+     "name": "Grey C B",
+     "secretName": null,
+     "home": "Canada",
+     "birthYear": null,
+     "events": [
+      {
+       "date": "1944-12-28",
+       "_id": "b6911bda-9095-46e5-98bc-8e7abce8a47d",
+       "title": "GARDENING SANDEFJORD",
+       "slug": "gardening-sandefjord",
+       "organization": "RAF/RCAF/RAAF/RNZAF",
+       "district": "RAF"
+      }
+     ]
+    },
+    {
+     "_id": "0677b904-75df-41cf-8050-4f365b8388c5",
+     "slug": "s-l-burdett-pilot",
+     "name": "S/L Burdett Pilot",
+     "secretName": null,
+     "home": null,
+     "birthYear": null,
+     "events": [
+      {
+       "date": "1942-01-28",
+       "_id": "2e55c033-2441-4d7f-ac4a-7787f519e232",
+       "title": "Tirpitz 01 SOE Operation OILED",
+       "slug": "tirpitz-01",
+       "organization": "SOE",
+       "district": "02-SOE"
+      }
+     ]
+    },
+    {
+     "_id": "06adabce-bb2e-443f-858c-d8068ce801db",
+     "slug": "hakon-olai-kyllingmark",
+     "name": "Håkon Olai Kyllingmark",
+     "secretName": "K.K.",
+     "home": "Svolvær",
+     "birthYear": 1915,
+     "events": [
+      {
+       "date": "1945-01-15",
+       "_id": "e7b24169-5f39-4e45-bf31-6211a9e333bb",
+       "title": "SFHQ Operation SEPALS GORGON \"MARIT\"",
+       "slug": "sfhq-operation-sepals-gorgon",
+       "organization": "SOE",
+       "district": "Milorg D40"
+      },
+      {
+       "date": "1944-08-14",
+       "_id": "20efe471-7019-45f6-971f-be36819b2c1e",
+       "title": "SFHQ Operation SEPALS I \"MONS\"",
+       "slug": "sfhq-operation-sepals-i",
+       "organization": "SOE",
+       "district": "Milorg D40"
+      }
+     ]
+    },
+    {
+     "_id": "0bcfcfff-1142-4989-a5ab-7ff0f2b78770",
+     "slug": "ragnar-augustin-kragstad",
+     "name": "Ragnar Augustin Kragstad",
+     "secretName": "\"AS.21\",\"Bassen\"",
+     "home": null,
+     "birthYear": 1920,
+     "events": []
+    },
+    {
+     "_id": "0c1e5c61-9bae-4d84-9c87-ea027b8592be",
+     "slug": "nils-andreas-vibe",
+     "name": "Nils Andreas Vibe",
+     "secretName": null,
+     "home": "Oslo",
+     "birthYear": 1910,
+     "events": [
+      {
+       "date": "1945-02-13",
+       "_id": "fb3289de-2e09-4b13-ab1a-5e7f5a7067df",
+       "title": "SOE Operasjon Crowfield",
+       "slug": "soe-operasjon-crowfield",
+       "organization": "SOE",
+       "district": "Milorg D22"
+      },
+      {
+       "date": "1945-05-11",
+       "_id": "beb91301-6226-4d2c-8544-0d23097af771",
+       "title": "WT Station CROWFIELD S: 11/5-45 - 31/5-45",
+       "slug": "wt-station-crowfield",
+       "organization": "SOE",
+       "district": "Milorg D22"
+      }
+     ]
+    },
+    {
+     "_id": "0c475cbe-485c-4e35-bc22-85c127013932",
+     "slug": "odd-sigfred-mjelde",
+     "name": "Odd Sigfred Mjelde",
+     "secretName": "\"AA.12\",",
+     "home": "Bergen",
+     "birthYear": 1916,
+     "events": [
+      {
+       "date": "1944-08-14",
+       "_id": "bb98709c-6d8b-4918-8fcf-502e35b258ed",
+       "title": "MK X74 MK SNEDIG H-79-HB",
+       "slug": "mk-x74",
+       "organization": "MK Skøyter",
+       "district": "06 Skøyter ikke organisert"
+      },
+      {
+       "date": "1944-08-14",
+       "_id": "ac9643a8-a75f-4213-a28c-73c37ab2756b",
+       "title": "SFHQ Operation SEPALS III \"TRULS\"",
+       "slug": "sfhq-operation-sepals-iii",
+       "organization": "SOE",
+       "district": "Milorg D40"
+      },
+      {
+       "date": "1945-03-07",
+       "_id": "b04cf055-500f-43fb-baf5-8b4c0531f5b7",
+       "title": "SOE Operasjon CROFTON",
+       "slug": "soe-operasjon-crofton",
+       "organization": "SOE",
+       "district": "Milorg D40"
+      },
+      {
+       "date": "1945-03-07",
+       "_id": "971ee42f-0d3f-4e09-8901-5bfe15f87661",
+       "title": "East BOAC/BALDER-070345",
+       "slug": "east-boac-balder-070345",
+       "organization": "BOAC/BALDER",
+       "district": "Norge"
+      },
+      {
+       "date": "1945-02-16",
+       "_id": "7a384ffe-bdc4-4f42-8a9f-afed81cd1167",
+       "title": "East BOAC/BALDER-160245",
+       "slug": "east-boac-balder-160245",
+       "organization": "BOAC/BALDER",
+       "district": "Norge"
+      }
+     ]
+    },
+    {
+     "_id": "0d21658c-b22d-4b81-bdd0-f3bcad62a840",
+     "slug": "f-o-leonard-h-cooke",
+     "name": "Leonard H Cooke",
+     "secretName": null,
+     "home": null,
+     "birthYear": null,
+     "events": [
+      {
+       "date": "1945-02-20",
+       "_id": "fe3dd1cc-75e9-4cef-8bba-bc14e355433f",
+       "title": "AM 320 SOE Operation PELHAM VII 2 Pheasant",
+       "slug": "am-320-2",
+       "organization": "SOE",
+       "district": "Milorg D14.3"
+      },
+      {
+       "date": "1944-10-16",
+       "_id": "e9e18f59-7ff8-4fc8-bb43-ca3c12d78d38",
+       "title": "AM 241 SOE Operation (SFHQ/SHAEF) QUAVER  Daylight",
+       "slug": "am-241",
+       "organization": "SOE",
+       "district": "Milorg D40"
+      },
+      {
+       "date": "1945-05-18",
+       "_id": "9ef78972-2af5-4e03-9576-cae53a9344ec",
+       "title": "AM Doomsday 18.5.45",
+       "slug": "am-doomsday-18-5-45",
+       "organization": "SOE",
+       "district": "02-SOE"
+      },
+      {
+       "date": "1945-04-23",
+       "_id": "a5463f5b-8dc0-4154-81e6-c81c377f832b",
+       "title": "AM 494 SOE Operation CROP XXIX Chiffchaff Red",
+       "slug": "am-494",
+       "organization": "SOE",
+       "district": "Milorg D12"
+      },
+      {
+       "date": "1945-05-19",
+       "_id": "8f8f377d-ba79-478e-a01e-f32c76c58210",
+       "title": "AM Doomsday 19.5.45",
+       "slug": "am-doomsday-19-5-45",
+       "organization": "SOE",
+       "district": "02-SOE"
+      },
+      {
+       "date": "1945-03-02",
+       "_id": "793ed5cf-d93e-407e-961f-6d8661f131d0",
+       "title": "AM 190 SOE Operation CURB I 5 Cormorant",
+       "slug": "am-190-5",
+       "organization": "SOE",
+       "district": "Milorg D14.3"
+      }
+     ]
+    },
+    {
+     "_id": "0e23070f-0b63-4000-a349-843b6529f79f",
+     "slug": "fenr-broddfors",
+     "name": "Broddfors",
+     "secretName": "\"Aramis\"",
+     "home": null,
+     "birthYear": null,
+     "events": [
+      {
+       "date": "1944-12-25",
+       "_id": "9f4dbe00-b672-413e-990b-8bb51343f767",
+       "title": "Rävmarksgjengen",
+       "slug": "raevmarksgjengen",
+       "organization": "Norge",
+       "district": "Milorg D11"
+      }
+     ]
+    },
+    {
+     "_id": "0e3a6292-f355-4eeb-8b27-3ca00044adec",
+     "slug": "erling-johan-jacobsen",
+     "name": "Erling Johan Jacobsen",
+     "secretName": null,
+     "home": "Nesna",
+     "birthYear": 1919,
+     "events": [
+      {
+       "date": "1945-02-09",
+       "_id": "4b2dda14-70c1-4a3b-b345-ed801956a808",
+       "title": "SOE Operation DUNKERTON",
+       "slug": "soe-operation-dunkerton",
+       "organization": "SOE",
+       "district": "Milorg D22"
+      }
+     ]
+    },
+    {
+     "_id": "0ef08229-f283-4032-86f7-f83cc5b19726",
+     "slug": "christoffer-kjeldahl",
+     "name": "Christoffer Kjeldahl",
+     "secretName": "\"AA.21\"",
+     "home": "Svolvær",
+     "birthYear": 1919,
+     "events": [
+      {
+       "date": "1945-05-07",
+       "_id": "a509168c-e691-4e4d-bfe9-764c77da7363",
+       "title": "SOE Operation WIDGEON",
+       "slug": "soe-operation-widgeon",
+       "organization": "SOE",
+       "district": "Milorg D22"
+      },
+      {
+       "date": "1944-01-06",
+       "_id": "a5210c08-1d02-4536-9722-b418169a0289",
+       "title": "Telegrafiskurs Gottrøra",
+       "slug": "telegrafiskurs-gottrora",
+       "organization": null,
+       "district": "Sverige"
+      },
+      {
+       "date": "1944-08-25",
+       "_id": "2260d66e-a8c0-4915-bffc-f202d8ba4053",
+       "title": "BOAC-559",
+       "slug": "boac-559",
+       "organization": "BOAC/BALDER",
+       "district": "Sverige-Air"
+      }
+     ]
+    },
+    {
+     "_id": "109fe6f7-463b-45bc-b9f2-6d1ccd7b6799",
+     "slug": "henry-iversen",
+     "name": "Henry Iversen",
+     "secretName": "\"C.11\"",
+     "home": null,
+     "birthYear": 1920,
+     "events": [
+      {
+       "date": "1941-12-09",
+       "_id": "6ee343bc-49d2-4e93-aac5-e157bfaf0f6d",
+       "title": "COHQ Operation KITBAG 1 (SOE Operation Knottgrass Bread)",
+       "slug": "cohq-kitbag-1",
+       "organization": "SOE",
+       "district": "02-SOE"
+      }
+     ]
+    },
+    {
+     "_id": "13868e6e-e828-4206-adbb-83e9676aea97",
+     "slug": "ove-mohagen",
+     "name": "Ove Mohagen",
+     "secretName": null,
+     "home": "Lier",
+     "birthYear": 1921,
+     "events": [
+      {
+       "date": "1945-02-21",
+       "_id": "1a0e912c-7f39-4314-bd4c-b0a8933cc19a",
+       "title": "SOE Operation CHACEWATER",
+       "slug": "soe-operation-chacewater",
+       "organization": "SOE",
+       "district": "Milorg D16.1"
+      }
+     ]
+    },
+    {
+     "_id": "140d6f97-2afc-46ff-97c8-1190e3d6742a",
+     "slug": "ole-johan-andreassen-ulstein",
+     "name": "Ole Johan Andreassen Ulstein",
+     "secretName": null,
+     "home": "Ulsteinvik",
+     "birthYear": 1911,
+     "events": [
+      {
+       "date": "1941-06-16",
+       "_id": "e61dfb9e-456d-4a77-b1e2-9c585ce84070",
+       "title": "MK X71 MK ULSTEIN M-27-U",
+       "slug": "mk-x86",
+       "organization": "Flyktninger",
+       "district": "06 Skøyter ikke organisert"
+      }
+     ]
+    },
+    {
+     "_id": "14f3a068-a3fd-4e52-9ae3-de2a05ec3d85",
+     "slug": "augustinus-halvorsen",
+     "name": "Augustinus Halvorsen",
+     "secretName": "\"Løken\"",
+     "home": "Øverbygd",
+     "birthYear": 1914,
+     "events": [
+      {
+       "date": "1945-01-15",
+       "_id": "e7b24169-5f39-4e45-bf31-6211a9e333bb",
+       "title": "SFHQ Operation SEPALS GORGON \"MARIT\"",
+       "slug": "sfhq-operation-sepals-gorgon",
+       "organization": "SOE",
+       "district": "Milorg D40"
+      }
+     ]
+    },
+    {
+     "_id": "151bc89d-ee04-42d8-9b6a-b37e6b1c6dbe",
+     "slug": "lorents-sanne",
+     "name": "Lorents Sanne",
+     "secretName": null,
+     "home": "Ålesund",
+     "birthYear": 1920,
+     "events": [
+      {
+       "date": "1941-05-07",
+       "_id": "87240969-d847-4833-8d10-92c11535b831",
+       "title": "MK X025 \"Skytterhom\" 1 MK Havtor til Shetland",
+       "slug": "mk-x026",
+       "organization": "MK Skøyter",
+       "district": "Grupper"
+      }
+     ]
+    },
+    {
+     "_id": "1944ee1e-1ca4-40de-8438-5c10b6eb874b",
+     "slug": "paul-arnold-strand",
+     "name": "Paul Arnold Strand",
+     "secretName": null,
+     "home": "Hamar",
+     "birthYear": 1916,
+     "events": [
+      {
+       "date": "1942-11-02",
+       "_id": "ef985a2f-67be-4bec-a847-507bac479dc0",
+       "title": "Krigsskolen i London 1942-43",
+       "slug": "ks-london",
+       "organization": "Hærens Overkommando i London HOK",
+       "district": "Norge"
+      },
+      {
+       "date": "1942-04-23",
+       "_id": "495baddf-f820-4665-af83-ce4f761c429a",
+       "title": "BOAC-097",
+       "slug": "boac-097",
+       "organization": "BOAC/BALDER",
+       "district": "Sverige-Air"
+      }
+     ]
+    },
+    {
+     "_id": "19f9e4d3-2ddb-4d04-9e3c-8719da03cd1d",
+     "slug": "henning-nordahl",
+     "name": "Henning Nordahl",
+     "secretName": null,
+     "home": "Lillestrøm",
+     "birthYear": 1920,
+     "events": [
+      {
+       "date": "1942-06-15",
+       "_id": "19f06011-2e49-42d9-95e3-1a89bc2aa77c",
+       "title": "BOAC-126",
+       "slug": "boac-126",
+       "organization": "BOAC/BALDER",
+       "district": "Sverige-Air"
+      }
+     ]
+    },
+    {
+     "_id": "1aa48698-f4f2-4eb2-982b-264398923ef6",
+     "slug": "brigadier-simon-christopher-joseph-fraser",
+     "name": "Brigadier Simon Christopher Joseph Fraser (Lord Lovat 15th.)",
+     "secretName": "\"Shimi Lovat\"",
+     "home": null,
+     "birthYear": 1910,
+     "events": [
+      {
+       "date": "1942-08-19",
+       "_id": "e5c8d001-68ee-43b3-bc01-f6b1cd52aef7",
+       "title": "COHQ Operation JUBILEE \"Dieppe raidet\"",
+       "slug": "cohq-operation-jubilee-dieppe-raidet",
+       "organization": null,
+       "district": "United Kingdom"
+      },
+      {
+       "date": "1942-08-11",
+       "_id": "1bd408a9-fb6d-493c-a0a2-421fa21ae7e1",
+       "title": "SOE Operation RAMOSE CANTON",
+       "slug": "soe-operation-ramose-canton",
+       "organization": "SOE",
+       "district": "02-SOE"
+      }
+     ]
+    },
+    {
+     "_id": "1b65d507-70e5-42a9-8734-be33f040dbc9",
+     "slug": "jonn-christoffer-vestrheim",
+     "name": "Jonn Christoffer Vestrheim",
+     "secretName": "\"ZB.20\",",
+     "home": "Bergen",
+     "birthYear": 1917,
+     "events": [
+      {
+       "date": "1945-01-29",
+       "_id": "e53d65cc-1392-41e6-8bbd-a5301fe901c1",
+       "title": "Spesialkurs broer SOE",
+       "slug": "course-antipodes-uk",
+       "organization": "FO IV - MI 4",
+       "district": "Norge"
+      },
+      {
+       "date": "1941-11-27",
+       "_id": "3c092f18-b3b9-4842-b42d-25df1aad821d",
+       "title": "MX-X022 \"Bremnes\" 8 MS Haugland I",
+       "slug": "mk-x022",
+       "organization": "Flyktninger",
+       "district": "06 Skøyter ikke organisert"
+      },
+      {
+       "date": "1945-05-08",
+       "_id": "135a42d2-5041-48de-9494-4c2daaaf0c2e",
+       "title": "SOE Operation ANTIPODES D-26",
+       "slug": "soe-operation-antipodes-d-26",
+       "organization": "SOE",
+       "district": "Milorg D26"
+      }
+     ]
+    },
+    {
+     "_id": "1e5dd23f-c3f0-4cce-980e-bbfa925e3356",
+     "slug": "hjalmar-kielland-wergeland",
+     "name": "Hjalmar Kielland Wergeland Dr.",
+     "secretName": null,
+     "home": "Notodden",
+     "birthYear": 1909,
+     "events": [
+      {
+       "date": "1945-05-01",
+       "_id": "a4f875c8-e2b7-4608-af72-624129982714",
+       "title": "Mineulykke Karasjok",
+       "slug": "mineulykke-karasjok",
+       "organization": "Norge",
+       "district": null
+      }
+     ]
+    },
+    {
+     "_id": "1f242950-0507-4215-8f15-ae9ce7830fba",
+     "slug": "peder-berhanrd-aarsetn",
+     "name": "Peder Berhanrd Aarsetn",
+     "secretName": null,
+     "home": "Ulsteinvik",
+     "birthYear": 1921,
+     "events": [
+      {
+       "date": "1941-06-16",
+       "_id": "e61dfb9e-456d-4a77-b1e2-9c585ce84070",
+       "title": "MK X71 MK ULSTEIN M-27-U",
+       "slug": "mk-x86",
+       "organization": "Flyktninger",
+       "district": "06 Skøyter ikke organisert"
+      }
+     ]
+    }
+   ],
+   "truncatedFrom": 3957
+  },
+  {
+   "query": "MATCH (p:Person {slug: $slug})\n           RETURN p.slug AS slug, p.canonicalName AS name,\n                  p.secretName AS secretName, p.home AS home,\n                  p.birthYear AS birthYear, p.status AS status,\n                  p.serviceClass AS serviceClass,\n                  coalesce(p.type, 'civilian') AS type",
+   "params": {
+    "slug": "bernt-balchen"
+   },
+   "rows": [
+    {
+     "slug": "bernt-balchen",
+     "name": "Bernt Balchen USAAF",
+     "secretName": null,
+     "home": "Tveit, Kristiansand",
+     "birthYear": 1899,
+     "status": null,
+     "serviceClass": "military",
+     "type": "soldier"
+    }
+   ]
+  },
+  {
+   "query": "MATCH (p:Person {slug: $slug})-[h:HAS_IMAGE]->(s:Source)\n           WITH s, h,\n                CASE WHEN h.isHero = true      THEN 0\n                     WHEN s.kind    = 'portrait' THEN 1\n                                                 ELSE 2 END AS tier\n           RETURN s.url AS url, h.caption AS caption\n           ORDER BY tier, h.order\n           LIMIT 1",
+   "params": {
+    "slug": "bernt-balchen"
+   },
+   "rows": [
+    {
+     "url": "https://cdn.sanity.io/images/7r6kqtqy/production/b75e68b328df660f6f5aedc2ce1c3bb25216536c-466x688.jpg",
+     "caption": null
+    }
+   ]
+  },
+  {
+   "query": "MATCH (person:Person {slug: $slug})\n           CALL {\n             WITH person\n             MATCH (person)-[h:HAS_IMAGE]->(s:Source)\n             RETURN s.url AS url, h.caption AS caption,\n                    person.canonicalName AS subjectName, person.slug AS subjectSlug,\n                    'person' AS subjectType, 0 AS sortKey\n             UNION\n             WITH person\n             MATCH (person)-[:INVOLVED_IN|PARTICIPATED_IN]->(:Incident|Operation)<-[:RELATED_TO {kind:'contains'}]-(op:Operation)-[h:HAS_IMAGE]->(s:Source)\n             WHERE coalesce(h.scope, 'propagate') <> 'entity'\n             RETURN s.url AS url, h.caption AS caption,\n                    op.codeName AS subjectName, op.slug AS subjectSlug,\n                    'operation' AS subjectType, 1 AS sortKey\n             UNION\n             WITH person\n             MATCH (person)-[:INVOLVED_IN|PARTICIPATED_IN]->(i:Incident|Operation)-[h:HAS_IMAGE]->(s:Source)\n             WHERE coalesce(h.scope, 'propagate') <> 'entity'\n             RETURN s.url AS url, h.caption AS caption,\n                    coalesce(i.title, i.codeName) AS subjectName, i.slug AS subjectSlug,\n                    CASE WHEN i:Operation THEN 'operation' ELSE 'incident' END AS subjectType, 2 AS sortKey\n             UNION\n             WITH person\n             MATCH (person)-[:MEMBER_OF]->(u:Unit)-[h:HAS_IMAGE]->(s:Source)\n             WHERE coalesce(h.scope, 'propagate') <> 'entity'\n             RETURN s.url AS url, h.caption AS caption,\n                    u.canonicalName AS subjectName, u.slug AS subjectSlug,\n                    'unit' AS subjectType, 3 AS sortKey\n             UNION\n             WITH person\n             MATCH (person)-[:MEMBER_OF]-(x)-[:PART_OF*0..]->(o:Organization)-[h:HAS_IMAGE]->(s:Source)\n             WHERE coalesce(h.scope, 'propagate') <> 'entity'\n             RETURN s.url AS url, h.caption AS caption,\n                    o.canonicalName AS subjectName, o.slug AS subjectSlug,\n                    'organization' AS subjectType, 4 AS sortKey\n           }\n           RETURN url, caption, subjectName, subjectSlug, subjectType, sortKey\n           ORDER BY sortKey, subjectName\n           LIMIT 200",
+   "params": {
+    "slug": "bernt-balchen"
+   },
+   "rows": [
+    {
+     "url": "https://cdn.sanity.io/images/7r6kqtqy/production/0e5e9a8d9a91dbc71fa1b8fa70574fa6e467cd20-495x619.png",
+     "caption": null,
+     "subjectName": "Bernt Balchen USAAF",
+     "subjectSlug": "bernt-balchen",
+     "subjectType": "person",
+     "sortKey": 0
+    },
+    {
+     "url": "https://cdn.sanity.io/images/7r6kqtqy/production/b75e68b328df660f6f5aedc2ce1c3bb25216536c-466x688.jpg",
+     "caption": null,
+     "subjectName": "Bernt Balchen USAAF",
+     "subjectSlug": "bernt-balchen",
+     "subjectType": "person",
+     "sortKey": 0
+    },
+    {
+     "url": "https://cdn.sanity.io/images/7r6kqtqy/production/6c3415192c5298d25634dab180a22b1d2cc9feb4-1488x2048.png",
+     "caption": null,
+     "subjectName": "Bernt Balchen USAAF",
+     "subjectSlug": "bernt-balchen",
+     "subjectType": "person",
+     "sortKey": 0
+    },
+    {
+     "url": "https://cdn.sanity.io/images/7r6kqtqy/production/02a3ebb6919b87c7039b80525f8cb17c2474e7e4-2048x1536.png",
+     "caption": null,
+     "subjectName": "Bernt Balchen USAAF",
+     "subjectSlug": "bernt-balchen",
+     "subjectType": "person",
+     "sortKey": 0
+    },
+    {
+     "url": "https://cdn.sanity.io/images/7r6kqtqy/production/7c4b448abf28942ff4a51c681c40235ac7de407c-1600x1160.png",
+     "caption": null,
+     "subjectName": "AM 144 SOE Operation FETLOCK 1",
+     "subjectSlug": "am-144",
+     "subjectType": "operation",
+     "sortKey": 2
+    },
+    {
+     "url": "https://cdn.sanity.io/images/7r6kqtqy/production/8fe51b6da35db5cf95e8ec1e13bc57e173df4380-350x350.png",
+     "caption": null,
+     "subjectName": "AM 144 SOE Operation FETLOCK 1",
+     "subjectSlug": "am-144",
+     "subjectType": "operation",
+     "sortKey": 2
+    },
+    {
+     "url": "https://cdn.sanity.io/images/7r6kqtqy/production/ed7000f5be1c484c7714b3ca41ce8359e29d142c-1024x770.png",
+     "caption": null,
+     "subjectName": "AM 145 SOE Operation GROIN I Grebe Blue",
+     "subjectSlug": "am-145",
+     "subjectType": "operation",
+     "sortKey": 2
+    },
+    {
+     "url": "https://cdn.sanity.io/images/7r6kqtqy/production/f6b6a317a1096dbae7779c94ed81c6216786386e-350x350.png",
+     "caption": null,
+     "subjectName": "AM 145 SOE Operation GROIN I Grebe Blue",
+     "subjectSlug": "am-145",
+     "subjectType": "operation",
+     "sortKey": 2
+    }
+   ]
+  },
+  {
+   "query": "MATCH (p:Person {slug: $slug})-[:REFERENCED_IN]->(s:Source)\n           RETURN s.id AS id, s.title AS title, s.url AS url,\n                  s.type AS type, s.domain AS domain,\n                  coalesce(s.nbBacked, false) AS nbBacked\n           ORDER BY nbBacked DESC, s.type, coalesce(s.title, s.url)",
+   "params": {
+    "slug": "bernt-balchen"
+   },
+   "rows": [
+    {
+     "id": "nb-no-items-12c006be3f36f4e17403a9121d6c6ee7-5009faea",
+     "title": "Intervju med oberst Bernt Balchen. Av Kåre Gytfeldt",
+     "url": "https://www.nb.no/items/12c006be3f36f4e17403a9121d6c6ee7",
+     "type": "book",
+     "domain": "nb.no",
+     "nbBacked": true
+    },
+    {
+     "id": "youtube-com-watch-7dff7237",
+     "title": "Bernt Balchen - en kunstner med vinger Forsvarets historiske filmarkiv",
+     "url": "https://www.youtube.com/watch?v=4sCL6pWUMf8",
+     "type": "video",
+     "domain": "youtube.com",
+     "nbBacked": false
+    },
+    {
+     "id": "urn-nb-no-urn-nbn-no-nb-digibok-2007012301071-1677a34e",
+     "title": "Bernt Balchen 1946",
+     "url": "https://urn.nb.no/URN:NBN:no-nb_digibok_2007012301071",
+     "type": "website",
+     "domain": "urn.nb.no",
+     "nbBacked": false
+    },
+    {
+     "id": "urn-nb-no-urn-nbn-no-nb-digibok-2010120905035-6d0301b6",
+     "title": "Boen om Balchen 1950",
+     "url": "https://urn.nb.no/URN:NBN:no-nb_digibok_2010120905035",
+     "type": "website",
+     "domain": "urn.nb.no",
+     "nbBacked": false
+    },
+    {
+     "id": "cahf-ca-bernt-balchen-74e8423a",
+     "title": "Canada Airforce Hall of Fame Bernt Balchen",
+     "url": "https://cahf.ca/bernt-balchen/",
+     "type": "website",
+     "domain": "cahf.ca",
+     "nbBacked": false
+    },
+    {
+     "id": "nationalmuseum-af-mil-visit-museum-exhibits-fact-sheets-display-article-196172-col-bernt-balchen-43814778",
+     "title": "National Museum of the U.S. Air Force",
+     "url": "https://www.nationalmuseum.af.mil/Visit/Museum-Exhibits/Fact-Sheets/Display/Article/196172/col-bernt-balchen/",
+     "type": "website",
+     "domain": "nationalmuseum.af.mil",
+     "nbBacked": false
+    },
+    {
+     "id": "pbs-org-wgbh-americanexperience-features-ice-balchen-523456fe",
+     "title": "PBS about Balchen & Byrd",
+     "url": "https://www.pbs.org/wgbh/americanexperience/features/ice-balchen/",
+     "type": "website",
+     "domain": "pbs.org",
+     "nbBacked": false
+    },
+    {
+     "id": "snl-no-bernt-balchen-75d0e231",
+     "title": "SNL Bernt Balchen",
+     "url": "https://snl.no/Bernt_Balchen",
+     "type": "website",
+     "domain": "snl.no",
+     "nbBacked": false
+    },
+    {
+     "id": "uswarmemorials-org-html-people-details-php-01944bc4",
+     "title": "US War memorials",
+     "url": "https://www.uswarmemorials.org/html/people_details.php?PeopleID=27667",
+     "type": "website",
+     "domain": "uswarmemorials.org",
+     "nbBacked": false
+    }
+   ]
+  },
+  {
+   "query": "\n    MATCH (p:Person {slug: $slug})-[m:MEMBER_OF]->(u:Unit)\n    WHERE coalesce(u.type, '') <> 'course'\n    OPTIONAL MATCH (p)-[:HAS_MEMBERSHIP_NOTE]->(d:Description)-[:ABOUT_UNIT]->(u)\n    OPTIONAL MATCH (d)-[:SOURCED_FROM]->(from:Source)\n    WITH p, m, u, d, from\n    OPTIONAL MATCH (d)-[cites:CITES]->(src:Source)\n    WITH p, m, u, d, from,\n         collect(CASE WHEN src IS NULL THEN NULL ELSE {\n           inline:       coalesce(cites.inline, false),\n           sourceId:     src.id,\n           sourceTitle:  src.title,\n           sourceUrl:    src.url,\n           sourceAuthor: src.authorFreeText\n         } END) AS rawCites\n    WITH p, m, u,\n         CASE WHEN d IS NULL THEN NULL ELSE {\n           order:     coalesce(d.order, 1),\n           content:   d.content,\n           citations: [x IN rawCites WHERE x IS NOT NULL],\n           sourcedFrom: CASE WHEN from IS NULL THEN NULL ELSE {\n             id:             from.id,\n             title:          from.title,\n             url:            from.url,\n             authorFreeText: from.authorFreeText,\n             license:        from.license,\n             attribution:    from.attribution\n           } END\n         } END AS section\n    WITH u, m, collect(section) AS rawSections\n    RETURN u.slug AS targetSlug, u.canonicalName AS targetName,\n           m.startDate AS startDate, m.endDate AS endDate\n           , m.role AS role,\n           [x IN rawSections WHERE x IS NOT NULL] AS sections\n    ORDER BY m.startDate, targetName\n  ",
+   "params": {
+    "slug": "bernt-balchen"
+   },
+   "rows": []
+  },
+  {
+   "query": "\n      MATCH (u:Unit)\n      WHERE coalesce(u.type, '') <> 'course'\n      RETURN u.slug AS slug, u.canonicalName AS name\n      ORDER BY u.canonicalName\n    ",
+   "params": {},
+   "rows": [
+    {
+     "slug": "01-sis-xu",
+     "name": "01- SIS-XU"
+    },
+    {
+     "slug": "02-soe",
+     "name": "02-SOE"
+    },
+    {
+     "slug": "06-skoyter-ikke-organisert",
+     "name": "06 Skøyter ikke organisert"
+    },
+    {
+     "slug": "a-u-patrol",
+     "name": "A/U Patrol"
+    },
+    {
+     "slug": "anglo-norwegian-collaboration-committee",
+     "name": "ANGLO-NORWEGIAN COLLABORATION COMMITTEE"
+    },
+    {
+     "slug": "cossac",
+     "name": "COSSAC"
+    },
+    {
+     "slug": "den-norske-regjering",
+     "name": "Den norske regjering"
+    },
+    {
+     "slug": "eksportgruppene",
+     "name": "EXPORT grupper "
+    },
+    {
+     "slug": "eksportgruppe-torsvik",
+     "name": "Eksportgruppe  Torsvik"
+    },
+    {
+     "slug": "eksportgruppe-kvalen",
+     "name": "Eksportgruppe Kvalen"
+    },
+    {
+     "slug": "eksportgruppe-nielsen",
+     "name": "Eksportgruppe Nielsen"
+    },
+    {
+     "slug": "eksportgruppe-skytterholm",
+     "name": "Eksportgruppe Skytterholm"
+    },
+    {
+     "slug": "eksportgruppe-walle",
+     "name": "Eksportgruppe Walle"
+    },
+    {
+     "slug": "flukt",
+     "name": "Flukt"
+    },
+    {
+     "slug": "grupper",
+     "name": "Grupper"
+    },
+    {
+     "slug": "holland",
+     "name": "Holland"
+    },
+    {
+     "slug": "hurtigruten",
+     "name": "Hurtigruten"
+    },
+    {
+     "slug": "kompani-linge",
+     "name": "Kompani Linge"
+    },
+    {
+     "slug": "milorg-d11",
+     "name": "Milorg D11"
+    },
+    {
+     "slug": "milorg-d12",
+     "name": "Milorg D12"
+    },
+    {
+     "slug": "milorg-d13",
+     "name": "Milorg D13"
+    },
+    {
+     "slug": "milorg-d14-1",
+     "name": "Milorg D14.1"
+    },
+    {
+     "slug": "milorg-d14-2",
+     "name": "Milorg D14.2"
+    },
+    {
+     "slug": "milorg-d14-3",
+     "name": "Milorg D14.3"
+    },
+    {
+     "slug": "milorg-d15",
+     "name": "Milorg D15"
+    }
+   ],
+   "truncatedFrom": 54
+  },
+  {
+   "query": "\n    MATCH (p:Person {slug: $slug})-[m:ATTENDED]->(u:Unit)\n    WHERE u.type = 'course'\n    OPTIONAL MATCH (p)-[:HAS_ATTENDANCE_NOTE]->(d:Description)-[:ABOUT_UNIT]->(u)\n    OPTIONAL MATCH (d)-[:SOURCED_FROM]->(from:Source)\n    WITH p, m, u, d, from\n    OPTIONAL MATCH (d)-[cites:CITES]->(src:Source)\n    WITH p, m, u, d, from,\n         collect(CASE WHEN src IS NULL THEN NULL ELSE {\n           inline:       coalesce(cites.inline, false),\n           sourceId:     src.id,\n           sourceTitle:  src.title,\n           sourceUrl:    src.url,\n           sourceAuthor: src.authorFreeText\n         } END) AS rawCites\n    WITH p, m, u,\n         CASE WHEN d IS NULL THEN NULL ELSE {\n           order:     coalesce(d.order, 1),\n           content:   d.content,\n           citations: [x IN rawCites WHERE x IS NOT NULL],\n           sourcedFrom: CASE WHEN from IS NULL THEN NULL ELSE {\n             id:             from.id,\n             title:          from.title,\n             url:            from.url,\n             authorFreeText: from.authorFreeText,\n             license:        from.license,\n             attribution:    from.attribution\n           } END\n         } END AS section\n    WITH u, m, collect(section) AS rawSections\n    RETURN u.slug AS targetSlug, u.canonicalName AS targetName,\n           m.startDate AS startDate, m.endDate AS endDate\n           , m.passed AS passed,\n           [x IN rawSections WHERE x IS NOT NULL] AS sections\n    ORDER BY m.startDate, targetName\n  ",
+   "params": {
+    "slug": "bernt-balchen"
+   },
+   "rows": []
+  },
+  {
+   "query": "\n      MATCH (u:Unit {type: 'course'})\n      RETURN u.slug AS slug, u.canonicalName AS name\n      ORDER BY u.canonicalName\n    ",
+   "params": {},
+   "rows": [
+    {
+     "slug": "linge-course-a",
+     "name": "Kompani Linge — Kurs A"
+    },
+    {
+     "slug": "linge-course-aa",
+     "name": "Kompani Linge — Kurs AA"
+    },
+    {
+     "slug": "linge-course-b",
+     "name": "Kompani Linge — Kurs B"
+    },
+    {
+     "slug": "linge-course-c",
+     "name": "Kompani Linge — Kurs C"
+    },
+    {
+     "slug": "linge-course-cc",
+     "name": "Kompani Linge — Kurs CC"
+    },
+    {
+     "slug": "linge-course-d",
+     "name": "Kompani Linge — Kurs D"
+    },
+    {
+     "slug": "linge-course-dd",
+     "name": "Kompani Linge — Kurs DD"
+    },
+    {
+     "slug": "linge-course-e",
+     "name": "Kompani Linge — Kurs E"
+    },
+    {
+     "slug": "linge-course-ee",
+     "name": "Kompani Linge — Kurs EE"
+    },
+    {
+     "slug": "linge-course-f",
+     "name": "Kompani Linge — Kurs F"
+    },
+    {
+     "slug": "linge-course-fa",
+     "name": "Kompani Linge — Kurs FA"
+    },
+    {
+     "slug": "linge-course-g",
+     "name": "Kompani Linge — Kurs G"
+    },
+    {
+     "slug": "linge-course-h",
+     "name": "Kompani Linge — Kurs H"
+    },
+    {
+     "slug": "linge-course-i",
+     "name": "Kompani Linge — Kurs I"
+    },
+    {
+     "slug": "linge-course-k",
+     "name": "Kompani Linge — Kurs K"
+    },
+    {
+     "slug": "linge-course-l",
+     "name": "Kompani Linge — Kurs L"
+    },
+    {
+     "slug": "linge-course-m",
+     "name": "Kompani Linge — Kurs M"
+    },
+    {
+     "slug": "linge-course-n",
+     "name": "Kompani Linge — Kurs N"
+    },
+    {
+     "slug": "linge-course-p",
+     "name": "Kompani Linge — Kurs P"
+    },
+    {
+     "slug": "linge-course-q",
+     "name": "Kompani Linge — Kurs Q"
+    },
+    {
+     "slug": "linge-course-r",
+     "name": "Kompani Linge — Kurs R"
+    },
+    {
+     "slug": "linge-course-s",
+     "name": "Kompani Linge — Kurs S"
+    },
+    {
+     "slug": "linge-course-t",
+     "name": "Kompani Linge — Kurs T"
+    },
+    {
+     "slug": "linge-course-u",
+     "name": "Kompani Linge — Kurs U"
+    },
+    {
+     "slug": "linge-course-x",
+     "name": "Kompani Linge — Kurs X"
+    }
+   ],
+   "truncatedFrom": 30
+  },
+  {
+   "query": "\n      MATCH (p:Person {slug: $slug})-[:INVOLVED_IN]->(i:Incident)\n      OPTIONAL MATCH (p)-[:HAS_INCIDENT_NOTE]->(d:Description)-[:ABOUT_INCIDENT]->(i)\n      OPTIONAL MATCH (d)-[:SOURCED_FROM]->(from:Source)\n      WITH p, i, d, from\n      OPTIONAL MATCH (d)-[cites:CITES]->(src:Source)\n      WITH p, i, d, from,\n           collect(CASE WHEN src IS NULL THEN NULL ELSE {\n             inline:       coalesce(cites.inline, false),\n             sourceId:     src.id,\n             sourceTitle:  src.title,\n             sourceUrl:    src.url,\n             sourceAuthor: src.authorFreeText\n           } END) AS rawCites\n      WITH i, d, from,\n           CASE WHEN d IS NULL THEN NULL ELSE {\n             order:     coalesce(d.order, 1),\n             content:   d.content,\n             citations: [x IN rawCites WHERE x IS NOT NULL],\n             sourcedFrom: CASE WHEN from IS NULL THEN NULL ELSE {\n               id:             from.id,\n               title:          from.title,\n               url:             from.url,\n               authorFreeText: from.authorFreeText,\n               license:        from.license,\n               attribution:    from.attribution\n             } END\n           } END AS section\n      WITH i, collect(section) AS rawSections\n      RETURN i.slug AS targetSlug,\n             i.title AS targetName,\n             i.date AS startDate,\n             NULL AS endDate,\n             [x IN rawSections WHERE x IS NOT NULL] AS sections\n      ORDER BY coalesce(i.date, ''), targetName\n    ",
+   "params": {
+    "slug": "bernt-balchen"
+   },
+   "rows": []
+  },
+  {
+   "query": "\n      MATCH (i:Incident)\n      RETURN i.slug AS slug,\n             i.title + CASE WHEN i.date IS NOT NULL THEN ' · ' + i.date ELSE '' END AS name\n      ORDER BY i.date DESC, i.title\n    ",
+   "params": {},
+   "rows": []
+  },
+  {
+   "query": "\n      MATCH (p:Person {slug: $slug})-[:PARTICIPATED_IN]->(op:Operation)\n      OPTIONAL MATCH (p)-[:HAS_OPERATION_NOTE]->(d:Description)-[:ABOUT_OPERATION]->(op)\n      OPTIONAL MATCH (d)-[:SOURCED_FROM]->(from:Source)\n      WITH p, op, d, from\n      OPTIONAL MATCH (d)-[cites:CITES]->(src:Source)\n      WITH p, op, d, from,\n           collect(CASE WHEN src IS NULL THEN NULL ELSE {\n             inline:       coalesce(cites.inline, false),\n             sourceId:     src.id,\n             sourceTitle:  src.title,\n             sourceUrl:    src.url,\n             sourceAuthor: src.authorFreeText\n           } END) AS rawCites\n      WITH op, d, from,\n           CASE WHEN d IS NULL THEN NULL ELSE {\n             order:     coalesce(d.order, 1),\n             content:   d.content,\n             citations: [x IN rawCites WHERE x IS NOT NULL],\n             sourcedFrom: CASE WHEN from IS NULL THEN NULL ELSE {\n               id:             from.id,\n               title:          from.title,\n               url:             from.url,\n               authorFreeText: from.authorFreeText,\n               license:        from.license,\n               attribution:    from.attribution\n             } END\n           } END AS section\n      WITH op, collect(section) AS rawSections\n      RETURN op.slug AS targetSlug,\n             op.codeName AS targetName,\n             NULL AS startDate,\n             NULL AS endDate,\n             [x IN rawSections WHERE x IS NOT NULL] AS sections\n      ORDER BY targetName\n    ",
+   "params": {
+    "slug": "bernt-balchen"
+   },
+   "rows": [
+    {
+     "targetSlug": "am-144",
+     "targetName": "AM 144 SOE Operation FETLOCK 1",
+     "startDate": null,
+     "endDate": null,
+     "sections": []
+    },
+    {
+     "targetSlug": "am-145",
+     "targetName": "AM 145 SOE Operation GROIN I Grebe Blue",
+     "startDate": null,
+     "endDate": null,
+     "sections": []
+    }
+   ]
+  },
+  {
+   "query": "\n      MATCH (op:Operation)\n      RETURN op.slug AS slug, op.codeName AS name\n      ORDER BY op.codeName\n    ",
+   "params": {},
+   "rows": [
+    {
+     "slug": "aba-141142",
+     "name": "ABA 141142"
+    },
+    {
+     "slug": "aba-150843",
+     "name": "ABA 150843"
+    },
+    {
+     "slug": "am-001",
+     "name": "AM 001 SOE Operation CHEESE I / FASTING "
+    },
+    {
+     "slug": "am-018",
+     "name": "AM 018 SOE Operation PUFFIN"
+    },
+    {
+     "slug": "am-024",
+     "name": "AM 024 SOE Operation CHAIN"
+    },
+    {
+     "slug": "am-026",
+     "name": "AM 026 SOE Operation GROUSE  I"
+    },
+    {
+     "slug": "am-027",
+     "name": "AM 027 SOE Operation RAVEN A+B"
+    },
+    {
+     "slug": "am-028",
+     "name": "AM 028 SOE Operation COCEREL"
+    },
+    {
+     "slug": "am-029-1",
+     "name": "AM 029 SOE Operation CHEESE 1"
+    },
+    {
+     "slug": "am-029-2",
+     "name": "AM 029 SOE Operation CHEESE 2"
+    },
+    {
+     "slug": "am-029-3",
+     "name": "AM 029 SOE Operation CHEESE 3"
+    },
+    {
+     "slug": "am-033-1",
+     "name": "AM 033 SOE Operation GROUSE II  1"
+    },
+    {
+     "slug": "am-033-2",
+     "name": "AM 033 SOE Operation GROUSE II 2"
+    },
+    {
+     "slug": "am-035-1",
+     "name": "AM 035 SOE Operation GUNNERSIDE 1"
+    },
+    {
+     "slug": "am-035-2",
+     "name": "AM 035 SOE Operation GUNNERSIDE 2"
+    },
+    {
+     "slug": "am-038-1",
+     "name": "AM 038 SOE Operation BITTERN 1"
+    },
+    {
+     "slug": "am-038-2",
+     "name": "AM 038 SOE Operation BITTERN 2"
+    },
+    {
+     "slug": "am-038-3",
+     "name": "AM 038 SOE Operation BITTERN 3"
+    },
+    {
+     "slug": "am-039-1",
+     "name": "AM 039 SOE Operation GANNET 1 Anvil"
+    },
+    {
+     "slug": "am-039-2",
+     "name": "AM 039 SOE Operation GANNET 2 Anvil"
+    },
+    {
+     "slug": "am-039-3",
+     "name": "AM 039 SOE Operation GANNET 3 Anvil"
+    },
+    {
+     "slug": "am-046-1",
+     "name": "AM 046  SOE Operation Chaffinch 1"
+    },
+    {
+     "slug": "am-046-2",
+     "name": "AM 046  SOE Operation Chaffinch 2"
+    },
+    {
+     "slug": "am-048",
+     "name": "AM 048 SOE Operation GANNET I Anvil"
+    },
+    {
+     "slug": "am-050-1",
+     "name": "AM 050 SOE Operation CARHAMPTON 1"
+    }
+   ],
+   "truncatedFrom": 2284
+  },
+  {
+   "query": "MATCH (p:Person {slug: $slug})-[k:RANK]->(r:Rank)\n           RETURN r.slug AS rankSlug, r.canonicalName AS rankName, r.tier AS tier,\n                  k.state AS state, k.sourceRef AS sourceRef",
+   "params": {
+    "slug": "bernt-balchen"
+   },
+   "rows": [
+    {
+     "rankSlug": "oberst",
+     "rankName": "Oberst",
+     "tier": 8,
+     "state": "candidate",
+     "sourceRef": "sanity-migration:person:4e81d624-3fc5-4d93-9b13-2071a2508fc8:name:rank-token"
+    }
+   ]
+  },
+  {
+   "query": "MATCH (r:Rank)\n           RETURN r.slug AS slug, r.canonicalName AS name, r.tier AS tier\n           ORDER BY r.tier, r.canonicalName",
+   "params": {},
+   "rows": [
+    {
+     "slug": "menig",
+     "name": "Menig",
+     "tier": 1
+    },
+    {
+     "slug": "korporal",
+     "name": "Korporal",
+     "tier": 2
+    },
+    {
+     "slug": "pilot-officer",
+     "name": "Pilot Officer",
+     "tier": 3
+    },
+    {
+     "slug": "sersjant",
+     "name": "Sersjant",
+     "tier": 3
+    },
+    {
+     "slug": "warrant-officer",
+     "name": "Warrant Officer",
+     "tier": 3
+    },
+    {
+     "slug": "fenrik",
+     "name": "Fenrik",
+     "tier": 4
+    },
+    {
+     "slug": "flying-officer",
+     "name": "Flying Officer",
+     "tier": 4
+    },
+    {
+     "slug": "second-lieutenant",
+     "name": "Second Lieutenant",
+     "tier": 4
+    },
+    {
+     "slug": "sub-lieutenant",
+     "name": "Sub Lieutenant",
+     "tier": 4
+    },
+    {
+     "slug": "flight-lieutenant",
+     "name": "Flight Lieutenant",
+     "tier": 5
+    },
+    {
+     "slug": "loytnant",
+     "name": "Løytnant",
+     "tier": 5
+    },
+    {
+     "slug": "kaptein",
+     "name": "Kaptein",
+     "tier": 6
+    },
+    {
+     "slug": "major",
+     "name": "Major",
+     "tier": 7
+    },
+    {
+     "slug": "oberst",
+     "name": "Oberst",
+     "tier": 8
+    }
+   ]
+  },
+  {
+   "query": "MATCH (p:Person {slug: $slug})-[:HAS_CONTENT]->(d:Description)\n           OPTIONAL MATCH (d)-[:SOURCED_FROM]->(from:Source)\n           WITH d, from\n             ORDER BY coalesce(d.order, 1)\n           OPTIONAL MATCH (d)-[cites:CITES]->(src:Source)\n           WITH d, from, collect(CASE WHEN src IS NULL THEN NULL ELSE {\n             inline:       coalesce(cites.inline, false),\n             sourceId:     src.id,\n             sourceTitle:  src.title,\n             sourceUrl:    src.url,\n             sourceAuthor: src.authorFreeText\n           } END) AS rawCites\n           RETURN coalesce(d.order, 1) AS order, d.content AS content,\n                  [x IN rawCites WHERE x IS NOT NULL] AS citations,\n                  CASE WHEN from IS NULL THEN NULL ELSE {\n                    id:             from.id,\n                    title:          from.title,\n                    url:             from.url,\n                    authorFreeText: from.authorFreeText,\n                    license:        from.license,\n                    attribution:    from.attribution\n                  } END AS sourcedFrom\n           ORDER BY order",
+   "params": {
+    "slug": "bernt-balchen"
+   },
+   "rows": [
+    {
+     "order": 1,
+     "content": "[{\"_key\":\"5bb35c002561\",\"_type\":\"block\",\"children\":[{\"_key\":\"73a04c3fca72\",\"_type\":\"span\",\"marks\":[],\"text\":\"Norsk amerikansk flyger, med utrolige egenskaper.\"}],\"markDefs\":[],\"style\":\"normal\"},{\"_key\":\"aa1a0f4e0600\",\"_type\":\"block\",\"children\":[{\"_key\":\"2e296a6d0f860\",\"_type\":\"span\",\"marks\":[],\"text\":\"BALCHEN Bernt, flyver, New York, f. 23. okt. 1899 i Tveit, \\nsønn av lege Lauritz B. (1869—1912) og Dagny Dietrichson.\\nGift 1930 Emmy Sørlie, f. 31. mai 1907, dtr. av bankopostbud i Oslo S.\"}],\"markDefs\":[],\"style\":\"normal\"},{\"_key\":\"df736a64ca3b\",\"_type\":\"block\",\"children\":[{\"_key\":\"99e5dff7ed8f0\",\"_type\":\"span\",\"marks\":[],\"text\":\"Middelskoleeks. 1917, \\nOddernes Skogskole eks. 8/4-1918, \\nAtletklubben \\\"Sparta\\\" Boksing 1919\\nVerdandisternes Sportsklub Bryting 20/1-19\\nOddernesjaa Cykelløb 6/7-19\\nMarinens flyvesk. 1921, \\nTekn. skogs- og sågvårksskolan Härnösand 1923, \\nSkogsmann 1918—19, mekaniker og \\nVpl. flyver i Marinen 1919—25, \\nDeltok Marinens undsetn.eksp. Spitsbergen 1925, \\nChief testpilot Fokker fabr. U. S. A. 1926—28 og siden 1930.\\nChief pilot Byrds Svdpolseksp. 1928—30. \\nVicepresident League Internat. de Aviateurs, N. Y., ærespres. National Aeronautic Association, Brooklyn Branch m. v. Special congressional Medal 1930. \\nTekn. konsulent: Fokker, Northrop, Douglas-fabrikkene. Amer. borger 1931.\\nEllsworth forsøk på\"},{\"_key\":\"fe6a74622c0d\",\"_type\":\"span\",\"marks\":[\"36813eefc187\"],\"text\":\" Transatlantisk  flyging\"},{\"_key\":\"9dc2275a7be7\",\"_type\":\"span\",\"marks\":[],\"text\":\" 1933 Se \"},{\"_key\":\"ab9989805522\",\"_type\":\"span\",\"marks\":[\"f9ce9a0ca17a\"],\"text\":\"2 siste\"},{\"_key\":\"c9160178594a\",\"_type\":\"span\",\"marks\":[],\"text\":\" bilder \"},{\"_key\":\"bf4eed6047d1\",\"_type\":\"span\",\"marks\":[\"ef59effc5d88\"],\"text\":\"under\"},{\"_key\":\"e48f45da0ecc\",\"_type\":\"span\",\"marks\":[],\"text\":\"\\nMedl.: Advisory committee Aeronaulics New York Univ. og Academy of Air Law, USA.\"}],\"markDefs\":[{\"_key\":\"f9ce9a0ca17a\",\"_type\":\"link\",\"href\":\"https://cdn.sanity.io/images/7r6kqtqy/production/6c3415192c5298d25634dab180a22b1d2cc9feb4-1488x2048.png?bg=000000&w=1280&h=720&fit=fill\"},{\"_key\":\"ef59effc5d88\",\"_type\":\"link\",\"href\":\"https://cdn.sanity.io/images/7r6kqtqy/production/02a3ebb6919b87c7039b80525f8cb17c2474e7e4-2048x1536.png?bg=000000&w=1280&h=720&fit=fill\"},{\"_key\":\"36813eefc187\",\"_type\":\"link\",\"href\":\"https://www.nb.no/items/URN:NBN:no-nb_digibok_2007052502003?searchText=balchen&page=91\"}],\"style\":\"normal\"},{\"_key\":\"75dfb5b7ed3f\",\"_type\":\"block\",\"children\":[{\"_key\":\"e24a8d44134a0\",\"_type\":\"span\",\"marks\":[],\"text\":\"Veteran of:\"}],\"level\":1,\"listItem\":\"bullet\",\"markDefs\":[],\"style\":\"normal\"},{\"_key\":\"21e689ebc73c\",\"_type\":\"block\",\"children\":[{\"_key\":\"900c0e9f5440\",\"_type\":\"span\",\"marks\":[],\"text\":\"French Foreign Legion 1917\"}],\"level\":1,\"listItem\":\"bullet\",\"markDefs\":[],\"style\":\"normal\"},{\"_key\":\"c6847369f538\",\"_type\":\"block\",\"children\":[{\"_key\":\"eca737fc3f4f\",\"_type\":\"span\",\"marks\":[],\"text\":\"Finnish Army 1918\"}],\"level\":1,\"listItem\":\"bullet\",\"markDefs\":[],\"style\":\"normal\"},{\"_key\":\"6dca97320247\",\"_type\":\"block\",\"children\":[{\"_key\":\"df2fd0fd427a\",\"_type\":\"span\",\"marks\":[],\"text\":\"Royal Norwegian Naval Air Service 1921-1926\"}],\"level\":1,\"listItem\":\"bullet\",\"markDefs\":[],\"style\":\"normal\"},{\"_key\":\"666ddfa0933b\",\"_type\":\"block\",\"children\":[{\"_key\":\"5fd910c000be\",\"_type\":\"span\",\"marks\":[],\"text\":\"U.S. Army Air Forces 1941-1946\"}],\"level\":1,\"listItem\":\"bullet\",\"markDefs\":[],\"style\":\"normal\"},{\"_key\":\"1df776800c71\",\"_type\":\"block\",\"children\":[{\"_key\":\"e53064216ad2\",\"_type\":\"span\",\"marks\":[],\"text\":\"U.S. Air Force 1948-1956\"}],\"level\":1,\"listItem\":\"bullet\",\"markDefs\":[],\"style\":\"normal\"},{\"_key\":\"a42a6a2350a8\",\"_type\":\"block\",\"children\":[{\"_key\":\"e9aa4121fb2a\",\"_type\":\"span\",\"marks\":[],\"text\":\"World War I 1917-1918\"}],\"level\":1,\"listItem\":\"bullet\",\"markDefs\":[],\"style\":\"normal\"},{\"_key\":\"03468f05bd66\",\"_type\":\"block\",\"children\":[{\"_key\":\"1c29490d0676\",\"_type\":\"span\",\"marks\":[],\"text\":\"Finnish Civil War 1918\"}],\"level\":1,\"listItem\":\"bullet\",\"markDefs\":[],\"style\":\"normal\"},{\"_key\":\"4e9a027a5b7d\",\"_type\":\"block\",\"children\":[{\"_key\":\"27c4dd01b79d\",\"_type\":\"span\",\"marks\":[],\"text\":\"World War II 1939-1945\"}],\"level\":1,\"listItem\":\"bullet\",\"markDefs\":[],\"style\":\"normal\"},{\"_key\":\"1f26c6d3eafe\",\"_type\":\"block\",\"children\":[{\"_key\":\"a37b25eac0fa\",\"_type\":\"span\",\"marks\":[],\"text\":\"Cold War 1945-1956\"}],\"level\":1,\"listItem\":\"bullet\",\"markDefs\":[],\"style\":\"normal\"},{\"_key\":\"5c1d8ad1dff5\",\"_type\":\"block\",\"children\":[{\"_key\":\"2fe9eb1d66a6\",\"_type\":\"span\",\"marks\":[],\"text\":\"DNL Direktør 1946-48\"}],\"level\":1,\"listItem\":\"bullet\",\"markDefs\":[],\"style\":\"normal\"},{\"_key\":\"15d3cb62a2dd\",\"_type\":\"block\",\"children\":[{\"_key\":\"3d0eb34e7ee1\",\"_type\":\"span\",\"marks\":[],\"text\":\"Lytt til radiointervju under: Bernt Balchen 9/4-1944 under.\"}],\"markDefs\":[],\"style\":\"normal\"}]",
+     "citations": [],
+     "sourcedFrom": null
+    }
+   ]
+  },
+  {
+   "query": "\n    MATCH (p:Person {slug: $slug})-[r:STATIONED_AT]->(t)\n    OPTIONAL MATCH (p)-[:HAS_STATIONED_NOTE]->(d:Description {stayId: r.id})\n    OPTIONAL MATCH (d)-[:SOURCED_FROM]->(from:Source)\n    WITH p, r, t, d, from\n    OPTIONAL MATCH (d)-[cites:CITES]->(src:Source)\n    WITH p, r, t, d, from,\n         collect(CASE WHEN src IS NULL THEN NULL ELSE {\n           inline:       coalesce(cites.inline, false),\n           sourceId:     src.id,\n           sourceTitle:  src.title,\n           sourceUrl:    src.url,\n           sourceAuthor: src.authorFreeText\n         } END) AS rawCites\n    WITH p, r, t,\n         CASE WHEN d IS NULL THEN NULL ELSE {\n           order:     coalesce(d.order, 1),\n           content:   d.content,\n           citations: [x IN rawCites WHERE x IS NOT NULL],\n           sourcedFrom: CASE WHEN from IS NULL THEN NULL ELSE {\n             id:             from.id,\n             title:          from.title,\n             url:            from.url,\n             authorFreeText: from.authorFreeText,\n             license:        from.license,\n             attribution:    from.attribution\n           } END\n         } END AS section\n    WITH p, r, t, collect(section) AS rawSections\n    RETURN r.id AS edgeId, r.state AS state, coalesce(r.sourceRefs, []) AS sourceRefs, CASE WHEN t:Station THEN 'station:' ELSE 'location:' END + t.slug AS targetSlug,\n         coalesce(t.canonicalName, t.title) AS targetName, r.role AS role, r.startDate AS startDate, r.endDate AS endDate,\n           [x IN rawSections WHERE x IS NOT NULL] AS sections\n    ORDER BY startDate, targetName\n  ",
+   "params": {
+    "slug": "bernt-balchen"
+   },
+   "rows": []
+  },
+  {
+   "query": "\n      MATCH (pl) WHERE pl:Location OR pl:Station\n      RETURN CASE WHEN pl:Station THEN 'station:' ELSE 'location:' END + pl.slug AS slug,\n             coalesce(pl.canonicalName, pl.title)\n               + CASE WHEN pl:Station THEN ' (stasjon)' ELSE '' END AS name,\n             [(pl)-[:HAS_NAME]->(n:Name) | n.value] AS aliases\n      ORDER BY name\n    ",
+   "params": {},
+   "rows": [
+    {
+     "slug": "location:finneru ",
+     "name": " Mærratjern",
+     "aliases": []
+    },
+    {
+     "slug": "location:london-lille-grevsjoen",
+     "name": "\"LONDON\"  Lille Grevsjøen",
+     "aliases": []
+    },
+    {
+     "slug": "location:paris-lille-grevsjoen",
+     "name": "\"PARIS\" Lille Grevsjøen",
+     "aliases": []
+    },
+    {
+     "slug": "location:1-fjellbu",
+     "name": "1 Fjellbu",
+     "aliases": []
+    },
+    {
+     "slug": "location:10-regnbuen",
+     "name": "10 Regnbuen",
+     "aliases": []
+    },
+    {
+     "slug": "location:11-elgebu",
+     "name": "11 Elgebu",
+     "aliases": []
+    },
+    {
+     "slug": "location:12-krementsjug",
+     "name": "12 Krementsjug",
+     "aliases": []
+    },
+    {
+     "slug": "location:13-holmetjernshytta",
+     "name": "13 Holmetjernshytta",
+     "aliases": []
+    },
+    {
+     "slug": "location:14-eriksbu",
+     "name": "14 Eriksbu",
+     "aliases": []
+    },
+    {
+     "slug": "location:15-hauketo",
+     "name": "15 Hauketo",
+     "aliases": []
+    },
+    {
+     "slug": "location:154-chiltern-court-baker-street",
+     "name": "154 Chiltern Court, Baker Street",
+     "aliases": []
+    },
+    {
+     "slug": "location:16-hakonshallen",
+     "name": "16 Håkonshallen",
+     "aliases": []
+    },
+    {
+     "slug": "location:17-oskarsborg",
+     "name": "17 Oskarsborg",
+     "aliases": []
+    },
+    {
+     "slug": "location:17th-oxford-square",
+     "name": "17th Oxford Square",
+     "aliases": []
+    },
+    {
+     "slug": "location:18-flagstua",
+     "name": "18 Flagstua",
+     "aliases": []
+    },
+    {
+     "slug": "location:19-putten",
+     "name": "19 Putten",
+     "aliases": []
+    },
+    {
+     "slug": "location:2-bbb",
+     "name": "2 BBB",
+     "aliases": []
+    },
+    {
+     "slug": "location:20-kollbu",
+     "name": "20 Kollbu",
+     "aliases": []
+    },
+    {
+     "slug": "location:21-polan",
+     "name": "21 Polan",
+     "aliases": []
+    },
+    {
+     "slug": "location:22-lauvkollen",
+     "name": "22 Lauvkollen",
+     "aliases": []
+    },
+    {
+     "slug": "location:23-bjerkeli-ikke-funnet",
+     "name": "23 Bjerkeli (ikke funnet)",
+     "aliases": []
+    },
+    {
+     "slug": "location:24-frisko",
+     "name": "24 Frisko",
+     "aliases": []
+    },
+    {
+     "slug": "location:25-jeger-bu",
+     "name": "25 Jeger bu",
+     "aliases": []
+    },
+    {
+     "slug": "location:26-fjellsetra",
+     "name": "26 Fjellsetra",
+     "aliases": []
+    },
+    {
+     "slug": "location:27-holastua",
+     "name": "27 Hølastua",
+     "aliases": []
+    }
+   ],
+   "truncatedFrom": 1301
+  },
+  {
+   "query": "\n    MATCH (p:Person {slug: $slug})-[r:HELD_RANK]->(t:Rank)\n    OPTIONAL MATCH (p)-[:HAS_RANK_NOTE]->(d:Description {rankEntryId: r.id})\n    OPTIONAL MATCH (d)-[:SOURCED_FROM]->(from:Source)\n    WITH p, r, t, d, from\n    OPTIONAL MATCH (d)-[cites:CITES]->(src:Source)\n    WITH p, r, t, d, from,\n         collect(CASE WHEN src IS NULL THEN NULL ELSE {\n           inline:       coalesce(cites.inline, false),\n           sourceId:     src.id,\n           sourceTitle:  src.title,\n           sourceUrl:    src.url,\n           sourceAuthor: src.authorFreeText\n         } END) AS rawCites\n    WITH p, r, t,\n         CASE WHEN d IS NULL THEN NULL ELSE {\n           order:     coalesce(d.order, 1),\n           content:   d.content,\n           citations: [x IN rawCites WHERE x IS NOT NULL],\n           sourcedFrom: CASE WHEN from IS NULL THEN NULL ELSE {\n             id:             from.id,\n             title:          from.title,\n             url:            from.url,\n             authorFreeText: from.authorFreeText,\n             license:        from.license,\n             attribution:    from.attribution\n           } END\n         } END AS section\n    WITH p, r, t, collect(section) AS rawSections\n    RETURN r.id AS edgeId, r.state AS state, coalesce(r.sourceRefs, []) AS sourceRefs, t.slug AS targetSlug, t.canonicalName AS targetName, t.tier AS tier,\n                   r.from AS startDate, r.to AS endDate, coalesce(r.acting, false) AS acting,\n           [x IN rawSections WHERE x IS NOT NULL] AS sections\n    ORDER BY startDate, targetName\n  ",
+   "params": {
+    "slug": "bernt-balchen"
+   },
+   "rows": []
+  },
+  {
+   "query": "\n    MATCH (r:Role)\n    OPTIONAL MATCH (r)-[:HAS_CONTENT]->(d:Description)\n    OPTIONAL MATCH (d)-[:CITES|SOURCED_FROM]->(s:Source)\n    WITH r, d, collect(DISTINCT s.id) AS ids\n    ORDER BY coalesce(d.order, 1)\n    WITH r, [x IN collect(d.content) WHERE x IS NOT NULL] AS sections,\n         reduce(acc = [], l IN collect(ids) | acc + l) AS allIds\n    RETURN r.key AS key, r.name AS name, r.scopes AS scopes, r.attended AS attended, sections,\n           reduce(acc = [], i IN allIds | CASE WHEN i IN acc THEN acc ELSE acc + i END) AS sourceIds\n  ",
+   "params": {},
+   "rows": [
+    {
+     "key": "operative",
+     "name": "operatør",
+     "scopes": [
+      "membership"
+     ],
+     "attended": false,
+     "sections": [],
+     "sourceIds": []
+    },
+    {
+     "key": "courier",
+     "name": "kurér",
+     "scopes": [
+      "membership"
+     ],
+     "attended": false,
+     "sections": [],
+     "sourceIds": []
+    },
+    {
+     "key": "radiotelegraph",
+     "name": "radiotelegrafist",
+     "scopes": [
+      "membership"
+     ],
+     "attended": false,
+     "sections": [],
+     "sourceIds": []
+    },
+    {
+     "key": "host",
+     "name": "vert",
+     "scopes": [
+      "membership"
+     ],
+     "attended": false,
+     "sections": [],
+     "sourceIds": []
+    },
+    {
+     "key": "informant",
+     "name": "informant",
+     "scopes": [
+      "membership"
+     ],
+     "attended": false,
+     "sections": [],
+     "sourceIds": []
+    },
+    {
+     "key": "member",
+     "name": "medlem",
+     "scopes": [
+      "membership"
+     ],
+     "attended": false,
+     "sections": [],
+     "sourceIds": []
+    },
+    {
+     "key": "administrative",
+     "name": "administrativt",
+     "scopes": [
+      "part-of"
+     ],
+     "attended": false,
+     "sections": [],
+     "sourceIds": []
+    },
+    {
+     "key": "operational",
+     "name": "operativt",
+     "scopes": [
+      "part-of"
+     ],
+     "attended": false,
+     "sections": [],
+     "sourceIds": []
+    },
+    {
+     "key": "sponsor",
+     "name": "sponsor",
+     "scopes": [
+      "part-of"
+     ],
+     "attended": false,
+     "sections": [],
+     "sourceIds": []
+    },
+    {
+     "key": "parent",
+     "name": "overordnet",
+     "scopes": [
+      "part-of"
+     ],
+     "attended": false,
+     "sections": [],
+     "sourceIds": []
+    },
+    {
+     "key": "stationed",
+     "name": "stasjonert",
+     "scopes": [
+      "stationed"
+     ],
+     "attended": false,
+     "sections": [],
+     "sourceIds": []
+    },
+    {
+     "key": "hiding",
+     "name": "i skjul",
+     "scopes": [
+      "stationed"
+     ],
+     "attended": false,
+     "sections": [],
+     "sourceIds": []
+    },
+    {
+     "key": "imprisoned",
+     "name": "fange",
+     "scopes": [
+      "stationed"
+     ],
+     "attended": false,
+     "sections": [],
+     "sourceIds": []
+    },
+    {
+     "key": "training",
+     "name": "opplæring",
+     "scopes": [
+      "stationed"
+     ],
+     "attended": true,
+     "sections": [],
+     "sourceIds": []
+    },
+    {
+     "key": "operating",
+     "name": "operatør",
+     "scopes": [
+      "stationed"
+     ],
+     "attended": false,
+     "sections": [],
+     "sourceIds": []
+    },
+    {
+     "key": "instructor",
+     "name": "instruktør",
+     "scopes": [
+      "stationed"
+     ],
+     "attended": true,
+     "sections": [],
+     "sourceIds": []
+    }
+   ]
+  }
+ ],
+ "gets": []
+}
