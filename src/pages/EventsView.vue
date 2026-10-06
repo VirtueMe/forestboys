@@ -65,7 +65,7 @@
     <!-- Event list -->
     <template v-else>
       <div class="list-heading">
-        <span class="list-label">Hendelser ({{ fmt(filteredEvents.length) }})</span>
+        <h1 class="list-label" aria-label="Hendelser">Hendelser ({{ fmt(filteredEvents.length) }})</h1>
       </div>
 
       <div
@@ -363,6 +363,7 @@ onUnmounted(() => {
 }
 
 .list-label {
+  margin: 0;
   font-size: 10px;
   font-weight: 700;
   text-transform: uppercase;
