@@ -17,7 +17,7 @@ import {
 } from '@portabletext/editor'
 import { EventListenerPlugin } from '@portabletext/editor/plugins'
 import {
-  getActiveAnnotations, getFocusTextBlock, getSelectedValue, getSelection, isActiveDecorator, isActiveStyle, isSelectionExpanded,
+  getActiveAnnotations, getFocusTextBlock, getSelectedValue, getSelection, isActiveDecorator, isActiveListItem, isActiveStyle, isSelectionExpanded,
 } from '@portabletext/editor/selectors'
 import React from 'react'
 import { neo4jQuery } from '@/composables/useNeo4j.ts'
@@ -53,7 +53,13 @@ const schemaDefinition = defineSchema({
       ],
     },
   ],
-  lists: [],
+  // The stored descriptions use both (Sanity: 1,025 of 2,282 events); the page renders them
+  // (blocksToHtml). Without them here the editor drew a list as plain paragraphs and could not
+  // continue, indent or end one (#124).
+  lists: [
+    { name: 'bullet' },
+    { name: 'number' },
+  ],
   inlineObjects: [],
   blockObjects: [],
 })
@@ -153,6 +159,22 @@ const expandIcon = React.createElement(
   React.createElement('path', { d: 'M9.5 2H14v4.5M6.5 14H2V9.5M14 2 9 7M2 14l5-5' }),
 )
 
+/** Three dots and three lines: a bulleted list. */
+const bulletListIcon = React.createElement(
+  'svg',
+  { width: 16, height: 16, viewBox: '0 0 16 16', fill: 'none', stroke: 'currentColor', strokeWidth: 1.5, strokeLinecap: 'round', 'aria-hidden': true },
+  [3.5, 8, 12.5].map(y => React.createElement('circle', { key: `d${y}`, cx: 2.5, cy: y, r: 0.9, fill: 'currentColor', stroke: 'none' })),
+  [3.5, 8, 12.5].map(y => React.createElement('path', { key: `l${y}`, d: `M6 ${y}h8` })),
+)
+
+/** Three numbers and three lines: a numbered list. */
+const numberListIcon = React.createElement(
+  'svg',
+  { width: 16, height: 16, viewBox: '0 0 16 16', fill: 'none', stroke: 'currentColor', strokeWidth: 1.5, strokeLinecap: 'round', 'aria-hidden': true },
+  ['1', '2', '3'].map((n, i) => React.createElement('text', { key: `n${n}`, x: 0.5, y: 5 + i * 4.5, fontSize: 4.6, fontWeight: 700, fill: 'currentColor', stroke: 'none' }, n)),
+  [3.5, 8, 12.5].map(y => React.createElement('path', { key: `l${y}`, d: `M6 ${y}h8` })),
+)
+
 /** Two chain links: the link icon of Sanity's editor (Feather «link»). */
 const linkIcon = React.createElement(
   'svg',
@@ -183,6 +205,18 @@ function DecoratorButton({ name, label }: { name: string; label: string }) {
     label,
     active,
     onClick: () => editor.send({ type: 'decorator.toggle', decorator: name }),
+  })
+}
+
+function ListButton({ name, label, title }: { name: 'bullet' | 'number'; label: React.ReactNode; title: string }) {
+  const editor = useEditor()
+  const active = useEditorSelector(editor, isActiveListItem(name))
+  return React.createElement(ToolbarButton, {
+    label,
+    active,
+    title,
+    ariaLabel: title,
+    onClick: () => editor.send({ type: 'list item.toggle', listItem: name }),
   })
 }
 
@@ -377,6 +411,9 @@ function Toolbar({ expanded, onToggleExpand }: { expanded: boolean; onToggleExpa
     React.createElement(DecoratorButton, { name: 'strong',    label: 'B' }),
     React.createElement(DecoratorButton, { name: 'em',        label: 'I' }),
     React.createElement(DecoratorButton, { name: 'underline', label: 'U' }),
+    React.createElement('span',          { className: 'pt-tb-sep' }),
+    React.createElement(ListButton,      { name: 'bullet', label: bulletListIcon, title: 'Punktliste' }),
+    React.createElement(ListButton,      { name: 'number', label: numberListIcon, title: 'Nummerert liste' }),
     React.createElement('span',          { className: 'pt-tb-sep' }),
     React.createElement(PersonAnnotationButton),
     React.createElement(LinkAnnotationButton),

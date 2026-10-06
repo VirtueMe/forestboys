@@ -98,6 +98,34 @@ onBeforeUnmount(() => {
   margin: 2px 4px;
 }
 
+/* Lists (#124). The editor renders a list item as a div with data-list-item (bullet | number),
+   data-level (1, 2, …) and data-list-index (the item's number within its list: it restarts after a
+   paragraph, or a list of the other kind, as the page does when it makes a new <ol>). Markers and
+   indent are drawn here: indent per level, bullets that change with the level, plain numbers like
+   the page's nested <ol>s. */
+.pt-editable [data-list-item] { position: relative; padding-left: 1.6em; }
+.pt-editable [data-list-item][data-level="2"] { padding-left: 3.2em; }
+.pt-editable [data-list-item][data-level="3"] { padding-left: 4.8em; }
+.pt-editable [data-list-item][data-level="4"],
+.pt-editable [data-list-item][data-level="5"] { padding-left: 6.4em; }
+
+.pt-editable [data-list-item]::before {
+  position: absolute;
+  left: 0;
+  width: 1.2em;
+  text-align: right;
+  color: var(--muted);
+}
+.pt-editable [data-list-item][data-level="2"]::before { left: 1.6em; }
+.pt-editable [data-list-item][data-level="3"]::before { left: 3.2em; }
+.pt-editable [data-list-item][data-level="4"]::before,
+.pt-editable [data-list-item][data-level="5"]::before { left: 4.8em; }
+
+.pt-editable [data-list-item="bullet"]::before { content: '•'; }
+.pt-editable [data-list-item="bullet"][data-level="2"]::before { content: '◦'; }
+.pt-editable [data-list-item="bullet"][data-level="3"]::before { content: '▪'; }
+.pt-editable [data-list-item="number"]::before { content: attr(data-list-index) '.'; }
+
 /* Icon buttons (link, expand) centre their svg. */
 .pt-tb-btn svg { display: block; }
 
