@@ -1,6 +1,6 @@
 <template>
   <section class="section">
-    <h3 class="section-heading">Lenker<span v-if="refs.length"> ({{ refs.length }})</span></h3>
+    <h2 class="section-heading">Lenker<span v-if="refs.length"> ({{ refs.length }})</span></h2>
     <div v-if="refs.length" class="link-list">
       <a
         v-for="r in refs"

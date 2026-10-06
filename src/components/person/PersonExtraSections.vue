@@ -2,7 +2,7 @@
   <!-- Hendelser (legacy IDB fallback — only when no Neo4j Incident list rendered) -->
   <section v-if="showLegacyEvents && person.events?.length" class="section">
     <div class="section-header-row">
-      <h3 class="section-heading">Hendelser ({{ person.events.length }})</h3>
+      <h2 class="section-heading">Hendelser ({{ person.events.length }})</h2>
       <button class="sort-btn" @click="eventSortAsc = !eventSortAsc">
         Dato {{ eventSortAsc ? '↑' : '↓' }}
       </button>
@@ -24,7 +24,7 @@
   </section>
 
   <section v-if="outlines.length" class="section">
-    <h3 class="section-heading">Annen informasjon</h3>
+    <h2 class="section-heading">Annen informasjon</h2>
     <div class="link-list">
       <RouterLink
         v-for="o in outlines"
@@ -38,7 +38,7 @@
   </section>
 
   <section v-if="person.movie" class="section">
-    <h3 class="section-heading">Video</h3>
+    <h2 class="section-heading">Video</h2>
     <video controls class="video-player">
       <source :src="person.movie" type="video/mp4" />
     </video>
