@@ -111,27 +111,69 @@ const renderAnnotation: RenderAnnotationFunction = props => {
 export interface Props {
   value:    PortableTextBlock[]
   onChange: (blocks: PortableTextBlock[]) => void
+  /** The editor fills the window (PortableTextEditor.vue sets the class on the host). */
+  expanded:        boolean
+  onToggleExpand:  () => void
 }
 
 function ToolbarButton({
   label,
   active,
   onClick,
+  title,
+  ariaLabel,
+  extraClass,
 }: {
-  label:   string
-  active:  boolean
-  onClick: () => void
+  label:       React.ReactNode
+  active:      boolean
+  onClick:     () => void
+  title?:      string
+  /** The name of an icon-only button, for screen readers. */
+  ariaLabel?:  string
+  extraClass?: string
 }) {
   return React.createElement(
     'button',
     {
       type:      'button',
-      className: `pt-tb-btn${active ? ' active' : ''}`,
+      className: `pt-tb-btn${active ? ' active' : ''}${extraClass ? ` ${extraClass}` : ''}`,
+      title,
+      'aria-label': ariaLabel,
       onMouseDown: (e: React.MouseEvent) => e.preventDefault(), // keep selection
       onClick,
     },
     label,
   )
+}
+
+/** Two arrows pointing at opposite corners: the expand icon of Sanity's editor. */
+const expandIcon = React.createElement(
+  'svg',
+  { width: 16, height: 16, viewBox: '0 0 16 16', fill: 'none', stroke: 'currentColor', strokeWidth: 1.5, 'aria-hidden': true },
+  React.createElement('path', { d: 'M9.5 2H14v4.5M6.5 14H2V9.5M14 2 9 7M2 14l5-5' }),
+)
+
+/** Two chain links: the link icon of Sanity's editor (Feather «link»). */
+const linkIcon = React.createElement(
+  'svg',
+  { width: 16, height: 16, viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: 2, strokeLinecap: 'round', strokeLinejoin: 'round', 'aria-hidden': true },
+  React.createElement('path', { d: 'M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71' }),
+  React.createElement('path', { d: 'M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71' }),
+)
+
+/**
+ * Far right of the toolbar. Expanded, it reads «Ferdig» and only closes the window: saving stays
+ * with the save bar behind it (DescriptionEditor), so closing never saves silently.
+ */
+function ExpandButton({ expanded, onToggle }: { expanded: boolean; onToggle: () => void }) {
+  return React.createElement(ToolbarButton, {
+    label:      expanded ? 'Ferdig' : expandIcon,
+    active:     false,
+    onClick:    onToggle,
+    title:      expanded ? 'Tilbake til siden (Esc)' : 'Utvid til hele vinduet',
+    ariaLabel:  expanded ? 'Ferdig' : 'Utvid',
+    extraClass: 'pt-tb-expand',
+  })
 }
 
 function DecoratorButton({ name, label }: { name: string; label: string }) {
@@ -285,7 +327,9 @@ function LinkAnnotationButton() {
     'span',
     { className: 'pt-tb-link' },
     React.createElement(ToolbarButton, {
-      label:  'Lenke',
+      label:     linkIcon,
+      title:     'Lenke',
+      ariaLabel: 'Lenke',
       active: !!active || !!target,
       onClick: () => (target ? close() : show()),
     }),
@@ -322,7 +366,7 @@ function LinkAnnotationButton() {
   )
 }
 
-function Toolbar() {
+function Toolbar({ expanded, onToggleExpand }: { expanded: boolean; onToggleExpand: () => void }) {
   return React.createElement(
     'div',
     { className: 'pt-toolbar' },
@@ -336,10 +380,11 @@ function Toolbar() {
     React.createElement('span',          { className: 'pt-tb-sep' }),
     React.createElement(PersonAnnotationButton),
     React.createElement(LinkAnnotationButton),
+    React.createElement(ExpandButton, { expanded, onToggle: onToggleExpand }),
   )
 }
 
-export function PortableTextEditorReact({ value, onChange }: Props) {
+export function PortableTextEditorReact({ value, onChange, expanded, onToggleExpand }: Props) {
   return React.createElement(
     EditorProvider,
     { initialConfig: { schemaDefinition, initialValue: value } },
@@ -348,7 +393,7 @@ export function PortableTextEditorReact({ value, onChange }: Props) {
         if (event.type === 'mutation' && event.value) onChange(event.value)
       },
     }),
-    React.createElement(Toolbar),
+    React.createElement(Toolbar, { expanded, onToggleExpand }),
     React.createElement(PortableTextEditable, {
       renderDecorator,
       renderStyle,
