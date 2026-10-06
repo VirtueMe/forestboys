@@ -1,6 +1,6 @@
 <template>
   <section class="edit-section">
-    <h3 class="edit-section-heading">{{ kindLabel }}</h3>
+    <h2 class="edit-section-heading">{{ kindLabel }}</h2>
 
     <div class="edit-row">
       <label class="edit-label">Klassifisering</label>

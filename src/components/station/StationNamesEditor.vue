@@ -1,6 +1,6 @@
 <template>
   <section class="edit-section">
-    <h3 class="edit-section-heading">Andre navn</h3>
+    <h2 class="edit-section-heading">Andre navn</h2>
     <p class="names-help">
       Tidligere eller senere navn, og andre navn stasjonen er kjent under. Navnet øverst er det som vises.
     </p>

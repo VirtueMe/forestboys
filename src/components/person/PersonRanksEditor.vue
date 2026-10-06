@@ -1,7 +1,7 @@
 <template>
   <section class="edit-section">
     <div class="edit-section-head">
-      <h3 class="edit-section-heading">Grad</h3>
+      <h2 class="edit-section-heading">Grad</h2>
     </div>
     <div class="known-rank-row">
       <select v-model="draftSlug" class="edit-input known-rank-select" aria-label="Grad">
