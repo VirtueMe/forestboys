@@ -20,12 +20,13 @@ if (!start) throw new Error(`No fixture «${name}». Known: ${Object.keys(fixtur
 
 const content = ref(JSON.stringify(start))
 const reports = ref(0)
+const history: string[] = []
 
 createApp(defineComponent({
   setup: () => () => h('main', { style: 'max-width: 720px; margin: 0 auto; padding: 16px' }, [
     h(PortableTextEditor, {
       modelValue: JSON.parse(content.value) as PortableTextBlock[],
-      'onUpdate:modelValue': (blocks: PortableTextBlock[]) => { content.value = JSON.stringify(blocks); reports.value++ },
+      'onUpdate:modelValue': (blocks: PortableTextBlock[]) => { content.value = JSON.stringify(blocks); history.push(content.value); reports.value++ },
     }),
     h('pre', { 'data-testid': 'value', style: 'font-size: 11px; white-space: pre-wrap' }, content.value),
   ]),
@@ -34,5 +35,6 @@ createApp(defineComponent({
 window.__harness = {
   value:   () => JSON.parse(content.value) as Block[],
   reports: () => reports.value,
+  history: () => history,
   set:     blocks => { content.value = JSON.stringify(blocks) },
 }
