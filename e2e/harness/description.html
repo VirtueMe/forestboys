@@ -1,0 +1,17 @@
+<!doctype html>
+<html lang="nb">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Description harness</title>
+  </head>
+  <body>
+    <!--
+      A dev-only page for the end-to-end tests (#140): the real DescriptionEditor, with its save bar and its
+      PATCH, mounted with one section and no login. A test answers the PATCH with page.route and reads
+      what was sent. Only the dev server serves it; the production build has one entry, index.html.
+    -->
+    <div id="harness"></div>
+    <script type="module" src="./description.ts"></script>
+  </body>
+</html>
