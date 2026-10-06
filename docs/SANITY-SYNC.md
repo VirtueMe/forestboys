@@ -358,8 +358,7 @@ bundles.
 
 Their descriptions were never imported (#99); the pages showed none. One sync
 carries them, and keeps carrying Jan's edits, for the types listed in `KINDS`
-(`scripts/lib/description-sync.ts`): **transports** and **stations** so far, then
-locations. Only the description: their links are already `:Source` nodes
+(`scripts/lib/description-sync.ts`): **transports**, **stations** and **locations**. Only the description: their links are already `:Source` nodes
 (`(owner)-[:REFERENCED_IN]->(:Source)`, the same shape for every type) and the
 sync does not touch them.
 
