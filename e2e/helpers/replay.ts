@@ -10,7 +10,7 @@
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { expect, type Page } from '@playwright/test'
-import { describeRequest, requestKey, type PageRecording } from '../../scripts/e2e/replay-key.ts'
+import { describeRequest, requestKey, STAND_IN_ADMIN, type PageRecording } from '../../scripts/e2e/replay-key.ts'
 import { fixturePath, type PageTarget } from '../pages.ts'
 
 const ROOT = join(import.meta.dirname, '..', '..')
@@ -23,7 +23,16 @@ export interface Replay {
   misses(): string[]
 }
 
-export async function replayPage(page: Page, target: PageTarget): Promise<Replay> {
+export interface ReplayOptions {
+  /**
+   * Who is looking. A visitor who is not logged in (the default) sees the public page. An admin sees the
+   * tabs «Forhåndsvisning» and «Rediger»: the page asks `/auth/me`, and an answer with role `admin` is all it
+   * takes, so no login and no session are needed (#140).
+   */
+  as?: 'visitor' | 'admin'
+}
+
+export async function replayPage(page: Page, target: PageTarget, options: ReplayOptions = {}): Promise<Replay> {
   const recording = JSON.parse(readFileSync(join(ROOT, fixturePath(target)), 'utf8')) as PageRecording
   const queries = new Map(recording.queries.map(q => [requestKey(q.query, q.params), q]))
   const gets = new Map(recording.gets.map(g => [g.url, g]))
@@ -46,8 +55,16 @@ export async function replayPage(page: Page, target: PageTarget): Promise<Replay
     if (!hit) { misses.push(`neo4j: ${describeRequest(body.query, body.params)}`); return route.fulfill({ json: { rows: [] } }) }
     return route.fulfill({ json: { rows: hit.rows } })
   })
-  // A visitor who is not logged in: the public view of the page.
-  await page.route('**/auth/me', route => route.fulfill({ status: 401, json: { error: 'Not authenticated' } }))
+  if (options.as === 'admin') {
+    await page.route('**/auth/me', route => route.fulfill({ json: STAND_IN_ADMIN }))
+    // What only an admin's page asks for, answered as «nothing»: no open proposals, and a live stream of proposal
+    // changes that says nothing (a long retry, so the browser does not reconnect again and again).
+    await page.route(/\/api\/admin\/[^/]+\/[^/]+\/proposals$/, route => route.fulfill({ json: { openBundles: [], generationPending: false } }))
+    await page.route('**/api/proposals/events**', route => route.fulfill({ contentType: 'text/event-stream', body: 'retry: 3600000\n\n' }))
+  } else {
+    // A visitor who is not logged in: the public view of the page.
+    await page.route('**/auth/me', route => route.fulfill({ status: 401, json: { error: 'Not authenticated' } }))
+  }
 
   // The world outside is not needed to judge a page and would make the tests depend on the network:
   // fonts fall back to the system's, map tiles are left out, images become one pixel.
@@ -57,16 +74,8 @@ export async function replayPage(page: Page, target: PageTarget): Promise<Replay
   return { misses: () => misses }
 }
 
-/**
- * Open a recorded page and wait until it has finished drawing: its title text is there, the network is quiet, and
- * the amount of text on it is the same on two looks in a row (sections mount a moment after their data). A
- * fixed wait would be too long on a fast machine and too short on a slow one.
- */
-export async function openRecordedPage(page: Page, target: PageTarget): Promise<Replay> {
-  const replay = await replayPage(page, target)
-  await page.goto(target.path)
-  // The title is on the page, whatever element it is in: a test of the outline must be able to say «no h1».
-  await expect(page.getByText(target.title).first()).toBeVisible()
+/** Wait until the page has finished drawing: the network is quiet and the amount of text on it is the same on two looks in a row. */
+async function settled(page: Page, what: string) {
   await page.waitForLoadState('networkidle')
   let last = -1
   await expect.poll(async () => {
@@ -74,6 +83,29 @@ export async function openRecordedPage(page: Page, target: PageTarget): Promise<
     const stable = now === last
     last = now
     return stable
-  }, { message: `${target.path} kept changing`, intervals: [150], timeout: 10_000 }).toBe(true)
+  }, { message: `${what} kept changing`, intervals: [150], timeout: 10_000 }).toBe(true)
+}
+
+/**
+ * Open a recorded page and wait until it has finished drawing: its title text is there, the network is quiet, and
+ * the amount of text on it is the same on two looks in a row (sections mount a moment after their data). A
+ * fixed wait would be too long on a fast machine and too short on a slow one.
+ */
+export async function openRecordedPage(page: Page, target: PageTarget, options: ReplayOptions = {}): Promise<Replay> {
+  const replay = await replayPage(page, target, options)
+  await page.goto(target.path)
+  // The title is on the page, whatever element it is in: a test of the outline must be able to say «no h1».
+  await expect(page.getByText(target.title).first()).toBeVisible()
+  await settled(page, target.path)
+  return replay
+}
+
+/** The page as an admin sees it in edit mode: opened as an admin, and the «Rediger» tab chosen (#140). */
+export async function openRecordedEditMode(page: Page, target: PageTarget): Promise<Replay> {
+  const replay = await openRecordedPage(page, target, { as: 'admin' })
+  const tab = page.getByRole('button', { name: 'Rediger', exact: true })
+  await tab.click()
+  await expect(tab).toHaveClass(/active/)                    // the edit mode is what is being looked at, not the preview
+  await settled(page, `${target.path} in edit mode`)
   return replay
 }

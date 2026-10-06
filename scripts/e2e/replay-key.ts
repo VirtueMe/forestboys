@@ -8,6 +8,13 @@
  * Pure, so the recorder and the replay cannot disagree about a key, and the rule is tested.
  */
 
+/**
+ * The admin the edit-mode pages are recorded and replayed as (#140): what `/auth/me` answers. The page shows
+ * its edit mode for role `admin` and asks nothing else of it. One definition, so the recording and the replay
+ * agree about who is looking.
+ */
+export const STAND_IN_ADMIN = { id: 'e2e-admin', email: 'admin@example.org', name: 'Admin', role: 'admin' } as const
+
 export interface RecordedQuery {
   query: string
   params: Record<string, unknown>
