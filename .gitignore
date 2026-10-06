@@ -12,6 +12,11 @@ lerna-debug.log*
 
 node_modules
 dist
+# Playwright (#129)
+/test-results/
+/playwright-report/
+/blob-report/
+/playwright/.cache/
 dist-ssr
 data/
 *.local

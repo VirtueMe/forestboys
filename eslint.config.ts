@@ -83,7 +83,7 @@ export default tseslint.config(
 
   // ── scripts (Node environment) ─────────────────────────────────────────
   {
-    files: ['scripts/**/*.ts', 'vite.config.ts', 'eslint.config.ts'],
+    files: ['scripts/**/*.ts', 'vite.config.ts', 'eslint.config.ts', 'playwright.config.ts', 'e2e/**/*.ts'],
     languageOptions: {
       globals: {
         ...globals.node,
@@ -122,6 +122,6 @@ export default tseslint.config(
 
   // ── ignore build output ────────────────────────────────────────────────
   {
-    ignores: ['dist/**', 'node_modules/**', '*.d.ts', '.wrangler/**', '**/.wrangler/**'],
+    ignores: ['dist/**', 'node_modules/**', '*.d.ts', '.wrangler/**', '**/.wrangler/**', 'playwright-report/**', 'test-results/**', 'blob-report/**'],
   },
 )
