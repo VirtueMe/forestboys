@@ -15,20 +15,20 @@ import {
   type RenderDecoratorFunction,
   type RenderStyleFunction,
 } from '@portabletext/editor'
-import { EventListenerPlugin } from '@portabletext/editor/plugins'
+import { defineBehavior, execute } from '@portabletext/editor/behaviors'
+import { BehaviorPlugin, EventListenerPlugin } from '@portabletext/editor/plugins'
 import {
   getActiveAnnotations, getFocusTextBlock, getSelectedValue, getSelection, isActiveDecorator, isActiveListItem, isActiveStyle, isSelectionExpanded,
 } from '@portabletext/editor/selectors'
 import React from 'react'
 import { neo4jQuery } from '@/composables/useNeo4j.ts'
-import { hasLinkMark, resolveLinkTarget } from '@/utils/portableText.ts'
+import { linkTextRange, selectionTextRange, splitMarks, type SpanPoint, type TextRange } from '@/utils/linkText.ts'
+import { hasLinkMark, resolveLinkTarget, type SanityBlock } from '@/utils/portableText.ts'
+
+const DECORATORS = ['strong', 'em', 'underline'] as const
 
 const schemaDefinition = defineSchema({
-  decorators: [
-    { name: 'strong' },
-    { name: 'em' },
-    { name: 'underline' },
-  ],
+  decorators: DECORATORS.map(name => ({ name })),
   // Body content only supports h3 sub-headings — card titles are h2
   // at the page level, and h1 is reserved for the text-block page title.
   styles: [
@@ -129,6 +129,7 @@ function ToolbarButton({
   title,
   ariaLabel,
   extraClass,
+  disabled,
 }: {
   label:       React.ReactNode
   active:      boolean
@@ -137,6 +138,7 @@ function ToolbarButton({
   /** The name of an icon-only button, for screen readers. */
   ariaLabel?:  string
   extraClass?: string
+  disabled?:   boolean
 }) {
   return React.createElement(
     'button',
@@ -144,6 +146,7 @@ function ToolbarButton({
       type:      'button',
       className: `pt-tb-btn${active ? ' active' : ''}${extraClass ? ` ${extraClass}` : ''}`,
       title,
+      disabled,
       'aria-label': ariaLabel,
       onMouseDown: (e: React.MouseEvent) => e.preventDefault(), // keep selection
       onClick,
@@ -301,16 +304,72 @@ function PersonAnnotationButton() {
   )
 }
 
+/** The event `replaceWords` answers to; one name for the sender and the behavior. */
+const REPLACE_WORDS = 'custom.replaceWords'
+
+/**
+ * Replaces words and types them again with their marks: select, delete, `insert.span`. The
+ * editor does not carry a link mark onto typed text (at the edge of a span it goes to the
+ * neighbour), and deleting and inserting as two events takes two undos. As the actions of one
+ * behavior they are one undo step.
+ *
+ * The delete is `delete.backward` over an expanded selection, which deletes the selection:
+ * the name says one character, so this leans on how @portabletext/editor 6.6.9 behaves
+ * (`delete.text` with a path range removed the wrong words). Recheck it when upgrading.
+ */
+const replaceWords = defineBehavior<{
+  at:          NonNullable<EditorSelection>
+  text:        string
+  decorators:  string[]
+  annotations: { name: string; value: Record<string, unknown> }[]
+}>({
+  on: REPLACE_WORDS,
+  actions: [({ event }) => [
+    execute({ type: 'select', at: event.at }),
+    execute({ type: 'delete.backward', unit: 'character' }),
+    execute({ type: 'insert.span', text: event.text, decorators: event.decorators, annotations: event.annotations }),
+  ]],
+})
+
 /** What the link box was opened on — fixed then, so a click elsewhere in the editor can't change what Enter does. */
 interface LinkTarget {
   /** The selected words: the ones to link, or to take a link off. */
   at:      EditorSelection
-  /** A selection or a link to change: without one there is nothing to link. */
+  /** A caret, a selection or a link to change: without any of them there is nowhere to put a link. */
   linkable: boolean
+  /** A caret with no link under it: the box inserts new linked words there. */
+  caret:   boolean
+  /** The decorators on at the caret, for the new words. */
+  decorators: string[]
   /** The link the caret or selection lies wholly in, to change its address. */
   link:    { blockKey: string; markKey: string; href: string } | null
   /** Any link on the selected words, whole or in part. */
   hasLink: boolean
+  /** The words the «Tekst» field shows, in the block they sit in; null when they cannot be read (across blocks). */
+  words:   { blockKey: string; range: TextRange; decorators: string[]; annotations: ReturnType<typeof splitMarks>['annotations'] } | null
+}
+
+/** The span a selection point is in: `[{_key: block}, 'children', {_key: span}]`. */
+function spanPoint(point: { path: unknown[]; offset: number }): SpanPoint | null {
+  const key = (point.path[2] as { _key?: string } | undefined)?._key
+  return key ? { spanKey: key, offset: point.offset } : null
+}
+
+/** The words the box was opened on: the link's, or the selection's when it lies in one block. */
+function wordsOf(
+  block: SanityBlock | undefined, linkKey: string | undefined, at: EditorSelection,
+): LinkTarget['words'] {
+  if (!block) return null
+  if (linkKey) {
+    const range = linkTextRange(block, linkKey)
+    return range ? { blockKey: block._key, range, ...splitMarks(block, range.marks) } : null
+  }
+  const a = at && spanPoint(at.anchor)
+  const f = at && spanPoint(at.focus)
+  if (!a || !f || (at.anchor.path[0] as { _key?: string })._key !== block._key
+      || (at.focus.path[0] as { _key?: string })._key !== block._key) return null
+  const range = selectionTextRange(block, a, f)
+  return range ? { blockKey: block._key, range, ...splitMarks(block, range.marks) } : null
 }
 
 /**
@@ -329,28 +388,66 @@ function LinkAnnotationButton() {
   // null: closed. The input takes focus, so everything below comes from when the box opened.
   const [target, setTarget] = React.useState<LinkTarget | null>(null)
   const [href, setHref]     = React.useState('')
+  const [text, setText]     = React.useState('')
 
   function show() {
     const current = (active as { href?: string } | undefined)?.href ?? ''
+    const words   = wordsOf(block?.node as SanityBlock | undefined, active?._key, selection)
     setHref(current)
+    setText(words?.range.text ?? '')
     setTarget({
       at:       selection,
-      linkable: !!active || (!!selection && expanded),
+      linkable: !!active || !!selection,
+      caret:    !active && !!selection && !expanded,
+      decorators: DECORATORS.filter(d => isActiveDecorator(d)(editor.getSnapshot())),
       link:     active && block ? { blockKey: block.node._key, markKey: active._key, href: current } : null,
       hasLink:  !!active || hasLinkMark(selected),
+      words,
     })
   }
-  function close() { setTarget(null); setHref('') }
+  function close() { setTarget(null); setHref(''); setText('') }
+
+  // The words can be changed when they are readable, carry one set of marks, and are not emptied.
+  // At a caret there are none yet: the box asks for them.
+  const showText     = !!target?.linkable && (!!target.words || target.caret)
+  const textEditable = !!target?.caret || !!target?.words?.range.editable
+  const textChanged  = !!target?.words && textEditable && text !== target.words.range.text
+  const textValid    = !textEditable || text.length > 0
 
   function apply() {
     const value = href.trim()
-    if (!target?.linkable || !resolveLinkTarget(value)) return
-    if (target.link) {
-      editor.send({ type: 'annotation.set', at: [{ _key: target.link.blockKey }, 'markDefs', { _key: target.link.markKey }], props: { href: value } })
+    if (!target?.linkable || !resolveLinkTarget(value) || !textValid) return
+    if (textChanged && target.words) {
+      // The words are replaced and typed again with their marks, as one undo step (see
+      // replaceWords). The link comes along with the address as it stands in the box.
+      const { blockKey, range, decorators, annotations } = target.words
+      const path = (key: string) => [{ _key: blockKey }, 'children', { _key: key }]
+      const link = { name: 'link', value: { href: value } }
+      editor.send({
+        type: REPLACE_WORDS,
+        at:   { anchor: { path: path(range.startKey), offset: range.startOffset }, focus: { path: path(range.endKey), offset: range.endOffset } },
+        text,
+        decorators,
+        annotations: [
+          ...annotations.filter(a => a.key !== target.link?.markKey).map(({ name, value: v }) => ({ name, value: v })),
+          link,
+        ],
+      })
+    } else if (target.caret && target.at) {
+      editor.send({ type: 'select', at: target.at })
+      editor.send({ type: 'insert.span', text, decorators: target.decorators, annotations: [{ name: 'link', value: { href: value } }] })
+    } else if (target.link) {
+      if (value !== target.link.href) {
+        editor.send({ type: 'annotation.set', at: [{ _key: target.link.blockKey }, 'markDefs', { _key: target.link.markKey }], props: { href: value } })
+      }
     } else if (target.at) {
       editor.send({ type: 'annotation.add', annotation: { name: 'link', value: { href: value } }, at: target.at })
     }
     close()
+  }
+  function onKey(e: React.KeyboardEvent) {
+    if (e.key === 'Enter')  { e.preventDefault(); apply() }
+    if (e.key === 'Escape') { e.preventDefault(); close() }
   }
   function remove() {
     editor.send({ type: 'annotation.remove', annotation: { name: 'link' }, ...(target?.at ? { at: target.at } : {}) })
@@ -365,32 +462,48 @@ function LinkAnnotationButton() {
       title:     'Lenke',
       ariaLabel: 'Lenke',
       active: !!active || !!target,
+      // Nowhere to put a link until the editor has a caret or a selection (an open box can still be closed).
+      disabled: !target && !selection,
       onClick: () => (target ? close() : show()),
     }),
     target ? React.createElement(
       'div',
       { className: 'pt-link-pop' },
-      !target.linkable
-        ? React.createElement('p', { className: 'pt-link-hint' }, 'Merk teksten som skal bli en lenke.')
-        : null,
-      React.createElement('input', {
-        className:   'pt-link-input',
-        autoFocus:   true,
-        placeholder: 'https://… eller /events/…',
-        value:       href,
-        onChange:    (e: React.ChangeEvent<HTMLInputElement>) => setHref(e.target.value),
-        onKeyDown:   (e: React.KeyboardEvent) => {
-          if (e.key === 'Enter')  { e.preventDefault(); apply() }
-          if (e.key === 'Escape') { e.preventDefault(); close() }
-        },
-      }),
+      showText ? React.createElement(
+        'label',
+        { className: 'pt-link-field' },
+        React.createElement('span', { className: 'pt-link-label' }, 'Tekst'),
+        React.createElement('input', {
+          className: 'pt-link-input',
+          autoFocus: textEditable,
+          placeholder: target.caret ? 'Teksten som skal vises' : undefined,
+          value:     text,
+          readOnly:  !textEditable,
+          title:     textEditable ? undefined : 'Teksten har ulik formatering og kan ikke endres her',
+          onChange:  (e: React.ChangeEvent<HTMLInputElement>) => setText(e.target.value),
+          onKeyDown: onKey,
+        }),
+      ) : null,
+      React.createElement(
+        'label',
+        { className: 'pt-link-field' },
+        showText ? React.createElement('span', { className: 'pt-link-label' }, 'Adresse') : null,
+        React.createElement('input', {
+          className:   'pt-link-input',
+          autoFocus:   !showText || !textEditable,
+          placeholder: 'https://… eller /events/…',
+          value:       href,
+          onChange:    (e: React.ChangeEvent<HTMLInputElement>) => setHref(e.target.value),
+          onKeyDown:   onKey,
+        }),
+      ),
       React.createElement(
         'div',
         { className: 'pt-link-actions' },
         React.createElement('button', {
-          type: 'button', className: 'pt-link-apply', disabled: !target.linkable || !resolveLinkTarget(href),
+          type: 'button', className: 'pt-link-apply', disabled: !target.linkable || !resolveLinkTarget(href) || !textValid,
           onMouseDown: (e: React.MouseEvent) => e.preventDefault(), onClick: apply,
-        }, target.link ? 'Endre' : 'Bruk'),
+        }, target.link ? 'Endre' : target.caret ? 'Sett inn' : 'Bruk'),
         target.hasLink ? React.createElement('button', {
           type: 'button', className: 'pt-link-remove',
           onMouseDown: (e: React.MouseEvent) => e.preventDefault(), onClick: remove,
@@ -430,6 +543,7 @@ export function PortableTextEditorReact({ value, onChange, expanded, onToggleExp
         if (event.type === 'mutation' && event.value) onChange(event.value)
       },
     }),
+    React.createElement(BehaviorPlugin, { behaviors: [replaceWords] }),
     React.createElement(Toolbar, { expanded, onToggleExpand }),
     React.createElement(PortableTextEditable, {
       renderDecorator,

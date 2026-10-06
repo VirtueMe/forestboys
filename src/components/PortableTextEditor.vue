@@ -89,6 +89,8 @@ onBeforeUnmount(() => {
   font-family: inherit;
 }
 .pt-tb-btn:hover  { background: var(--paper-raised); }
+.pt-tb-btn:disabled { opacity: 0.4; cursor: default; }
+.pt-tb-btn:disabled:hover { background: transparent; }
 .pt-tb-btn.active { background: var(--focus); color: #fff; border-color: var(--focus); }
 
 .pt-tb-sep {
@@ -218,11 +220,9 @@ onBeforeUnmount(() => {
   gap: 6px;
 }
 
-.pt-link-hint {
-  margin: 0;
-  font-size: 12px;
-  color: var(--muted);
-}
+.pt-link-field { display: flex; flex-direction: column; gap: 3px; }
+.pt-link-label { font-size: 11px; font-weight: 600; color: var(--muted); }
+.pt-link-input[readonly] { color: var(--muted); background: transparent; }
 
 .pt-link-input {
   padding: 7px 10px;
