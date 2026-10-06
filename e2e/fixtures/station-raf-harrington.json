@@ -2,68 +2,11 @@
  "path": "/station/raf-harrington",
  "queries": [
   {
-   "query": "MATCH (s:Station {slug: $slug})\n           RETURN coalesce(s.canonicalName, s.title) AS name,\n                  s.type        AS type,\n                  s.category    AS category,\n                  coalesce(s.sourceRefs, []) AS sourceRefs,\n                  s.lat         AS lat,\n                  s.lng         AS lng,\n                  s.activeFrom  AS activeFrom,\n                  s.activeTo    AS activeTo,\n                  s.description AS description,\n                  s.links       AS links",
-   "params": {
-    "slug": "raf-harrington"
-   },
-   "rows": [
-    {
-     "name": "RAF Harrington",
-     "type": "Airfield",
-     "category": null,
-     "sourceRefs": [],
-     "lat": 52.40351044918938,
-     "lng": -0.872605931823625,
-     "activeFrom": null,
-     "activeTo": null,
-     "description": null,
-     "links": null
-    }
-   ]
-  },
-  {
-   "query": "MATCH (s:Station {slug: $slug})-[:HAS_CONTENT]->(d:Description)\n           OPTIONAL MATCH (d)-[:SOURCED_FROM]->(from:Source)\n           WITH d, from\n           OPTIONAL MATCH (d)-[cites:CITES]->(src:Source)\n           WITH d, from,\n                collect(CASE WHEN src IS NULL THEN NULL ELSE {\n                  inline:       coalesce(cites.inline, false),\n                  sourceId:     src.id,\n                  sourceTitle:  src.title,\n                  sourceUrl:    src.url,\n                  sourceAuthor: src.authorFreeText\n                } END) AS rawCites\n           RETURN coalesce(d.order, 1) AS `order`,\n                  d.content AS content,\n                  [x IN rawCites WHERE x IS NOT NULL] AS citations,\n                  CASE WHEN from IS NULL THEN NULL ELSE {\n                    id:             from.id,\n                    title:          from.title,\n                    url:             from.url,\n                    authorFreeText: from.authorFreeText,\n                    license:        from.license,\n                    attribution:    from.attribution\n                  } END AS sourcedFrom\n           ORDER BY `order`",
-   "params": {
-    "slug": "raf-harrington"
-   },
-   "rows": [
-    {
-     "order": 1,
-     "content": "[{\"_key\":\"43515f066611\",\"_type\":\"block\",\"children\":[{\"_key\":\"80ebf9660605\",\"_type\":\"span\",\"marks\":[],\"text\":\"Harrington airfield, known as Station 179 during WW2, was built by the 826th and 852nd Engineer Battalions of the US Army as a Class A airfield intended for heavy bomber use, the main runway length being approximately a mile. Construction started on the 11th July 1942 by a battalion of aviation engineers who were subsequently alerted and sent to the North African Theatre of Operations. The two other engineering battalions carried on the work. The airfield was completed in the spring of 1944.\\n\\nApproximately 860,000 square yards of concrete were laid, with one and three quarter million bricks being used, 210,000 cubic yards of soil being moved and 6 miles of roadway formed.\\n\\nIt took four engineering soldiers under the command of a corporal to complete a standard 16 ft by 18 ft Nissen Hut in two days. Eighty man hours were used (originally 225 hours per hut had been allocated).\\n\\nAlthough this airfield had initially been constructed for use by a B-17 Flying Fortress Bomb Group, this group was diverted to North Africa to support Operation Torch. It was therefore taken over as a satellite station for training the bomber crews of the nearby RAF 84th Operational Training Unit at Desborough who mainly operated Wellington bombers. \"}],\"markDefs\":[],\"style\":\"normal\"}]",
-     "citations": [],
-     "sourcedFrom": null
-    }
-   ]
-  },
-  {
    "query": "MATCH (:Station {slug: $slug})-[:HAS_NAME]->(n:Name)\n           RETURN n.id AS id, n.order AS `order`, n.value AS value, n.type AS type,\n                  n.from AS `from`, n.fromAbout AS fromAbout, n.to AS `to`, n.toAbout AS toAbout,\n                  n.sourceRefs AS sourceRefs\n           ORDER BY coalesce(n.order, 0), n.value",
    "params": {
     "slug": "raf-harrington"
    },
    "rows": []
-  },
-  {
-   "query": "\n    MATCH (p:Person)-[r:STATIONED_AT]->(t:Station {slug: $slug})\n    OPTIONAL MATCH (p)-[:HAS_STATIONED_NOTE]->(d:Description {stayId: r.id})\n    OPTIONAL MATCH (d)-[:SOURCED_FROM]->(from:Source)\n    WITH p, r, t, d, from\n    OPTIONAL MATCH (d)-[cites:CITES]->(src:Source)\n    WITH p, r, t, d, from,\n         collect(CASE WHEN src IS NULL THEN NULL ELSE {\n           inline:       coalesce(cites.inline, false),\n           sourceId:     src.id,\n           sourceTitle:  src.title,\n           sourceUrl:    src.url,\n           sourceAuthor: src.authorFreeText\n         } END) AS rawCites\n    WITH p, r, t,\n         CASE WHEN d IS NULL THEN NULL ELSE {\n           order:     coalesce(d.order, 1),\n           content:   d.content,\n           citations: [x IN rawCites WHERE x IS NOT NULL],\n           sourcedFrom: CASE WHEN from IS NULL THEN NULL ELSE {\n             id:             from.id,\n             title:          from.title,\n             url:            from.url,\n             authorFreeText: from.authorFreeText,\n             license:        from.license,\n             attribution:    from.attribution\n           } END\n         } END AS section\n    WITH p, r, t, collect(section) AS rawSections\n    RETURN r.id AS edgeId, r.state AS state, coalesce(r.sourceRefs, []) AS sourceRefs, p.slug AS targetSlug, p.canonicalName AS targetName, r.role AS role, r.startDate AS startDate, r.endDate AS endDate,\n           [x IN rawSections WHERE x IS NOT NULL] AS sections\n    ORDER BY startDate, targetName\n  ",
-   "params": {
-    "slug": "raf-harrington"
-   },
-   "rows": []
-  },
-  {
-   "query": "MATCH (s:Station {slug: $slug})-[:REFERENCED_IN]->(src:Source)\n           RETURN src.id AS id, src.title AS title, src.url AS url,\n                  src.type AS type, src.domain AS domain,\n                  coalesce(src.nbBacked, false) AS nbBacked\n           ORDER BY nbBacked DESC, src.type, coalesce(src.title, src.url)",
-   "params": {
-    "slug": "raf-harrington"
-   },
-   "rows": [
-    {
-     "id": "harringtonmuseum-org-uk-history-of-harrington-airfield-3d600a13",
-     "title": "HISTORY OF HARRINGTON AIRFIELD",
-     "url": "https://harringtonmuseum.org.uk/history-of-harrington-airfield/",
-     "type": "website",
-     "domain": "harringtonmuseum.org.uk",
-     "nbBacked": false
-    }
-   ]
   },
   {
    "query": "MATCH (e:Operation|Incident)-[r:FROM_STATION|TO_STATION]->(:Station {slug: $slug})\n           WHERE e.slug IS NOT NULL\n           RETURN DISTINCT e.slug AS slug,\n                  coalesce(e.title, e.codeName, e.canonicalName) AS title,\n                  e.date AS date,\n                  CASE type(r) WHEN 'FROM_STATION' THEN 'departed' ELSE 'arrived' END AS direction\n           ORDER BY date",
@@ -638,26 +581,11 @@
    ]
   },
   {
-   "query": "MATCH (s:Station {slug: $slug})-[h:HAS_IMAGE]->(src:Source)\n           RETURN src.url AS url, h.caption AS caption,\n                  coalesce(s.canonicalName, s.title) AS subjectName,\n                  s.slug AS subjectSlug,\n                  0 AS sortKey\n           ORDER BY sortKey, subjectName\n           LIMIT 200",
+   "query": "\n    MATCH (p:Person)-[r:STATIONED_AT]->(t:Station {slug: $slug})\n    OPTIONAL MATCH (p)-[:HAS_STATIONED_NOTE]->(d:Description {stayId: r.id})\n    OPTIONAL MATCH (d)-[:SOURCED_FROM]->(from:Source)\n    WITH p, r, t, d, from\n    OPTIONAL MATCH (d)-[cites:CITES]->(src:Source)\n    WITH p, r, t, d, from,\n         collect(CASE WHEN src IS NULL THEN NULL ELSE {\n           inline:       coalesce(cites.inline, false),\n           sourceId:     src.id,\n           sourceTitle:  src.title,\n           sourceUrl:    src.url,\n           sourceAuthor: src.authorFreeText\n         } END) AS rawCites\n    WITH p, r, t,\n         CASE WHEN d IS NULL THEN NULL ELSE {\n           order:     coalesce(d.order, 1),\n           content:   d.content,\n           citations: [x IN rawCites WHERE x IS NOT NULL],\n           sourcedFrom: CASE WHEN from IS NULL THEN NULL ELSE {\n             id:             from.id,\n             title:          from.title,\n             url:            from.url,\n             authorFreeText: from.authorFreeText,\n             license:        from.license,\n             attribution:    from.attribution\n           } END\n         } END AS section\n    WITH p, r, t, collect(section) AS rawSections\n    RETURN r.id AS edgeId, r.state AS state, coalesce(r.sourceRefs, []) AS sourceRefs, p.slug AS targetSlug, p.canonicalName AS targetName, r.role AS role, r.startDate AS startDate, r.endDate AS endDate,\n           [x IN rawSections WHERE x IS NOT NULL] AS sections\n    ORDER BY startDate, targetName\n  ",
    "params": {
     "slug": "raf-harrington"
    },
-   "rows": [
-    {
-     "url": "https://cdn.sanity.io/images/7r6kqtqy/production/f3b5e1d2cdd636a3077b0a06d16456f524ee21ad-311x162.png",
-     "caption": null,
-     "subjectName": "RAF Harrington",
-     "subjectSlug": "raf-harrington",
-     "sortKey": 0
-    },
-    {
-     "url": "https://cdn.sanity.io/images/7r6kqtqy/production/055bcde44bea9e774760d6c592ae6d30451fd838-255x198.png",
-     "caption": null,
-     "subjectName": "RAF Harrington",
-     "subjectSlug": "raf-harrington",
-     "sortKey": 0
-    }
-   ]
+   "rows": []
   },
   {
    "query": "\n    MATCH (r:Role)\n    OPTIONAL MATCH (r)-[:HAS_CONTENT]->(d:Description)\n    OPTIONAL MATCH (d)-[:CITES|SOURCED_FROM]->(s:Source)\n    WITH r, d, collect(DISTINCT s.id) AS ids\n    ORDER BY coalesce(d.order, 1)\n    WITH r, [x IN collect(d.content) WHERE x IS NOT NULL] AS sections,\n         reduce(acc = [], l IN collect(ids) | acc + l) AS allIds\n    RETURN r.key AS key, r.name AS name, r.scopes AS scopes, r.attended AS attended, sections,\n           reduce(acc = [], i IN allIds | CASE WHEN i IN acc THEN acc ELSE acc + i END) AS sourceIds\n  ",
@@ -822,6 +750,78 @@
      "attended": true,
      "sections": [],
      "sourceIds": []
+    }
+   ]
+  },
+  {
+   "query": "MATCH (s:Station {slug: $slug})\n           RETURN coalesce(s.canonicalName, s.title) AS name,\n                  s.type        AS type,\n                  s.category    AS category,\n                  coalesce(s.sourceRefs, []) AS sourceRefs,\n                  s.lat         AS lat,\n                  s.lng         AS lng,\n                  s.activeFrom  AS activeFrom,\n                  s.activeTo    AS activeTo,\n                  s.description AS description,\n                  s.links       AS links",
+   "params": {
+    "slug": "raf-harrington"
+   },
+   "rows": [
+    {
+     "name": "RAF Harrington",
+     "type": "Airfield",
+     "category": null,
+     "sourceRefs": [],
+     "lat": 52.40351044918938,
+     "lng": -0.872605931823625,
+     "activeFrom": null,
+     "activeTo": null,
+     "description": null,
+     "links": null
+    }
+   ]
+  },
+  {
+   "query": "MATCH (s:Station {slug: $slug})-[:HAS_CONTENT]->(d:Description)\n           OPTIONAL MATCH (d)-[:SOURCED_FROM]->(from:Source)\n           WITH d, from\n           OPTIONAL MATCH (d)-[cites:CITES]->(src:Source)\n           WITH d, from,\n                collect(CASE WHEN src IS NULL THEN NULL ELSE {\n                  inline:       coalesce(cites.inline, false),\n                  sourceId:     src.id,\n                  sourceTitle:  src.title,\n                  sourceUrl:    src.url,\n                  sourceAuthor: src.authorFreeText\n                } END) AS rawCites\n           RETURN coalesce(d.order, 1) AS `order`,\n                  d.content AS content,\n                  [x IN rawCites WHERE x IS NOT NULL] AS citations,\n                  CASE WHEN from IS NULL THEN NULL ELSE {\n                    id:             from.id,\n                    title:          from.title,\n                    url:             from.url,\n                    authorFreeText: from.authorFreeText,\n                    license:        from.license,\n                    attribution:    from.attribution\n                  } END AS sourcedFrom\n           ORDER BY `order`",
+   "params": {
+    "slug": "raf-harrington"
+   },
+   "rows": [
+    {
+     "order": 1,
+     "content": "[{\"_key\":\"43515f066611\",\"_type\":\"block\",\"children\":[{\"_key\":\"80ebf9660605\",\"_type\":\"span\",\"marks\":[],\"text\":\"Harrington airfield, known as Station 179 during WW2, was built by the 826th and 852nd Engineer Battalions of the US Army as a Class A airfield intended for heavy bomber use, the main runway length being approximately a mile. Construction started on the 11th July 1942 by a battalion of aviation engineers who were subsequently alerted and sent to the North African Theatre of Operations. The two other engineering battalions carried on the work. The airfield was completed in the spring of 1944.\\n\\nApproximately 860,000 square yards of concrete were laid, with one and three quarter million bricks being used, 210,000 cubic yards of soil being moved and 6 miles of roadway formed.\\n\\nIt took four engineering soldiers under the command of a corporal to complete a standard 16 ft by 18 ft Nissen Hut in two days. Eighty man hours were used (originally 225 hours per hut had been allocated).\\n\\nAlthough this airfield had initially been constructed for use by a B-17 Flying Fortress Bomb Group, this group was diverted to North Africa to support Operation Torch. It was therefore taken over as a satellite station for training the bomber crews of the nearby RAF 84th Operational Training Unit at Desborough who mainly operated Wellington bombers. \"}],\"markDefs\":[],\"style\":\"normal\"}]",
+     "citations": [],
+     "sourcedFrom": null
+    }
+   ]
+  },
+  {
+   "query": "MATCH (s:Station {slug: $slug})-[:REFERENCED_IN]->(src:Source)\n           RETURN src.id AS id, src.title AS title, src.url AS url,\n                  src.type AS type, src.domain AS domain,\n                  coalesce(src.nbBacked, false) AS nbBacked\n           ORDER BY nbBacked DESC, src.type, coalesce(src.title, src.url)",
+   "params": {
+    "slug": "raf-harrington"
+   },
+   "rows": [
+    {
+     "id": "harringtonmuseum-org-uk-history-of-harrington-airfield-3d600a13",
+     "title": "HISTORY OF HARRINGTON AIRFIELD",
+     "url": "https://harringtonmuseum.org.uk/history-of-harrington-airfield/",
+     "type": "website",
+     "domain": "harringtonmuseum.org.uk",
+     "nbBacked": false
+    }
+   ]
+  },
+  {
+   "query": "MATCH (s:Station {slug: $slug})-[h:HAS_IMAGE]->(src:Source)\n           RETURN src.url AS url, h.caption AS caption,\n                  coalesce(s.canonicalName, s.title) AS subjectName,\n                  s.slug AS subjectSlug,\n                  0 AS sortKey\n           ORDER BY sortKey, subjectName\n           LIMIT 200",
+   "params": {
+    "slug": "raf-harrington"
+   },
+   "rows": [
+    {
+     "url": "https://cdn.sanity.io/images/7r6kqtqy/production/f3b5e1d2cdd636a3077b0a06d16456f524ee21ad-311x162.png",
+     "caption": null,
+     "subjectName": "RAF Harrington",
+     "subjectSlug": "raf-harrington",
+     "sortKey": 0
+    },
+    {
+     "url": "https://cdn.sanity.io/images/7r6kqtqy/production/055bcde44bea9e774760d6c592ae6d30451fd838-255x198.png",
+     "caption": null,
+     "subjectName": "RAF Harrington",
+     "subjectSlug": "raf-harrington",
+     "sortKey": 0
     }
    ]
   }

@@ -1,0 +1,466 @@
+{
+ "path": "/organization/british-commandos",
+ "queries": [
+  {
+   "query": "CALL {\n             MATCH (o:Organization {slug: $slug})-[h:HAS_IMAGE]->(s:Source)\n             RETURN s.url AS url, h.caption AS caption,\n                    o.canonicalName AS subjectName, o.slug AS subjectSlug,\n                    'organization' AS subjectType, 0 AS sortKey\n             UNION\n             MATCH (o:Organization {slug: $slug})<-[:ORCHESTRATED_BY]-(op:Operation)-[h:HAS_IMAGE]->(s:Source)\n             WHERE coalesce(h.scope, 'propagate') <> 'entity'\n             RETURN s.url AS url, h.caption AS caption,\n                    op.codeName AS subjectName, op.slug AS subjectSlug,\n                    'operation' AS subjectType, 1 AS sortKey\n             UNION\n             MATCH (o:Organization {slug: $slug})<-[:PART_OF*1..]-(u:Unit)-[h:HAS_IMAGE]->(s:Source)\n             WHERE coalesce(h.scope, 'propagate') <> 'entity'\n             RETURN s.url AS url, h.caption AS caption,\n                    u.canonicalName AS subjectName, u.slug AS subjectSlug,\n                    'unit' AS subjectType, 2 AS sortKey\n             UNION\n             MATCH (o:Organization {slug: $slug})<-[:ORCHESTRATED_BY]-(i:Incident)-[h:HAS_IMAGE]->(s:Source)\n             WHERE coalesce(h.scope, 'propagate') <> 'entity'\n             RETURN s.url AS url, h.caption AS caption,\n                    i.title AS subjectName, i.slug AS subjectSlug,\n                    'incident' AS subjectType, 3 AS sortKey\n             UNION\n             MATCH (o:Organization {slug: $slug})<-[:PART_OF*1..]-(:Unit)<-[:MEMBER_OF]-(p:Person)-[h:HAS_IMAGE]->(s:Source)\n             WHERE coalesce(h.scope, 'propagate') <> 'entity'\n             RETURN s.url AS url, h.caption AS caption,\n                    p.canonicalName AS subjectName, p.slug AS subjectSlug,\n                    'person' AS subjectType, 4 AS sortKey\n           }\n           RETURN url, caption, subjectName, subjectSlug, subjectType, sortKey\n           ORDER BY sortKey, subjectName\n           LIMIT 200",
+   "params": {
+    "slug": "british-commandos"
+   },
+   "rows": []
+  },
+  {
+   "query": "\n      MATCH (i:Incident)\n      RETURN i.slug AS slug,\n             i.title + CASE WHEN i.date IS NOT NULL THEN ' · ' + i.date ELSE '' END AS name\n      ORDER BY i.date DESC, i.title\n    ",
+   "params": {},
+   "rows": []
+  },
+  {
+   "query": "\n      MATCH (i:Incident)-[:ORCHESTRATED_BY]->(o:Organization {slug: $slug})\n      RETURN i.slug AS targetSlug, i.title AS targetName, i.date AS date\n      ORDER BY i.date, i.title\n    ",
+   "params": {
+    "slug": "british-commandos"
+   },
+   "rows": []
+  },
+  {
+   "query": "MATCH (o:Organization {slug: $slug})\n           RETURN o.canonicalName AS name,\n                  o.formalName    AS formalName,\n                  o.abbreviation  AS abbreviation,\n                  o.sortingName   AS sortingName,\n                  o.color         AS color,\n                  o.foundedDate   AS foundedDate,\n                  o.dissolvedDate AS dissolvedDate,\n                  o.country       AS country",
+   "params": {
+    "slug": "british-commandos"
+   },
+   "rows": [
+    {
+     "name": "British Commandos",
+     "formalName": null,
+     "abbreviation": null,
+     "sortingName": null,
+     "color": null,
+     "foundedDate": null,
+     "dissolvedDate": null,
+     "country": "UK"
+    }
+   ]
+  },
+  {
+   "query": "MATCH (o:Organization {slug: $slug})-[:HAS_CONTENT]->(d:Description)\n           OPTIONAL MATCH (d)-[:SOURCED_FROM]->(from:Source)\n           WITH d, from\n           OPTIONAL MATCH (d)-[cites:CITES]->(src:Source)\n           WITH d, from,\n                collect(CASE WHEN src IS NULL THEN NULL ELSE {\n                  inline:       coalesce(cites.inline, false),\n                  sourceId:     src.id,\n                  sourceTitle:  src.title,\n                  sourceUrl:    src.url,\n                  sourceAuthor: src.authorFreeText\n                } END) AS rawCites\n           RETURN coalesce(d.order, 1) AS `order`,\n                  d.content AS content,\n                  [x IN rawCites WHERE x IS NOT NULL] AS citations,\n                  CASE WHEN from IS NULL THEN NULL ELSE {\n                    id:             from.id,\n                    title:          from.title,\n                    url:             from.url,\n                    authorFreeText: from.authorFreeText,\n                    license:        from.license,\n                    attribution:    from.attribution\n                  } END AS sourcedFrom\n           ORDER BY `order`",
+   "params": {
+    "slug": "british-commandos"
+   },
+   "rows": []
+  },
+  {
+   "query": "MATCH (o:Organization {slug: $slug})-[:REFERENCED_IN]->(s:Source)\n           RETURN s.id AS id, s.title AS title, s.url AS url,\n                  s.type AS type, s.domain AS domain,\n                  coalesce(s.nbBacked, false) AS nbBacked\n           ORDER BY nbBacked DESC, s.type, coalesce(s.title, s.url)",
+   "params": {
+    "slug": "british-commandos"
+   },
+   "rows": []
+  },
+  {
+   "query": "MATCH (o:Organization {slug: $slug})<-[:ORCHESTRATED_BY]-(i:Incident|Operation)<-[:INVOLVED_IN|PARTICIPATED_IN]-(p:Person)\n           RETURN DISTINCT p.slug AS slug, p.canonicalName AS name, count(i) AS eventCount\n           ORDER BY eventCount DESC",
+   "params": {
+    "slug": "british-commandos"
+   },
+   "rows": []
+  },
+  {
+   "query": "\n      MATCH (op:Operation)\n      RETURN op.slug AS slug, op.codeName AS name\n      ORDER BY op.codeName\n    ",
+   "params": {},
+   "rows": [
+    {
+     "slug": "aba-141142",
+     "name": "ABA 141142"
+    },
+    {
+     "slug": "aba-150843",
+     "name": "ABA 150843"
+    },
+    {
+     "slug": "am-001",
+     "name": "AM 001 SOE Operation CHEESE I / FASTING "
+    },
+    {
+     "slug": "am-018",
+     "name": "AM 018 SOE Operation PUFFIN"
+    },
+    {
+     "slug": "am-024",
+     "name": "AM 024 SOE Operation CHAIN"
+    },
+    {
+     "slug": "am-026",
+     "name": "AM 026 SOE Operation GROUSE  I"
+    },
+    {
+     "slug": "am-027",
+     "name": "AM 027 SOE Operation RAVEN A+B"
+    },
+    {
+     "slug": "am-028",
+     "name": "AM 028 SOE Operation COCEREL"
+    },
+    {
+     "slug": "am-029-1",
+     "name": "AM 029 SOE Operation CHEESE 1"
+    },
+    {
+     "slug": "am-029-2",
+     "name": "AM 029 SOE Operation CHEESE 2"
+    },
+    {
+     "slug": "am-029-3",
+     "name": "AM 029 SOE Operation CHEESE 3"
+    },
+    {
+     "slug": "am-033-1",
+     "name": "AM 033 SOE Operation GROUSE II  1"
+    },
+    {
+     "slug": "am-033-2",
+     "name": "AM 033 SOE Operation GROUSE II 2"
+    },
+    {
+     "slug": "am-035-1",
+     "name": "AM 035 SOE Operation GUNNERSIDE 1"
+    },
+    {
+     "slug": "am-035-2",
+     "name": "AM 035 SOE Operation GUNNERSIDE 2"
+    },
+    {
+     "slug": "am-038-1",
+     "name": "AM 038 SOE Operation BITTERN 1"
+    },
+    {
+     "slug": "am-038-2",
+     "name": "AM 038 SOE Operation BITTERN 2"
+    },
+    {
+     "slug": "am-038-3",
+     "name": "AM 038 SOE Operation BITTERN 3"
+    },
+    {
+     "slug": "am-039-1",
+     "name": "AM 039 SOE Operation GANNET 1 Anvil"
+    },
+    {
+     "slug": "am-039-2",
+     "name": "AM 039 SOE Operation GANNET 2 Anvil"
+    },
+    {
+     "slug": "am-039-3",
+     "name": "AM 039 SOE Operation GANNET 3 Anvil"
+    },
+    {
+     "slug": "am-046-1",
+     "name": "AM 046  SOE Operation Chaffinch 1"
+    },
+    {
+     "slug": "am-046-2",
+     "name": "AM 046  SOE Operation Chaffinch 2"
+    },
+    {
+     "slug": "am-048",
+     "name": "AM 048 SOE Operation GANNET I Anvil"
+    },
+    {
+     "slug": "am-050-1",
+     "name": "AM 050 SOE Operation CARHAMPTON 1"
+    }
+   ],
+   "truncatedFrom": 2284
+  },
+  {
+   "query": "\n      MATCH (op:Operation)-[:ORCHESTRATED_BY]->(o:Organization {slug: $slug})\n      RETURN op.slug AS targetSlug, op.codeName AS targetName, op.date AS date\n      ORDER BY op.codeName\n    ",
+   "params": {
+    "slug": "british-commandos"
+   },
+   "rows": []
+  },
+  {
+   "query": "\n    MATCH (r:Role)\n    OPTIONAL MATCH (r)-[:HAS_CONTENT]->(d:Description)\n    OPTIONAL MATCH (d)-[:CITES|SOURCED_FROM]->(s:Source)\n    WITH r, d, collect(DISTINCT s.id) AS ids\n    ORDER BY coalesce(d.order, 1)\n    WITH r, [x IN collect(d.content) WHERE x IS NOT NULL] AS sections,\n         reduce(acc = [], l IN collect(ids) | acc + l) AS allIds\n    RETURN r.key AS key, r.name AS name, r.scopes AS scopes, r.attended AS attended, sections,\n           reduce(acc = [], i IN allIds | CASE WHEN i IN acc THEN acc ELSE acc + i END) AS sourceIds\n  ",
+   "params": {},
+   "rows": [
+    {
+     "key": "operative",
+     "name": "operatør",
+     "scopes": [
+      "membership"
+     ],
+     "attended": false,
+     "sections": [],
+     "sourceIds": []
+    },
+    {
+     "key": "courier",
+     "name": "kurér",
+     "scopes": [
+      "membership"
+     ],
+     "attended": false,
+     "sections": [],
+     "sourceIds": []
+    },
+    {
+     "key": "radiotelegraph",
+     "name": "radiotelegrafist",
+     "scopes": [
+      "membership"
+     ],
+     "attended": false,
+     "sections": [],
+     "sourceIds": []
+    },
+    {
+     "key": "host",
+     "name": "vert",
+     "scopes": [
+      "membership"
+     ],
+     "attended": false,
+     "sections": [],
+     "sourceIds": []
+    },
+    {
+     "key": "informant",
+     "name": "informant",
+     "scopes": [
+      "membership"
+     ],
+     "attended": false,
+     "sections": [],
+     "sourceIds": []
+    },
+    {
+     "key": "member",
+     "name": "medlem",
+     "scopes": [
+      "membership"
+     ],
+     "attended": false,
+     "sections": [],
+     "sourceIds": []
+    },
+    {
+     "key": "administrative",
+     "name": "administrativt",
+     "scopes": [
+      "part-of"
+     ],
+     "attended": false,
+     "sections": [],
+     "sourceIds": []
+    },
+    {
+     "key": "operational",
+     "name": "operativt",
+     "scopes": [
+      "part-of"
+     ],
+     "attended": false,
+     "sections": [],
+     "sourceIds": []
+    },
+    {
+     "key": "sponsor",
+     "name": "sponsor",
+     "scopes": [
+      "part-of"
+     ],
+     "attended": false,
+     "sections": [],
+     "sourceIds": []
+    },
+    {
+     "key": "parent",
+     "name": "overordnet",
+     "scopes": [
+      "part-of"
+     ],
+     "attended": false,
+     "sections": [],
+     "sourceIds": []
+    },
+    {
+     "key": "stationed",
+     "name": "stasjonert",
+     "scopes": [
+      "stationed"
+     ],
+     "attended": false,
+     "sections": [],
+     "sourceIds": []
+    },
+    {
+     "key": "hiding",
+     "name": "i skjul",
+     "scopes": [
+      "stationed"
+     ],
+     "attended": false,
+     "sections": [],
+     "sourceIds": []
+    },
+    {
+     "key": "imprisoned",
+     "name": "fange",
+     "scopes": [
+      "stationed"
+     ],
+     "attended": false,
+     "sections": [],
+     "sourceIds": []
+    },
+    {
+     "key": "training",
+     "name": "opplæring",
+     "scopes": [
+      "stationed"
+     ],
+     "attended": true,
+     "sections": [],
+     "sourceIds": []
+    },
+    {
+     "key": "operating",
+     "name": "operatør",
+     "scopes": [
+      "stationed"
+     ],
+     "attended": false,
+     "sections": [],
+     "sourceIds": []
+    },
+    {
+     "key": "instructor",
+     "name": "instruktør",
+     "scopes": [
+      "stationed"
+     ],
+     "attended": true,
+     "sections": [],
+     "sourceIds": []
+    }
+   ]
+  },
+  {
+   "query": "\n      MATCH (u:Unit)\n      RETURN u.slug AS slug, u.canonicalName AS name\n      ORDER BY name\n    ",
+   "params": {},
+   "rows": [
+    {
+     "slug": "01-sis-xu",
+     "name": "01- SIS-XU"
+    },
+    {
+     "slug": "02-soe",
+     "name": "02-SOE"
+    },
+    {
+     "slug": "06-skoyter-ikke-organisert",
+     "name": "06 Skøyter ikke organisert"
+    },
+    {
+     "slug": "a-u-patrol",
+     "name": "A/U Patrol"
+    },
+    {
+     "slug": "anglo-norwegian-collaboration-committee",
+     "name": "ANGLO-NORWEGIAN COLLABORATION COMMITTEE"
+    },
+    {
+     "slug": "cossac",
+     "name": "COSSAC"
+    },
+    {
+     "slug": "den-norske-regjering",
+     "name": "Den norske regjering"
+    },
+    {
+     "slug": "eksportgruppene",
+     "name": "EXPORT grupper "
+    },
+    {
+     "slug": "eksportgruppe-torsvik",
+     "name": "Eksportgruppe  Torsvik"
+    },
+    {
+     "slug": "eksportgruppe-kvalen",
+     "name": "Eksportgruppe Kvalen"
+    },
+    {
+     "slug": "eksportgruppe-nielsen",
+     "name": "Eksportgruppe Nielsen"
+    },
+    {
+     "slug": "eksportgruppe-skytterholm",
+     "name": "Eksportgruppe Skytterholm"
+    },
+    {
+     "slug": "eksportgruppe-walle",
+     "name": "Eksportgruppe Walle"
+    },
+    {
+     "slug": "flukt",
+     "name": "Flukt"
+    },
+    {
+     "slug": "grupper",
+     "name": "Grupper"
+    },
+    {
+     "slug": "holland",
+     "name": "Holland"
+    },
+    {
+     "slug": "hurtigruten",
+     "name": "Hurtigruten"
+    },
+    {
+     "slug": "linge-course-a",
+     "name": "Kompani Linge — Kurs A"
+    },
+    {
+     "slug": "linge-course-aa",
+     "name": "Kompani Linge — Kurs AA"
+    },
+    {
+     "slug": "linge-course-b",
+     "name": "Kompani Linge — Kurs B"
+    },
+    {
+     "slug": "linge-course-c",
+     "name": "Kompani Linge — Kurs C"
+    },
+    {
+     "slug": "linge-course-cc",
+     "name": "Kompani Linge — Kurs CC"
+    },
+    {
+     "slug": "linge-course-d",
+     "name": "Kompani Linge — Kurs D"
+    },
+    {
+     "slug": "linge-course-dd",
+     "name": "Kompani Linge — Kurs DD"
+    },
+    {
+     "slug": "linge-course-e",
+     "name": "Kompani Linge — Kurs E"
+    }
+   ],
+   "truncatedFrom": 84
+  },
+  {
+   "query": "\n      MATCH (u:Unit)-[r:PART_OF]->(o:Organization {slug: $slug})\n      OPTIONAL MATCH (o)-[:HAS_MEMBER_UNIT_NOTE]->(d:Description)-[:ABOUT_UNIT]->(u)\n      OPTIONAL MATCH (d)-[:SOURCED_FROM]->(from:Source)\n      WITH u, r, d, from\n      OPTIONAL MATCH (d)-[cites:CITES]->(src:Source)\n      WITH u, r, d, from,\n           collect(CASE WHEN src IS NULL THEN NULL ELSE {\n             inline:       coalesce(cites.inline, false),\n             sourceId:     src.id,\n             sourceTitle:  src.title,\n             sourceUrl:    src.url,\n             sourceAuthor: src.authorFreeText\n           } END) AS rawCites\n      WITH u, r,\n           CASE WHEN d IS NULL THEN NULL ELSE {\n             order:     coalesce(d.order, 1),\n             content:   d.content,\n             citations: [x IN rawCites WHERE x IS NOT NULL],\n             sourcedFrom: CASE WHEN from IS NULL THEN NULL ELSE {\n               id:             from.id,\n               title:          from.title,\n               url:             from.url,\n               authorFreeText: from.authorFreeText,\n               license:        from.license,\n               attribution:    from.attribution\n             } END\n           } END AS section\n      WITH u, r, collect(section) AS rawSections\n      RETURN u.slug          AS targetSlug,\n             u.canonicalName AS targetName,\n             r.role          AS role,\n             r.order         AS `order`,\n             [x IN rawSections WHERE x IS NOT NULL] AS sections\n      ORDER BY CASE WHEN size([x IN rawSections WHERE x IS NOT NULL]) > 0 THEN 1 ELSE 0 END,\n               coalesce(r.order, 999), targetName\n    ",
+   "params": {
+    "slug": "british-commandos"
+   },
+   "rows": [
+    {
+     "targetSlug": "no-5-troop-10-ia-commandos",
+     "targetName": "No. 5 Troop 10 I.A Commandos",
+     "role": null,
+     "order": null,
+     "sections": []
+    }
+   ]
+  }
+ ],
+ "gets": []
+}

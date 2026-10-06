@@ -24,10 +24,19 @@ export interface RecordedQuery {
  */
 export const CAP_ROWS = 25
 
-export function capRows(query: string, params: Record<string, unknown>, rows: unknown[]): RecordedQuery {
+/**
+ * Cut a registry-wide query to CAP_ROWS rows, and say so. Two things keep the recording honest:
+ *  - the rows are put in a fixed order first (by their JSON), because the graph answers a query with no
+ *    ORDER BY in any order it likes, and a recording that changes every time it is made hides real changes;
+ *  - rows that mention `mustKeep` (the page's own slug) are kept as well, because a page may look itself up
+ *    in a registry (the events route finds its event in the list of events) and must find itself.
+ */
+export function capRows(query: string, params: Record<string, unknown>, rows: unknown[], mustKeep = ''): RecordedQuery {
   const global = Object.keys(params).length === 0
-  if (global && rows.length > CAP_ROWS) return { query, params, rows: rows.slice(0, CAP_ROWS), truncatedFrom: rows.length }
-  return { query, params, rows }
+  if (!global || rows.length <= CAP_ROWS) return { query, params, rows }
+  const sorted = rows.map(row => ({ row, text: stableStringify(row) })).sort((a, b) => (a.text < b.text ? -1 : a.text > b.text ? 1 : 0))
+  const kept = sorted.filter((r, i) => i < CAP_ROWS || (mustKeep !== '' && r.text.includes(mustKeep)))
+  return { query, params, rows: kept.map(r => r.row), truncatedFrom: rows.length }
 }
 
 /** A same-origin GET that the page made (the Sanity proxy under /sanity/): found again by its path and query. */

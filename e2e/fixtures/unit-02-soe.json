@@ -1,0 +1,366 @@
+{
+ "path": "/district/02-soe",
+ "queries": [
+  {
+   "query": "MATCH (c:Unit {type: 'course'})-[:PART_OF]->(u:Unit {slug: $slug})\n           RETURN c.slug AS slug, c.courseLetter AS letter,\n                  c.startDate AS startDate, c.studentCount AS studentCount,\n                  c.missingCount AS missingCount, c.targetGroup AS targetGroup\n           ORDER BY c.order",
+   "params": {
+    "slug": "02-soe"
+   },
+   "rows": []
+  },
+  {
+   "query": "MATCH (child:Unit)-[:PART_OF]->(u:Unit {slug: $slug})\n           WHERE child.type IS NULL OR child.type <> 'course'\n           RETURN child.canonicalName AS name, child.slug AS slug\n           ORDER BY name",
+   "params": {
+    "slug": "02-soe"
+   },
+   "rows": []
+  },
+  {
+   "query": "MATCH (d:Description)-[:ABOUT]->(u:Unit {slug: $slug})\n           OPTIONAL MATCH (d)-[:FROM]->(s:Source)\n           WITH d, collect(s.id) AS sourceRefs\n           RETURN d.content AS content,\n                  d.recordedDate AS recordedDate,\n                  d.author AS author,\n                  [x IN sourceRefs WHERE x IS NOT NULL] AS sourceRefs\n           ORDER BY d.recordedDate DESC, d.id",
+   "params": {
+    "slug": "02-soe"
+   },
+   "rows": []
+  },
+  {
+   "query": "\n      MATCH (p:Person)\n      RETURN p.slug AS slug,\n             p.canonicalName + CASE WHEN p.birthYear IS NOT NULL THEN ' (' + toString(p.birthYear) + ')' ELSE '' END AS name\n      ORDER BY p.canonicalName\n    ",
+   "params": {},
+   "rows": [
+    {
+     "slug": "1-mekanikar-2-piloter-en-uk-officer-en-britisk-soldat-en-britisk-predikant-og-en-tysk-jode",
+     "name": "1 mekanikar ,2 piloter, en UK Officer, en britisk soldat, en britisk predikant og en tysk Jøde."
+    },
+    {
+     "slug": "1-britiske-soldater",
+     "name": "1 nordmann og 11 britiske soldater"
+    },
+    {
+     "slug": "1-officer-lorentzen",
+     "name": "1. Officer Lorentzen"
+    },
+    {
+     "slug": "1-officer-abney",
+     "name": "1.Officer Abney"
+    },
+    {
+     "slug": "10-flyktniner-fra-djupevag-og-3-juletraer",
+     "name": "10 Flyktniner fra Djupevåg og 3 juletrær"
+    },
+    {
+     "slug": "10-norwegian-marine-special-force",
+     "name": "10 Norwegian Marine Special Force"
+    },
+    {
+     "slug": "11-flyktninger",
+     "name": "11 flyktninger"
+    },
+    {
+     "slug": "11-mann-motig-i",
+     "name": "11 mann MK Motig I"
+    },
+    {
+     "slug": "11-omkomne-war-bride",
+     "name": "11 omkomne \"WAR BRIDE\""
+    },
+    {
+     "slug": "12-flyktninger-med-mk-bofjord",
+     "name": "12 flyktninger med MK Bøfjord"
+    },
+    {
+     "slug": "12-flyktninger-med-mk-traust-stjernen",
+     "name": "12 flyktninger med MK Traust/Stjernen"
+    },
+    {
+     "slug": "13-flyktninger-mk-glinmt",
+     "name": "13 Flyktninger MK GLINMT"
+    },
+    {
+     "slug": "13-flyktninger",
+     "name": "13 Flyktninger"
+    },
+    {
+     "slug": "14-flyktinger-fedje",
+     "name": "14 flyktinger Fedje"
+    },
+    {
+     "slug": "16-totalt-dro-over",
+     "name": "16 totalt dro over"
+    },
+    {
+     "slug": "16-flyktninger-fra-vefsn",
+     "name": "17 flyktninger fra Vefsn"
+    },
+    {
+     "slug": "19-flyktinger-tananger-til-aberdeen",
+     "name": "19 flyktinger Tananger til Aberdeen"
+    },
+    {
+     "slug": "19-flyktninger-ms-arnafjord",
+     "name": "19 flyktninger MS Arnafjord"
+    },
+    {
+     "slug": "19-flyktninger-fra-hernar",
+     "name": "19 flyktninger fra Hernar"
+    },
+    {
+     "slug": "19-kjente",
+     "name": "19 kjente"
+    },
+    {
+     "slug": "1st-officer-campbell",
+     "name": "1st Officer Campbell"
+    },
+    {
+     "slug": "1st-offiser-fowler",
+     "name": "1st Offiser Fowler"
+    },
+    {
+     "slug": "1st-off-tennyson",
+     "name": "1st off Tennyson BOAC"
+    },
+    {
+     "slug": "2-barn-aud-og-maria-dronen",
+     "name": "2 barn, Aud og Marta Drønen"
+    },
+    {
+     "slug": "2-britiske-offiserer",
+     "name": "2 britiske offiserer"
+    }
+   ],
+   "truncatedFrom": 3957
+  },
+  {
+   "query": "MATCH (p:Person)-[m:MEMBER_OF]->(:Unit)-[:PART_OF*0..]->(u:Unit {slug: $slug})\n           OPTIONAL MATCH (p)-[:RANK]->(r:Rank)\n           WHERE r.canonicalName <> 'Menig'\n           WITH p, r, collect(m) AS edges\n           WITH p, r,\n                head([e IN edges WHERE e.description IS NOT NULL] + edges) AS m\n           RETURN p.slug AS slug, p.canonicalName AS name,\n                  r.abbreviation AS rank, p.status AS status,\n                  m.role AS role, m.description AS description,\n                  m.sourceRefs AS sourceRefs,\n                  m.startDate AS startDate, m.endDate AS endDate\n           ORDER BY CASE WHEN m.description IS NOT NULL THEN 1 ELSE 0 END,\n                    name",
+   "params": {
+    "slug": "02-soe"
+   },
+   "rows": []
+  },
+  {
+   "query": "\n      MATCH (p:Person)-[m:MEMBER_OF]->(u:Unit {slug: $slug})\n      OPTIONAL MATCH (p)-[:HAS_MEMBERSHIP_NOTE]->(d:Description)-[:ABOUT_UNIT]->(u)\n      OPTIONAL MATCH (d)-[:SOURCED_FROM]->(from:Source)\n      WITH p, m, d, from\n      OPTIONAL MATCH (d)-[cites:CITES]->(src:Source)\n      WITH p, m, d, from,\n           collect(CASE WHEN src IS NULL THEN NULL ELSE {\n             inline:       coalesce(cites.inline, false),\n             sourceId:     src.id,\n             sourceTitle:  src.title,\n             sourceUrl:    src.url,\n             sourceAuthor: src.authorFreeText\n           } END) AS rawCites\n      WITH p, m, d, from,\n           CASE WHEN d IS NULL THEN NULL ELSE {\n             order:     coalesce(d.order, 1),\n             content:   d.content,\n             citations: [x IN rawCites WHERE x IS NOT NULL],\n             sourcedFrom: CASE WHEN from IS NULL THEN NULL ELSE {\n               id:             from.id,\n               title:          from.title,\n               url:             from.url,\n               authorFreeText: from.authorFreeText,\n               license:        from.license,\n               attribution:    from.attribution\n             } END\n           } END AS section\n      WITH p, m, collect(section) AS rawSections\n      RETURN p.slug AS targetSlug, p.canonicalName AS targetName,\n             m.role AS role, m.startDate AS startDate, m.endDate AS endDate,\n             [x IN rawSections WHERE x IS NOT NULL] AS sections\n      ORDER BY m.startDate, targetName\n    ",
+   "params": {
+    "slug": "02-soe"
+   },
+   "rows": []
+  },
+  {
+   "query": "\n    MATCH (r:Role)\n    OPTIONAL MATCH (r)-[:HAS_CONTENT]->(d:Description)\n    OPTIONAL MATCH (d)-[:CITES|SOURCED_FROM]->(s:Source)\n    WITH r, d, collect(DISTINCT s.id) AS ids\n    ORDER BY coalesce(d.order, 1)\n    WITH r, [x IN collect(d.content) WHERE x IS NOT NULL] AS sections,\n         reduce(acc = [], l IN collect(ids) | acc + l) AS allIds\n    RETURN r.key AS key, r.name AS name, r.scopes AS scopes, r.attended AS attended, sections,\n           reduce(acc = [], i IN allIds | CASE WHEN i IN acc THEN acc ELSE acc + i END) AS sourceIds\n  ",
+   "params": {},
+   "rows": [
+    {
+     "key": "operative",
+     "name": "operatør",
+     "scopes": [
+      "membership"
+     ],
+     "attended": false,
+     "sections": [],
+     "sourceIds": []
+    },
+    {
+     "key": "courier",
+     "name": "kurér",
+     "scopes": [
+      "membership"
+     ],
+     "attended": false,
+     "sections": [],
+     "sourceIds": []
+    },
+    {
+     "key": "radiotelegraph",
+     "name": "radiotelegrafist",
+     "scopes": [
+      "membership"
+     ],
+     "attended": false,
+     "sections": [],
+     "sourceIds": []
+    },
+    {
+     "key": "host",
+     "name": "vert",
+     "scopes": [
+      "membership"
+     ],
+     "attended": false,
+     "sections": [],
+     "sourceIds": []
+    },
+    {
+     "key": "informant",
+     "name": "informant",
+     "scopes": [
+      "membership"
+     ],
+     "attended": false,
+     "sections": [],
+     "sourceIds": []
+    },
+    {
+     "key": "member",
+     "name": "medlem",
+     "scopes": [
+      "membership"
+     ],
+     "attended": false,
+     "sections": [],
+     "sourceIds": []
+    },
+    {
+     "key": "administrative",
+     "name": "administrativt",
+     "scopes": [
+      "part-of"
+     ],
+     "attended": false,
+     "sections": [],
+     "sourceIds": []
+    },
+    {
+     "key": "operational",
+     "name": "operativt",
+     "scopes": [
+      "part-of"
+     ],
+     "attended": false,
+     "sections": [],
+     "sourceIds": []
+    },
+    {
+     "key": "sponsor",
+     "name": "sponsor",
+     "scopes": [
+      "part-of"
+     ],
+     "attended": false,
+     "sections": [],
+     "sourceIds": []
+    },
+    {
+     "key": "parent",
+     "name": "overordnet",
+     "scopes": [
+      "part-of"
+     ],
+     "attended": false,
+     "sections": [],
+     "sourceIds": []
+    },
+    {
+     "key": "stationed",
+     "name": "stasjonert",
+     "scopes": [
+      "stationed"
+     ],
+     "attended": false,
+     "sections": [],
+     "sourceIds": []
+    },
+    {
+     "key": "hiding",
+     "name": "i skjul",
+     "scopes": [
+      "stationed"
+     ],
+     "attended": false,
+     "sections": [],
+     "sourceIds": []
+    },
+    {
+     "key": "imprisoned",
+     "name": "fange",
+     "scopes": [
+      "stationed"
+     ],
+     "attended": false,
+     "sections": [],
+     "sourceIds": []
+    },
+    {
+     "key": "training",
+     "name": "opplæring",
+     "scopes": [
+      "stationed"
+     ],
+     "attended": true,
+     "sections": [],
+     "sourceIds": []
+    },
+    {
+     "key": "operating",
+     "name": "operatør",
+     "scopes": [
+      "stationed"
+     ],
+     "attended": false,
+     "sections": [],
+     "sourceIds": []
+    },
+    {
+     "key": "instructor",
+     "name": "instruktør",
+     "scopes": [
+      "stationed"
+     ],
+     "attended": true,
+     "sections": [],
+     "sourceIds": []
+    }
+   ]
+  },
+  {
+   "query": "MATCH (u:Unit {slug: $slug})\n           RETURN u.canonicalName AS name,\n                  u.formalName    AS formalName,\n                  u.type          AS type,\n                  u.color         AS color,\n                  u.foundedDate   AS foundedDate,\n                  u.dissolvedDate AS dissolvedDate,\n                  u.country       AS country",
+   "params": {
+    "slug": "02-soe"
+   },
+   "rows": [
+    {
+     "name": "02-SOE",
+     "formalName": null,
+     "type": "district",
+     "color": null,
+     "foundedDate": null,
+     "dissolvedDate": null,
+     "country": null
+    }
+   ]
+  },
+  {
+   "query": "MATCH (u:Unit {slug: $slug})-[:HAS_CONTENT]->(d:Description)\n           OPTIONAL MATCH (d)-[:SOURCED_FROM]->(from:Source)\n           WITH d, from\n           OPTIONAL MATCH (d)-[cites:CITES]->(src:Source)\n           WITH d, from,\n                collect(CASE WHEN src IS NULL THEN NULL ELSE {\n                  inline:       coalesce(cites.inline, false),\n                  sourceId:     src.id,\n                  sourceTitle:  src.title,\n                  sourceUrl:    src.url,\n                  sourceAuthor: src.authorFreeText\n                } END) AS rawCites\n           RETURN coalesce(d.order, 1) AS `order`,\n                  d.content AS content,\n                  [x IN rawCites WHERE x IS NOT NULL] AS citations,\n                  CASE WHEN from IS NULL THEN NULL ELSE {\n                    id:             from.id,\n                    title:          from.title,\n                    url:             from.url,\n                    authorFreeText: from.authorFreeText,\n                    license:        from.license,\n                    attribution:    from.attribution\n                  } END AS sourcedFrom\n           ORDER BY `order`",
+   "params": {
+    "slug": "02-soe"
+   },
+   "rows": []
+  },
+  {
+   "query": "MATCH (u:Unit {slug: $slug})-[:REFERENCED_IN]->(s:Source)\n           RETURN s.id AS id, s.title AS title, s.url AS url,\n                  s.type AS type, s.domain AS domain,\n                  coalesce(s.nbBacked, false) AS nbBacked\n           ORDER BY nbBacked DESC, s.type, coalesce(s.title, s.url)",
+   "params": {
+    "slug": "02-soe"
+   },
+   "rows": []
+  },
+  {
+   "query": "MATCH (u:Unit {slug: $slug})-[r:PART_OF]->(parent)\n           WHERE parent:Organization OR parent:Unit\n           RETURN parent.canonicalName AS name,\n                  parent.slug          AS slug,\n                  labels(parent)[0]    AS label,\n                  parent.color         AS color,\n                  r.role               AS role,\n                  r.description        AS description,\n                  r.sourceRefs         AS sourceRefs,\n                  coalesce(r.order, 999) AS `order`\n           ORDER BY CASE WHEN r.description IS NOT NULL THEN 1 ELSE 0 END,\n                    `order`, name",
+   "params": {
+    "slug": "02-soe"
+   },
+   "rows": []
+  },
+  {
+   "query": "MATCH (u:Unit {slug: $slug})<-[:MEMBER_OF]-(p:Person)-[:INVOLVED_IN|PARTICIPATED_IN]->(i:Incident|Operation)\n           WHERE i.date IS NULL\n              OR (\n                (u.foundedDate   IS NULL OR i.date >= u.foundedDate) AND\n                (u.dissolvedDate IS NULL OR i.date <= u.dissolvedDate)\n              )\n           RETURN DISTINCT i.slug AS slug, coalesce(i.title, i.codeName) AS title, i.date AS date\n           ORDER BY date",
+   "params": {
+    "slug": "02-soe"
+   },
+   "rows": []
+  },
+  {
+   "query": "MATCH (unit:Unit {slug: $slug})\n           CALL {\n             WITH unit\n             MATCH (unit)-[h:HAS_IMAGE]->(s:Source)\n             RETURN s.url AS url, h.caption AS caption,\n                    unit.canonicalName AS subjectName, unit.slug AS subjectSlug,\n                    'unit' AS subjectType, 0 AS sortKey\n             UNION\n             WITH unit\n             MATCH (unit)<-[:MEMBER_OF]-(:Person)-[:INVOLVED_IN|PARTICIPATED_IN]->(i:Incident|Operation)<-[:RELATED_TO {kind:'contains'}]-(op:Operation)-[h:HAS_IMAGE]->(s:Source)\n             WHERE coalesce(h.scope, 'propagate') <> 'entity'\n               AND (i.date IS NULL OR (\n                 (unit.foundedDate   IS NULL OR i.date >= unit.foundedDate) AND\n                 (unit.dissolvedDate IS NULL OR i.date <= unit.dissolvedDate)\n               ))\n             RETURN s.url AS url, h.caption AS caption,\n                    op.codeName AS subjectName, op.slug AS subjectSlug,\n                    'operation' AS subjectType, 1 AS sortKey\n             UNION\n             WITH unit\n             MATCH (unit)-[:PART_OF*1..]->(o:Organization)-[h:HAS_IMAGE]->(s:Source)\n             WHERE coalesce(h.scope, 'propagate') <> 'entity'\n             RETURN s.url AS url, h.caption AS caption,\n                    o.canonicalName AS subjectName, o.slug AS subjectSlug,\n                    'organization' AS subjectType, 2 AS sortKey\n             UNION\n             WITH unit\n             MATCH (unit)<-[:MEMBER_OF]-(:Person)-[:INVOLVED_IN|PARTICIPATED_IN]->(i:Incident|Operation)-[h:HAS_IMAGE]->(s:Source)\n             WHERE coalesce(h.scope, 'propagate') <> 'entity'\n               AND (i.date IS NULL OR (\n                 (unit.foundedDate   IS NULL OR i.date >= unit.foundedDate) AND\n                 (unit.dissolvedDate IS NULL OR i.date <= unit.dissolvedDate)\n               ))\n             RETURN s.url AS url, h.caption AS caption,\n                    coalesce(i.title, i.codeName) AS subjectName, i.slug AS subjectSlug,\n                    CASE WHEN i:Operation THEN 'operation' ELSE 'incident' END AS subjectType, 3 AS sortKey\n             UNION\n             WITH unit\n             MATCH (unit)<-[:MEMBER_OF]-(p:Person)-[h:HAS_IMAGE]->(s:Source)\n             WHERE coalesce(h.scope, 'propagate') <> 'entity'\n             RETURN s.url AS url, h.caption AS caption,\n                    p.canonicalName AS subjectName, p.slug AS subjectSlug,\n                    'person' AS subjectType, 4 AS sortKey\n           }\n           RETURN url, caption, subjectName, subjectSlug, subjectType, sortKey\n           ORDER BY sortKey, subjectName\n           LIMIT 200",
+   "params": {
+    "slug": "02-soe"
+   },
+   "rows": []
+  }
+ ],
+ "gets": []
+}

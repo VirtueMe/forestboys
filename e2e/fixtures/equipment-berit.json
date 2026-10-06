@@ -1,0 +1,101 @@
+{
+ "path": "/equipment/berit",
+ "queries": [
+  {
+   "query": "\n      MATCH (:EquipmentType {slug: $slug})-[:PAIRED_WITH]-(other:EquipmentType)\n      RETURN DISTINCT other.slug AS targetSlug, trim(other.canonicalName) AS targetName\n      ORDER BY targetName\n    ",
+   "params": {
+    "slug": "berit"
+   },
+   "rows": []
+  },
+  {
+   "query": "MATCH (:EquipmentType {slug: $slug})-[:REFERENCED_IN]->(src:Source)\n           RETURN src.id AS id, src.title AS title, src.url AS url,\n                  src.type AS type, src.domain AS domain,\n                  coalesce(src.nbBacked, false) AS nbBacked\n           ORDER BY nbBacked DESC, src.type, coalesce(src.title, src.url)",
+   "params": {
+    "slug": "berit"
+   },
+   "rows": [
+    {
+     "id": "en-wikipedia-org-wiki-morse-code-012751f1",
+     "title": "Morse Code",
+     "url": "https://en.wikipedia.org/wiki/Morse_code",
+     "type": "encyclopedia",
+     "domain": "en.wikipedia.org",
+     "nbBacked": false
+    },
+    {
+     "id": "youtube-com-watch-1943b60e",
+     "title": "Video BERIT - Helge Fykse",
+     "url": "https://www.youtube.com/watch?v=VBXZl0Pr3rw",
+     "type": "video",
+     "domain": "youtube.com",
+     "nbBacked": false
+    },
+    {
+     "id": "spycom-org-ww2-berit-1d179560",
+     "title": "Senderen BERIT - fra Spycom.org",
+     "url": "https://www.spycom.org/WW2/berit/",
+     "type": "website",
+     "domain": "spycom.org",
+     "nbBacked": false
+    }
+   ]
+  },
+  {
+   "query": "MATCH (d:Description)-[:ABOUT]->(:EquipmentType {slug: $slug})\n           RETURN d.content AS content\n           ORDER BY coalesce(d.order, 1), d.id",
+   "params": {
+    "slug": "berit"
+   },
+   "rows": [
+    {
+     "content": "[{\"_key\":\"a553280dd519\",\"_type\":\"block\",\"children\":[{\"_key\":\"bf4328f2bedc\",\"_type\":\"span\",\"marks\":[],\"text\":\"Senderen BERIT - fra Spycopm.org.\"}],\"markDefs\":[],\"style\":\"normal\"},{\"_key\":\"25d0c9e794d6\",\"_type\":\"block\",\"children\":[{\"_key\":\"17b6d0695115\",\"_type\":\"span\",\"marks\":[],\"text\":\"Her er også prøver av senderen med Helge Fykse.\"}],\"markDefs\":[],\"style\":\"normal\"}]"
+    }
+   ]
+  },
+  {
+   "query": "MATCH (e:EquipmentType {slug: $slug})\n           RETURN e.slug AS slug, trim(e.canonicalName) AS canonicalName,\n                  e.type AS type, e.subtype AS subtype,\n                  e.country AS country, e.period AS period",
+   "params": {
+    "slug": "berit"
+   },
+   "rows": [
+    {
+     "slug": "berit",
+     "canonicalName": "BERIT",
+     "type": "radio",
+     "subtype": "agent-radio",
+     "country": "NO",
+     "period": null
+    }
+   ]
+  },
+  {
+   "query": "MATCH (e:EquipmentType {slug: $slug})-[:HAS_CONTENT]->(d:Description)\n           OPTIONAL MATCH (d)-[:SOURCED_FROM]->(from:Source)\n           WITH d, from\n           OPTIONAL MATCH (d)-[cites:CITES]->(src:Source)\n           WITH d, from,\n                collect(CASE WHEN src IS NULL THEN NULL ELSE {\n                  inline:       coalesce(cites.inline, false),\n                  sourceId:     src.id,\n                  sourceTitle:  src.title,\n                  sourceUrl:    src.url,\n                  sourceAuthor: src.authorFreeText\n                } END) AS rawCites\n           RETURN coalesce(d.order, 1) AS `order`,\n                  d.content AS content,\n                  [x IN rawCites WHERE x IS NOT NULL] AS citations,\n                  CASE WHEN from IS NULL THEN NULL ELSE {\n                    id:             from.id,\n                    title:          from.title,\n                    url:            from.url,\n                    authorFreeText: from.authorFreeText,\n                    license:        from.license,\n                    attribution:    from.attribution\n                  } END AS sourcedFrom\n           ORDER BY `order`",
+   "params": {
+    "slug": "berit"
+   },
+   "rows": []
+  },
+  {
+   "query": "\n      MATCH (e:EquipmentType) WHERE e.slug IS NOT NULL\n      RETURN e.slug AS slug, trim(e.canonicalName) AS name\n      ORDER BY name\n    ",
+   "params": {},
+   "rows": [
+    {
+     "slug": "berit",
+     "name": "BERIT"
+    },
+    {
+     "slug": "eureka",
+     "name": "EUREKA - (tranciever til Rebecca mottaker i fly)."
+    },
+    {
+     "slug": "olga",
+     "name": "OLGA"
+    },
+    {
+     "slug": "rebecca",
+     "name": "Rebecca"
+    }
+   ]
+  }
+ ],
+ "gets": []
+}
