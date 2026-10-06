@@ -1,12 +1,11 @@
 import { expect, test, type Page } from '@playwright/test'
 import { caretAtEndOf, undo } from './helpers/editor.ts'
 
-// What Lagre sends, when it is pressed right after a change (#140). The editor reports a change to the
-// page about 0.3 s after typing and about 1 s after an undo, and the save sends what the page last
-// heard. Measured, with a real mouse click: a Lagre within a second of an undo saves the text from before
-// it, and one within 0.1 s of typing misses the last word. That is a bug of its own, #145; the two tests
-// below are what it should do, marked as expected to fail until #145 is fixed. When it is, they pass,
-// Playwright reports «expected to fail, but passed», and the `test.fail` goes.
+// What Lagre sends, when it is pressed right after a change (#140, fixed in #145). The editor reports a
+// change to the page about 0.3 s after typing and about 1 s after an undo, and Lagre used to send what
+// the page last heard: a Lagre within a second of an undo saved the text from before it, and one within
+// 0.1 s of typing missed the last word. Lagre now asks every editor for what it holds before it sends
+// (`flush`), so the two tests below hold at any delay.
 //
 // The real DescriptionEditor with its real save bar and PATCH (e2e/harness/description.html); the PATCH is
 // answered by a stub and its body read.
@@ -41,7 +40,7 @@ test.describe('Lagre right after a change', () => {
     await expect.poll(sent).toEqual([['Første avsnitt. Mer']])
   })
 
-  test.fail('Lagre right after an undo saves the text on the screen (#145)', async ({ page }) => {
+  test('Lagre right after an undo saves the text on the screen (#145)', async ({ page }) => {
     const { sent } = await open(page)
     await page.keyboard.type(' Mer tekst.')
     await expect(lagre(page)).toBeVisible()
@@ -52,7 +51,7 @@ test.describe('Lagre right after a change', () => {
     expect(sent()).toEqual([['Første avsnitt. Mer']])
   })
 
-  test.fail('Lagre right after typing saves the last word (#145)', async ({ page }) => {
+  test('Lagre right after typing saves the last word (#145)', async ({ page }) => {
     const { sent } = await open(page)
     await page.keyboard.type(' Tekst')
     await expect(lagre(page)).toBeVisible()

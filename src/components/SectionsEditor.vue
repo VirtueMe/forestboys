@@ -20,6 +20,7 @@
         </div>
 
         <PortableTextEditor
+          :ref="el => setEditor(section.order, el)"
           :model-value="sectionBlocks(section)"
           @update:model-value="blocks => onContentChange(section, blocks)"
         />
@@ -125,6 +126,15 @@ const editingSourceId = ref<string | null>(null)
 function sectionBlocks(s: Section): PortableTextBlock[] {
   try { return JSON.parse(s.content) as PortableTextBlock[] } catch { return [] }
 }
+
+// One editor per section; `flush` makes each report what it holds right now (#145).
+const editors = new Map<number, { flush: () => void }>()
+function setEditor(order: number, el: unknown) {
+  if (el) editors.set(order, el as { flush: () => void })
+  else editors.delete(order)
+}
+function flush() { editors.forEach(e => e.flush()) }
+defineExpose({ flush })
 
 function onContentChange(s: Section, blocks: PortableTextBlock[]) {
   s.content = JSON.stringify(blocks)

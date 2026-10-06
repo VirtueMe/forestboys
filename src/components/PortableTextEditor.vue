@@ -27,6 +27,19 @@ const expanded = ref(false)
 let held: string | null = null
 let generation = 0
 
+// The editor reports a change late (about 0.3 s after typing, 1 s after an undo), so the draft can
+// be behind the screen. `flush` reads what the editor holds right now and reports it at once (#145).
+let read: (() => PortableTextBlock[] | undefined) | null = null
+function flush() {
+  const blocks = read?.()
+  if (!blocks) return
+  const now = JSON.stringify(blocks)
+  if (now === held) return
+  held = now
+  emit('update:modelValue', blocks)
+}
+defineExpose({ flush })
+
 function render() {
   if (!root) return
   root.render(
@@ -39,6 +52,7 @@ function render() {
       },
       expanded: expanded.value,
       onToggleExpand: () => { expanded.value = !expanded.value },
+      registerReader: (fn: (() => PortableTextBlock[] | undefined) | null) => { read = fn },
     }),
   )
 }
