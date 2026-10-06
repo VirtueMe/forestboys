@@ -80,8 +80,11 @@ onBeforeUnmount(() => {
   margin: 2px 4px;
 }
 
+/* The text scrolls inside its box, as in Sanity, so the toolbar above it stays in view (#123). */
 .pt-editable {
   min-height: 200px;
+  max-height: 60vh;
+  overflow-y: auto;
   padding: 12px;
   border: 1px solid var(--rule);
   border-radius: 0 0 6px 6px;
