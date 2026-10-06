@@ -15,6 +15,8 @@ export interface Harness {
   value(): Block[]
   /** How many times the editor has reported a change. */
   reports(): number
+  /** Everything the editor reported, in order, as JSON: for working out what happened when a test fails. */
+  history(): string[]
   /** Replace the content from outside, as «Angre» or a repaired heading does: the editor starts over. */
   set(blocks: Block[]): void
 }
