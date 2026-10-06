@@ -1,6 +1,8 @@
 ---
+version: alpha
 name: Milorg Utforsker — Archival Paper (light)
 colors:
+  primary: "#8B2E1F"   # the spec asks for a primary; our single accent, same value as faded-red
   ink: "#1A1A1A"
   ink-soft: "#3D3A35"
   paper: "#F4EFE4"
@@ -56,7 +58,7 @@ typography:
     fontWeight: 600
     lineHeight: 1.2
     letterSpacing: "0.08em"
-    textTransform: uppercase
+    # uppercase (text-transform) is not a spec property; see the Typography section
   mono:
     fontFamily: JetBrains Mono
     fontSize: 0.875rem
@@ -86,6 +88,20 @@ layout:
   breakpoint-sm: 640px
   breakpoint-md: 900px
   breakpoint-lg: 1200px
+components:
+  # The foreground/background pairs the design uses, so the lint can check their contrast
+  # (npm run check:design). Only pairs the documents or the code state; the rendered ones are #134 stage 2.
+  body:               {backgroundColor: "{colors.paper}",        textColor: "{colors.ink}"}
+  body-raised:        {backgroundColor: "{colors.paper-raised}", textColor: "{colors.ink}"}
+  secondary:          {backgroundColor: "{colors.paper}",        textColor: "{colors.ink-soft}"}
+  secondary-raised:   {backgroundColor: "{colors.paper-raised}", textColor: "{colors.ink-soft}"}
+  caption:            {backgroundColor: "{colors.paper}",        textColor: "{colors.muted}"}
+  caption-raised:     {backgroundColor: "{colors.paper-raised}", textColor: "{colors.muted}"}
+  caption-sunken:     {backgroundColor: "{colors.paper-sunken}", textColor: "{colors.muted}"}
+  accent-text:        {backgroundColor: "{colors.paper}",        textColor: "{colors.faded-red}"}
+  accent-text-raised: {backgroundColor: "{colors.paper-raised}", textColor: "{colors.faded-red}"}
+  button-primary:     {backgroundColor: "{colors.faded-red}",    textColor: "{colors.paper}"}
+  badge-accepted:     {backgroundColor: "{colors.moss}",         textColor: "{colors.paper}"}
 ---
 
 ## Overview
@@ -139,12 +155,18 @@ The palette is four paper tones, one ink, one accent, plus functional utilities.
 
 ### Contrast rules
 
-- Body text (`ink` on `paper`) is 13.2:1 — comfortably AAA.
-- `ink-soft` on `paper` is 9.1:1 — AAA.
-- `muted` on `paper` is 4.7:1 — AA only. Do not use for body prose; captions
-  and metadata only.
-- `faded-red` on `paper` is 5.4:1 — AA for text. Fine for buttons with white
-  or cream text inside; test any red-on-paper text at the size you use it.
+The foreground/background pairs the design uses are declared under `components` in the front
+matter, and `npm run check:design` computes their contrast (WCAG 2.x, AA is 4.5:1 for normal text)
+with the linter of the DESIGN.md format, `@google/design.md`. The ratios used to be written here by
+hand and several were wrong, so none are quoted: the check is the source. A pair that is below AA
+today is listed in `scripts/design/check.ts` (`KNOWN_BELOW_AA`) until it is decided what to do with it (#134).
+
+The rules of use stay:
+
+- `ink` on `paper` is body text; `ink-soft` is secondary text.
+- `muted` is for captions and metadata, never body prose.
+- `faded-red` as text on paper, and as a button background with `paper` text: test the pair at the
+  size it is used.
 
 ## Typography
 
