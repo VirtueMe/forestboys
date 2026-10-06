@@ -19,12 +19,24 @@ let root: Root | null = null
 // draft, the selection and the undo history are the ones the inline editor has. Not a second editor.
 const expanded = ref(false)
 
+// The React editor takes its value once, when it mounts. A change that did not come from the editor
+// itself (a repaired heading, a fixed link, «Angre») would never reach it, and its next keystroke
+// would put the old content back. So what the editor holds is remembered (what it last reported, or
+// what it was started over with), and a different incoming value starts it over. The draft is a JSON
+// string that comes back exactly as it was reported, so typing never looks like an outside change.
+let held: string | null = null
+let generation = 0
+
 function render() {
   if (!root) return
   root.render(
     React.createElement(PortableTextEditorReact, {
       value:    props.modelValue,
-      onChange: (blocks: PortableTextBlock[]) => emit('update:modelValue', blocks),
+      generation,
+      onChange: (blocks: PortableTextBlock[]) => {
+        held = JSON.stringify(blocks)
+        emit('update:modelValue', blocks)
+      },
       expanded: expanded.value,
       onToggleExpand: () => { expanded.value = !expanded.value },
     }),
@@ -46,7 +58,11 @@ onMounted(() => {
   if (!host.value) return
   root = createRoot(host.value)
   render()
-  watch(() => props.modelValue, render)
+  watch(() => props.modelValue, value => {
+    const incoming = JSON.stringify(value)
+    if (incoming !== held) { generation++; held = incoming }
+    render()
+  })
 })
 
 onBeforeUnmount(() => {
@@ -89,9 +105,19 @@ onBeforeUnmount(() => {
   font-family: inherit;
 }
 .pt-tb-btn:hover  { background: var(--paper-raised); }
-.pt-tb-menu { position: relative; display: inline-block; }
-/* The ▾ sits against the H3 button: narrow, and no gap between them. */
+.pt-tb-menu { position: relative; display: inline-flex; }
+/* H3 and the ▾ are one split button: the group draws the outline, a hairline divides the two. */
+.pt-tb-split {
+  display: inline-flex;
+  align-items: stretch;
+  border: 1px solid var(--rule);
+  border-radius: 4px;
+}
+.pt-tb-split .pt-tb-btn { border-color: transparent; border-radius: 0; }
+.pt-tb-split > .pt-tb-btn { border-radius: 3px 0 0 3px; }
+.pt-tb-split .pt-tb-menu .pt-tb-btn { border-radius: 0 3px 3px 0; }
 .pt-tb-more { min-width: 20px; padding: 0 4px; font-size: 13px; }
+.pt-tb-split .pt-tb-more { border-left-color: var(--rule); }
 
 .pt-menu {
   position: absolute;
