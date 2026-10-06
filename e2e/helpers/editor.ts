@@ -55,6 +55,41 @@ export async function caretAtEndOf(page: Page, text: string) {
   await expect.poll(() => caretIsAtEnd(page), { message: `the caret never reached the end of «${text}»` }).toBe(true)
 }
 
+/** Is the browser's caret collapsed, and at the very start of the text node it is in? */
+const caretIsAtStart = (page: Page) => page.evaluate(() => {
+  type Sel = { focusNode: unknown; isCollapsed: boolean; focusOffset: number } | null
+  const s = (globalThis as unknown as { getSelection(): Sel }).getSelection()
+  return !!s?.focusNode && s.isCollapsed && s.focusOffset === 0
+})
+
+/**
+ * Put the caret at the start of the text that contains `text`: the twin of `caretAtEndOf`, with the click at
+ * the left edge. It only proves the browser's caret is there. The editor takes the selection over a moment
+ * later, so wait on something the editor derives (a list button's `active` class) or `settleSelection`
+ * before pressing a key that acts on the caret.
+ */
+export async function caretAtStartOf(page: Page, text: string) {
+  const leaf = page.locator('.pt-editable').getByText(text, { exact: false }).first()
+  const box = await leaf.boundingBox()
+  if (!box) throw new Error(`«${text}» is not on screen`)
+  await leaf.click({ position: { x: 1, y: box.height / 2 } })
+  await page.keyboard.press('Home')
+  await expect.poll(() => caretIsAtStart(page), { message: `the caret never reached the start of «${text}»` }).toBe(true)
+}
+
+/**
+ * Paste, as the browser delivers it: a `paste` event carrying the given clipboard formats
+ * (`{ 'text/plain': ..., 'text/html': ... }`). The real clipboard is not used: the test controls exactly what
+ * is on it, and the editor reads the event's data and nothing else.
+ */
+export const paste = (page: Page, data: Record<string, string>) => page.locator('.pt-editable').evaluate((el, formats) => {
+  type Transfer = { setData(type: string, value: string): void }
+  const G = globalThis as unknown as { DataTransfer: new () => Transfer; ClipboardEvent: new (type: string, init: object) => unknown }
+  const clipboardData = new G.DataTransfer()
+  for (const [type, value] of Object.entries(formats)) clipboardData.setData(type, value)
+  ;(el as unknown as { dispatchEvent(e: unknown): boolean }).dispatchEvent(new G.ClipboardEvent('paste', { clipboardData, bubbles: true, cancelable: true }))
+}, data)
+
 /**
  * Press a key that changes the document (Enter, Tab) and wait until the editor has reported it. The next
  * key must not reach the editor before this one has been applied, or it acts on the old state.

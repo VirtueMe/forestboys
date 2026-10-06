@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test'
-import { blocksOf, caretAtEndOf, listOf, openEditor, pressAndWait, reportedTexts, texts } from './helpers/editor.ts'
+import { blocksOf, caretAtEndOf, caretAtStartOf, listOf, openEditor, pressAndWait, reportedTexts, settleSelection, texts } from './helpers/editor.ts'
 
 // Lists in the editor (#124): they survive, they continue, they end, they indent.
 test.describe('lists', () => {
@@ -68,5 +68,48 @@ test.describe('lists', () => {
     await expect.poll(kind).toBe('number')
     await page.getByRole('button', { name: 'Nummerert liste' }).click()
     await expect.poll(kind).toBe(null)
+  })
+
+  // Backspace at the very start of an item: the editor's own rules, pinned so an upgrade that changes them is seen.
+  test.describe('Backspace at the start of an item', () => {
+    const editorHasCaretIn = (page: import('@playwright/test').Page, button: 'Punktliste' | 'Nummerert liste') =>
+      expect(page.getByRole('button', { name: button })).toHaveClass(/active/)
+
+    test('takes a top-level item out of the list and leaves the other items as they are', async ({ page }) => {
+      await openEditor(page, 'lists')
+      await caretAtStartOf(page, 'Andre punkt')
+      await editorHasCaretIn(page, 'Punktliste')
+      await pressAndWait(page, 'Backspace')
+      await expect.poll(async () => (await blocksOf(page)).map(listOf)).toEqual([
+        { kind: 'bullet', level: 1 }, null, { kind: 'bullet', level: 2 }, { kind: 'number', level: 1 }, null,
+      ])
+      expect(texts(await blocksOf(page))).toEqual(['Første punkt', 'Andre punkt', 'Underpunkt', 'Første nummer', 'Et avsnitt etter listen.'])
+    })
+
+    test('takes an indented item one level out, and keeps it in the list', async ({ page }) => {
+      await openEditor(page, 'lists')
+      await caretAtStartOf(page, 'Underpunkt')
+      await editorHasCaretIn(page, 'Punktliste')
+      await pressAndWait(page, 'Backspace')
+      await expect.poll(async () => listOf((await blocksOf(page))[2])).toEqual({ kind: 'bullet', level: 1 })
+    })
+
+    test('takes a numbered item out of its list', async ({ page }) => {
+      await openEditor(page, 'lists')
+      await caretAtStartOf(page, 'Første nummer')
+      await editorHasCaretIn(page, 'Nummerert liste')
+      await pressAndWait(page, 'Backspace')
+      await expect.poll(async () => listOf((await blocksOf(page))[3])).toBe(null)
+      expect(texts(await blocksOf(page))[3]).toBe('Første nummer')
+    })
+
+    test('in the paragraph after a list, joins the paragraph to the last item', async ({ page }) => {
+      await openEditor(page, 'lists')
+      await caretAtStartOf(page, 'Et avsnitt etter listen.')
+      await settleSelection(page)
+      await pressAndWait(page, 'Backspace')
+      await expect.poll(() => reportedTexts(page)).toEqual(['Første punkt', 'Andre punkt', 'Underpunkt', 'Første nummerEt avsnitt etter listen.'])
+      expect(listOf((await blocksOf(page))[3])).toEqual({ kind: 'number', level: 1 })
+    })
   })
 })
