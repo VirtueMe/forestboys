@@ -346,7 +346,8 @@ function handleInternalLinks(e: MouseEvent) {
 .portable-text :deep(h2),
 .portable-text :deep(h3),
 .portable-text :deep(h4),
-.portable-text :deep(h5) {
+.portable-text :deep(h5),
+.portable-text :deep(h6) {
   font-family: var(--font-serif);
   font-weight: 600;
   color: var(--ink);
@@ -356,7 +357,8 @@ function handleInternalLinks(e: MouseEvent) {
 .portable-text :deep(h2) { font-size: var(--size-h3); }
 .portable-text :deep(h3),
 .portable-text :deep(h4),
-.portable-text :deep(h5) { font-size: var(--size-body); }
+.portable-text :deep(h5),
+.portable-text :deep(h6) { font-size: var(--size-body); }
 .portable-text :deep(blockquote) {
   border-left: 3px solid var(--rule);
   margin: 0.75em 0;

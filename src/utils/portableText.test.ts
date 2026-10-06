@@ -29,6 +29,12 @@ describe('blocksToHtml', () => {
     expect(blocksToHtml([block({ text: 'Q', style: 'blockquote' })])).toBe('<blockquote>Q</blockquote>')
   })
 
+  it('renders every heading level the editor can set, h3 to h6', () => {
+    for (const level of ['h3', 'h4', 'h5', 'h6']) {
+      expect(blocksToHtml([block({ text: 'T', style: level })])).toBe(`<${level}>T</${level}>`)
+    }
+  })
+
   it('applies marks', () => {
     expect(blocksToHtml([block({ text: 'x', marks: ['strong', 'em'] })])).toBe('<p><em><strong>x</strong></em></p>')
   })

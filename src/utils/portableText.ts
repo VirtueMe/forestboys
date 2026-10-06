@@ -173,6 +173,7 @@ export function blocksToHtml(blocks?: SanityBlock[] | unknown | null): string {
         case 'h3':         flushPre(); parts.push(`<h3>${inner}</h3>`); break
         case 'h4':         flushPre(); parts.push(`<h4>${inner}</h4>`); break
         case 'h5':         flushPre(); parts.push(`<h5>${inner}</h5>`); break
+        case 'h6':         flushPre(); parts.push(`<h6>${inner}</h6>`); break
         case 'blockquote': flushPre(); parts.push(`<blockquote>${inner}</blockquote>`); break
         default:
           if (inner && inner.includes('\t')) {
