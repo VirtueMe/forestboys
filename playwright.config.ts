@@ -5,7 +5,8 @@ import { defineConfig, devices } from '@playwright/test'
  * `npm run test:e2e`. They run against the Vite dev server, not the build, because the editor
  * harness (e2e/harness) is a dev-only page that the production build does not contain.
  *
- * One browser to start: Chromium. `npx playwright install chromium` fetches it.
+ * One browser to start: Chromium. `npx playwright install chromium` fetches it. CI installs only the headless
+ * shell (`--only-shell`), which is what these tests run in; a headed run (`--headed`, `--ui`) needs the full one.
  */
 
 const PORT = Number(process.env.E2E_PORT ?? 5174)
@@ -29,5 +30,8 @@ export default defineConfig({
     url: `http://localhost:${PORT}/`,
     reuseExistingServer: !process.env.CI,
     timeout: 60_000,
+    // vite.config.ts asks git for release notes, and with CI set it unshallows the whole clone to find a
+    // tag. The tests need none of that, so the dev server is started as if it were not in CI.
+    env: { CI: '' },
   },
 })
