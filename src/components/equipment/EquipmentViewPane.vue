@@ -3,7 +3,7 @@
   <div class="view-pane">
     <details v-if="!hideEditable && previewSections.length" class="section" open>
       <summary class="section-summary">
-        <h3 class="section-heading">Beskrivelse</h3>
+        <h2 class="section-heading">Beskrivelse</h2>
       </summary>
       <div class="section-body">
         <DescriptionPreview :sections="previewSections" />
@@ -14,7 +14,7 @@
          until migrated to HAS_CONTENT — same treatment as Unit. -->
     <details v-if="legacyHtml.length" class="section" open>
       <summary class="section-summary">
-        <h3 class="section-heading">Beskrivelse (arkiv)</h3>
+        <h2 class="section-heading">Beskrivelse (arkiv)</h2>
       </summary>
       <div class="section-body">
         <!-- eslint-disable vue/no-v-html -->
@@ -25,7 +25,7 @@
 
     <details v-if="!hideEditable && paired.length" class="section" open>
       <summary class="section-summary">
-        <h3 class="section-heading">Paret med</h3>
+        <h2 class="section-heading">Paret med</h2>
       </summary>
       <div class="section-body">
         <div class="link-list">
@@ -43,7 +43,7 @@
 
     <details class="section" open>
       <summary class="section-summary">
-        <h3 class="section-heading">Lenker<span v-if="totalLinkCount"> ({{ totalLinkCount }})</span></h3>
+        <h2 class="section-heading">Lenker<span v-if="totalLinkCount"> ({{ totalLinkCount }})</span></h2>
       </summary>
       <div class="section-body">
         <div v-if="totalLinkCount" class="link-list">

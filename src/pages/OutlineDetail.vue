@@ -33,7 +33,7 @@
       <!-- Edit pane (admin only) -->
       <template v-if="isAdmin && mode === 'edit'">
         <section class="section edit-pane">
-          <h3 class="section-heading">Bot</h3>
+          <h2 class="section-heading">Bot</h2>
           <button
             type="button"
             class="bot-request"
@@ -76,14 +76,14 @@
       <!-- View panes -->
       <template v-if="!isAdmin || mode === 'preview'">
         <section v-if="descriptionHtml" class="section">
-          <h3 class="section-heading">Beskrivelse</h3>
+          <h2 class="section-heading">Beskrivelse</h2>
           <!-- eslint-disable vue/no-v-html -->
           <div class="portable-text" v-html="descriptionHtml"></div>
           <!-- eslint-enable vue/no-v-html -->
         </section>
 
         <section v-if="mentions.length" class="section">
-          <h3 class="section-heading">Omtalte personer ({{ mentions.length }})</h3>
+          <h2 class="section-heading">Omtalte personer ({{ mentions.length }})</h2>
           <div class="link-list">
             <RouterLink
               v-for="p in mentions"

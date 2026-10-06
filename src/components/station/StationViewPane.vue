@@ -3,7 +3,7 @@
   <div class="view-pane">
     <details v-if="!hideEditable && lat != null && lng != null" class="section" open>
       <summary class="section-summary">
-        <h3 class="section-heading">Kart</h3>
+        <h2 class="section-heading">Kart</h2>
       </summary>
       <div class="section-body">
         <LocationMap :lat="lat" :lng="lng" readonly :marker-to="slug ? `/map/${slug}` : undefined" />
@@ -12,7 +12,7 @@
 
     <details v-if="!hideEditable && sortedNames.length" class="section" open>
       <summary class="section-summary">
-        <h3 class="section-heading">Navnehistorikk ({{ sortedNames.length }})</h3>
+        <h2 class="section-heading">Navnehistorikk ({{ sortedNames.length }})</h2>
       </summary>
       <div class="section-body">
         <ul class="name-history">
@@ -28,7 +28,7 @@
 
     <details v-if="!hideEditable && previewSections.length" class="section" open>
       <summary class="section-summary">
-        <h3 class="section-heading">Beskrivelse</h3>
+        <h2 class="section-heading">Beskrivelse</h2>
       </summary>
       <div class="section-body">
         <DescriptionPreview :sections="previewSections" />
@@ -39,7 +39,7 @@
          until migrated to HAS_CONTENT. -->
     <details v-if="legacyDescription" class="section" open>
       <summary class="section-summary">
-        <h3 class="section-heading">Beskrivelse (arkiv)</h3>
+        <h2 class="section-heading">Beskrivelse (arkiv)</h2>
       </summary>
       <div class="section-body">
         <LegacyDescription :text="legacyDescription" />
@@ -48,7 +48,7 @@
 
     <details v-if="events.length" class="section" open>
       <summary class="section-summary">
-        <h3 class="section-heading">Hendelser ({{ events.length }})</h3>
+        <h2 class="section-heading">Hendelser ({{ events.length }})</h2>
       </summary>
       <div class="section-body">
         <div class="section-tools">
@@ -73,7 +73,7 @@
 
     <details v-if="!hideEditable && people.length" class="section" open>
       <summary class="section-summary">
-        <h3 class="section-heading">Deltakere ({{ people.length }})</h3>
+        <h2 class="section-heading">Deltakere ({{ people.length }})</h2>
       </summary>
       <div class="section-body">
         <!-- One role in use: a flat list with the role on each row, as before. -->
@@ -107,7 +107,7 @@
 
     <details v-if="galleryImages.length" class="section" open>
       <summary class="section-summary">
-        <h3 class="section-heading">Galleri ({{ galleryImages.length }})</h3>
+        <h2 class="section-heading">Galleri ({{ galleryImages.length }})</h2>
       </summary>
       <div class="section-body">
         <ImageSlider :images="galleryImages" />
@@ -116,7 +116,7 @@
 
     <details v-if="!hideEditable && sourceRefs.length" class="section" open>
       <summary class="section-summary">
-        <h3 class="section-heading">Kilder ({{ sourceRefs.length }})</h3>
+        <h2 class="section-heading">Kilder ({{ sourceRefs.length }})</h2>
       </summary>
       <div class="section-body">
         <SourceRef :refs="sourceRefs" inline />
@@ -125,7 +125,7 @@
 
     <details class="section" open>
       <summary class="section-summary">
-        <h3 class="section-heading">Lenker<span v-if="totalLinkCount"> ({{ totalLinkCount }})</span></h3>
+        <h2 class="section-heading">Lenker<span v-if="totalLinkCount"> ({{ totalLinkCount }})</span></h2>
       </summary>
       <div class="section-body">
         <div v-if="totalLinkCount" class="link-list">

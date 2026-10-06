@@ -3,7 +3,7 @@
   <div class="view-pane">
     <details v-if="!hideEditable && previewSections.length" class="section" open>
       <summary class="section-summary">
-        <h3 class="section-heading">Beskrivelse</h3>
+        <h2 class="section-heading">Beskrivelse</h2>
       </summary>
       <div class="section-body">
         <DescriptionPreview :sections="previewSections" />
@@ -12,7 +12,7 @@
 
     <details v-if="legacyDescription" class="section" open>
       <summary class="section-summary">
-        <h3 class="section-heading">Beskrivelse (arkiv)</h3>
+        <h2 class="section-heading">Beskrivelse (arkiv)</h2>
       </summary>
       <div class="section-body">
         <LegacyDescription :text="legacyDescription" />
@@ -21,7 +21,7 @@
 
     <details v-if="events.length" class="section" open>
       <summary class="section-summary">
-        <h3 class="section-heading">Hendelser ({{ events.length }})</h3>
+        <h2 class="section-heading">Hendelser ({{ events.length }})</h2>
       </summary>
       <div class="section-body">
         <div class="section-tools">
@@ -43,7 +43,7 @@
 
     <details v-if="crew.length" class="section" open>
       <summary class="section-summary">
-        <h3 class="section-heading">Mannskap ({{ crew.length }})</h3>
+        <h2 class="section-heading">Mannskap ({{ crew.length }})</h2>
       </summary>
       <div class="section-body">
         <div class="relation-list">
@@ -57,7 +57,7 @@
 
     <details v-if="galleryImages.length" class="section" open>
       <summary class="section-summary">
-        <h3 class="section-heading">Galleri ({{ galleryImages.length }})</h3>
+        <h2 class="section-heading">Galleri ({{ galleryImages.length }})</h2>
       </summary>
       <div class="section-body">
         <ImageSlider :images="galleryImages" />
@@ -66,7 +66,7 @@
 
     <details class="section" open>
       <summary class="section-summary">
-        <h3 class="section-heading">Lenker<span v-if="totalLinkCount"> ({{ totalLinkCount }})</span></h3>
+        <h2 class="section-heading">Lenker<span v-if="totalLinkCount"> ({{ totalLinkCount }})</span></h2>
       </summary>
       <div class="section-body">
         <div v-if="totalLinkCount" class="link-list">
