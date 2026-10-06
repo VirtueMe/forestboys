@@ -10,6 +10,7 @@
  *   clean     graph still equals the April value → the Sanity change can apply
  *   conflict  graph differs from April → edited in the graph
  *   review    no trustworthy baseline
+ *   reset     a description that differs from Sanity: rewritten from Sanity by the sync (#119)
  *
  * Plus events new in Sanity, events deleted in Sanity, and graph edits on
  * events Sanity hasn't touched.
@@ -67,7 +68,7 @@ async function main() {
 
   const byField: Record<string, Record<EventVerdict, number>> = {}
   for (const c of changed) for (const { field, verdict } of c.fields) {
-    const f = (byField[field] ??= { already: 0, clean: 0, conflict: 0, review: 0 })
+    const f = (byField[field] ??= { already: 0, clean: 0, conflict: 0, review: 0, reset: 0 })
     f[verdict]++
   }
 

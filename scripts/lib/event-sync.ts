@@ -121,7 +121,16 @@ export function stampsFor(d: Doc, l: Lookups): Record<string, string> {
   return Object.fromEntries(EVENT_FIELDS.map(f => [`${f.name}_sha`, sha(f.fromSanity(d, l))]))
 }
 
-export type EventVerdict = 'already' | 'clean' | 'conflict' | 'review'
+/**
+ * Fields where Sanity is the master and a hand edit in the graph does not stand (#119): the graph's
+ * value is rewritten from Sanity, and calibration does not count the edit as a failure. Until the
+ * cutover (docs/SANITY-SYNC.md) Jan edits in Sanity and tries the editor in the graph; one test edit
+ * of one description must not block the whole event sync. Empty this set at the cutover — the graph's
+ * edits then count again (`conflict`, calibration) — or run with `--keep-graph-edits` for one run.
+ */
+export const RESET_FROM_SANITY: ReadonlySet<string> = new Set(['description'])
+
+export type EventVerdict = 'already' | 'clean' | 'conflict' | 'review' | 'reset'
 
 /**
  * Per field Sanity changed: the field's stamp is the baseline (or, before
@@ -130,18 +139,26 @@ export type EventVerdict = 'already' | 'clean' | 'conflict' | 'review'
  *   clean     the graph still holds the baseline → apply
  *   conflict  the graph was edited too → review bundle
  *   review    no baseline at all
+ *   reset     a field in `reset` (RESET_FROM_SANITY) where the graph differs from Sanity, whatever the
+ *             stamp says — edited in the graph, Sanity changed or not: rewritten from Sanity (#119)
  */
-export function classifyEvent(g: GraphEvent, s: Doc, base: Doc | undefined, l: Lookups): { field: string; verdict: EventVerdict }[] {
+export function classifyEvent(
+  g: GraphEvent, s: Doc, base: Doc | undefined, l: Lookups, reset: ReadonlySet<string> = RESET_FROM_SANITY,
+): { field: string; verdict: EventVerdict }[] {
   const out: { field: string; verdict: EventVerdict }[] = []
   for (const f of EVENT_FIELDS) {
     const now = f.fromSanity(s, l), graph = f.fromGraph(g)
     const stamp = baselineSha(g, f, base, l)
+    const resets = reset.has(f.name) && graph !== now
     if (stamp === undefined) {
-      if (graph !== now) out.push({ field: f.name, verdict: 'review' })
+      if (graph !== now) out.push({ field: f.name, verdict: resets ? 'reset' : 'review' })
       continue
     }
-    if (sha(now) === stamp) continue
-    out.push({ field: f.name, verdict: graph === now ? 'already' : sha(graph) === stamp ? 'clean' : 'conflict' })
+    if (sha(now) === stamp) {
+      if (resets) out.push({ field: f.name, verdict: 'reset' })
+      continue
+    }
+    out.push({ field: f.name, verdict: graph === now ? 'already' : sha(graph) === stamp ? 'clean' : resets ? 'reset' : 'conflict' })
   }
   return out
 }
@@ -168,8 +185,15 @@ export function verifyEventStamps(toStamp: GraphEvent[], sanity: Map<string, Doc
   return { checked, differ }
 }
 
-/** Events Sanity hasn't changed: the graph must still equal its stamps (or the baseline file). */
-export function calibrateEvents(graph: Map<string, GraphEvent>, sanity: Map<string, Doc>, base: Map<string, Doc>, l: Lookups) {
+/**
+ * Events Sanity hasn't changed: the graph must still equal its stamps (or the baseline file).
+ * A field in `reset` is not checked: its edits in the graph are rewritten from Sanity (#119), so
+ * they are not a failure.
+ */
+export function calibrateEvents(
+  graph: Map<string, GraphEvent>, sanity: Map<string, Doc>, base: Map<string, Doc>, l: Lookups,
+  reset: ReadonlySet<string> = RESET_FROM_SANITY,
+) {
   const checks: Record<string, { agree: number; total: number; samples: unknown[] }> = {}
   for (const g of graph.values()) {
     const s = sanity.get(g.sanityId), b = base.get(g.sanityId)
@@ -177,6 +201,7 @@ export function calibrateEvents(graph: Map<string, GraphEvent>, sanity: Map<stri
     for (const f of EVENT_FIELDS) {
       const stamp = baselineSha(g, f, b, l)
       if (stamp === undefined || sha(f.fromSanity(s, l)) !== stamp) continue   // no baseline, or Sanity changed
+      if (reset.has(f.name)) continue
       const c = (checks[f.name] ??= { agree: 0, total: 0, samples: [] })
       c.total++
       if (sha(f.fromGraph(g)) === stamp) c.agree++

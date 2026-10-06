@@ -344,14 +344,26 @@ bundles.
   they are not a graph edit: the stamp is the hash of the linked text, and a
   later Sanity edit is `clean`. The first run after the change takes them into
   every description that has a reference (718 on 2026-10-05) as an ordinary
-  `clean` change; a description edited in the graph is a `conflict` as before.
-  Only AIR 27 — the HS series are left alone (Jan).
+  `clean` change. Only AIR 27 — the HS series are left alone (Jan).
 - People compare on the import's links only — editor additions
   (`sourceRef: admin-edit`) stay and don't count as a graph edit; removing
   an imported link does. Links to targets the graph doesn't have yet are
   left out of the comparison, so they arrive as an ordinary change later.
 - New events are created as Operations; deleted ones need
   `--accept-delete=<slug>,…` and are blocked by graph additions.
+- **A description edited in the graph is rewritten from Sanity** (#119). Until the cutover Sanity
+  is the master, and Jan tries the editor in the live graph (`ax-32`, 2026-10-06). One test edit
+  of one description used to fail calibration and so block the whole event sync. Now a
+  description that differs from Sanity is a `reset` verdict, whatever its stamp says (Sanity
+  unchanged, Sanity changed, no baseline): it is rewritten with the import's rule like a
+  `clean` change, stamped, and listed in the dry run and the report
+  (`↺ <slug>: description`, `rewritten` in the plan file). The text it replaces is in the
+  backup (`event-before-<time>.json`, and the run artifact for 30 days). Calibration does not
+  count these edits. It is the event `description` only (`RESET_FROM_SANITY` in
+  `scripts/lib/event-sync.ts`): every other field keeps `conflict` and the calibration check, and
+  the other types' descriptions keep the `conflict` rule of `sync-description.ts`.
+  **Temporary:** at the cutover the graph becomes the authority — empty `RESET_FROM_SANITY` so
+  the graph's edits count again. `--keep-graph-edits` switches it off for one run.
 - Refuses to write unless calibration is 100%; backs up touched events first.
 
 ### Descriptions of transports, stations and locations
