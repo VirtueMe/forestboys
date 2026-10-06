@@ -163,8 +163,13 @@ onBeforeUnmount(() => {
 /* A stored link with no address leads nowhere — shown, so it can be fixed. */
 .pt-link-mark--dead { border-bottom: 1px dashed var(--faded-red); }
 
+/* The popups hang from the toolbar, not from their button: a button's popup ran past the right edge
+   of a narrow window and was clipped by the scrolling page. Anchored to the toolbar, a popup is never
+   wider than it and never past its edge. */
+.pt-toolbar { position: relative; }
+
 .pt-tb-link {
-  position: relative;
+  position: static;
   display: inline-block;
 }
 
@@ -172,8 +177,8 @@ onBeforeUnmount(() => {
   position: absolute;
   top: calc(100% + 4px);
   left: 0;
-  width: 280px;
-  max-width: calc(100vw - 32px);
+  width: min(560px, 100%);
+  box-sizing: border-box;
   background: var(--paper-raised);
   border: 1px solid var(--rule);
   border-radius: 4px;
@@ -230,7 +235,7 @@ onBeforeUnmount(() => {
 .pt-person-mark:hover { background: rgba(5, 35, 69, 0.14); }
 
 .pt-tb-person {
-  position: relative;
+  position: static;
   display: inline-block;
 }
 
@@ -238,7 +243,9 @@ onBeforeUnmount(() => {
   position: absolute;
   top: calc(100% + 4px);
   left: 0;
-  min-width: 240px;
+  min-width: min(240px, 100%);
+  max-width: 100%;
+  box-sizing: border-box;
   max-height: 280px;
   overflow-y: auto;
   background: var(--paper-raised);
