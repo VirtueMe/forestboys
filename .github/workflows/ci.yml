@@ -48,7 +48,7 @@ jobs:
       # This fails if any of them ever gets into the build. A new harness page names itself here.
       - name: The e2e harness is not in the build
         run: |
-          if grep -rlE '__harness|Editor harness|Contrast harness|Outline harness' dist; then
+          if grep -rlE '__harness|Editor harness|Contrast harness|Outline harness|Description harness' dist; then
             echo "::error::an e2e harness page is in the build"
             exit 1
           fi
