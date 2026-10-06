@@ -16,6 +16,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:e2e": "playwright test",
+    "e2e:record": "tsx scripts/e2e/record-fixtures.ts",
     "prepare": "husky",
     "prompts:test": "tsx scripts/prompts/test.ts"
   },

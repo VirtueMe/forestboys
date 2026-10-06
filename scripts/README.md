@@ -10,6 +10,7 @@ directory.
 | `sanity/` | Read-only looks at Sanity and at how far the graph has drifted: `sanity-sync`, `sanity-person-fields`, `sanity-event-fields`, and `sanity-export` (writes the `data/sanity-*.json` the others read). |
 | `migrations/` | One-shot graph migrations. One that has run in production leaves the tree — git is the archive — so what is here is either still waiting for production or recent. |
 | `seed/` | Reference data the app needs (`seed-roles`). |
+| `e2e/` | The browser design checks (#139): `record-fixtures` records the pages of `e2e/pages.ts` from the local graph (a dry run unless `--write`), `replay-key` is how a recorded request is found again. |
 | `tools/` | Small helpers (`hash-password`). |
 | `lib/` | Shared code. `person-rule`, `event-rule` and `import-missing-refs` are TypeScript ports of the Clojure import rules in `../migration/`; change a rule in both. `env.ts` decides which Neo4j a script talks to. |
 | `bot/`, `prompts/` | The proposal bot: the local runner and the prompts it renders. |

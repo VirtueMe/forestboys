@@ -1,0 +1,830 @@
+{
+ "path": "/station/raf-harrington",
+ "queries": [
+  {
+   "query": "MATCH (s:Station {slug: $slug})\n           RETURN coalesce(s.canonicalName, s.title) AS name,\n                  s.type        AS type,\n                  s.category    AS category,\n                  coalesce(s.sourceRefs, []) AS sourceRefs,\n                  s.lat         AS lat,\n                  s.lng         AS lng,\n                  s.activeFrom  AS activeFrom,\n                  s.activeTo    AS activeTo,\n                  s.description AS description,\n                  s.links       AS links",
+   "params": {
+    "slug": "raf-harrington"
+   },
+   "rows": [
+    {
+     "name": "RAF Harrington",
+     "type": "Airfield",
+     "category": null,
+     "sourceRefs": [],
+     "lat": 52.40351044918938,
+     "lng": -0.872605931823625,
+     "activeFrom": null,
+     "activeTo": null,
+     "description": null,
+     "links": null
+    }
+   ]
+  },
+  {
+   "query": "MATCH (s:Station {slug: $slug})-[:HAS_CONTENT]->(d:Description)\n           OPTIONAL MATCH (d)-[:SOURCED_FROM]->(from:Source)\n           WITH d, from\n           OPTIONAL MATCH (d)-[cites:CITES]->(src:Source)\n           WITH d, from,\n                collect(CASE WHEN src IS NULL THEN NULL ELSE {\n                  inline:       coalesce(cites.inline, false),\n                  sourceId:     src.id,\n                  sourceTitle:  src.title,\n                  sourceUrl:    src.url,\n                  sourceAuthor: src.authorFreeText\n                } END) AS rawCites\n           RETURN coalesce(d.order, 1) AS `order`,\n                  d.content AS content,\n                  [x IN rawCites WHERE x IS NOT NULL] AS citations,\n                  CASE WHEN from IS NULL THEN NULL ELSE {\n                    id:             from.id,\n                    title:          from.title,\n                    url:             from.url,\n                    authorFreeText: from.authorFreeText,\n                    license:        from.license,\n                    attribution:    from.attribution\n                  } END AS sourcedFrom\n           ORDER BY `order`",
+   "params": {
+    "slug": "raf-harrington"
+   },
+   "rows": [
+    {
+     "order": 1,
+     "content": "[{\"_key\":\"43515f066611\",\"_type\":\"block\",\"children\":[{\"_key\":\"80ebf9660605\",\"_type\":\"span\",\"marks\":[],\"text\":\"Harrington airfield, known as Station 179 during WW2, was built by the 826th and 852nd Engineer Battalions of the US Army as a Class A airfield intended for heavy bomber use, the main runway length being approximately a mile. Construction started on the 11th July 1942 by a battalion of aviation engineers who were subsequently alerted and sent to the North African Theatre of Operations. The two other engineering battalions carried on the work. The airfield was completed in the spring of 1944.\\n\\nApproximately 860,000 square yards of concrete were laid, with one and three quarter million bricks being used, 210,000 cubic yards of soil being moved and 6 miles of roadway formed.\\n\\nIt took four engineering soldiers under the command of a corporal to complete a standard 16 ft by 18 ft Nissen Hut in two days. Eighty man hours were used (originally 225 hours per hut had been allocated).\\n\\nAlthough this airfield had initially been constructed for use by a B-17 Flying Fortress Bomb Group, this group was diverted to North Africa to support Operation Torch. It was therefore taken over as a satellite station for training the bomber crews of the nearby RAF 84th Operational Training Unit at Desborough who mainly operated Wellington bombers. \"}],\"markDefs\":[],\"style\":\"normal\"}]",
+     "citations": [],
+     "sourcedFrom": null
+    }
+   ]
+  },
+  {
+   "query": "MATCH (:Station {slug: $slug})-[:HAS_NAME]->(n:Name)\n           RETURN n.id AS id, n.order AS `order`, n.value AS value, n.type AS type,\n                  n.from AS `from`, n.fromAbout AS fromAbout, n.to AS `to`, n.toAbout AS toAbout,\n                  n.sourceRefs AS sourceRefs\n           ORDER BY coalesce(n.order, 0), n.value",
+   "params": {
+    "slug": "raf-harrington"
+   },
+   "rows": []
+  },
+  {
+   "query": "\n    MATCH (p:Person)-[r:STATIONED_AT]->(t:Station {slug: $slug})\n    OPTIONAL MATCH (p)-[:HAS_STATIONED_NOTE]->(d:Description {stayId: r.id})\n    OPTIONAL MATCH (d)-[:SOURCED_FROM]->(from:Source)\n    WITH p, r, t, d, from\n    OPTIONAL MATCH (d)-[cites:CITES]->(src:Source)\n    WITH p, r, t, d, from,\n         collect(CASE WHEN src IS NULL THEN NULL ELSE {\n           inline:       coalesce(cites.inline, false),\n           sourceId:     src.id,\n           sourceTitle:  src.title,\n           sourceUrl:    src.url,\n           sourceAuthor: src.authorFreeText\n         } END) AS rawCites\n    WITH p, r, t,\n         CASE WHEN d IS NULL THEN NULL ELSE {\n           order:     coalesce(d.order, 1),\n           content:   d.content,\n           citations: [x IN rawCites WHERE x IS NOT NULL],\n           sourcedFrom: CASE WHEN from IS NULL THEN NULL ELSE {\n             id:             from.id,\n             title:          from.title,\n             url:            from.url,\n             authorFreeText: from.authorFreeText,\n             license:        from.license,\n             attribution:    from.attribution\n           } END\n         } END AS section\n    WITH p, r, t, collect(section) AS rawSections\n    RETURN r.id AS edgeId, r.state AS state, coalesce(r.sourceRefs, []) AS sourceRefs, p.slug AS targetSlug, p.canonicalName AS targetName, r.role AS role, r.startDate AS startDate, r.endDate AS endDate,\n           [x IN rawSections WHERE x IS NOT NULL] AS sections\n    ORDER BY startDate, targetName\n  ",
+   "params": {
+    "slug": "raf-harrington"
+   },
+   "rows": []
+  },
+  {
+   "query": "MATCH (s:Station {slug: $slug})-[:REFERENCED_IN]->(src:Source)\n           RETURN src.id AS id, src.title AS title, src.url AS url,\n                  src.type AS type, src.domain AS domain,\n                  coalesce(src.nbBacked, false) AS nbBacked\n           ORDER BY nbBacked DESC, src.type, coalesce(src.title, src.url)",
+   "params": {
+    "slug": "raf-harrington"
+   },
+   "rows": [
+    {
+     "id": "harringtonmuseum-org-uk-history-of-harrington-airfield-3d600a13",
+     "title": "HISTORY OF HARRINGTON AIRFIELD",
+     "url": "https://harringtonmuseum.org.uk/history-of-harrington-airfield/",
+     "type": "website",
+     "domain": "harringtonmuseum.org.uk",
+     "nbBacked": false
+    }
+   ]
+  },
+  {
+   "query": "MATCH (e:Operation|Incident)-[r:FROM_STATION|TO_STATION]->(:Station {slug: $slug})\n           WHERE e.slug IS NOT NULL\n           RETURN DISTINCT e.slug AS slug,\n                  coalesce(e.title, e.codeName, e.canonicalName) AS title,\n                  e.date AS date,\n                  CASE type(r) WHEN 'FROM_STATION' THEN 'departed' ELSE 'arrived' END AS direction\n           ORDER BY date",
+   "params": {
+    "slug": "raf-harrington"
+   },
+   "rows": [
+    {
+     "slug": "am-071",
+     "title": "AM 071  SOE Operation Company",
+     "date": "1943-11-13",
+     "direction": "departed"
+    },
+    {
+     "slug": "am-073-1",
+     "title": "AM 073  FIELDFARE I Tordsvann 1",
+     "date": "1943-11-17",
+     "direction": "departed"
+    },
+    {
+     "slug": "am-073-22",
+     "title": "AM 073  FIELDFARE 1 Tordsvann 2",
+     "date": "1943-12-10",
+     "direction": "departed"
+    },
+    {
+     "slug": "am-101-1",
+     "title": "AM 101 SOE Operation GOLDFINCH IV 1 /BIT 43",
+     "date": "1944-03-06",
+     "direction": "departed"
+    },
+    {
+     "slug": "am-073-3",
+     "title": "AM 073  FIELDFARE 1 Tordsvann 3",
+     "date": "1944-03-07",
+     "direction": "departed"
+    },
+    {
+     "slug": "am-101-2",
+     "title": "AM 101 SOE Operation GOLDFINCH IV 2 /BIT 43",
+     "date": "1944-03-15",
+     "direction": "departed"
+    },
+    {
+     "slug": "am-125",
+     "title": "AM 125 SOE Operation GIRTH II Gull Red",
+     "date": "1944-03-31",
+     "direction": "departed"
+    },
+    {
+     "slug": "am-142",
+     "title": "AM 142 SOE Operation BIT III  Chaffinch",
+     "date": "1944-05-06",
+     "direction": "departed"
+    },
+    {
+     "slug": "am-131-2",
+     "title": "AM 131 SOE Operation BIT V 2 Goldcrest",
+     "date": "1944-05-06",
+     "direction": "departed"
+    },
+    {
+     "slug": "am-184-1",
+     "title": "AM 184 SOE Operation CRUPPER 8 Golden Eagle 1",
+     "date": "1944-09-18",
+     "direction": "departed"
+    },
+    {
+     "slug": "am-265-2",
+     "title": "AM 265 SOE Operation BIT XVII 2 Chaffinch Blue",
+     "date": "1944-12-31",
+     "direction": "departed"
+    },
+    {
+     "slug": "am-322-3",
+     "title": "AM 322 SOE Operation RUMP V 3 Redwing",
+     "date": "1945-01-23",
+     "direction": "departed"
+    },
+    {
+     "slug": "am-351-1",
+     "title": "AM 351 SOE Operation CRUPPER XXXIV 1 Golden Eagle",
+     "date": "1945-01-29",
+     "direction": "departed"
+    },
+    {
+     "slug": "am-310",
+     "title": "AM 310 SOE Operation BLINKERS IV 1 Bjørn",
+     "date": "1945-01-29",
+     "direction": "departed"
+    },
+    {
+     "slug": "am-320-1",
+     "title": "AM 320 SOE Operation PELHAM VII 1 Pheasant",
+     "date": "1945-02-08",
+     "direction": "departed"
+    },
+    {
+     "slug": "am-319-1",
+     "title": "AM 319 SOE Operation PELHAM VIII 1 Pheasant",
+     "date": "1945-02-08",
+     "direction": "departed"
+    },
+    {
+     "slug": "am-336-2",
+     "title": "AM 336 SOE Operation PELHAM IX 2 Pheasant",
+     "date": "1945-02-09",
+     "direction": "departed"
+    },
+    {
+     "slug": "am-244-4",
+     "title": "AM 244 SOE Operation BIT XIV 4 Goldcrest",
+     "date": "1945-02-20",
+     "direction": "departed"
+    },
+    {
+     "slug": "am-151-2",
+     "title": "AM 151 SOE Operation Crupper IV 2 Greenfinch",
+     "date": "1945-02-20",
+     "direction": "departed"
+    },
+    {
+     "slug": "am-259-2",
+     "title": "AM 259 SOE Operation TAIL VI 2  Tern Blue",
+     "date": "1945-02-20",
+     "direction": "departed"
+    },
+    {
+     "slug": "am-198-3",
+     "title": "AM 198 SOE Operation CRUPPER X 3 Golden Eagle",
+     "date": "1945-02-20",
+     "direction": "departed"
+    },
+    {
+     "slug": "am-138-7",
+     "title": "AM 138 SOE Operation BIT VII 7  Lamplight / Goldfinch",
+     "date": "1945-02-23",
+     "direction": "departed"
+    },
+    {
+     "slug": "am-244-5",
+     "title": "AM 244 SOE Operation BIT XIV 5 Goldcrest",
+     "date": "1945-02-23",
+     "direction": "departed"
+    },
+    {
+     "slug": "am-275-1",
+     "title": "AM 275 SOE Operation POMMEL IX 1 Pipit",
+     "date": "1945-02-26",
+     "direction": "departed"
+    },
+    {
+     "slug": "am-171-7",
+     "title": "AM 171  SOE Operation BIT XIII 7 Goldcrest",
+     "date": "1945-02-26",
+     "direction": "departed"
+    },
+    {
+     "slug": "am-354-2",
+     "title": "AM 354 SOE Operation VET III 2 Varg",
+     "date": "1945-02-26",
+     "direction": "departed"
+    },
+    {
+     "slug": "am-412-3",
+     "title": "AM 412 SOE Operation CRUPPER XXXXIV 3 Golden eagle",
+     "date": "1945-03-02",
+     "direction": "departed"
+    },
+    {
+     "slug": "am-468-1",
+     "title": "AM 468 SOE Operation BRIDLE XV 1 Woodpecker",
+     "date": "1945-03-02",
+     "direction": "departed"
+    },
+    {
+     "slug": "am-312-5",
+     "title": "AM 312 SOE Operation BIT XVIII 5 Lamplight",
+     "date": "1945-03-02",
+     "direction": "departed"
+    },
+    {
+     "slug": "am-198-5",
+     "title": "AM 198 SOE Operation CRUPPER X 5 Golden Eagle",
+     "date": "1945-03-02",
+     "direction": "departed"
+    },
+    {
+     "slug": "am-476-1",
+     "title": "AM 476 SOE Operation REINS XV 1 Rosy Bullfinch Red",
+     "date": "1945-03-20",
+     "direction": "departed"
+    },
+    {
+     "slug": "am-389-2",
+     "title": "Am 389 SOE Operation BIT XXIX 2 Chaffinch",
+     "date": "1945-03-24",
+     "direction": "departed"
+    },
+    {
+     "slug": "am-468-2",
+     "title": "AM 468 SOE Operation BRIDLE XV 2 Reeve",
+     "date": "1945-03-24",
+     "direction": "departed"
+    },
+    {
+     "slug": "am-310.2",
+     "title": "AM 310 SOE Operation BLINKERS IV 2 Bjørn",
+     "date": "1945-03-24",
+     "direction": "departed"
+    },
+    {
+     "slug": "am-239-1",
+     "title": "AM 239 SOE Operation Blinkers II 1 Bjørn BA III",
+     "date": "1945-03-24",
+     "direction": "departed"
+    },
+    {
+     "slug": "am-352-1",
+     "title": "AM 352 SOE Operation CRUPPER XXXV 1 Golden Eagle",
+     "date": "1945-03-30",
+     "direction": "departed"
+    },
+    {
+     "slug": "am-452-4",
+     "title": "AM 452 SOE Operation CRUPPER XXXXVII 4  Elg",
+     "date": "1945-03-30",
+     "direction": "departed"
+    },
+    {
+     "slug": "am-464-4",
+     "title": "AM 464 SOE Operation SADDLE XIV 4 Sanderling",
+     "date": "1945-03-30",
+     "direction": "departed"
+    },
+    {
+     "slug": "am-468-3",
+     "title": "AM 468 SOE Operation BRIDLE XV 3 Reeve",
+     "date": "1945-03-30",
+     "direction": "departed"
+    },
+    {
+     "slug": "am-463-2",
+     "title": "AM 463 SOE Operation SADDLE XV 2 Sanderling",
+     "date": "1945-03-30",
+     "direction": "departed"
+    },
+    {
+     "slug": "am-491",
+     "title": "AM 491 SOE Operation CRUPPER L Elg Red",
+     "date": "1945-03-30",
+     "direction": "departed"
+    },
+    {
+     "slug": "am-252-9",
+     "title": "Am 252 SOE Operation SNAFFLE III 9 Starlight",
+     "date": "1945-03-30",
+     "direction": "departed"
+    },
+    {
+     "slug": "am-310.3",
+     "title": "AM 310 SOE Operation BLINKERS IV 3 Bjørn",
+     "date": "1945-04-02",
+     "direction": "departed"
+    },
+    {
+     "slug": "am-468-4",
+     "title": "AM 468 SOE Operation BRIDLE XV 4 Reeve",
+     "date": "1945-04-06",
+     "direction": "departed"
+    },
+    {
+     "slug": "am-166-7",
+     "title": "Am 166 SOE Operation BIT X 7 Goldcrest",
+     "date": "1945-04-17",
+     "direction": "departed"
+    },
+    {
+     "slug": "am-404-2",
+     "title": "AM 404 SOE Operation BIT XXX 2 Goldcrest",
+     "date": "1945-04-17",
+     "direction": "departed"
+    },
+    {
+     "slug": "am-305-3",
+     "title": "AM 305 SOE Operation VET I 3 Varg",
+     "date": "1945-04-17",
+     "direction": "departed"
+    },
+    {
+     "slug": "am-288-4",
+     "title": "AM 288 SOE Operation TAIL VIII 4 Tern Blue",
+     "date": "1945-04-17",
+     "direction": "departed"
+    },
+    {
+     "slug": "am-405-8",
+     "title": "AM 405 SOE Operation BIT XXXI 8 Goldcrest",
+     "date": "1945-04-17",
+     "direction": "departed"
+    },
+    {
+     "slug": "am-165-6",
+     "title": "Am 165 SOE Operation BIT VIII 6 Goldcrest",
+     "date": "1945-04-17",
+     "direction": "departed"
+    },
+    {
+     "slug": "am-452-5",
+     "title": "AM 452 SOE Operation CRUPPER XXXXVII 5  Elg",
+     "date": "1945-04-17",
+     "direction": "departed"
+    },
+    {
+     "slug": "am-485-3",
+     "title": "AM 485 SOE Operation REINS XVII 3 Rosy Bullfich Red",
+     "date": "1945-04-17",
+     "direction": "departed"
+    },
+    {
+     "slug": "am-485-2",
+     "title": "AM 485 SOE Operation REINS XVII 2 Rosy Bullfinch Blue",
+     "date": "1945-04-17",
+     "direction": "departed"
+    },
+    {
+     "slug": "am-335-2",
+     "title": "AM 335 SOE Operation REINS VIII 2 Rosy Bullfinch Blue",
+     "date": "1945-04-17",
+     "direction": "departed"
+    },
+    {
+     "slug": "am-319-5",
+     "title": "AM 319 SOE Operation PELHAM VIII 5 Pheasant",
+     "date": "1945-04-17",
+     "direction": "departed"
+    },
+    {
+     "slug": "am-308-3",
+     "title": "AM 308 SOE Operation\tFLANK VIII 3 Firecrest",
+     "date": "1945-04-18",
+     "direction": "departed"
+    },
+    {
+     "slug": "am-335-3",
+     "title": "AM 335 SOE Operation REINS VIII 3 Rosy Bullfinch Blue",
+     "date": "1945-04-18",
+     "direction": "departed"
+    },
+    {
+     "slug": "am-571-1",
+     "title": "AM 571 SOE Operation SADDLE XXI 1 Sanderling",
+     "date": "1945-04-18",
+     "direction": "departed"
+    },
+    {
+     "slug": "am-571-2",
+     "title": "AM 571 SOE Operation SADDLE XXI 2 Sanderling",
+     "date": "1945-04-18",
+     "direction": "departed"
+    },
+    {
+     "slug": "am-158-5",
+     "title": "AM 158 Soe Operation FLANK II 5 Firecrest",
+     "date": "1945-04-18",
+     "direction": "departed"
+    },
+    {
+     "slug": "am-540",
+     "title": "AM 540 SOE Operation TAIL IXX Tern Blue",
+     "date": "1945-04-19",
+     "direction": "departed"
+    },
+    {
+     "slug": "am-562",
+     "title": "AM 562 SOE Operation TAIL XX Tern Blue",
+     "date": "1945-04-19",
+     "direction": "departed"
+    },
+    {
+     "slug": "am-404-3",
+     "title": "AM 404 SOE Operation BIT XXX 3 Goldcrest",
+     "date": "1945-04-19",
+     "direction": "departed"
+    },
+    {
+     "slug": "am-288-5",
+     "title": "AM 288 SOE Operation TAIL VIII 5 Tern Blue",
+     "date": "1945-04-19",
+     "direction": "departed"
+    },
+    {
+     "slug": "am-166-8",
+     "title": "Am 166 SOE Operation BIT X 8  Goldcrest",
+     "date": "1945-04-19",
+     "direction": "departed"
+    },
+    {
+     "slug": "am-462-4",
+     "title": "AM 462 SOE Operation\tFLANK X 4 Firecrest",
+     "date": "1945-04-19",
+     "direction": "departed"
+    },
+    {
+     "slug": "am-503-1",
+     "title": "AM 503  SOE Operation BIT XXXIV 1  Goldcrest",
+     "date": "1945-04-19",
+     "direction": "departed"
+    },
+    {
+     "slug": "am-444-4",
+     "title": "AM 444 SOE Operation TAIL XVII 4 Tern Blue",
+     "date": "1945-04-19",
+     "direction": "departed"
+    },
+    {
+     "slug": "am-165-7",
+     "title": "Am 165 SOE Operation BIT VIII 7 Goldcrest",
+     "date": "1945-04-19",
+     "direction": "departed"
+    },
+    {
+     "slug": "am-452-6",
+     "title": "AM 452 SOE Operation CRUPPER XXXXVII 6  Elg",
+     "date": "1945-04-19",
+     "direction": "departed"
+    },
+    {
+     "slug": "am-088-3",
+     "title": "AM 088 SOE Operation THRUSH RED I 3 Tern",
+     "date": "1945-04-19",
+     "direction": "departed"
+    },
+    {
+     "slug": "am-527",
+     "title": "Am 527 SOE Operation BIT XXXVIII Chaffinch",
+     "date": "1945-04-19",
+     "direction": "departed"
+    },
+    {
+     "slug": "am-166-9",
+     "title": "Am 166 SOE Operation BIT X 9  Goldcrest",
+     "date": "1945-04-20",
+     "direction": "departed"
+    },
+    {
+     "slug": "am-219-1",
+     "title": "AM 219 SOE Operation CRUPPER XV 1 Golden Eagle",
+     "date": "1945-04-20",
+     "direction": "departed"
+    },
+    {
+     "slug": "am-165-8",
+     "title": "Am 165 SOE Operation BIT VIII 8 Goldcrest",
+     "date": "1945-04-20",
+     "direction": "departed"
+    },
+    {
+     "slug": "am-503-2",
+     "title": "AM 503  SOE Operation BIT XXXIV 2  Goldcrest",
+     "date": "1945-04-20",
+     "direction": "departed"
+    },
+    {
+     "slug": "am-407-4",
+     "title": "AM 407 SOE Operation BIT XXXIII 4 Goldcrest",
+     "date": "1945-04-21",
+     "direction": "departed"
+    },
+    {
+     "slug": "am-462-5",
+     "title": "AM 462 SOE Operation\tFLANK X 5 Firecrest",
+     "date": "1945-04-22",
+     "direction": "departed"
+    },
+    {
+     "slug": "am-364-3",
+     "title": "AM 364  Soe Operation CRUPPER XXXX 3 Greenfinch",
+     "date": "1945-04-22",
+     "direction": "departed"
+    },
+    {
+     "slug": "am-165-9",
+     "title": "Am 165 SOE Operation BIT VIII 9 Goldcrest",
+     "date": "1945-04-22",
+     "direction": "departed"
+    },
+    {
+     "slug": "am-584",
+     "title": "AM 584 SOE Operation REINS XXII  Rosy Bullfinch Blue",
+     "date": "1945-04-22",
+     "direction": "departed"
+    },
+    {
+     "slug": "am-407-5",
+     "title": "AM 407 SOE Operation BIT XXXIII 5 Goldcrest",
+     "date": "1945-04-22",
+     "direction": "departed"
+    },
+    {
+     "slug": "am-503-3",
+     "title": "AM 503  SOE Operation BIT XXXIV 3  Goldcrest",
+     "date": "1945-04-22",
+     "direction": "departed"
+    },
+    {
+     "slug": "am-576-1",
+     "title": "AM 576 SOE Operation VET XIX 1 Tomtit",
+     "date": "1945-04-22",
+     "direction": "departed"
+    },
+    {
+     "slug": "am-219-2",
+     "title": "AM 219 SOE Operation CRUPPER XV 2 Golden Eagle",
+     "date": "1945-04-22",
+     "direction": "departed"
+    },
+    {
+     "slug": "am-166-10",
+     "title": "Am 166 SOE Operation BIT X 10  Goldcrest",
+     "date": "1945-04-25",
+     "direction": "departed"
+    },
+    {
+     "slug": "am-576-2",
+     "title": "AM 576 SOE Operation VET XIX 2 Tomtit",
+     "date": "1945-04-25",
+     "direction": "departed"
+    },
+    {
+     "slug": "am-219-3",
+     "title": "AM 219 SOE Operation CRUPPER XV 3 Golden Eagle",
+     "date": "1945-04-25",
+     "direction": "departed"
+    },
+    {
+     "slug": "am-464-5",
+     "title": "AM 464 SOE Operation SADDLE XIV 5 Sanderling",
+     "date": "1945-04-25",
+     "direction": "departed"
+    },
+    {
+     "slug": "am-405-9",
+     "title": "AM 405 SOE Operation BIT XXXI 9 Goldcrest",
+     "date": "1945-04-25",
+     "direction": "departed"
+    },
+    {
+     "slug": "am-571-3",
+     "title": "AM 571 SOE Operation SADDLE XXI 3 Sanderling",
+     "date": "1945-04-25",
+     "direction": "departed"
+    },
+    {
+     "slug": "am-455-2",
+     "title": "AM 455 SOE Operation VET XI 2 Varg",
+     "date": "1945-04-25",
+     "direction": "departed"
+    },
+    {
+     "slug": "am-305-4",
+     "title": "AM 305 SOE Operation VET I 4 Varg",
+     "date": "1945-04-25",
+     "direction": "departed"
+    },
+    {
+     "slug": "am-452-7",
+     "title": "AM 452 SOE Operation CRUPPER XXXXVII 7  Elg",
+     "date": "1945-04-25",
+     "direction": "departed"
+    }
+   ]
+  },
+  {
+   "query": "MATCH (s:Station {slug: $slug})-[h:HAS_IMAGE]->(src:Source)\n           RETURN src.url AS url, h.caption AS caption,\n                  coalesce(s.canonicalName, s.title) AS subjectName,\n                  s.slug AS subjectSlug,\n                  0 AS sortKey\n           ORDER BY sortKey, subjectName\n           LIMIT 200",
+   "params": {
+    "slug": "raf-harrington"
+   },
+   "rows": [
+    {
+     "url": "https://cdn.sanity.io/images/7r6kqtqy/production/f3b5e1d2cdd636a3077b0a06d16456f524ee21ad-311x162.png",
+     "caption": null,
+     "subjectName": "RAF Harrington",
+     "subjectSlug": "raf-harrington",
+     "sortKey": 0
+    },
+    {
+     "url": "https://cdn.sanity.io/images/7r6kqtqy/production/055bcde44bea9e774760d6c592ae6d30451fd838-255x198.png",
+     "caption": null,
+     "subjectName": "RAF Harrington",
+     "subjectSlug": "raf-harrington",
+     "sortKey": 0
+    }
+   ]
+  },
+  {
+   "query": "\n    MATCH (r:Role)\n    OPTIONAL MATCH (r)-[:HAS_CONTENT]->(d:Description)\n    OPTIONAL MATCH (d)-[:CITES|SOURCED_FROM]->(s:Source)\n    WITH r, d, collect(DISTINCT s.id) AS ids\n    ORDER BY coalesce(d.order, 1)\n    WITH r, [x IN collect(d.content) WHERE x IS NOT NULL] AS sections,\n         reduce(acc = [], l IN collect(ids) | acc + l) AS allIds\n    RETURN r.key AS key, r.name AS name, r.scopes AS scopes, r.attended AS attended, sections,\n           reduce(acc = [], i IN allIds | CASE WHEN i IN acc THEN acc ELSE acc + i END) AS sourceIds\n  ",
+   "params": {},
+   "rows": [
+    {
+     "key": "operative",
+     "name": "operatør",
+     "scopes": [
+      "membership"
+     ],
+     "attended": false,
+     "sections": [],
+     "sourceIds": []
+    },
+    {
+     "key": "courier",
+     "name": "kurér",
+     "scopes": [
+      "membership"
+     ],
+     "attended": false,
+     "sections": [],
+     "sourceIds": []
+    },
+    {
+     "key": "radiotelegraph",
+     "name": "radiotelegrafist",
+     "scopes": [
+      "membership"
+     ],
+     "attended": false,
+     "sections": [],
+     "sourceIds": []
+    },
+    {
+     "key": "host",
+     "name": "vert",
+     "scopes": [
+      "membership"
+     ],
+     "attended": false,
+     "sections": [],
+     "sourceIds": []
+    },
+    {
+     "key": "informant",
+     "name": "informant",
+     "scopes": [
+      "membership"
+     ],
+     "attended": false,
+     "sections": [],
+     "sourceIds": []
+    },
+    {
+     "key": "member",
+     "name": "medlem",
+     "scopes": [
+      "membership"
+     ],
+     "attended": false,
+     "sections": [],
+     "sourceIds": []
+    },
+    {
+     "key": "administrative",
+     "name": "administrativt",
+     "scopes": [
+      "part-of"
+     ],
+     "attended": false,
+     "sections": [],
+     "sourceIds": []
+    },
+    {
+     "key": "operational",
+     "name": "operativt",
+     "scopes": [
+      "part-of"
+     ],
+     "attended": false,
+     "sections": [],
+     "sourceIds": []
+    },
+    {
+     "key": "sponsor",
+     "name": "sponsor",
+     "scopes": [
+      "part-of"
+     ],
+     "attended": false,
+     "sections": [],
+     "sourceIds": []
+    },
+    {
+     "key": "parent",
+     "name": "overordnet",
+     "scopes": [
+      "part-of"
+     ],
+     "attended": false,
+     "sections": [],
+     "sourceIds": []
+    },
+    {
+     "key": "stationed",
+     "name": "stasjonert",
+     "scopes": [
+      "stationed"
+     ],
+     "attended": false,
+     "sections": [],
+     "sourceIds": []
+    },
+    {
+     "key": "hiding",
+     "name": "i skjul",
+     "scopes": [
+      "stationed"
+     ],
+     "attended": false,
+     "sections": [],
+     "sourceIds": []
+    },
+    {
+     "key": "imprisoned",
+     "name": "fange",
+     "scopes": [
+      "stationed"
+     ],
+     "attended": false,
+     "sections": [],
+     "sourceIds": []
+    },
+    {
+     "key": "training",
+     "name": "opplæring",
+     "scopes": [
+      "stationed"
+     ],
+     "attended": true,
+     "sections": [],
+     "sourceIds": []
+    },
+    {
+     "key": "operating",
+     "name": "operatør",
+     "scopes": [
+      "stationed"
+     ],
+     "attended": false,
+     "sections": [],
+     "sourceIds": []
+    },
+    {
+     "key": "instructor",
+     "name": "instruktør",
+     "scopes": [
+      "stationed"
+     ],
+     "attended": true,
+     "sections": [],
+     "sourceIds": []
+    }
+   ]
+  }
+ ],
+ "gets": []
+}
