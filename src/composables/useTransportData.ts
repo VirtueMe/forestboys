@@ -3,7 +3,7 @@
  * detail page. Mirror of useStationData / useUnitData.
  *
  * Legacy properties carried in from the Sanity import — `description`
- * (free text), `links` (JSON string), `unit`, `regser`, `reserve` —
+ * (free text), `links` (JSON string), `rawUnit`, `regser`, `reserve` —
  * stay on the node and are surfaced by the ViewPane until structured
  * editors take them over. New editor writes target HAS_CONTENT only.
  *
@@ -17,6 +17,7 @@ import { ref } from 'vue'
 import { neo4jQuery } from './useNeo4j.ts'
 import type { SlideImage } from '@/components/ImageSlider.vue'
 import type { Section } from '@/components/SectionsEditor.vue'
+import { tidyText } from '@/utils/tidyText'
 
 export interface TransportNode {
   name:        string
@@ -114,7 +115,7 @@ export function useTransportData() {
           `MATCH (t:Transport {slug: $slug})
            RETURN coalesce(t.canonicalName, t.name) AS name,
                   t.type        AS type,
-                  t.unit        AS unit,
+                  coalesce(t.rawUnit, t.unit) AS unit,
                   t.regser      AS regser,
                   t.reserve     AS reserve,
                   t.description AS description,
@@ -185,7 +186,14 @@ export function useTransportData() {
         ),
       ])
 
-      transport.value    = transportRows[0] ?? null
+      const row = transportRows[0]
+      transport.value    = row
+        ? { ...row,
+            name:   tidyText(row.name) ?? '',
+            type:   tidyText(row.type),
+            unit:   tidyText(row.unit),
+            regser: tidyText(row.regser) }
+        : null
       crew.value         = crewRows
       events.value       = eventRows
       externalRefs.value = refRows
