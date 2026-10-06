@@ -59,4 +59,29 @@ test.describe('the heading levels', () => {
     await page.locator('.pt-editable').click({ position: { x: 4, y: 4 } })
     await expect(list(page)).toHaveCount(0)
   })
+
+  // A heading cannot be shown in a list (the page renders the item as a plain <li>) and the heading check
+  // does not count it, so the editor must not make one (#144).
+  test('H3 and the ▾ are disabled while the caret is in a list item, and work again outside it (#144)', async ({ page }) => {
+    await openEditor(page, 'lists')
+    await caretAtEndOf(page, 'Andre punkt')
+    await expect(page.getByRole('button', { name: 'Punktliste' })).toHaveClass(/active/)
+    await expect(page.getByRole('button', { name: 'H3', exact: true })).toBeDisabled()
+    await expect(more(page)).toBeDisabled()
+
+    await caretAtEndOf(page, 'Et avsnitt etter listen.')
+    await expect(page.getByRole('button', { name: 'Punktliste' })).not.toHaveClass(/active/)
+    await expect(page.getByRole('button', { name: 'H3', exact: true })).toBeEnabled()
+    await expect(more(page)).toBeEnabled()
+  })
+
+  test('a heading that is turned into a list item becomes a plain item (#144)', async ({ page }) => {
+    await openEditor(page, 'paragraph')
+    await caretAtEndOf(page, 'Første avsnitt.')
+    await page.getByRole('button', { name: 'H3', exact: true }).click()
+    await expect.poll(() => styleOfFirst(page)).toBe('h3')
+    await page.getByRole('button', { name: 'Punktliste' }).click()
+    await expect.poll(async () => (await blocksOf(page))[0].listItem).toBe('bullet')
+    await expect.poll(async () => (await blocksOf(page))[0].style).toBe('normal')
+  })
 })

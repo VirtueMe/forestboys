@@ -62,6 +62,8 @@ function headingsOf(blocks: unknown): Heading[] {
   const out: Heading[] = []
   ;(blocks as SanityBlock[]).forEach((b, index) => {
     if (b?._type !== 'block') return
+    // A list item is never a heading on the page (blocksToHtml checks listItem first), so it is none here (#144).
+    if (b.listItem) return
     const level = headingLevel(b.style)
     if (level !== null) out.push({ index, block: b, level, text: textOf(b) })
   })

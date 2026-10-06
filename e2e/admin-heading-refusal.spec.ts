@@ -45,7 +45,7 @@ test.describe('the heading check on save, in the edit mode of a page', () => {
   // is put at the end of a line), so a re-recording after the description was edited can break this: the
   // precondition below says so, instead of the caret failing to arrive somewhere else.
   const FIRST = 'Norsk amerikansk flyger'          // the first paragraph
-  const SHORT = 'Veteran of:'                      // a short paragraph further down
+  const SHORT = 'Lytt til radiointervju under'     // a plain paragraph further down (not a list item: no heading can be made in a list, #144)
   const precondition = async (page: Page) => {
     const why = 'the recorded description changed: update FIRST and SHORT in this spec, they must be single-line paragraphs'
     await expect(editor(page), why).toContainText(FIRST)
