@@ -38,6 +38,7 @@ export interface DescriptionKind {
 
 export const KINDS: Record<string, DescriptionKind> = {
   transport: { key: 'transport', label: 'Transport', sanityType: 'transport' },
+  station:   { key: 'station',   label: 'Station',   sanityType: 'station' },
 }
 
 /** Does any block hold text? */

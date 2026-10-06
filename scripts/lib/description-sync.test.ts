@@ -107,6 +107,17 @@ describe('classifyDescription', () => {
   })
 })
 
+describe('the types it covers', () => {
+  it.each(['transport', 'station'])('%s: the graph label, the Sanity type and the id the editor uses', key => {
+    const kind = KINDS[key]
+    expect(kind.key).toBe(key)
+    expect(kind.sanityType).toBe(key)
+    expect(kind.label).toBe(key[0].toUpperCase() + key.slice(1))
+    expect(descriptionId(kind, 'x')).toBe(`desc:${key}:x:1`)
+    expect(stampsFor(kind, doc([block('x')])).description_sourceRef).toBe(`sanity-migration:${key}:t1:description`)
+  })
+})
+
 describe('stamps and ids', () => {
   it('records the hash, where it came from and when, as the person import does', () => {
     const d = doc([block('Nona Rhea')])
