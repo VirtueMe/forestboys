@@ -23,6 +23,7 @@ const TOOLING = '[id*="vue-devtools"], [class*="vue-devtools"], [data-v-inspecto
  *
  * Skipped, because the standard does not ask for contrast there: text that is not visible (display,
  * visibility, opacity 0, zero size), disabled controls, script/style/svg/canvas, and the dev tooling.
+ * A punctuation-only glyph that is aria-hidden is collected and marked `decorative`, so the judge counts it.
  * Placeholders are included: they are text a person has to read.
  */
 export function collectTextSamples(page: Page, scope = 'body'): Promise<TextSample[]> {
@@ -69,6 +70,8 @@ export function collectTextSamples(page: Page, scope = 'body'): Promise<TextSamp
     const add = (el: Element, text: string, color: string) => {
       const cs = getComputedStyle(el)
       samples.push({
+        // Hidden from assistive technology and no letter or digit in it: a separator dot, an arrow.
+        decorative: !!el.closest('[aria-hidden="true"]') && !/[\p{L}\p{N}]/u.test(text),
         text: text.length > 40 ? text.slice(0, 40) + '…' : text,
         where: where(el),
         color,
