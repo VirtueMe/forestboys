@@ -38,6 +38,20 @@ export const fixtures: Record<string, Block[]> = {
     ],
   }],
 
+  // A link whose words are all bold: replacing them must keep the bold and the link.
+  boldLink: [{
+    _key: 'b1', _type: 'block', style: 'normal',
+    markDefs: [{ _key: 'mlink', _type: 'link', href: '/events/forste-mote-om-mostandsbevegelse-i-london' }],
+    children: [span('c1', 'Se '), span('c2', 'det fete møtet', ['mlink', 'strong']), span('c3', ' nå.')],
+  }],
+
+  // A link whose words are partly bold: its text cannot be replaced without losing the bold.
+  mixedLink: [{
+    _key: 'x1', _type: 'block', style: 'normal',
+    markDefs: [{ _key: 'mlink', _type: 'link', href: '/events/forste-mote-om-mostandsbevegelse-i-london' }],
+    children: [span('c1', 'Se '), span('c2', 'del ', ['mlink']), span('c3', 'fet', ['mlink', 'strong']), span('c4', ' nå.')],
+  }],
+
   headings: [
     block('h1', 'Bakgrunn', { style: 'h3' }),
     block('h2', 'Detaljer', { style: 'h4' }),
