@@ -15,10 +15,10 @@ import {
   type RenderDecoratorFunction,
   type RenderStyleFunction,
 } from '@portabletext/editor'
-import { defineBehavior, execute } from '@portabletext/editor/behaviors'
+import { defineBehavior, execute, forward } from '@portabletext/editor/behaviors'
 import { BehaviorPlugin, EventListenerPlugin } from '@portabletext/editor/plugins'
 import {
-  getActiveAnnotations, getFocusTextBlock, getSelectedValue, getSelection, isActiveDecorator, isActiveListItem, isActiveStyle, isSelectionExpanded,
+  getActiveAnnotations, getFocusTextBlock, getSelectedTextBlocks, getSelectedValue, getSelection, isActiveDecorator, isActiveListItem, isActiveStyle, isSelectionExpanded,
 } from '@portabletext/editor/selectors'
 import React from 'react'
 import { neo4jQuery } from '@/composables/useNeo4j.ts'
@@ -248,12 +248,24 @@ function ListButton({ name, label, title }: { name: 'bullet' | 'number'; label: 
   })
 }
 
-function StyleButton({ name, label }: { name: string; label: string }) {
+/**
+ * The selection touches a list item. A heading cannot be shown inside a list (the page renders the
+ * item as a plain <li>) and the heading check does not count it, so no heading can be made there (#144).
+ */
+const selectionInList = (snapshot: Parameters<typeof getSelectedTextBlocks>[0]) =>
+  getSelectedTextBlocks(snapshot).some(({ node }) => !!node.listItem)
+
+const IN_LIST_TITLE = 'Overskrifter kan ikke brukes i en liste'
+
+function StyleButton({ name, label, heading }: { name: string; label: string; heading?: boolean }) {
   const editor = useEditor()
   const active = useEditorSelector(editor, isActiveStyle(name))
+  const blocked = useEditorSelector(editor, snapshot => !!heading && selectionInList(snapshot))
   return React.createElement(ToolbarButton, {
     label,
     active,
+    disabled: blocked,
+    title:    blocked ? IN_LIST_TITLE : undefined,
     onClick: () => editor.send({ type: 'style.toggle', style: name }),
   })
 }
@@ -268,7 +280,9 @@ const DEEP_HEADINGS = ['h4', 'h5', 'h6'] as const
 function DeepHeadingMenu() {
   const editor = useEditor()
   const active = useEditorSelector(editor, snapshot => DEEP_HEADINGS.find(h => isActiveStyle(h)(snapshot)))
+  const blocked = useEditorSelector(editor, selectionInList)
   const [open, setOpen] = React.useState(false)
+  React.useEffect(() => { if (blocked) setOpen(false) }, [blocked])
   const root = React.useRef<HTMLSpanElement>(null)
 
   React.useEffect(() => {
@@ -290,9 +304,10 @@ function DeepHeadingMenu() {
       label:      '▾',
       active:     !!active,
       onClick:    () => setOpen(v => !v),
-      title:      'Flere overskriftsnivåer (H4–H6)',
+      title:      blocked ? IN_LIST_TITLE : 'Flere overskriftsnivåer (H4–H6)',
       ariaLabel:  'Flere overskriftsnivåer',
       extraClass: 'pt-tb-more',
+      disabled:   blocked,
       expanded:   open,
     }),
     open ? React.createElement(
@@ -410,6 +425,18 @@ const replaceWords = defineBehavior<{
     execute({ type: 'delete.backward', unit: 'character' }),
     execute({ type: 'insert.span', text: event.text, decorators: event.decorators, annotations: event.annotations }),
   ]],
+})
+
+/**
+ * A heading that becomes a list item turns back into a plain item. The page renders a list item as
+ * a plain <li> whatever its style, and the heading check does not count it, so keeping the style
+ * would be a heading that exists only in the data (#144). The toolbar already refuses H3 to H6 in
+ * a list; this is the other way in, the list button (or a typed «- ») on a heading.
+ */
+const listItemIsNoHeading = defineBehavior({
+  on: 'list item.add',
+  guard: ({ snapshot }) => getSelectedTextBlocks(snapshot).some(({ node }) => !!node.style && node.style !== 'normal'),
+  actions: [({ event }) => [forward(event), execute({ type: 'style.add', style: 'normal' })]],
 })
 
 /** What the link box was opened on — fixed then, so a click elsewhere in the editor can't change what Enter does. */
@@ -601,7 +628,7 @@ function Toolbar({ expanded, onToggleExpand }: { expanded: boolean; onToggleExpa
     React.createElement(StyleButton,     { name: 'normal',     label: 'P' }),
     // H3 and the ▾ with H4 to H6 are one control: a split button.
     React.createElement('span', { className: 'pt-tb-split' },
-      React.createElement(StyleButton, { name: 'h3', label: 'H3' }),
+      React.createElement(StyleButton, { name: 'h3', label: 'H3', heading: true }),
       React.createElement(DeepHeadingMenu),
     ),
     React.createElement(StyleButton,     { name: 'blockquote', label: '❝' }),
@@ -629,7 +656,7 @@ export function PortableTextEditorReact({ value, generation, onChange, expanded,
       },
     }),
     React.createElement(ValueReader, { registerReader }),
-    React.createElement(BehaviorPlugin, { behaviors: [replaceWords] }),
+    React.createElement(BehaviorPlugin, { behaviors: [replaceWords, listItemIsNoHeading] }),
     React.createElement(Toolbar, { expanded, onToggleExpand }),
     React.createElement(PortableTextEditable, {
       renderDecorator,

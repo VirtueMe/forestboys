@@ -66,6 +66,18 @@ describe('checkHeadings, section heading at h2 (the default)', () => {
     }])
   })
 
+  it('ignores a list item with a heading style: the page shows it as a plain item (#144)', () => {
+    const item: SanityBlock = { ...b('h3', 'Punkt'), listItem: 'bullet', level: 1 }
+    // Counted, the phantom h3 would make the h5 «too deep» only from h4 on; it must not be there at all.
+    expect(checkHeadings([item, b('h5', 'Under')]).map(p => `${p.reason}:h${p.level}→${p.allowed}`)).toEqual(['too-deep:h5→3'])
+    expect(checkHeadings([item])).toEqual([])
+  })
+
+  it('leaves a list item with a heading style as it is when headings are repaired (#144)', () => {
+    const item: SanityBlock = { ...b('h5', 'Punkt'), listItem: 'number', level: 1 }
+    expect(fixHeadings([item, b('h4', 'Overskrift')])).toEqual([item, { ...b('h4', 'Overskrift'), _key: expect.any(String), style: 'h3' }])
+  })
+
   it('ignores blocks that are not text blocks, and input that is not a list', () => {
     expect(checkHeadings([{ _key: 'x', _type: 'image', style: 'h1' }])).toEqual([])
     expect(checkHeadings(undefined)).toEqual([])
