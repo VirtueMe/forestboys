@@ -72,6 +72,12 @@ export interface TextSample {
   backgrounds: string[] | null
   fontSize: number
   fontWeight: number
+  /**
+   * A glyph the page has declared decoration: hidden from assistive technology (aria-hidden) and made of
+   * no letter or digit (a separator dot, an arrow). WCAG asks no contrast of pure decoration. Words that
+   * are merely aria-hidden are not decoration: they are still read by the eye.
+   */
+  decorative?: boolean
 }
 
 export interface Violation {
@@ -94,6 +100,8 @@ export interface Judged {
   notJudged: { reason: string; count: number; examples: string[] }[]
   /** How many samples were judged and passed. */
   passed: number
+  /** How many were left out as decoration (see `TextSample.decorative`): counted, never silently dropped. */
+  decorative: number
 }
 
 const hex = (c: Rgba) => '#' + [c.r, c.g, c.b].map(v => Math.round(v).toString(16).padStart(2, '0')).join('').toUpperCase()
@@ -123,6 +131,7 @@ export function judgeText(samples: TextSample[]): Judged {
   const groups = new Map<string, Violation>()
   const skipped = new Map<string, { reason: string; count: number; examples: string[] }>()
   let passed = 0
+  let decorative = 0
 
   const skip = (reason: string, s: TextSample) => {
     const g = skipped.get(reason) ?? { reason, count: 0, examples: [] }
@@ -132,6 +141,7 @@ export function judgeText(samples: TextSample[]): Judged {
   }
 
   for (const s of samples) {
+    if (s.decorative) { decorative++; continue }
     const bgResult = background(s)
     if ('reason' in bgResult) { skip(bgResult.reason, s); continue }
     const fgRaw = parseCssColor(s.color)
@@ -158,5 +168,6 @@ export function judgeText(samples: TextSample[]): Judged {
     violations: [...groups.values()].sort((a, b) => b.count - a.count),
     notJudged: [...skipped.values()],
     passed,
+    decorative,
   }
 }

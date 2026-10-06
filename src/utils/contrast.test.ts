@@ -77,7 +77,7 @@ describe('judgeText', () => {
 
   it('passes readable text, and counts it', () => {
     const r = judgeText([sample(), sample({ color: 'rgb(0, 0, 0)' })])
-    expect(r).toEqual({ violations: [], notJudged: [], passed: 2 })
+    expect(r).toEqual({ violations: [], notJudged: [], passed: 2, decorative: 0 })
   })
 
   it('fails normal text below 4.5:1 and passes the same colours as large text', () => {
@@ -114,6 +114,14 @@ describe('judgeText', () => {
   it('assumes a white page where no layer is opaque, as a browser does', () => {
     expect(judgeText([sample({ backgrounds: [] })]).passed).toBe(1)
     expect(judgeText([sample({ color: 'rgb(255, 255, 255)', backgrounds: [] })]).violations).toHaveLength(1)
+  })
+
+  it('leaves out a decorative glyph and counts it, and judges words that are merely hidden from assistive technology', () => {
+    const faint = { color: 'rgb(221, 221, 221)' }
+    const r = judgeText([sample({ ...faint, text: '·', decorative: true }), sample({ ...faint, text: 'Skjult for skjermleser, men synlig' })])
+    expect(r.decorative).toBe(1)
+    expect(r.violations).toHaveLength(1)                       // the words still fail: the eye reads them
+    expect(r.violations[0].examples[0]).toContain('Skjult for skjermleser')
   })
 
   it('does not judge text over an image or a gradient, and says so', () => {

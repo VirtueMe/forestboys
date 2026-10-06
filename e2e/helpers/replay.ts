@@ -9,7 +9,7 @@
  */
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
-import type { Page } from '@playwright/test'
+import { expect, type Page } from '@playwright/test'
 import { describeRequest, requestKey, type PageRecording } from '../../scripts/e2e/replay-key.ts'
 import { fixturePath, type PageTarget } from '../pages.ts'
 
@@ -55,4 +55,25 @@ export async function replayPage(page: Page, target: PageTarget): Promise<Replay
   await page.route(/^https:\/\/cdn\.sanity\.io\//, route => route.fulfill({ contentType: 'image/png', body: PIXEL }))
 
   return { misses: () => misses }
+}
+
+/**
+ * Open a recorded page and wait until it has finished drawing: its title text is there, the network is quiet, and
+ * the amount of text on it is the same on two looks in a row (sections mount a moment after their data). A
+ * fixed wait would be too long on a fast machine and too short on a slow one.
+ */
+export async function openRecordedPage(page: Page, target: PageTarget): Promise<Replay> {
+  const replay = await replayPage(page, target)
+  await page.goto(target.path)
+  // The title is on the page, whatever element it is in: a test of the outline must be able to say «no h1».
+  await expect(page.getByText(target.title).first()).toBeVisible()
+  await page.waitForLoadState('networkidle')
+  let last = -1
+  await expect.poll(async () => {
+    const now = await page.evaluate(() => (document.body.innerText || '').length)
+    const stable = now === last
+    last = now
+    return stable
+  }, { message: `${target.path} kept changing`, intervals: [150], timeout: 10_000 }).toBe(true)
+  return replay
 }

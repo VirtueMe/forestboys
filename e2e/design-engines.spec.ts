@@ -16,7 +16,9 @@ test.describe('the contrast collector and judge', () => {
 
     const judged = judgeText(samples)
     const failing = judged.violations.flatMap(v => v.examples.map(e => e.replace(/ at .*/, '')))
-    expect(failing.sort()).toEqual(['«bad-alpha-black»', '«bad-grey-on-white»', '«bad-inline-grey»', '«bad-opacity-half»', '«bad-placeholder»'])
+    // `bad-aria-hidden-words`: hidden from screen readers, but the eye still reads it, so it is judged.
+    expect(failing.sort()).toEqual(['«bad-alpha-black»', '«bad-aria-hidden-words»', '«bad-grey-on-white»', '«bad-inline-grey»', '«bad-opacity-half»', '«bad-placeholder»'])
+    expect(judged.decorative).toBe(2)                           // the dot and the arrow: aria-hidden and no letter
 
     expect(judged.notJudged.map(n => [n.reason, n.examples.map(e => e.replace(/ at .*/, ''))])).toEqual([
       ['text over an image or a gradient', ['«notjudged-gradient»', '«notjudged-image»']],
