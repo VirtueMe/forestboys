@@ -189,6 +189,7 @@ every reshaping is a bundle he accepts.
 
 ```
 npx tsx scripts/migrations/outlines-to-bundles.ts --site=https://archive.example [--write]   # archive + bundles, in data/outlines-conversion
+npx tsx scripts/bundles/send-bundles.ts --dir=data/outlines-conversion/bundles --url=https://<site>/api/proposals/ingest --production [--write]
 npx tsx scripts/migrations/outlines-to-bundles.ts --remove [--write]                          # the removal: the owner's, after a dump
 ```
 
@@ -202,8 +203,9 @@ npx tsx scripts/migrations/outlines-to-bundles.ts --remove [--write]            
   and a person's `MEMBER_OF` without the import's `sourceRef` (neither the import nor we made it: dropped).
 - **The removal** is one transaction, rolled back unless exactly the archive's nodes and edges went and no
   `sanityOutlineId` is left. It refuses when the graph is no longer what the archive saw.
-- **Order:** archive and bundles, the removal, then ingest. Accepting a `create-entity` for an entity that still
-  exists is refused as drift (`checkEntityExists`), so the order cannot be got wrong the other way.
+- **Order:** archive and bundles (files), `send-bundles` to ingest, a look at each in the review preview, then the
+  removal, then Jan accepts. Accepting a `create-entity` for an entity that still exists is refused as drift
+  (`checkEntityExists`), so the bundles can wait in review before the removal, and the order cannot be got wrong.
 
 ---
 
