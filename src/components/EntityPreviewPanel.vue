@@ -15,7 +15,8 @@
     <component :is="OutlineDetail" v-else-if="kind === 'Outline'" />
     <component :is="EventDetail" v-else-if="kind === 'Operation' || kind === 'Incident'" />
     <component :is="LocationPreviewBody" v-else-if="kind === 'Location'" />
-    <p v-else class="muted">Ingen forhåndsvisning for kind «{{ kind }}».</p>
+    <component :is="EquipmentDetail" v-else-if="kind === 'EquipmentType'" />
+    <p v-else class="muted">Ingen forhåndsvisning for kind «{{ kind }}». Forhåndsvisning finnes for {{ PREVIEW_KINDS.join(', ') }}.</p>
 
     <section v-if="proposedEdges.length" class="edges-pane">
       <h3 class="edges-heading">Foreslåtte koblinger ({{ proposedEdges.length }})</h3>
@@ -48,7 +49,7 @@ import { neo4jQuery } from '@/composables/useNeo4j.ts'
 
 import {
   PersonDataKey, UnitDataKey, OrganizationDataKey, StationDataKey, TransportDataKey,
-  OutlineDataKey, EventDataKey, LocationDataKey,
+  OutlineDataKey, EventDataKey, LocationDataKey, EquipmentDataKey,
   ProposalPreviewKey,
 } from '@/composables/proposalDataInjection.ts'
 import { useProposalPersonData }       from '@/composables/useProposalPersonData.ts'
@@ -59,6 +60,7 @@ import { useProposalTransportData }    from '@/composables/useProposalTransportD
 import { useProposalOutlineData }      from '@/composables/useProposalOutlineData.ts'
 import { useProposalEventData }        from '@/composables/useProposalEventData.ts'
 import { useProposalLocationData }     from '@/composables/useProposalLocationData.ts'
+import { useProposalEquipmentData }    from '@/composables/useProposalEquipmentData.ts'
 import type { EntityStatus } from '@/composables/useProposalBundle.ts'
 
 import PersonDetail       from '@/pages/PersonDetail.vue'
@@ -69,6 +71,8 @@ import TransportDetail    from '@/pages/TransportDetail.vue'
 import OutlineDetail      from '@/pages/OutlineDetail.vue'
 import EventDetail         from '@/pages/EventDetail.vue'
 import LocationPreviewBody from '@/components/LocationPreviewBody.vue'
+import EquipmentDetail     from '@/pages/EquipmentDetail.vue'
+import { PREVIEW_KINDS } from '@/utils/previewKinds.ts'
 
 const props = defineProps<{ bundleId: string; kind: string; slug: string }>()
 const emit  = defineEmits<{ accepted: []; denied: [] }>()
@@ -85,6 +89,7 @@ const proposalData =
   props.kind === 'Operation' || props.kind === 'Incident'
                                 ? useProposalEventData(props.bundleId, entityId)        :
   props.kind === 'Location'     ? useProposalLocationData(props.bundleId, entityId)     :
+  props.kind === 'EquipmentType' ? useProposalEquipmentData(props.bundleId, entityId)   :
   null
 
 provide(ProposalPreviewKey, true)
@@ -100,6 +105,7 @@ if (proposalData) {
     case 'Operation':
     case 'Incident':     provide(EventDataKey,        proposalData as ReturnType<typeof useProposalEventData>);        break
     case 'Location':     provide(LocationDataKey,     proposalData as ReturnType<typeof useProposalLocationData>);     break
+    case 'EquipmentType': provide(EquipmentDataKey,   proposalData as ReturnType<typeof useProposalEquipmentData>);    break
   }
 }
 
@@ -129,7 +135,7 @@ const KIND_LABELS: Record<string, string> = {
   Person: 'Person', Unit: 'Avdeling', Organization: 'Organisasjon',
   Station: 'Stasjon', Transport: 'Fremkomstmiddel',
   Operation: 'Operasjon', Incident: 'Hendelse', Location: 'Sted',
-  Outline: 'Informasjon',
+  Outline: 'Informasjon', EquipmentType: 'Utstyr',
 }
 const RELATION_LABELS: Record<string, string> = {
   PART_OF: 'tilhører', MEMBER_OF: 'medlem', ATTENDED: 'deltok',

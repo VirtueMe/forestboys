@@ -138,6 +138,7 @@ import { useProposalBundle, type EntityStatus } from '@/composables/useProposalB
 import { authFetch } from '@/composables/useAuth.ts'
 import AppModal from '@/components/AppModal.vue'
 import EntityPreviewPanel from '@/components/EntityPreviewPanel.vue'
+import { PREVIEW_KINDS } from '@/utils/previewKinds.ts'
 
 const props = defineProps<{
   bundleId:     string
@@ -157,7 +158,6 @@ const actionError = ref<Record<string, string>>({})
 
 onMounted(() => { void bundle.load() })
 
-const PREVIEWABLE = new Set(['Person', 'Unit', 'Organization', 'Station', 'Transport', 'Outline', 'Operation', 'Incident', 'Location'])
 
 const preview    = ref<{ kind: string; slug: string } | null>(null)
 const modalOpen  = ref(false)
@@ -165,7 +165,7 @@ const modalTitle = computed(() => preview.value ? `${preview.value.kind}:${previ
 
 function previewable(entityId: string): boolean {
   const m = entityId.match(/^([A-Za-z]+):([a-z0-9-]+)$/)
-  return !!m && PREVIEWABLE.has(m[1])
+  return !!m && PREVIEW_KINDS.includes(m[1])
 }
 
 function openPreview(entityId: string): void {
