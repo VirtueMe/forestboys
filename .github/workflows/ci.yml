@@ -58,6 +58,10 @@ jobs:
   # Only the headless shell, which is what the tests run in: measured on a clean Debian, the install takes
   # 20 s (31 s with the full Chromium) and the browser is 269 MB (662 MB), most of it apt and download that
   # a cache would not save. If the install grows, cache ~/.cache/ms-playwright by Playwright version.
+  #
+  # The ruleset «Protect main» (Settings → Rules) requires this check by its NAME, «End-to-end (Playwright)»
+  # (#149). Renaming the job leaves every PR waiting for a check that never reports, until the ruleset is
+  # changed to the new name. Change both together.
   e2e:
     name: End-to-end (Playwright)
     runs-on: ubuntu-latest
@@ -79,6 +83,14 @@ jobs:
 
       - name: End-to-end tests
         run: npm run test:e2e
+
+      # A test that failed and passed on the retry leaves the job green. This lists those in the job's summary
+      # and as warnings, so they are looked at (#149). It never fails the job: not for flaky tests, and not if
+      # the report itself is missing or the script breaks.
+      - name: Flaky tests
+        if: ${{ !cancelled() }}
+        continue-on-error: true
+        run: node scripts/e2e/flaky-summary.ts test-results/e2e-report.json
 
       # The report has the traces of failed tests (open one with `npx playwright show-trace`).
       - name: Keep the report and the traces
