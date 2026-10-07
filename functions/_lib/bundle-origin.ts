@@ -17,6 +17,8 @@
  * (BUNDLE_EVENTS) and the source index.
  */
 
+import { sourceRefText } from './bundle-package.ts'
+
 export interface SanityOrigin {
   type:       'sanity'
   /** Sanity document type, e.g. 'event'. */
@@ -42,6 +44,30 @@ export type DerivedFrom =
   | { outlineId: string; outlineRev: string; sectionPath?: string }
   | { sanityId: string; sanityRev: string }
   | { source: { site: string; path: string } }
+
+/**
+ * What an accepted bundle writes on the nodes and edges it creates, so «what did this outline produce» and
+ * «what came from this source» are queries (docs/BUNDLE-FORMAT.md, #157):
+ *  - an outline bundle: `originOutline` (the outline's slug), `originSha` (the hash of the outline's text it was
+ *    made from), `originBundle`, and `originSection` when the entity came from one section;
+ *  - a package bundle: `importedFrom` (the source ref: the archive's address and the path to the entity, which
+ *    is how a later import finds the same entity) and `originBundle`;
+ *  - a sync bundle: nothing. It belongs to the Sanity bridge, which keeps its own bookkeeping.
+ * Never a Sanity id or revision. Written by the apply step in the same transaction as the entity.
+ */
+export function originStamp(df: DerivedFrom, bundleId: string): Record<string, string> {
+  if ('outlineId' in df) {
+    return {
+      originOutline: df.outlineId, originSha: df.outlineRev, originBundle: bundleId,
+      ...(df.sectionPath ? { originSection: df.sectionPath } : {}),
+    }
+  }
+  if ('source' in df) return { importedFrom: sourceRefText(df.source), originBundle: bundleId }
+  return {}
+}
+
+/** The property names the apply step owns: a bundle may not set them itself, in props, set-props or on an edge. */
+export const ORIGIN_PROPS = new Set(['originOutline', 'originSha', 'originBundle', 'originSection', 'importedFrom'])
 
 /** `https://Archive.example:8080/x` → `archive-example-8080-x`: a piece of a channel or a bundle id. */
 export function siteSlug(site: string): string {

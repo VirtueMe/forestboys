@@ -26,7 +26,7 @@
 
 import { runCypher, runCypherTx, type Neo4jEnv } from '~/_lib/neo4j.ts'
 import { stableSha } from '~/_lib/stable-sha.ts'
-import type { BundleOriginFields, DerivedFrom } from '~/_lib/bundle-origin.ts'
+import { originStamp, type BundleOriginFields, type DerivedFrom } from '~/_lib/bundle-origin.ts'
 import { ENTITY_ID_RE, keyProp, nodePattern, parseNodeRef } from '~/_lib/entity-ref.ts'
 import { DEMOTE_TO_INCIDENT, PROMOTE_TO_OPERATION } from '~/_lib/event-kind.ts'
 import { judgeStored, storedContents, type LinkProblem } from '~/_lib/link-guard.ts'
@@ -256,6 +256,8 @@ export async function applyEntityOps(
   const [, kind, slug] = idMatch
 
   const summary: ApplySummary = { appliedOps: [], droppedEdges: [] }
+  // Written on what this bundle creates, in the same transaction (docs/BUNDLE-FORMAT.md, #157).
+  const stamp = originStamp(payload.derivedFrom, bundleId)
   const txStatements: { statement: string; parameters?: Record<string, unknown> }[] = []
 
   for (const op of payload.ops) {
@@ -269,7 +271,7 @@ export async function applyEntityOps(
         const key = keyProp(op.kind)
         txStatements.push({
           statement: `CREATE (n:\`${op.kind}\`) SET n = $props, n.${key} = $slug`,
-          parameters: { props: { ...sanitizedProps, [key]: op.slug }, slug: op.slug },
+          parameters: { props: { ...sanitizedProps, ...stamp, [key]: op.slug }, slug: op.slug },
         })
         if (op.descriptions?.length) {
           for (const d of op.descriptions) {
@@ -293,7 +295,7 @@ export async function applyEntityOps(
               statement:
                 `MATCH ${nodePattern('a', op.kind, 'fromSlug')}, ${nodePattern('b', to.kind, 'toKey')}
                  CREATE (a)-[r:\`${edge.type}\`]->(b) SET r = $props`,
-              parameters: { fromSlug: op.slug, toKey: to.key, props: edge.props ?? {} },
+              parameters: { fromSlug: op.slug, toKey: to.key, props: { ...edge.props, ...stamp } },
             })
           }
         }
@@ -307,8 +309,11 @@ export async function applyEntityOps(
         txStatements.push({
           statement:
             `MATCH ${nodePattern('a', from.kind, 'fromKey')}, ${nodePattern('b', to.kind, 'toKey')}
-             MERGE (a)-[r:\`${op.type}\`]->(b) SET r += $props`,
-          parameters: { fromKey: from.key, toKey: to.key, props: op.props ?? {} },
+             MERGE (a)-[r:\`${op.type}\`]->(b)
+             ON CREATE SET r += $stamp
+             SET r += $props`,
+          // The stamp only goes on an edge this op creates: an edge that was there is not this bundle's.
+          parameters: { fromKey: from.key, toKey: to.key, props: op.props ?? {}, stamp },
         })
         summary.appliedOps.push(`+${op.type} ${op.from} → ${op.to}`)
         break

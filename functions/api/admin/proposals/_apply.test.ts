@@ -25,7 +25,8 @@ function graph(rows: { descriptions?: Row[] }) {
     return Promise.resolve([] as never)
   })
 }
-const payload = (entityId: string, ops: unknown[]) => ({ entityId, ops, derivedFrom: { source: { site: 'https://a.example', path: '/x' } }, source: 's', generatedAt: AT }) as Parameters<typeof applyEntityOps>[2]
+// A sync-style derivedFrom by default: it stamps nothing, so a test about something else sees the statements as they are.
+const payload = (entityId: string, ops: unknown[]) => ({ entityId, ops, derivedFrom: { sanityId: 'abc', sanityRev: 'r1' }, source: 's', generatedAt: AT }) as Parameters<typeof applyEntityOps>[2]
 const statements = () => cypher.mock.calls.map(c => String(c[1]))
 const writes = () => cypher.mock.calls.filter(c => /SET d\.content|CREATE \(e\)-\[:HAS_CONTENT/.test(String(c[1])))
 
@@ -134,5 +135,45 @@ describe('the kinds keyed by id (a Source) and by slug (the rest)', () => {
     tx.mockReset()
     await applyEntityOps(env, 'Transport:mtb-683', payload('Transport:mtb-683', [{ op: 'set-props', props: { regser: { from: 'a', to: 'b' } } }]), 'b', AT)
     expect(created(tx.mock.calls)[0].statement).toBe('MATCH (n:`Transport` {slug: $slug}) SET n += $set')
+  })
+})
+
+describe('what an accepted bundle writes on what it creates (#157)', () => {
+  const OUTLINE = { outlineId: 'linge-pulje-4', outlineRev: 'abc123', sectionPath: 'overview' }
+  const PACKAGE = { source: { site: 'https://a.example', path: '/transport/mtb-683' } }
+  const SYNC    = { sanityId: 'abc', sanityRev: 'r1' }
+  const BUNDLE  = 'bundle:linge-pulje-4:t'
+  const withOrigin = (entityId: string, derivedFrom: unknown, ops: unknown[]) => ({ ...payload(entityId, ops), derivedFrom }) as Parameters<typeof applyEntityOps>[2]
+  const create = { op: 'create-entity', kind: 'Operation', slug: 'linge-pulje-4', props: { canonicalName: 'Linge Pulje 4' }, edges: [{ type: 'PART_OF', to: 'Unit:linge', props: { role: 'x' } }] }
+  const stmts = () => tx.mock.calls[0][1] as { statement: string; parameters?: Record<string, unknown> }[]
+
+  it('stamps the node and its edges from an outline bundle: the outline, the hash, the bundle, the section', async () => {
+    await applyEntityOps(env, 'Operation:linge-pulje-4', withOrigin('Operation:linge-pulje-4', OUTLINE, [create]), BUNDLE, AT)
+    const stamp = { originOutline: 'linge-pulje-4', originSha: 'abc123', originBundle: BUNDLE, originSection: 'overview' }
+    expect(stmts()[0].parameters!.props).toEqual({ canonicalName: 'Linge Pulje 4', ...stamp, slug: 'linge-pulje-4' })
+    expect(stmts()[1].parameters!.props).toEqual({ role: 'x', ...stamp })   // the edge keeps its own properties and gets the stamp
+  })
+
+  it('stamps importedFrom on what a package bundle creates, so a second import finds it', async () => {
+    await applyEntityOps(env, 'Transport:mtb-683', withOrigin('Transport:mtb-683', PACKAGE, [{ op: 'create-entity', kind: 'Transport', slug: 'mtb-683', props: { regser: '683' } }]), 'bundle:package-a-example:t', AT)
+    expect(stmts()[0].parameters!.props).toEqual({ regser: '683', importedFrom: 'https://a.example/transport/mtb-683', originBundle: 'bundle:package-a-example:t', slug: 'mtb-683' })
+  })
+
+  it('stamps nothing from a sync bundle: it belongs to the bridge', async () => {
+    await applyEntityOps(env, 'Operation:linge-pulje-4', withOrigin('Operation:linge-pulje-4', SYNC, [create]), 'bundle:sanity-event:t', AT)
+    expect(stmts()[0].parameters!.props).toEqual({ canonicalName: 'Linge Pulje 4', slug: 'linge-pulje-4' })
+    expect(stmts()[1].parameters!.props).toEqual({ role: 'x' })
+  })
+
+  it('stamps an added edge only when this op creates it, not one that was there', async () => {
+    await applyEntityOps(env, 'Person:erik', withOrigin('Person:erik', OUTLINE, [{ op: 'add-edge', type: 'MEMBER_OF', from: 'Person:erik', to: 'Unit:linge', props: { role: 'operative' } }]), BUNDLE, AT)
+    const [edge] = stmts()
+    expect(edge.statement).toMatch(/MERGE \(a\)-\[r:`MEMBER_OF`\]->\(b\)\s+ON CREATE SET r \+= \$stamp\s+SET r \+= \$props/)
+    expect(edge.parameters).toMatchObject({ props: { role: 'operative' }, stamp: { originOutline: 'linge-pulje-4', originSha: 'abc123', originBundle: BUNDLE, originSection: 'overview' } })
+  })
+
+  it('does not stamp what it only changes: a set-props leaves the origin of the entity as it was', async () => {
+    await applyEntityOps(env, 'Operation:linge-pulje-4', withOrigin('Operation:linge-pulje-4', OUTLINE, [{ op: 'set-props', props: { codeName: { from: 'a', to: 'b' } } }]), BUNDLE, AT)
+    expect(stmts()[0].parameters).toEqual({ slug: 'linge-pulje-4', set: { codeName: 'b' } })
   })
 })

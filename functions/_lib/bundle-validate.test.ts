@@ -244,3 +244,24 @@ describe('a bundle that scripts/bundles/package-to-bundle.ts writes', () => {
     expect(v.manifest.entities[0].opSummary.at(-1)).toContain('proposed as the same entity')   // matched by slug alone
   })
 })
+
+describe('the origin stamp is written by the accept, not set by a bundle', () => {
+  const create = (props: Record<string, unknown>, edges?: unknown[]) => [{ op: 'create-entity', kind: 'Operation', slug: 'linge-pulje-4', props, ...(edges ? { edges } : {}) }]
+  const forOutline = (ops: unknown[]) => { const b = outlineBundle(); entityOf(b).ops = ops; return b }
+
+  it('refuses it in the properties of a new entity, in a set-props, on an edge and on an add-edge, for an outline bundle', () => {
+    expect(reason(forOutline(create({ canonicalName: 'x', originSha: 'forged' })))).toContain('«originSha» is written by the accept')
+    expect(reason(forOutline([{ op: 'set-props', props: { originOutline: { from: null, to: 'x' } } }]))).toContain('«originOutline» is written by the accept')
+    expect(reason(forOutline(create({ canonicalName: 'x' }, [{ type: 'PART_OF', to: 'Unit:a', props: { originBundle: 'b' } }])))).toContain('«originBundle»')
+    expect(reason(forOutline([{ op: 'add-edge', type: 'PART_OF', from: 'Operation:linge-pulje-4', to: 'Unit:a', props: { importedFrom: 'x' } }]))).toContain('«importedFrom»')
+  })
+
+  it('and for a sync bundle', () => {
+    const b = syncBundle(); entityOf(b).ops = [{ op: 'set-props', props: { originSha: { from: null, to: 'x' } } }]
+    expect(reason(b)).toContain('«originSha» is written by the accept')
+  })
+
+  it('leaves everything else in an outline bundle as it was', () => {
+    expect(reason(forOutline(create({ canonicalName: 'x', startDate: '1942-03', origin: 'unknown' })))).toBeNull()
+  })
+})

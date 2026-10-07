@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { bundleChannel, originLabel, siteSlug, sourceIndexKey, validateDerivedFrom, validateOrigin } from './bundle-origin.ts'
+import { sourceRefText } from './bundle-package.ts'
+import { bundleChannel, ORIGIN_PROPS, originLabel, originStamp, siteSlug, sourceIndexKey, validateDerivedFrom, validateOrigin } from './bundle-origin.ts'
 
 const SITE = 'https://archive.example'
 const NOW  = '2026-10-07T12:00:00.000Z'
@@ -45,5 +46,39 @@ describe('the package origin', () => {
     expect(validateDerivedFrom(o, { source: {} })).toContain('source.site')
     expect(validateDerivedFrom(o, { sanityId: 'x', sanityRev: 'y' })).toContain('source.site')   // not what a package carries
     expect(validateDerivedFrom(o, undefined)).toBe('derivedFrom required')
+  })
+})
+
+describe('originStamp: what an accepted bundle writes on what it creates', () => {
+  const BUNDLE = 'bundle:linge-pulje-4:2026-10-07T12:00:00.000Z'
+
+  it('for an outline: the outline, the hash of its text, the bundle, and the section when there is one', () => {
+    expect(originStamp({ outlineId: 'linge-pulje-4', outlineRev: 'abc123', sectionPath: 'overview' }, BUNDLE))
+      .toEqual({ originOutline: 'linge-pulje-4', originSha: 'abc123', originBundle: BUNDLE, originSection: 'overview' })
+    expect(originStamp({ outlineId: 'linge-pulje-4', outlineRev: 'abc123' }, BUNDLE))
+      .toEqual({ originOutline: 'linge-pulje-4', originSha: 'abc123', originBundle: BUNDLE })
+  })
+
+  it('for a package: the source ref (how a later import finds the entity) and the bundle', () => {
+    expect(originStamp({ source: { site: SITE, path: '/transport/mtb-683' } }, BUNDLE))
+      .toEqual({ importedFrom: 'https://archive.example/transport/mtb-683', originBundle: BUNDLE })
+  })
+
+  it('for the Sanity sync: nothing, and never a Sanity id or revision', () => {
+    expect(originStamp({ sanityId: 'abc', sanityRev: 'r1' }, BUNDLE)).toEqual({})
+  })
+
+  it('stamps the same string a later import looks for', () => {
+    const source = { site: SITE, path: '/transport/mtb-683' }
+    expect(originStamp({ source }, BUNDLE).importedFrom).toBe(sourceRefText(source))   // what package-to-bundle.ts matches on
+  })
+
+  it('uses only names the accept owns', () => {
+    const names = [
+      ...Object.keys(originStamp({ outlineId: 'a', outlineRev: 'b', sectionPath: 'c' }, BUNDLE)),
+      ...Object.keys(originStamp({ source: { site: SITE, path: '/x' } }, BUNDLE)),
+    ]
+    for (const n of names) expect(ORIGIN_PROPS.has(n), n).toBe(true)
+    expect(JSON.stringify([...ORIGIN_PROPS])).not.toMatch(/sanity/i)
   })
 })

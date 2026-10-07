@@ -19,6 +19,13 @@ export interface SourceRef {
   path: string
 }
 
+/**
+ * A source ref as one string, `<site><path>`: what an accepted package bundle stamps as `importedFrom` on what it
+ * creates (bundle-origin.ts `originStamp`) and what a later import looks for (scripts/lib/package-graph.ts
+ * `findNode`). One function, so the two cannot drift apart.
+ */
+export const sourceRefText = (source: SourceRef): string => `${source.site}${source.path}`
+
 export interface EdgeSnapshot {
   type:   string
   /** `<Kind>:<key>` (functions/_lib/entity-ref.ts). */
