@@ -29,6 +29,7 @@ import {
   applyEntityOps,
   checkDrift,
   checkOpLinks,
+  checkDescriptionDrift,
   checkPropDrift,
   ENTITY_ID_RE,
   indexRemove,
@@ -93,7 +94,7 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env, params }
 
   // 2b. Drift check.
   const drifted      = await checkDrift(env, entityId, payload.ops, expectedShas)
-  const driftedProps = await checkPropDrift(env, entityId, payload.ops)
+  const driftedProps = [...await checkPropDrift(env, entityId, payload.ops), ...await checkDescriptionDrift(env, entityId, payload.ops)]
   if (drifted.length || driftedProps.length) {
     return json({ kind: 'drift', driftedBlocks: drifted, driftedProps }, 409)
   }

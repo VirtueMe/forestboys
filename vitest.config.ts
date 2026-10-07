@@ -7,6 +7,8 @@ export default defineConfig({
   resolve: {
     alias: {
       '@': fileURLToPath(new URL('./src', import.meta.url)),
+      // The functions code imports '~/…' (functions/tsconfig.json paths): a test that mocks one of its modules needs it too.
+      '~': fileURLToPath(new URL('./functions', import.meta.url)),
     },
   },
   test: {

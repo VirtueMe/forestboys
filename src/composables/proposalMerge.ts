@@ -72,12 +72,20 @@ export function synthesizeSectionsFromModifyOps(payload: EntityPayload): Section
 }
 
 /**
- * Replace each `modify-block` op's matching block in place across the
- * Section[] ref the page binds to. Returns the count of replacements.
+ * Apply the payload's text ops in place across the Section[] ref the page binds to: each `modify-block`
+ * replaces its matching block, each `set-description` replaces the whole text of the section with that
+ * order, or adds the section when there is none (#161). Returns the count of changes.
  */
 export function applyModifyBlockOps(payload: EntityPayload, sections: Section[]): number {
   let replaced = 0
   for (const op of payload.ops) {
+    if (op.op === 'set-description') {
+      const section = sections.find((s) => s.order === op.order)
+      if (section) section.content = op.content
+      else sections.push({ order: op.order, content: op.content, citations: [], sourcedFrom: null })
+      replaced++
+      continue
+    }
     if (op.op !== 'modify-block') continue
     const key = blockKeyFromPath(op.blockPath)
     if (!key) continue

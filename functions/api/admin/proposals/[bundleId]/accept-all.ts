@@ -17,6 +17,7 @@ import { requireAdmin } from '~/_lib/require-admin.ts'
 import {
   applyEntityOps,
   checkOpLinks,
+  checkDescriptionDrift,
   checkPropDrift,
   ENTITY_ID_RE,
   indexRemove,
@@ -82,7 +83,7 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env, params }
     }
 
     // Field values changed since the proposal was made → leave it for a per-entity look.
-    const driftedProps = await checkPropDrift(env, entityId, payload.ops)
+    const driftedProps = [...await checkPropDrift(env, entityId, payload.ops), ...await checkDescriptionDrift(env, entityId, payload.ops)]
     if (driftedProps.length) {
       results.push({ entityId, status: 'failed', reason: `drift: ${driftedProps.map(d => d.prop).join(', ')}` })
       continue
