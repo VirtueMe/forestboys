@@ -173,9 +173,30 @@ carries one-step revert state:
 | `previousAt`     | string | ISO timestamp of the prior write.                                      |
 | `previousSource` | string | `'sanity-import' | 'proposal:<ts>' | 'manual-edit'`                    |
 
-Revert = swap `previousValue` back in, then clear the `previous*` fields
-(one step back is the contract). See `PROPOSALS.md` for the full
+| `previousKind`   | string | What `previousValue` holds: `'block'` (the one block a `modify-block` replaced) or `'description'` (the whole content a `set-description` replaced). Absent on writes from before it existed: those hold a block. |
+
+Revert = swap `previousValue` back in (a block into its place, or the whole content, by `previousKind`), then clear
+the `previous*` fields (one step back is the contract). See `PROPOSALS.md` for the full
 proposal-flow design and the durable history log.
+
+### Origin stamps (what an accepted bundle created)
+
+Written by the accept step in the same transaction as the entity (`functions/api/admin/proposals/_apply.ts`,
+`originStamp` in `functions/_lib/bundle-origin.ts`), on the **node** and on each **edge** the bundle creates. An
+`add-edge` stamps only an edge it creates, never one that was already there. A bundle cannot set these itself.
+They name no Sanity id and no Sanity `_rev`: the Sanity sync's bundles stamp nothing.
+
+| Property        | From a bundle of | Meaning                                                                                          |
+|-----------------|------------------|--------------------------------------------------------------------------------------------------|
+| `originOutline` | an outline       | Slug of the outline the entity was made from.                                                    |
+| `originSha`     | an outline       | Hash of the outline's text (`outlineContentSha`) the bundle was made from: the version.          |
+| `originBundle`  | outline, package | The bundle that created it.                                                                      |
+| `originSection` | an outline       | The section the entity came from, when the payload named one.                                    |
+| `importedFrom`  | a package        | The source ref (`<site><path>`, `sourceRefText`) of the entity in the archive it came from: how a later import finds it again. |
+
+«Everything outline O produced» is `MATCH (n) WHERE n.originOutline = $slug` (and the same on edges); what was made
+from an older version of the text is `n.originSha <> <the hash of the text now>`. These stamps describe this
+archive's own history, so a package never carries them (`isBridgeProp`, `BUNDLE-FORMAT.md`).
 
 ### Attribute vs node rule
 
@@ -580,7 +601,7 @@ vessel
 ### Outline
 
 **Identity**: `slug` · **Display**: `canonicalName` (legacy `title` on un-migrated nodes)
-**Properties**: `provenance` (where the document originated — `oss-hq-memo`, `soe-report`, `lokalhistoriewiki`, `wikipedia`, …)
+**Properties**: `provenance` (where the document originated — `oss-hq-memo`, `soe-report`, `lokalhistoriewiki`, `wikipedia`, …); `archivedAt`, `archivedReason`, `absorbedSha`, `absorbedBundle` (set when a bundle made from the outline is fully accepted: the hash of the text it was made from, and the bundle)
 
 A full source document — OSS memos, SOE reports, articles, scanned correspondence — kept as a first-class node rather than exploded into facts. Outlines are the **source material** the proposal pipeline reads to generate edits against entity nodes.
 
