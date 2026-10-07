@@ -27,9 +27,10 @@ const graphTransport: EntityInput = {
 describe('isBridgeProp', () => {
   it('names the sync bridge\'s bookkeeping and nothing that is content', () => {
     for (const name of ['sanityId', 'sanityRev', 'sanityImportedAt', 'sanityUpdatedAt', 'sanitySha', 'sanityOutlineId',
-      'description_sanityUpdatedAt', 'description_sha', 'links_sha', 'date_sha', 'sha', 'lat_sourceRef', 'description_sourceRef']) expect(isBridgeProp(name), name).toBe(true)
+      'description_sanityUpdatedAt', 'description_sha', 'links_sha', 'date_sha', 'sha', 'lat_sourceRef', 'description_sourceRef',
+      'importedFrom', 'originOutline', 'originSha', 'originBundle', 'originSection']) expect(isBridgeProp(name), name).toBe(true)
     for (const name of ['canonicalName', 'rawUnit', 'regser', 'lat', 'lat_state', 'description_state',
-      'shape', 'shadow', 'role', 'startDate', 'description_state']) expect(isBridgeProp(name), name).toBe(false)
+      'shape', 'shadow', 'role', 'startDate', 'description_state', 'origin', 'originalName', 'imported']) expect(isBridgeProp(name), name).toBe(false)
   })
 })
 
