@@ -36,3 +36,11 @@ bucket_name = "milorg-proposals"
 # is a Cloudflare secret (Production + Preview), never here. Locally .dev.vars overrides
 # both with the 127.0.0.1 app.
 GITHUB_CLIENT_ID = "Ov23li62h3a4NAutaB7P"
+
+# The two build-time values the client reads (src: import.meta.env.VITE_SANITY_*, vite.config.ts: the dev proxy). With
+# this file valid, Pages builds from these and ignores the dashboard's variables, so a value left only in the dashboard
+# is missing from the bundle. Both are public (the project id is in every Sanity URL the site calls). The VITE_NEO4J_*
+# values in the dashboard are read by nothing in src or functions. Remove a name from the dashboard when it is here: a
+# name defined in both fails the deployment («Binding name … already in use»).
+VITE_SANITY_PROJECT_ID = "7r6kqtqy"
+VITE_SANITY_DATASET    = "production"
