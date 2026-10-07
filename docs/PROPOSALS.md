@@ -171,19 +171,22 @@ without doing an `R2.list()` on every page load.
 
 ## Bundle origin
 
-A bundle comes from one of two places (`functions/_lib/bundle-origin.ts`). A third, a package from another archive or from an earlier absorption, is designed in `BUNDLE-FORMAT.md` and waits for #161:
+A bundle comes from one of three places (`functions/_lib/bundle-origin.ts`):
 
-| | Outline (Claude) | Sanity sync (docs/SANITY-SYNC.md) |
-|---|---|---|
-| Manifest | `outlineId`, `outlineRev` | `origin: {type: 'sanity', sanityType, runAt}` |
-| Per entity `derivedFrom` | `{outlineId, outlineRev, sectionPath?}` | `{sanityId, sanityRev}` |
-| Channel (bundle id, live updates) | `<outlineId>` | `sanity-<type>` |
-| Source index | `by-outline/<outlineId>` | `by-source/sanity-<type>` |
-| On full accept | outline archived (`obsolete-outline`) | — |
-| GitHub issue, resolve dispatch | yes | no |
+| | Outline (Claude) | Sanity sync (docs/SANITY-SYNC.md) | Package (docs/BUNDLE-FORMAT.md) |
+|---|---|---|---|
+| Manifest | `outlineId`, `outlineRev` | `origin: {type: 'sanity', sanityType, runAt}` | `origin: {type: 'package', site, madeAt}` |
+| Per entity `derivedFrom` | `{outlineId, outlineRev, sectionPath?}` | `{sanityId, sanityRev}` | `{source: {site, path}}` |
+| Channel (bundle id, live updates) | `<outlineId>` | `sanity-<type>` | `package-<site>` (`siteSlug`) |
+| Source index | `by-outline/<outlineId>` | `by-source/sanity-<type>` | `by-source/package-<site>` |
+| On full accept | outline archived (`obsolete-outline`) | — | — |
+| GitHub issue, resolve dispatch | yes | no | no |
+| `model`, `promptHash` | the bot's | `sanity-sync`, a rule version | none: `'none'` when left out |
+| Bridge bookkeeping in the ops | not checked | not checked | refused (`sanity*`, hash stamps, `*_sourceRef`, `importedFrom`, `origin*`) |
 
-Ingest takes exactly one of the two. Sync bundles use `model: 'sanity-sync'`
-and a rule version as `promptHash`. The live-update stream is
+Ingest takes exactly one of the three. Sync bundles use `model: 'sanity-sync'`
+and a rule version as `promptHash`. A package bundle may carry a `note` per entity
+(a match by slug alone, to be confirmed); the review shows it with the entity's ops. The live-update stream is
 `/api/proposals/events?channel=<channel>` (`outlineId=` still accepted).
 
 ## Bundle shape
@@ -249,12 +252,23 @@ filtered from the review UI and recoverable in `bundles/<bundleId>/drifted/`.
 // Create a new entity, optionally with outbound edges in one shot.
 {
   "op":    "create-entity",
-  "kind":  "Person | Unit | Operation | Incident | Station | Transport | Location | Outline",
+  "kind":  "Person | Unit | Operation | Incident | Station | Transport | Location | Outline | Organization | Article | EquipmentType | Source",
   "slug":  "<entity slug>",
   "props": { /* scalar properties from the kind's SCHEMA.md spec */ },
   "edges": [
     { "type": "<EDGE_TYPE>", "to": "<targetEntityId>", "props": { /* edge metadata */ } }
   ]
+}
+
+// Replace the whole text of one Description of an entity, or create it (expectedSha is empty then).
+// expectedSha is the stableSha of the live blocks as a value (not of the JSON string), compared at accept like
+// a set-props `from`: a mismatch refuses the entity as drift («description <order>»). The replaced text is
+// kept whole in previousValue, with previousKind: 'description' (a modify-block keeps the one block, 'block').
+{
+  "op":          "set-description",
+  "order":       1,
+  "expectedSha": "<sha of the live description of that order, or empty when there is none>",
+  "content":     "[{\"_type\":\"block\", …}]"          // a JSON string of blocks
 }
 
 // Modify one PT block on an existing entity. Carries expectedSha for drift detection.

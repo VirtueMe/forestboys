@@ -129,9 +129,9 @@ The rules that keep a package from doing harm:
 
 `set-description` is new: `modify-block` replaces one existing block by its
 key and cannot add or remove one, so a description that gained a paragraph
-had no op. The op, and what ingest and apply must accept for a package, are
-**#161**; until then a bundle using them can be written and checked but not
-ingested.
+had no op. The op, the package origin and the guard against bridge metadata
+are in ingest and apply (**#161**, `PROPOSALS.md`): a bundle the scripts write
+is ingested as it is.
 
 ### Matching
 
@@ -174,7 +174,7 @@ npx tsx scripts/bundles/package-to-bundle.ts --package=data/packages/<name>.json
 bookkeeping, checks the package and reports what it left out. A kind without a page of its own (an Article, a
 Source) gets a placeholder path, and the script says so. `package-to-bundle` finds each entity by `importedFrom`,
 else by kind and slug, lists what would change, and with `--write` writes the bundle (`origin: package`) to a
-file. It does not send it: ingest takes that origin, and `set-description`, in #161.
+file. It does not send it. Ingest takes it as it is (`bundle-validate.ts`; a test pins this).
 
 An edge belongs to the entity it leaves, so the 272 `MEMBER_OF` edges of the people in `kompani-linge` are in
 the **people's** snapshots, not in the unit's. A package of the unit alone does not carry them.
@@ -192,9 +192,6 @@ the **people's** snapshots, not in the unit's. A package of the unit alone does 
 
 - The origin stamp on the nodes an accepted bundle creates, and the state of
   an outline (#157).
-- What ingest and apply must accept: `set-description`, the kinds `Article`,
-  `EquipmentType` and `Source`, the `package` origin, the guard against
-  bridge metadata (#161).
 - The export feature: the filter, the zip, who may export (#160).
 - A minted id that survives slug renames (#96): only if aliases turn out not
   to be enough.

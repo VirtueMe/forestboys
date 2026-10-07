@@ -7,6 +7,7 @@
  * read, not what is sent.
  */
 
+import { siteSlug } from './bundle-origin.ts'
 import type { BundlePackage, SourceRef } from './bundle-package.ts'
 import type { DiffOp, PackageDiff } from './snapshot-diff.ts'
 
@@ -32,10 +33,7 @@ export interface PackageBundleBody {
   entities:   PackageBundleEntity[]
 }
 
-/** `https://Archive.example:8080/x` → `archive-example-8080-x`: a piece of a bundle id (`bundle:<this>:<time>`). */
-export function siteSlug(site: string): string {
-  return site.toLowerCase().replace(/^[a-z]+:\/\//, '').replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || 'site'
-}
+export { siteSlug }
 
 /** The bundle for a package's differences, or null when the graph already holds everything. */
 export function buildBundleBody(pkg: BundlePackage, diff: PackageDiff, now: string): PackageBundleBody | null {

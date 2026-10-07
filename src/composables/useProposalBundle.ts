@@ -22,6 +22,7 @@ export type BundleOp =
   | { op: 'modify-block'; blockPath: string; expectedSha: string; newValue: PtBlock }
   | { op: 'add-edge';     type: string; from: string; to: string; props?: Record<string, unknown> }
   | { op: 'remove-edge';  type: string; from: string; to: string }
+  | { op: 'set-description'; order: number; expectedSha: string; content: string }
   | { op: 'delete-entity' }
   | { op: 'obsolete-outline'; reason: string }
   | { op: 'set-props';    props: Record<string, { from: unknown; to: unknown }> }
@@ -47,14 +48,16 @@ export type BundleStatus = 'pending' | 'blocked' | 'closed'
 
 /** Bundle origin — functions/_lib/bundle-origin.ts. */
 export interface SanityOrigin { type: 'sanity'; sanityType: string; runAt: string }
+/** A package of entity snapshots from an archive (docs/BUNDLE-FORMAT.md). */
+export interface PackageOrigin { type: 'package'; site: string; madeAt: string }
 
 export interface BundleManifest {
   bundleId:         string
   /** Outline bundles (Claude absorbing an outline). */
   outlineId?:       string
   outlineRev?:      string
-  /** Sync bundles (Sanity → graph). */
-  origin?:          SanityOrigin
+  /** Sync bundles (Sanity → graph), and bundles made from a package. */
+  origin?:          SanityOrigin | PackageOrigin
   summary:          string
   createdAt:        string
   model:            string
@@ -72,8 +75,11 @@ export interface EntityPayload {
   derivedFrom:
     | { outlineId: string; outlineRev: string; sectionPath?: string }
     | { sanityId: string; sanityRev: string }
+    | { source: { site: string; path: string } }
   source:      string
   generatedAt: string
+  /** Set when a package's entity was matched by slug alone: it is proposed as the same entity. */
+  note?:       string
 }
 
 interface BundleResponse {

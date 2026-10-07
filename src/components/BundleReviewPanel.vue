@@ -10,6 +10,9 @@
           <template v-if="manifest.outlineId">
             <dt>Outline</dt><dd><code>{{ manifest.outlineId }}</code> (rev <code>{{ manifest.outlineRev?.slice(0, 8) }}</code>)</dd>
           </template>
+          <template v-else-if="manifest.origin?.type === 'package'">
+            <dt>Kilde</dt><dd>Pakke fra <code>{{ manifest.origin.site }}</code>, laget {{ manifest.origin.madeAt.slice(0, 16).replace('T', ' ') }}</dd>
+          </template>
           <template v-else-if="manifest.origin">
             <dt>Kilde</dt><dd>Sanity <code>{{ manifest.origin.sanityType }}</code>, kjørt {{ manifest.origin.runAt.slice(0, 16).replace('T', ' ') }}</dd>
           </template>

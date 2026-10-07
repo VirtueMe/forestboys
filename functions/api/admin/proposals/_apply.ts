@@ -2,8 +2,9 @@
  * Apply / unwind helpers shared by accept.ts + deny.ts.
  *
  * Responsibilities:
- *   - Drift check for `modify-block` ops (recompute live sha vs `expectedSha`)
- *     and `set-props` ops (live value vs the op's `from`).
+ *   - Drift check for `modify-block` ops (recompute live sha vs `expectedSha`),
+ *     `set-props` ops (live value vs the op's `from`) and `set-description` ops
+ *     (sha of the live description vs the op's `expectedSha`).
  *   - Translate a payload's ops into Neo4j writes (per-entity transaction).
  *   - R2 conditional-write helpers (intent lock, manifest patch, index patch).
  *
@@ -26,7 +27,7 @@
 import { runCypher, runCypherTx, type Neo4jEnv } from '~/_lib/neo4j.ts'
 import { stableSha } from '~/_lib/stable-sha.ts'
 import type { BundleOriginFields, DerivedFrom } from '~/_lib/bundle-origin.ts'
-import { ENTITY_ID_RE, nodePattern, parseNodeRef } from '~/_lib/entity-ref.ts'
+import { ENTITY_ID_RE, keyProp, nodePattern, parseNodeRef } from '~/_lib/entity-ref.ts'
 import { DEMOTE_TO_INCIDENT, PROMOTE_TO_OPERATION } from '~/_lib/event-kind.ts'
 import { judgeStored, storedContents, type LinkProblem } from '~/_lib/link-guard.ts'
 
@@ -38,6 +39,8 @@ export type BundleOp =
   | { op: 'modify-block'; blockPath: string; expectedSha: string; newValue: PtBlock }
   | { op: 'add-edge';     type: string; from: string; to: string; props?: Record<string, unknown> }
   | { op: 'remove-edge';  type: string; from: string; to: string }
+  /** The whole text of one Description of the entity, replaced (or created when `expectedSha` is empty): #161. */
+  | { op: 'set-description'; order: number; expectedSha: string; content: string }
   | { op: 'delete-entity' }
   | { op: 'obsolete-outline'; reason: string }
   /** Scalar properties on the payload's entity; `to: null` removes it. `from` is the value the proposal expects to replace. */
@@ -97,7 +100,7 @@ export async function checkPropDrift(env: Neo4jEnv, entityId: string, ops: Bundl
   if (!idMatch) return []
   const [, kind, slug] = idMatch
   const [row] = await runCypher<{ props: Record<string, unknown> | null }>(
-    env, `OPTIONAL MATCH (n:\`${kind}\` {slug: $slug}) RETURN properties(n) AS props`, { slug })
+    env, `OPTIONAL MATCH ${nodePattern('n', kind, 'slug')} RETURN properties(n) AS props`, { slug })
   const live = row?.props ?? {}
   const drifted: DriftedProp[] = []
   for (const op of setOps) {
@@ -106,6 +109,37 @@ export async function checkPropDrift(env: Neo4jEnv, entityId: string, ops: Bundl
     }
   }
   return drifted
+}
+
+/**
+ * Compare each set-description op's `expectedSha` with the sha of the live description of that order
+ * (the stableSha of its parsed blocks; empty when there is none). Reported like a drifted property, so the
+ * review shows it the same way: `prop` is «description <order>», `expected` and `actual` are the shas.
+ */
+export async function checkDescriptionDrift(env: Neo4jEnv, entityId: string, ops: BundleOp[]): Promise<DriftedProp[]> {
+  const setOps = ops.filter((o): o is Extract<BundleOp, { op: 'set-description' }> => o.op === 'set-description')
+  if (!setOps.length) return []
+  const idMatch = entityId.match(ENTITY_ID_RE)
+  if (!idMatch) return []
+  const [, kind, slug] = idMatch
+  const rows = await runCypher<{ order: number; content: string | null }>(
+    env,
+    `MATCH ${nodePattern('e', kind, 'slug')}-[:HAS_CONTENT]->(d:Description)
+     RETURN d.order AS order, d.content AS content`,
+    { slug },
+  )
+  const drifted: DriftedProp[] = []
+  for (const op of setOps) {
+    const live = rows.find(r => Number(r.order) === op.order)
+    const actual = live?.content ? await descriptionSha(live.content) : ''
+    if (actual !== op.expectedSha) drifted.push({ prop: `description ${op.order}`, expected: op.expectedSha, actual })
+  }
+  return drifted
+}
+
+/** The sha of a description: of its blocks as a value, so another way of writing the same JSON is not a change. */
+async function descriptionSha(content: string): Promise<string> {
+  try { return await stableSha(JSON.parse(content)) } catch { return await stableSha(content) }
 }
 
 export interface DriftedBlock {
@@ -160,7 +194,7 @@ export async function readLiveBlock(
 
   const rows = await runCypher<{ content: string | null }>(
     env,
-    `MATCH (e:\`${kind}\` {slug: $slug})-[:HAS_CONTENT]->(d:Description)
+    `MATCH ${nodePattern('e', kind, 'slug')}-[:HAS_CONTENT]->(d:Description)
      RETURN d.content AS content`,
     { slug },
   )
@@ -188,6 +222,7 @@ export async function checkOpLinks(env: Neo4jEnv, entityId: string, ops: BundleO
   for (const op of ops) {
     if (op.op === 'modify-block') written.push(JSON.stringify([op.newValue]))
     else if (op.op === 'create-entity') for (const d of op.descriptions ?? []) written.push(d.content)
+    else if (op.op === 'set-description') written.push(op.content)
   }
   if (!written.length) return []
   const idMatch = entityId.match(ENTITY_ID_RE)
@@ -230,16 +265,18 @@ export async function applyEntityOps(
         // (older malformed bundles) so it doesn't land as a node prop.
         const { descriptions: _drop, ...sanitizedProps } = op.props
         void _drop
+        // A Source is keyed by `id`, every other kind by `slug` (entity-ref.ts `keyProp`).
+        const key = keyProp(op.kind)
         txStatements.push({
-          statement: `CREATE (n:\`${op.kind}\`) SET n = $props, n.slug = $slug`,
-          parameters: { props: { ...sanitizedProps, slug: op.slug }, slug: op.slug },
+          statement: `CREATE (n:\`${op.kind}\`) SET n = $props, n.${key} = $slug`,
+          parameters: { props: { ...sanitizedProps, [key]: op.slug }, slug: op.slug },
         })
         if (op.descriptions?.length) {
           for (const d of op.descriptions) {
             const descId = `desc:${op.kind}:${op.slug}:${d.order}`
             txStatements.push({
               statement:
-                `MATCH (n:\`${op.kind}\` {slug: $slug})
+                `MATCH ${nodePattern('n', op.kind, 'slug')}
                  CREATE (n)-[:HAS_CONTENT]->(:Description { id: $id, order: $order, content: $content })`,
               parameters: { slug: op.slug, id: descId, order: d.order, content: d.content },
             })
@@ -254,7 +291,7 @@ export async function applyEntityOps(
             }
             txStatements.push({
               statement:
-                `MATCH (a:\`${op.kind}\` {slug: $fromSlug}), ${nodePattern('b', to.kind, 'toKey')}
+                `MATCH ${nodePattern('a', op.kind, 'fromSlug')}, ${nodePattern('b', to.kind, 'toKey')}
                  CREATE (a)-[r:\`${edge.type}\`]->(b) SET r = $props`,
               parameters: { fromSlug: op.slug, toKey: to.key, props: edge.props ?? {} },
             })
@@ -291,7 +328,7 @@ export async function applyEntityOps(
       }
       case 'delete-entity': {
         txStatements.push({
-          statement: `MATCH (n:\`${kind}\` {slug: $slug}) DETACH DELETE n`,
+          statement: `MATCH ${nodePattern('n', kind, 'slug')} DETACH DELETE n`,
           parameters: { slug },
         })
         summary.appliedOps.push(`delete ${entityId}`)
@@ -309,15 +346,16 @@ export async function applyEntityOps(
         const set = Object.fromEntries(Object.entries(op.props).map(([k, v]) => [k, v.to ?? null]))
         txStatements.push({
           // A null in `SET n += map` removes that property.
-          statement: `MATCH (n:\`${kind}\` {slug: $slug}) SET n += $set`,
+          statement: `MATCH ${nodePattern('n', kind, 'slug')} SET n += $set`,
           parameters: { slug, set },
         })
         summary.appliedOps.push(`set ${Object.keys(set).join(', ')} on ${entityId}`)
         break
       }
       case 'modify-block':
+      case 'set-description':
       case 'set-kind':
-        // Handled below — modify-block per op; set-kind last, as it relabels the entity.
+        // Handled below — modify-block and set-description per op; set-kind last, as it relabels the entity.
         break
     }
   }
@@ -337,6 +375,13 @@ export async function applyEntityOps(
     summary.appliedOps.push(`modify ${op.blockPath}`)
   }
 
+  // Replace (or create) whole descriptions: read-then-write like modify-block, to stamp what was there.
+  for (const op of payload.ops) {
+    if (op.op !== 'set-description') continue
+    await applySetDescription(env, kind, slug, op, bundleId, acceptedAt)
+    summary.appliedOps.push(`description ${op.order} on ${entityId}`)
+  }
+
   // Relabel last — every op above matches the entity by its current label.
   if (setKind && setKind.to !== kind) {
     await runCypherTx(env, [{
@@ -347,6 +392,56 @@ export async function applyEntityOps(
   }
 
   return summary
+}
+
+/**
+ * Replace the whole content of the entity's Description with this `order`, or create it when there is none.
+ * A replaced description keeps what was there, as every write does (docs/PROPOSALS.md, *Single-step revert*):
+ * `previousValue` is the **whole content** (a JSON string of blocks) and `previousKind` says so, where a
+ * modify-block keeps the one block it replaced (`previousKind: 'block'`).
+ */
+async function applySetDescription(
+  env:        Neo4jEnv,
+  kind:       string,
+  slug:       string,
+  op:         Extract<BundleOp, { op: 'set-description' }>,
+  bundleId:   string,
+  acceptedAt: string,
+): Promise<void> {
+  const rows = await runCypher<{ descId: string; content: string | null }>(
+    env,
+    `MATCH ${nodePattern('e', kind, 'slug')}-[:HAS_CONTENT]->(d:Description {order: $order})
+     RETURN d.id AS descId, d.content AS content`,
+    { slug, order: op.order },
+  )
+  const there = rows[0]
+  if (!there) {
+    await runCypher(
+      env,
+      `MATCH ${nodePattern('e', kind, 'slug')}
+       CREATE (e)-[:HAS_CONTENT]->(:Description { id: $id, order: $order, content: $content })`,
+      { slug, id: `desc:${kind}:${slug}:${op.order}`, order: op.order, content: op.content },
+    )
+    return
+  }
+  await runCypher(
+    env,
+    `MATCH (d:Description {id: $descId})
+     SET d.content        = $content,
+         d.previousValue  = $previousValue,
+         d.previousSha    = $previousSha,
+         d.previousAt     = $previousAt,
+         d.previousSource = $previousSource,
+         d.previousKind   = 'description'`,
+    {
+      descId:         there.descId,
+      content:        op.content,
+      previousValue:  there.content ?? '',
+      previousSha:    there.content ? await descriptionSha(there.content) : '',
+      previousAt:     acceptedAt,
+      previousSource: `proposal:${bundleId}`,
+    },
+  )
 }
 
 async function applyModifyBlock(
@@ -364,7 +459,7 @@ async function applyModifyBlock(
   // Find the Description holding the block keyed by $key.
   const rows = await runCypher<{ descId: string; content: string }>(
     env,
-    `MATCH (e:\`${kind}\` {slug: $slug})-[:HAS_CONTENT]->(d:Description)
+    `MATCH ${nodePattern('e', kind, 'slug')}-[:HAS_CONTENT]->(d:Description)
      RETURN d.id AS descId, d.content AS content`,
     { slug },
   )
@@ -400,7 +495,8 @@ async function applyModifyBlock(
          d.previousValue  = $previousValue,
          d.previousSha    = $previousSha,
          d.previousAt     = $previousAt,
-         d.previousSource = $previousSource`,
+         d.previousSource = $previousSource,
+         d.previousKind   = 'block'`,
     {
       descId:         target.descId,
       content:        newContent,
