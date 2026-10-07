@@ -10,7 +10,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import { runCypher, type Neo4jEnv } from '~/_lib/neo4j.ts'
 import { stableSha } from '~/_lib/stable-sha.ts'
 import { readOutlineVersion, readProduced, outlineContentSha } from '~/_lib/outline-version.ts'
-import { applyEntityOps, archiveOutlineStatement, checkDescriptionDrift } from './_apply.ts'
+import { applyEntityOps, archiveOutlineStatement, checkDescriptionDrift, checkEntityExists } from './_apply.ts'
 
 // The settings come from vitest.config.ts (`test.env`), which reads .env only for `npm run test:neo4j`. Read through
 // globalThis: this file is type-checked with the Cloudflare types, which have no `process`.
@@ -108,6 +108,15 @@ describe.skipIf(!ENABLED)('apply, against the local Neo4j', () => {
     expect(rows[0]).toMatchObject({ order: 1, content: BLOCKS('Ny.'), pv: old, ps: sha, pk: 'description', psrc: `proposal:bundle:${P}c:t` })
     expect(rows[1]).toMatchObject({ order: 2, id: `desc:Location:${P}loc:2`, content: BLOCKS('To.') })
     expect(rows[1].pv ?? null).toBeNull()                                                                       // a new text has nothing before it
+  })
+
+  it('refuses to create what is already there, by slug and, for a Source, by id', async () => {
+    const create = (kind: string, slug: string) => [{ op: 'create-entity', kind, slug, props: {} }] as Ops
+    expect(await checkEntityExists(env, `Unit:${P}twice`, create('Unit', `${P}twice`))).toEqual([])
+    await apply(`Unit:${P}twice`, create('Unit', `${P}twice`), SYNC)
+    expect(await checkEntityExists(env, `Unit:${P}twice`, create('Unit', `${P}twice`))).toEqual([{ prop: 'entity', expected: null, actual: 'exists' }])
+    await apply(`Source:${P}twice-src`, create('Source', `${P}twice-src`), SYNC)
+    expect(await checkEntityExists(env, `Source:${P}twice-src`, create('Source', `${P}twice-src`))).toHaveLength(1)
   })
 
   it('a Source is keyed by id: created, changed, linked and deleted by it', async () => {

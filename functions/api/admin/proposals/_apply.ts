@@ -125,6 +125,21 @@ export async function checkPropDrift(env: Neo4jEnv, entityId: string, ops: Bundl
 }
 
 /**
+ * A `create-entity` for an entity the graph already holds is refused: the apply would `CREATE` a second node. Reported
+ * like a drifted property (`prop` «entity»), so the review shows it the same way and the entity is set aside, not applied.
+ * This is what makes the order of the conversion of earlier absorptions safe (#158): a bundle that creates what we made
+ * from an outline cannot be accepted before those nodes are removed.
+ */
+export async function checkEntityExists(env: Neo4jEnv, entityId: string, ops: BundleOp[]): Promise<DriftedProp[]> {
+  if (!ops.some(o => o.op === 'create-entity')) return []
+  const idMatch = entityId.match(ENTITY_ID_RE)
+  if (!idMatch) return []
+  const [, kind, slug] = idMatch
+  const rows = await runCypher<{ n: number }>(env, `MATCH ${nodePattern('n', kind, 'slug')} RETURN count(n) AS n`, { slug })
+  return Number(rows[0]?.n ?? 0) > 0 ? [{ prop: 'entity', expected: null, actual: 'exists' }] : []
+}
+
+/**
  * Compare each set-description op's `expectedSha` with the sha of the live description of that order
  * (the stableSha of its parsed blocks; empty when there is none). Reported like a drifted property, so the
  * review shows it the same way: `prop` is «description <order>», `expected` and `actual` are the shas.
