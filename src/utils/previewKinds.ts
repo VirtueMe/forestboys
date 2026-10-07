@@ -5,5 +5,5 @@
  */
 export const PREVIEW_KINDS = [
   'Person', 'Unit', 'Organization', 'Station', 'Transport', 'Outline',
-  'Operation', 'Incident', 'Location', 'EquipmentType', 'Article',
+  'Operation', 'Incident', 'Location', 'EquipmentType', 'Article', 'Source',
 ]
