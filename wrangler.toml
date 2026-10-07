@@ -1,6 +1,12 @@
 name = "forestboys"
 compatibility_date = "2024-01-01"
 
+# Without this, Cloudflare Pages skips this file («A Wrangler configuration file was found but it does not appear to be
+# valid… make sure the file is valid and contains the `pages_build_output_dir` property») and the production site's
+# bindings are whatever someone set by hand in the dashboard (#174). With it, this file is the source of truth for
+# bindings and plain variables; secrets stay in the dashboard.
+pages_build_output_dir = "dist"
+
 [[d1_databases]]
 binding = "milorg_users"
 database_name = "milorg-users"
@@ -14,10 +20,16 @@ bucket_name = "milorg-images"
 binding = "PROPOSALS"
 bucket_name = "milorg-proposals"
 
-[[durable_objects.bindings]]
-name        = "BUNDLE_EVENTS"
-class_name  = "BundleEventsDO"
-script_name = "milorg-bundle-events"
+# BUNDLE_EVENTS (the live-update Durable Object, workers/bundle-events) is not bound here yet: it points at another
+# worker, `milorg-bundle-events`, which has to be deployed first (`npx wrangler deploy --config
+# workers/bundle-events/wrangler.toml`), and a binding to a worker that does not exist can fail the whole deployment.
+# Ingest and the review pages work without it (a page reloads to see a new bundle). Locally `npm run dev:worker`
+# passes it on the command line (--do). Add it here once the worker is deployed (#174):
+#
+# [[durable_objects.bindings]]
+# name        = "BUNDLE_EVENTS"
+# class_name  = "BundleEventsDO"
+# script_name = "milorg-bundle-events"
 
 [vars]
 # GitHub OAuth App "MILORG CLOUDFLARE" (#14) — the client id is public; GITHUB_CLIENT_SECRET

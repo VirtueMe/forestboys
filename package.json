@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "dev:worker": "wrangler pages dev --do BUNDLE_EVENTS=BundleEventsDO@milorg-bundle-events -- npm run dev",
+    "dev:worker": "node scripts/tools/dev-worker.ts",
     "dev:bot": "tsx scripts/bot/local-runner.ts",
     "dev:do": "wrangler dev --config workers/bundle-events/wrangler.toml --port 8790",
     "build": "vue-tsc -b && vite build",
