@@ -33,6 +33,26 @@ for (const theme of ['light', 'dark'] as const) {
   })
 }
 
+// The same, in the edit mode an admin sees (#146): the placeholders, the editor and the forms are only there.
+for (const theme of ['light', 'dark'] as const) {
+  test.describe(`contrast in edit mode, ${theme} theme`, () => {
+    test.use({ colorScheme: theme })
+
+    for (const target of PAGES.filter(t => t.edit !== false)) {
+      test(`${target.kind} «${target.slug}»: all text meets WCAG AA`, async ({ page }, info) => {
+        await openRecordedEditMode(page, target)
+        const judged = judgeText(await collectTextSamples(page))
+
+        for (const n of judged.notJudged) info.annotations.push({ type: 'not judged', description: `${n.count}: ${n.reason}, for example ${n.examples[0]}` })
+        info.annotations.push({ type: 'checked', description: `${judged.passed} passed, ${judged.decorative} decorative` })
+
+        expect(judged.violations.map(line)).toEqual([])
+        expect(judged.passed).toBeGreaterThan(10)
+      })
+    }
+  })
+}
+
 test.describe('the heading outline', () => {
   for (const target of PAGES) {
     test(`${target.kind} «${target.slug}»: one h1, and no skipped level`, async ({ page }) => {

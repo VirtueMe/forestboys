@@ -21,6 +21,7 @@
 
         <PortableTextEditor
           :ref="el => setEditor(section.order, el)"
+          :label="sections.length > 1 ? `Beskrivelse, seksjon ${section.order}` : 'Beskrivelse'"
           :model-value="sectionBlocks(section)"
           @update:model-value="blocks => onContentChange(section, blocks)"
         />
