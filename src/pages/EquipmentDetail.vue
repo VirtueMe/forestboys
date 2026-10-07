@@ -15,8 +15,8 @@
         :period="pick('period', equipment.period)"
       />
 
-      <!-- No Forslag tab: the proposal pipeline doesn't produce
-           EquipmentType bundles (not in its ENTITY_KINDS). -->
+      <!-- No Forslag tab: there is no per-entity proposal list for
+           EquipmentType. Bundles preview it through EquipmentDataKey. -->
       <AdminViewTabs v-model="mode" />
 
       <EquipmentEditPane
@@ -47,8 +47,9 @@
 </template>
 
 <script setup lang="ts">
-import { computed, useTemplateRef } from 'vue'
+import { computed, inject, useTemplateRef } from 'vue'
 import { useEquipmentData, type EquipmentNode } from '../composables/useEquipmentData.ts'
+import { EquipmentDataKey } from '../composables/proposalDataInjection.ts'
 import { useDetailCreateMode } from '../composables/useDetailCreateMode.ts'
 import { useAuth } from '../composables/useAuth.ts'
 import DetailPage from '../components/DetailPage.vue'
@@ -68,7 +69,7 @@ const { slug: equipmentSlug, isCreate, mode, pendingDescription, onCreated, clea
 const {
   equipment, savedSections, legacyDescriptions, externalRefs, paired,
   loadEquipment, resetEquipment,
-} = useEquipmentData()
+} = inject(EquipmentDataKey, () => useEquipmentData(), true)
 
 function onSectionsSaved(sections: Section[]) {
   savedSections.value = sections
