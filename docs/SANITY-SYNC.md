@@ -485,7 +485,9 @@ If an input field changes, the mapping goes `stale` and a review bundle
 proposes a new one; until then the old one stands. Known cases:
 
 - Kompani Linge — Sanity organization → `Unit`
-- Outlines absorbed into Operations / Persons (the bundle pipeline)
+- Outlines absorbed into Operations / Persons: the nodes we made from outlines before the bundle pipeline are
+  converted into bundles Jan accepts (#158, `BUNDLE-FORMAT.md`, *Earlier absorptions*); after that no node is a
+  reshaping nobody reviewed, and what an absorption makes is a bundle (`PROPOSALS.md`)
 - `location.people[]` / `station.people[]` → STATIONED_AT edges
   (`PERSON-STATIONED-AT.md`) — held until this exists, and the first
   mapping to build

@@ -29,7 +29,8 @@ export const PAGES: PageTarget[] = [
   { kind: 'unit',      slug: '02-soe',           path: '/district/02-soe',        title: '02-SOE' },
   { kind: 'equipment', slug: 'berit',            path: '/equipment/berit',        title: 'BERIT' },
   { kind: 'transport', slug: '37-fly',           path: '/transport/37-fly',       title: '37 fly' },
-  { kind: 'outline',   slug: 'eksportgruppe-torsvik', path: '/outlines/eksportgruppe-torsvik', title: 'Eksportgruppe' },
+  // No `outline` page for now (#158): the only Units with a description were made from outlines before they were
+  // bundles, and are taken out until Jan accepts their bundles. Record one again then (`/outlines/<slug>`).
   { kind: 'event',     slug: 'forste-mote-om-mostandsbevegelse-i-london', path: '/events/forste-mote-om-mostandsbevegelse-i-london', title: 'Første møte' },
   { kind: 'events',    slug: 'list',             path: '/events',                 title: 'Hendelser', minHeadings: 1, edit: false },
 ]

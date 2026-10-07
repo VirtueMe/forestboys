@@ -179,6 +179,34 @@ file. It does not send it. Ingest takes it as it is (`bundle-validate.ts`; a tes
 An edge belongs to the entity it leaves, so the 272 `MEMBER_OF` edges of the people in `kompani-linge` are in
 the **people's** snapshots, not in the unit's. A package of the unit alone does not carry them.
 
+## Earlier absorptions (#158)
+
+Before bundles existed, outlines were absorbed by us: 56 nodes (28 entities and their Descriptions) carry a
+`sanityOutlineId`, the one link to their outline. `scripts/migrations/outlines-to-bundles.ts` turns them into **28
+outline bundles** (one per outline: `outlineId` is the slug, `outlineRev` the hash of its text, so what an accept
+creates carries `originOutline` and `originSha`) and removes them, so the graph holds what Jan wrote in Sanity and
+every reshaping is a bundle he accepts.
+
+```
+npx tsx scripts/migrations/outlines-to-bundles.ts --site=https://archive.example [--write]   # archive + bundles, in data/outlines-conversion
+npx tsx scripts/migrations/outlines-to-bundles.ts --remove [--write]                          # the removal: the owner's, after a dump
+```
+
+- **The archive** (`archive.json`) is the package of the entities, the edges *into* them (which a snapshot does not
+  hold), and `raw`: every node with all its properties and every edge that touches it, so they can be put back.
+- **A bundle** creates the entity (props, description, outbound edges) and has an `add-edge` entity for every other
+  entity that pointed into it (the 271 people of `kompani-linge`, the 30 course units). The dry run checks each
+  bundle against the archive and against what ingest accepts.
+- **Left out of the bundles**, and kept in the archive: an edge from a node that is no entity (a membership note); an
+  edge from an entity whose slug is padded with a space, which a bundle cannot name (re-add it once the slug is fixed);
+  and a person's `MEMBER_OF` without the import's `sourceRef` (neither the import nor we made it: dropped).
+- **The removal** is one transaction, rolled back unless exactly the archive's nodes and edges went and no
+  `sanityOutlineId` is left. It refuses when the graph is no longer what the archive saw.
+- **Order:** archive and bundles, the removal, then ingest. Accepting a `create-entity` for an entity that still
+  exists is refused as drift (`checkEntityExists`), so the order cannot be got wrong the other way.
+
+---
+
 ## What this is used for
 
 | Use | Package from | Compared with |
