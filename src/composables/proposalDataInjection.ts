@@ -21,6 +21,7 @@ import type { useOutlineData }      from './useOutlineData.ts'
 import type { useEventData }        from './useEventData.ts'
 import type { useLocationData }     from './useLocationData.ts'
 import type { useEquipmentData }    from './useEquipmentData.ts'
+import type { useArticleData }      from './useArticleData.ts'
 
 export const PersonDataKey:       InjectionKey<ReturnType<typeof usePersonData>>       = Symbol('PersonData')
 export const UnitDataKey:         InjectionKey<ReturnType<typeof useUnitData>>         = Symbol('UnitData')
@@ -31,6 +32,7 @@ export const OutlineDataKey:      InjectionKey<ReturnType<typeof useOutlineData>
 export const EventDataKey:        InjectionKey<ReturnType<typeof useEventData>>        = Symbol('EventData')
 export const LocationDataKey:     InjectionKey<ReturnType<typeof useLocationData>>     = Symbol('LocationData')
 export const EquipmentDataKey:    InjectionKey<ReturnType<typeof useEquipmentData>>    = Symbol('EquipmentData')
+export const ArticleDataKey:      InjectionKey<ReturnType<typeof useArticleData>>      = Symbol('ArticleData')
 
 /**
  * `true` while a detail page is rendering inside a proposal preview.
