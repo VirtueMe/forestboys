@@ -23,6 +23,7 @@
 
 import { runCypher, type Neo4jEnv } from '~/_lib/neo4j.ts'
 import { stableSha } from '~/_lib/stable-sha.ts'
+import { readOutlineVersion, readProduced, type OutlineVersion, type Produced } from '~/_lib/outline-version.ts'
 
 interface Env extends Neo4jEnv {
   BOT_INGEST_SECRET: string
@@ -57,6 +58,10 @@ interface EntityContext {
 
 interface OutlineContext extends EntityContext {
   mentions: string[]
+  /** The hash of the outline's text and where it stands (#157). Inside the outline, since that is what the prompt gets. */
+  version:  OutlineVersion | null
+  /** What earlier accepted bundles made from it, each marked when it is from an older version of the text. */
+  produced: Produced
 }
 
 export const onRequestGet: PagesFunction<Env> = async ({ request, env, params }) => {
@@ -113,7 +118,9 @@ async function loadOutlineContext(env: Env, slug: string): Promise<OutlineContex
     .filter((r) => r.kind && r.slug && ENTITY_KINDS.has(r.kind))
     .map((r) => `${r.kind}:${r.slug}`)
 
-  return { ...base, mentions }
+  const version  = await readOutlineVersion(env, slug)
+  const produced = await readProduced(env, slug, version?.contentSha ?? '')
+  return { ...base, mentions, version, produced }
 }
 
 async function loadMentionedEntities(env: Env, outlineSlug: string): Promise<EntityContext[]> {

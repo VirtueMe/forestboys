@@ -17,6 +17,7 @@ import { requireAdmin } from '~/_lib/require-admin.ts'
 import {
   applyEntityOps,
   checkOpLinks,
+  archiveOutlineStatement,
   checkDescriptionDrift,
   checkPropDrift,
   ENTITY_ID_RE,
@@ -119,10 +120,8 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env, params }
       if (m && m[1] === 'Outline') {
         const archiveOp = payload.ops.find((o) => o.op === 'obsolete-outline')
         if (archiveOp && archiveOp.op === 'obsolete-outline') {
-          await runCypher(env,
-            `MATCH (o:Outline {slug: $slug})
-             SET o.archivedAt = $at, o.archivedReason = $reason`,
-            { slug: m[2], at: acceptedAt, reason: archiveOp.reason })
+          const archive = archiveOutlineStatement({ slug: m[2], at: acceptedAt, reason: archiveOp.reason, sha: manifest.outlineRev, bundleId })
+          await runCypher(env, archive.statement, archive.parameters)
         }
       }
 

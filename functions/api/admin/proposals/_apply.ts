@@ -92,6 +92,19 @@ export interface DriftedProp {
 
 const norm = (v: unknown) => JSON.stringify(v ?? null)
 
+/**
+ * Archive an outline once a bundle made from it is fully accepted, and record what was absorbed: the hash of the
+ * text the bundle was made from (`absorbedSha`, the bundle's `outlineRev`) and the bundle. An outline whose text
+ * has changed since is stale (functions/_lib/outline-version.ts); nothing here is stored as a state.
+ */
+export function archiveOutlineStatement(a: { slug: string; at: string; reason: string; sha?: string; bundleId: string }): { statement: string; parameters: Record<string, unknown> } {
+  return {
+    statement: `MATCH (o:Outline {slug: $slug})
+                SET o.archivedAt = $at, o.archivedReason = $reason, o.absorbedSha = $sha, o.absorbedBundle = $bundle`,
+    parameters: { slug: a.slug, at: a.at, reason: a.reason, sha: a.sha ?? null, bundle: a.bundleId },
+  }
+}
+
 /** Compare each set-props op's `from` against the live node. */
 export async function checkPropDrift(env: Neo4jEnv, entityId: string, ops: BundleOp[]): Promise<DriftedProp[]> {
   const setOps = ops.filter((o): o is Extract<BundleOp, { op: 'set-props' }> => o.op === 'set-props')
@@ -340,10 +353,10 @@ export async function applyEntityOps(
         break
       }
       case 'obsolete-outline': {
-        txStatements.push({
-          statement: `MATCH (o:Outline {slug: $slug}) SET o.archivedAt = $at, o.archivedReason = $reason`,
-          parameters: { slug, at: acceptedAt, reason: op.reason },
-        })
+        txStatements.push(archiveOutlineStatement({
+          slug, at: acceptedAt, reason: op.reason, bundleId,
+          sha: 'outlineRev' in payload.derivedFrom ? payload.derivedFrom.outlineRev : undefined,
+        }))
         summary.appliedOps.push(`archive ${entityId}`)
         break
       }

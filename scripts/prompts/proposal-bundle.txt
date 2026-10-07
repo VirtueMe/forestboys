@@ -35,6 +35,18 @@ knowledge of similar systems.
 ${OUTLINE_JSON}
 ```
 
+`outline.version` says which version of the text this is: `contentSha` is the
+hash of the text as it is now (it is also `${OUTLINE_REV}`), and `absorbedSha`
+is the hash of the text the last fully accepted bundle was made from. The text
+has changed since that bundle when the two differ (`state: "stale"`).
+`outline.produced` lists what earlier accepted bundles made from this outline:
+entities and edges, each marked `olderVersion: true` when it was made from an
+older version of the text. For a stale outline, start from `produced`: keep what
+the text still supports, change what it now says differently (`set-props`,
+`set-description`, `modify-block`), and propose `delete-entity` or `remove-edge`
+only for something the text no longer supports, never for something you simply
+did not mention. Jan reviews every one of them.
+
 ## Live entities the outline references (current Neo4j state)
 
 ```json
