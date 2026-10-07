@@ -14,6 +14,7 @@
     "lint:fix": "eslint . --fix",
     "check:design": "npx tsx scripts/design/check.ts",
     "test": "vitest run",
+    "test:neo4j": "NEO4J_TEST=1 vitest run functions/api/admin/proposals/_apply.neo4j.test.ts",
     "test:watch": "vitest",
     "test:e2e": "playwright test",
     "e2e:record": "tsx scripts/e2e/record-fixtures.ts",

@@ -177,3 +177,20 @@ describe('what an accepted bundle writes on what it creates (#157)', () => {
     expect(stmts()[0].parameters).toEqual({ slug: 'linge-pulje-4', set: { codeName: 'b' } })
   })
 })
+
+describe('archiving an outline: the obsolete-outline op records what was absorbed', () => {
+  const archiveOp = [{ op: 'obsolete-outline', reason: 'fully absorbed' }]
+  const stmts = () => tx.mock.calls[0][1] as { statement: string; parameters?: Record<string, unknown> }[]
+
+  it('takes the hash from the outline bundle it is part of, and the bundle', async () => {
+    const p = { ...payload('Outline:linge-pulje-4', archiveOp), derivedFrom: { outlineId: 'linge-pulje-4', outlineRev: 'abc123' } } as Parameters<typeof applyEntityOps>[2]
+    await applyEntityOps(env, 'Outline:linge-pulje-4', p, 'bundle:linge-pulje-4:t', AT)
+    expect(stmts()[0].statement).toContain('o.absorbedSha = $sha')
+    expect(stmts()[0].parameters).toEqual({ slug: 'linge-pulje-4', at: AT, reason: 'fully absorbed', sha: 'abc123', bundle: 'bundle:linge-pulje-4:t' })
+  })
+
+  it('records no hash for a bundle that has none', async () => {
+    await applyEntityOps(env, 'Outline:linge-pulje-4', payload('Outline:linge-pulje-4', archiveOp), 'bundle:x:t', AT)
+    expect(stmts()[0].parameters!.sha).toBeNull()
+  })
+})

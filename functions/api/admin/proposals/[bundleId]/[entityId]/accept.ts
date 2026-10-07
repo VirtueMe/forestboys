@@ -29,6 +29,7 @@ import {
   applyEntityOps,
   checkDrift,
   checkOpLinks,
+  archiveOutlineStatement,
   checkDescriptionDrift,
   checkPropDrift,
   ENTITY_ID_RE,
@@ -163,12 +164,11 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env, params }
       const outlinePayload = await outlinePayloadObj.json<EntityPayload>()
       const archiveOp = outlinePayload.ops.find((o) => o.op === 'obsolete-outline')
       if (archiveOp && archiveOp.op === 'obsolete-outline') {
-        await runCypher(
-          env,
-          `MATCH (o:Outline {slug: $slug})
-           SET o.archivedAt = $at, o.archivedReason = $reason`,
-          { slug: updatedManifest.outlineId, at: acceptedAt, reason: archiveOp.reason },
-        )
+        const archive = archiveOutlineStatement({
+          slug: updatedManifest.outlineId!, at: acceptedAt, reason: archiveOp.reason,
+          sha: updatedManifest.outlineRev, bundleId,
+        })
+        await runCypher(env, archive.statement, archive.parameters)
         await manifestSetStatus(env, bundleId, outlineEntityId, 'accepted')
         await indexRemove(env, `proposals/by-entity/${outlineEntityId}/index.json`, bundleId)
         outlineArchived = true

@@ -191,12 +191,24 @@ async function onRequestBundle(): Promise<void> {
   requestResult.value = null
   requestError.value  = null
   try {
+    // The version of an outline is a hash of its text (not Sanity's _rev, which goes at the cutover): read it from
+    // the server, which also knows what the last accepted bundle was made from (#157).
+    const vres = await authFetch(`/api/admin/outline/${encodeURIComponent(item.value.slug)}/version`)
+    if (!vres.ok) {
+      requestError.value = `Kunne ikke lese versjonen av teksten (HTTP ${vres.status})`
+      return
+    }
+    const version = await vres.json() as { contentSha: string; state: 'new' | 'absorbed' | 'stale' }
+    if (version.state === 'absorbed') {
+      requestError.value = 'Teksten er den samme som den siste godkjente pakken ble laget av: det er ingenting nytt å foreslå.'
+      return
+    }
     const res = await authFetch('/api/proposals/request', {
       method:  'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         outlineId:  item.value.slug,
-        outlineRev: item.value.sanityRev ?? 'smoke-test',
+        outlineRev: version.contentSha,
         promptHash: '000000000000',
       }),
     })
