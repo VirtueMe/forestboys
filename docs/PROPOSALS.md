@@ -171,7 +171,7 @@ without doing an `R2.list()` on every page load.
 
 ## Bundle origin
 
-A bundle comes from one of two places (`functions/_lib/bundle-origin.ts`):
+A bundle comes from one of two places (`functions/_lib/bundle-origin.ts`). A third, a package from another archive or from an earlier absorption, is designed in `BUNDLE-FORMAT.md` and waits for #161:
 
 | | Outline (Claude) | Sanity sync (docs/SANITY-SYNC.md) |
 |---|---|---|

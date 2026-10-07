@@ -21,7 +21,7 @@ export async function stableSha(value: unknown): Promise<string> {
   return [...new Uint8Array(hashBuf)].map((b) => b.toString(16).padStart(2, '0')).join('')
 }
 
-function canonicalize(value: unknown): string {
+export function canonicalize(value: unknown): string {
   if (value === null || typeof value !== 'object') return JSON.stringify(value)
   if (Array.isArray(value)) {
     return '[' + value.map(canonicalize).join(',') + ']'

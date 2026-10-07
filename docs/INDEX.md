@@ -17,6 +17,7 @@ Entry point for all design and architecture documents.
 | [EQUIPMENT-LIFECYCLE.md](EQUIPMENT-LIFECYCLE.md) | Equipment lifecycle possibilities — manufactured, in service, lost / never recovered (discussion, nothing decided) |
 | [PERSON-STATIONED-AT.md](PERSON-STATIONED-AT.md) | Linking a Person to a Location / Station with role and timeframe (implemented; migration waits on SANITY-SYNC) |
 | [SANITY-SYNC.md](SANITY-SYNC.md) | Keeping the graph in step with Sanity until cutover — April baseline, three-way field compare, curated mappings for reshaped data (draft) |
+| [BUNDLE-FORMAT.md](BUNDLE-FORMAT.md) | Packages of entity snapshots and how an import becomes a review bundle — no Sanity metadata, a source ref per entity (#159) |
 | [ROLES.md](ROLES.md) | Requirements for editable relation roles with name, description and a visitor-facing explanation popover (draft) |
 | [PERSON-RANKS.md](PERSON-RANKS.md) | Requirements for a person's known rank plus an optional dated rank history with acting flag and sourced notes (draft) |
 
