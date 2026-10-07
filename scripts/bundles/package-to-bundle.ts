@@ -16,7 +16,7 @@
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { dirname, resolve } from 'node:path'
 import neo4j from 'neo4j-driver'
-import { refOf, validatePackage, type BundlePackage } from '../../functions/_lib/bundle-package.ts'
+import { refOf, sourceRefText, validatePackage, type BundlePackage } from '../../functions/_lib/bundle-package.ts'
 import { buildBundleBody } from '../../functions/_lib/bundle-from-package.ts'
 import { diffPackage, type DiffOp, type Match } from '../../functions/_lib/snapshot-diff.ts'
 import { loadEnv, WRITE } from '../lib/env.ts'
@@ -46,7 +46,7 @@ try {
   const rekeyed: BundlePackage = { ...pkg, entities: [] }
   const matches = new Map<string, Match>()
   for (const snapshot of pkg.entities) {
-    const found = await findNode(session, snapshot.kind, snapshot.key, `${snapshot.source.site}${snapshot.source.path}`)
+    const found = await findNode(session, snapshot.kind, snapshot.key, sourceRefText(snapshot.source))
     const entity = found && found.key !== snapshot.key ? { ...snapshot, key: found.key } : snapshot
     if (entity !== snapshot) renamed.push(`${refOf(snapshot)} → ${refOf(entity)}`)
     rekeyed.entities.push(entity)

@@ -6,7 +6,7 @@
  */
 
 import {
-  bundleChannel, validateDerivedFrom, validateOrigin,
+  bundleChannel, ORIGIN_PROPS, validateDerivedFrom, validateOrigin,
   type BundleOriginFields, type DerivedFrom,
 } from './bundle-origin.ts'
 import { isBridgeProp } from './bundle-package.ts'
@@ -186,6 +186,9 @@ function validateOp(eid: string, op: Record<string, unknown>, origin: BundleOrig
   // A package carries entities, not the bridge's bookkeeping (docs/BUNDLE-FORMAT.md): refused at the door.
   const bridge = origin.origin?.type === 'package' ? bridgePropIn(eid, op) : null
   if (bridge) return bridge
+  // The origin of what a bundle creates is written by the apply step, whoever the bundle is from (#157).
+  const owned = ownedPropIn(eid, op)
+  if (owned) return owned
   switch (op.op) {
     case 'create-entity': {
       if (typeof op.kind !== 'string' || !ENTITY_KINDS.has(op.kind))    return `${eid} create-entity: kind invalid`
@@ -279,7 +282,7 @@ function validateEdge(eid: string, edge: Record<string, unknown>): string | null
  * A package's ops must not carry the bridge's bookkeeping (isBridgeProp in bundle-package.ts): not as
  * the properties of a new entity, in a set-props, or on an edge. Null when they do not.
  */
-function bridgePropIn(eid: string, op: Record<string, unknown>): string | null {
+function propNamesIn(op: Record<string, unknown>): string[] {
   const names: string[] = []
   const props = (v: unknown) => { if (v && typeof v === 'object') names.push(...Object.keys(v)) }
   if (op.op === 'create-entity') {
@@ -288,7 +291,17 @@ function bridgePropIn(eid: string, op: Record<string, unknown>): string | null {
   }
   if (op.op === 'set-props')      props(op.props)
   if (op.op === 'add-edge')       props(op.props)
-  const bad = [...new Set(names.filter(isBridgeProp))]
+  return names
+}
+
+/** Properties the apply step writes itself (the origin stamp): refused in any bundle's ops. */
+function ownedPropIn(eid: string, op: Record<string, unknown>): string | null {
+  const bad = [...new Set(propNamesIn(op).filter(n => ORIGIN_PROPS.has(n)))]
+  return bad.length ? `${eid} ${String(op.op)}: ${bad.map(n => `«${n}»`).join(', ')} ${bad.length === 1 ? 'is' : 'are'} written by the accept, not set by a bundle` : null
+}
+
+function bridgePropIn(eid: string, op: Record<string, unknown>): string | null {
+  const bad = [...new Set(propNamesIn(op).filter(isBridgeProp))]
   return bad.length ? `${eid} ${String(op.op)}: ${bad.map(n => `«${n}»`).join(', ')} ${bad.length === 1 ? 'is' : 'are'} the sync bridge's bookkeeping and does not belong in a package` : null
 }
 
