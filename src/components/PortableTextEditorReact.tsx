@@ -122,6 +122,8 @@ const renderAnnotation: RenderAnnotationFunction = props => {
 
 export interface Props {
   value:    PortableTextBlock[]
+  /** What a screen reader says when it lands in the editor (#146). */
+  label:    string
   /** Changes when the value was replaced from outside: the editor starts over with it (see PortableTextEditor.vue). */
   generation: number
   onChange: (blocks: PortableTextBlock[]) => void
@@ -646,7 +648,7 @@ function Toolbar({ expanded, onToggleExpand }: { expanded: boolean; onToggleExpa
   )
 }
 
-export function PortableTextEditorReact({ value, generation, onChange, expanded, onToggleExpand, registerReader }: Props) {
+export function PortableTextEditorReact({ value, label, generation, onChange, expanded, onToggleExpand, registerReader }: Props) {
   return React.createElement(
     EditorProvider,
     { key: generation, initialConfig: { schemaDefinition, initialValue: value } },
@@ -659,6 +661,7 @@ export function PortableTextEditorReact({ value, generation, onChange, expanded,
     React.createElement(BehaviorPlugin, { behaviors: [replaceWords, listItemIsNoHeading] }),
     React.createElement(Toolbar, { expanded, onToggleExpand }),
     React.createElement(PortableTextEditable, {
+      'aria-label': label,
       renderDecorator,
       renderStyle,
       renderAnnotation,

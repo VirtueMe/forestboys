@@ -9,7 +9,7 @@ import React from 'react'
 import { PortableTextEditorReact } from './PortableTextEditorReact.tsx'
 import type { PortableTextBlock } from '@portabletext/editor'
 
-const props = defineProps<{ modelValue: PortableTextBlock[] }>()
+const props = withDefaults(defineProps<{ modelValue: PortableTextBlock[]; label?: string }>(), { label: 'Beskrivelse' })
 const emit = defineEmits<{ 'update:modelValue': [blocks: PortableTextBlock[]] }>()
 
 const host = ref<HTMLElement | null>(null)
@@ -45,6 +45,7 @@ function render() {
   root.render(
     React.createElement(PortableTextEditorReact, {
       value:    props.modelValue,
+      label:    props.label,
       generation,
       onChange: (blocks: PortableTextBlock[]) => {
         held = JSON.stringify(blocks)
@@ -72,6 +73,7 @@ onMounted(() => {
   if (!host.value) return
   root = createRoot(host.value)
   render()
+  watch(() => props.label, render)
   watch(() => props.modelValue, value => {
     const incoming = JSON.stringify(value)
     if (incoming !== held) { generation++; held = incoming }
@@ -130,7 +132,7 @@ onBeforeUnmount(() => {
 .pt-tb-split .pt-tb-btn { border-color: transparent; border-radius: 0; }
 .pt-tb-split > .pt-tb-btn { border-radius: 3px 0 0 3px; }
 .pt-tb-split .pt-tb-menu .pt-tb-btn { border-radius: 0 3px 3px 0; }
-.pt-tb-more { min-width: 20px; padding: 0 4px; font-size: 13px; }
+.pt-tb-more { min-width: 24px; padding: 0 4px; font-size: 13px; }
 .pt-tb-split .pt-tb-more { border-left-color: var(--rule); }
 
 .pt-menu {
