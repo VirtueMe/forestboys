@@ -18,7 +18,11 @@ export default defineConfig({
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 1 : 0,
   workers: process.env.CI ? 2 : undefined,
-  reporter: process.env.CI ? [['github'], ['html', { open: 'never' }]] : [['list']],
+  // On CI the JSON report is what scripts/e2e/flaky-summary.ts reads: a test that passed on the retry shows
+  // as «flaky» there (#149). It is in test-results/, which the html reporter does not clear.
+  reporter: process.env.CI
+    ? [['github'], ['html', { open: 'never' }], ['json', { outputFile: 'test-results/e2e-report.json' }]]
+    : [['list']],
   use: {
     baseURL: `http://localhost:${PORT}`,
     // A trace of a failed test is the first thing to open: every action, DOM snapshot and request.
