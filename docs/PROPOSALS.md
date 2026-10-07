@@ -87,6 +87,35 @@ For PT blocks these live as properties on the block-level node (or on the
 section node addressed by `blockPath`); for entity nodes they live on the
 node itself.
 
+### Origin of what a bundle creates, and the version of an outline
+
+What an accepted bundle **creates** carries where it came from, on the node and on the edges it creates: for an
+outline bundle `originOutline`, `originSha`, `originBundle` and `originSection`; for a package bundle `importedFrom`
+and `originBundle`; a sync bundle stamps nothing (`SCHEMA.md`, *Origin stamps*). Written in the same transaction as
+the entity; a bundle may not set them. None of them is a Sanity id or revision.
+
+The **version of an outline** is a hash of its text (`outlineContentSha`, `functions/_lib/outline-version.ts`): the
+blocks of its descriptions as a value, in `order`. It is the `outlineRev` of a bundle made from it, and it is the same
+before and after the day Jan stops editing in Sanity, which Sanity's `_rev` is not. When a bundle made from an
+outline is fully accepted, the outline is archived and records `absorbedSha` (the hash the bundle was made from) and
+`absorbedBundle`. Its state is derived, never stored:
+
+| State | When |
+|---|---|
+| `bundled` | a bundle made from it is open (waiting for Jan) |
+| `new` | nothing of it has been absorbed |
+| `absorbed` | its text is what the last accepted bundle was made from |
+| `stale` | its text has changed since: a **new bundle** is what that calls for; nothing changes until Jan accepts it |
+
+`GET /api/admin/outline/<slug>/version` gives the hash and the state (the admin's «request a bundle» reads it, and does
+nothing for an absorbed outline); the bot's context (`/api/entity/Outline/<slug>/context`) carries `version` and
+`produced` inside `outline`: what earlier accepted bundles made from it, each marked `olderVersion` when it was made
+from an older text. For a stale outline the generator starts from `produced` and may propose `set-props`,
+`set-description` and `modify-block` for what changed, and `delete-entity` or `remove-edge` for what the text no
+longer supports, like any other op that Jan reviews. A changed outline that was absorbed is a new bundle; the old
+one stays closed. Ingest does not refuse a bundle whose `outlineRev` is out of date by the time it arrives: the
+outline is then stale, and a new bundle can follow.
+
 ### Drift detection — 2×2
 
 |                            | Neo4j sha == sanitySha                  | Neo4j sha != sanitySha                              |
