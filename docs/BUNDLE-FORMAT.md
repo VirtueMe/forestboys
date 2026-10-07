@@ -88,6 +88,7 @@ or a Sanity `_rev`.
 | a name that mentions Sanity | `sanityId`, `sanityRev`, `sanityImportedAt`, `sanityUpdatedAt`, `sanityOutlineId`, `description_sanityUpdatedAt` |
 | a hash stamp | `description_sha`, `links_sha`, `date_sha`, `sha` |
 | a `<field>_sourceRef` | `lat_sourceRef`: its value is `sanity-migration:<type>:<Sanity document id>:<field>` |
+| where the node itself came from | `importedFrom` (set by an import), and the `origin*` stamps of a bundle's products (#157): this archive's history, not the entity's |
 
 `<field>_state` (`candidate`) stays: it says how sure a value is. Outside the
 properties, the bridge's nodes (`SyncState`, `Heartbeat`) are not entities and
@@ -157,6 +158,26 @@ may carry the referenced entities too; one made for a single review (the
 conversion in #158) names them.
 
 ---
+
+## The scripts
+
+Both read the graph (local, or `--production`'s) and neither writes to it; each is a dry run unless `--write`.
+
+```
+npx tsx scripts/bundles/export-package.ts --site=https://archive.example \
+    --refs=Transport:mtb-683,Unit:kompani-linge [--refs-file=refs.txt] [--filter="…"] [--write]
+npx tsx scripts/bundles/package-to-bundle.ts --package=data/packages/<name>.json \
+    [--authoritative-edges=MEMBER_OF] [--write]
+```
+
+`export-package` reads each entity (properties, `HAS_CONTENT` descriptions, outbound edges), takes out the
+bookkeeping, checks the package and reports what it left out. A kind without a page of its own (an Article, a
+Source) gets a placeholder path, and the script says so. `package-to-bundle` finds each entity by `importedFrom`,
+else by kind and slug, lists what would change, and with `--write` writes the bundle (`origin: package`) to a
+file. It does not send it: ingest takes that origin, and `set-description`, in #161.
+
+An edge belongs to the entity it leaves, so the 272 `MEMBER_OF` edges of the people in `kompani-linge` are in
+the **people's** snapshots, not in the unit's. A package of the unit alone does not carry them.
 
 ## What this is used for
 

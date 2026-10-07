@@ -60,15 +60,18 @@ export interface BundlePackage {
 /* ───────────────────────── bridge metadata ───────────────────────── */
 
 /**
- * A property is the bridge's bookkeeping, not content, when
+ * A property is the bookkeeping of the archive it is on, not content, when
  *  - its name mentions Sanity (`sanityId`, `sanityRev`, `description_sanityUpdatedAt`, `sanityOutlineId`, …),
- *  - it is a hash stamp (`description_sha`, `links_sha`, `sha`), or
+ *  - it is a hash stamp (`description_sha`, `links_sha`, `sha`),
  *  - it is a `<field>_sourceRef`: in the graph its value is `sanity-migration:<type>:<Sanity document id>:<field>`,
- *    a Sanity id inside a value.
+ *    a Sanity id inside a value, or
+ *  - it says where the node itself came from: `importedFrom` (set by an import, naming a source ref) and the
+ *    `origin*` stamps of a bundle's products (#157). They describe this archive's history, not the entity.
  * Everything else goes with the entity. `lat_state` and the other `<field>_state` stay: `candidate` says how
  * sure a value is, which a reader of the receiving archive can use.
  */
-export const isBridgeProp = (name: string): boolean => /sanity/i.test(name) || /(^|_)sha$/i.test(name) || /_sourceRef$/.test(name)
+export const isBridgeProp = (name: string): boolean =>
+  /sanity/i.test(name) || /(^|_)sha$/i.test(name) || /_sourceRef$/.test(name) || name === 'importedFrom' || /^origin[A-Z]/.test(name)
 
 /** `props` without the bridge's bookkeeping, and the names that were taken out. */
 export function stripBridgeProps(props: Record<string, unknown>): { kept: Record<string, unknown>; dropped: string[] } {
