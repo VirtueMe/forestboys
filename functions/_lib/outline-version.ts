@@ -17,20 +17,9 @@
 
 import { ENTITY_KINDS } from './bundle-validate.ts'
 import { runCypher, type Neo4jEnv } from './neo4j.ts'
-import { stableSha } from './stable-sha.ts'
+import { outlineContentSha, type DescriptionRow } from './outline-sha.ts'
 
-export interface DescriptionRow { order: number | null; content: string | null }
-
-const blocksOf = (content: string): unknown => { try { return JSON.parse(content) } catch { return content } }
-
-/** The hash of an outline's text: its descriptions' blocks as a value, with their order, in order. */
-export async function outlineContentSha(rows: DescriptionRow[]): Promise<string> {
-  const text = rows
-    .filter((r): r is { order: number | null; content: string } => typeof r.content === 'string')
-    .map(r => ({ order: Number(r.order ?? 0), blocks: blocksOf(r.content) }))
-    .sort((a, b) => a.order - b.order)
-  return stableSha(text)
-}
+export { outlineContentSha, type DescriptionRow }
 
 export type OutlineState = 'new' | 'bundled' | 'absorbed' | 'stale'
 
