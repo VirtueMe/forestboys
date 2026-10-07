@@ -6,7 +6,7 @@ vi.mock('~/_lib/neo4j.ts', () => ({ runCypher: vi.fn(), runCypherTx: vi.fn() }))
 vi.mock('~/_lib/link-guard.ts', () => ({ judgeStored: vi.fn(() => Promise.resolve({ blocked: [] })), storedContents: vi.fn(() => Promise.resolve([])) }))
 
 const { runCypher, runCypherTx } = await import('~/_lib/neo4j.ts')
-const { applyEntityOps, checkDescriptionDrift, checkOpLinks } = await import('./_apply.ts')
+const { applyEntityOps, checkDescriptionDrift, checkEntityExists, checkOpLinks } = await import('./_apply.ts')
 const { judgeStored } = await import('~/_lib/link-guard.ts')
 
 type Row = Record<string, unknown>
@@ -192,5 +192,29 @@ describe('archiving an outline: the obsolete-outline op records what was absorbe
   it('records no hash for a bundle that has none', async () => {
     await applyEntityOps(env, 'Outline:linge-pulje-4', payload('Outline:linge-pulje-4', archiveOp), 'bundle:x:t', AT)
     expect(stmts()[0].parameters!.sha).toBeNull()
+  })
+})
+
+describe('create-entity: an entity that already exists', () => {
+  const create = [{ op: 'create-entity', kind: 'Unit', slug: 'kompani-linge', props: {} }] as Parameters<typeof checkEntityExists>[2]
+
+  it('is reported, so the entity is set aside instead of getting a second node', async () => {
+    cypher.mockResolvedValue([{ n: 1 }] as never)
+    expect(await checkEntityExists(env, 'Unit:kompani-linge', create)).toEqual([{ prop: 'entity', expected: null, actual: 'exists' }])
+    expect(String(cypher.mock.calls[0][1])).toMatch(/MATCH \(n:`Unit` \{slug: \$slug\}\)/)
+  })
+
+  it('is fine when there is none, and asks nothing of a bundle that creates nothing', async () => {
+    cypher.mockResolvedValue([{ n: 0 }] as never)
+    expect(await checkEntityExists(env, 'Unit:kompani-linge', create)).toEqual([])
+    cypher.mockClear()
+    expect(await checkEntityExists(env, 'Unit:kompani-linge', [{ op: 'add-edge', type: 'PART_OF', from: 'Unit:kompani-linge', to: 'Unit:x' }] as never)).toEqual([])
+    expect(cypher).not.toHaveBeenCalled()
+  })
+
+  it('looks a Source up by id', async () => {
+    cypher.mockResolvedValue([{ n: 0 }] as never)
+    await checkEntityExists(env, 'Source:granlund-rapport-1942', [{ op: 'create-entity', kind: 'Source', slug: 'granlund-rapport-1942', props: {} }] as never)
+    expect(String(cypher.mock.calls[0][1])).toMatch(/\{id: \$slug\}/)
   })
 })
