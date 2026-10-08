@@ -23,7 +23,7 @@
  *   :pageClass — string             — extra class for page-specific styles
  */
 import { ref, watch } from 'vue'
-import { useRoute } from 'vue-router'
+import { useDetailSlug } from '@/composables/useDetailSlug.ts'
 
 const props = defineProps<{
   load:         (slug: string) => Promise<void>
@@ -33,8 +33,8 @@ const props = defineProps<{
   pageClass?:   string
 }>()
 
-const route   = useRoute()
-const loading = ref(false)
+const detailSlug = useDetailSlug()
+const loading    = ref(false)
 
 async function run(slug: string) {
   if (!slug) return
@@ -45,7 +45,7 @@ async function run(slug: string) {
   finally { loading.value = false }
 }
 
-watch(() => route.params.slug as string, run, { immediate: true })
+watch(detailSlug, run, { immediate: true })
 </script>
 
 <style scoped>
