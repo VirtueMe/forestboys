@@ -116,6 +116,7 @@ export function useProposalBundle(bundleId: string) {
   const payloads = ref<EntityPayload[]>([])
   const loading  = ref(false)
   const error    = ref<string | null>(null)
+  const notFound = ref(false)
 
   const payloadsByEntity = computed(() => {
     const map = new Map<string, EntityPayload>()
@@ -134,8 +135,13 @@ export function useProposalBundle(bundleId: string) {
   async function load(): Promise<void> {
     loading.value = true
     error.value   = null
+    notFound.value = false
     try {
       const res = await authFetch(`/api/admin/proposals/${encodeURIComponent(bundleId)}`)
+      if (res.status === 404) {
+        notFound.value = true
+        throw new Error('Bundlen finnes ikke (slettet?)')
+      }
       if (!res.ok) throw new Error(`HTTP ${res.status}`)
       const body = await res.json() as BundleResponse
       manifest.value = body.manifest
@@ -238,6 +244,7 @@ export function useProposalBundle(bundleId: string) {
     payloads,
     loading,
     error,
+    notFound,
     getEntityPayload,
     getEntityRef,
     load,

@@ -5,6 +5,10 @@
       <p class="muted">Alle bundles i R2 — nyeste øverst.</p>
     </header>
 
+    <p v-if="deletedId" class="notice" role="status">
+      Bundle slettet: <code>{{ deletedId }}</code>
+    </p>
+
     <p v-if="error" class="error">{{ error }}</p>
     <p v-else-if="loading" class="muted">Laster…</p>
 
@@ -37,8 +41,9 @@
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
-import { RouterLink } from 'vue-router'
+import { RouterLink, useRoute, useRouter } from 'vue-router'
 import { authFetch } from '@/composables/useAuth.ts'
+import { deletedBundleFromQuery } from '@/utils/proposalNav.ts'
 
 interface BundleSummary {
   bundleId:      string
@@ -58,6 +63,12 @@ interface BundleSummary {
 
 const bundles = ref<BundleSummary[]>([])
 const loading = ref(true)
+
+const route     = useRoute()
+const router    = useRouter()
+// Set by leaveDeletedBundle(); shown once, then dropped from the URL so a reload does not repeat it.
+const deletedId = ref(deletedBundleFromQuery(route.query.deleted))
+if (deletedId.value) void router.replace({ path: route.path })
 const error   = ref<string | null>(null)
 
 onMounted(async () => {
@@ -97,6 +108,7 @@ function statusLabel(s: 'pending' | 'blocked' | 'closed'): string {
 
 .muted { color: var(--muted); }
 .error { color: var(--danger); }
+.notice { color: var(--muted); }
 
 .bundle-list { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: var(--space-sm); }
 .bundle-row { background: var(--paper-raised); border: 1px solid var(--rule); border-radius: var(--radius-md); }

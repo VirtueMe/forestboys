@@ -3,15 +3,17 @@
     <header class="bundle-header">
       <h1 class="bundle-title">Forslag</h1>
     </header>
-    <BundleReviewPanel :bundle-id="bundleId" />
+    <BundleReviewPanel :bundle-id="bundleId" @deleted="leaveDeletedBundle(router, bundleId)" />
   </section>
 </template>
 
 <script setup lang="ts">
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import BundleReviewPanel from '@/components/BundleReviewPanel.vue'
+import { leaveDeletedBundle } from '@/utils/proposalNav.ts'
 
 const route    = useRoute()
+const router   = useRouter()
 const bundleId = String(route.params.bundleId)
 </script>
 
