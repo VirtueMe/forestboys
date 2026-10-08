@@ -45,8 +45,9 @@ export interface BundleManifest extends BundleOriginFields {
   entities:         BundleEntityRef[]
   /** 'blocked' = at least one edge target neither lives nor is being
    *  created in this bundle; the bundle waits for child bundles to
-   *  resolve `unresolvedRefs` before Jan can review. 'pending' on a
-   *  parent flips to 'closed' once every entity is non-pending. */
+   *  resolve `unresolvedRefs` before Jan can review. Ingest writes only
+   *  'blocked'; what the reviewer sees is derived from the entities
+   *  (src/utils/bundleStatus.ts, #185), so 'closed' is never stored. */
   status?:          'pending' | 'blocked' | 'closed'
   unresolvedRefs?:  string[]
   /** Set on a child bundle generated to resolve a parent's unresolved

@@ -26,7 +26,8 @@
 
 import { runCypher, runCypherTx, type Neo4jEnv } from '~/_lib/neo4j.ts'
 import { stableSha } from '~/_lib/stable-sha.ts'
-import { originStamp, type BundleOriginFields, type DerivedFrom } from '~/_lib/bundle-origin.ts'
+import { originStamp, sourceIndexKey, type BundleOriginFields, type DerivedFrom } from '~/_lib/bundle-origin.ts'
+import { bundleCounts } from '../../../../src/utils/bundleStatus.ts'
 import { ENTITY_ID_RE, keyProp, nodePattern, parseNodeRef } from '~/_lib/entity-ref.ts'
 import { DEMOTE_TO_INCIDENT, PROMOTE_TO_OPERATION } from '~/_lib/event-kind.ts'
 import { judgeStored, storedContents, type LinkProblem } from '~/_lib/link-guard.ts'
@@ -62,7 +63,8 @@ export interface BundleManifest extends BundleOriginFields {
   createdAt:   string
   model:       string
   promptHash:  string
-  entities:    { entityId: string; status: 'pending' | 'accepted' | 'denied' | 'drifted'; opSummary: string[] }[]
+  entities:    { entityId: string; status: 'pending' | 'accepted' | 'denied' | 'drifted'; opSummary: string[]; refusal?: DriftedProp[] }[]
+  /** Written by ingest as 'blocked' only; the status the reviewer sees is derived (src/utils/bundleStatus.ts, #185). */
   status?:          'pending' | 'blocked' | 'closed'
   unresolvedRefs?:  string[]
   parentBundle?:    string
@@ -618,6 +620,7 @@ export async function manifestSetStatus(
   bundleId:  string,
   entityId:  string,
   status:    'accepted' | 'denied' | 'drifted',
+  refusal?:  DriftedProp[],
 ): Promise<BundleManifest> {
   const key = `proposals/bundles/${bundleId}/manifest.json`
   for (let attempt = 0; attempt < 3; attempt++) {
@@ -628,6 +631,7 @@ export async function manifestSetStatus(
     const ent      = manifest.entities.find((e) => e.entityId === entityId)
     if (!ent)      throw new Error(`manifestSetStatus: entity ${entityId} not in bundle ${bundleId}`)
     ent.status     = status
+    if (refusal?.length) ent.refusal = refusal
     const result   = await env.PROPOSALS.put(key, JSON.stringify(manifest), {
       httpMetadata: { contentType: 'application/json' },
       onlyIf:       { etagMatches: etag },
@@ -635,6 +639,18 @@ export async function manifestSetStatus(
     if (result) return manifest
   }
   throw new Error(`manifestSetStatus: conditional write failed after 3 attempts`)
+}
+
+/**
+ * Accept refused an entity for a reason that will not go away (it exists, a property changed): set it aside, with the
+ * reason, so the bundle does not count it as waiting and the reviewer can see why. It leaves the open-bundle lists like a
+ * decided entity does (#185). The reviewer can still deny it.
+ */
+export async function setAside(env: R2Like, bundleId: string, entityId: string, refusal: DriftedProp[]): Promise<BundleManifest> {
+  const manifest = await manifestSetStatus(env, bundleId, entityId, 'drifted', refusal)
+  await indexRemove(env, `proposals/by-entity/${entityId}/index.json`, bundleId)
+  if (bundleCounts(manifest.entities).pending === 0) await indexRemove(env, sourceIndexKey(manifest), bundleId)
+  return manifest
 }
 
 /** R2's `httpEtag` returns the HTTP-quoted form (`"abc"`); the conditional

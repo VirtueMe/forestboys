@@ -14,6 +14,7 @@
  */
 import { ref, computed } from 'vue'
 import { authFetch } from './useAuth.ts'
+import type { BundleStatus } from '@/utils/bundleStatus.ts'
 
 export type EntityStatus = 'pending' | 'accepted' | 'denied' | 'drifted'
 
@@ -42,9 +43,11 @@ export interface BundleEntityRef {
   entityId:  string
   status:    EntityStatus
   opSummary: string[]
+  /** Why accept set the entity aside (status `drifted`): the entity exists, or a property changed. */
+  refusal?:  DriftedProp[]
 }
 
-export type BundleStatus = 'pending' | 'blocked' | 'closed'
+export type { BundleStatus }
 
 /** Bundle origin — functions/_lib/bundle-origin.ts. */
 export interface SanityOrigin { type: 'sanity'; sanityType: string; runAt: string }
@@ -178,10 +181,14 @@ export function useProposalBundle(bundleId: string) {
       },
     )
     if (!res.ok) {
-      const body = await res.json().catch(() => ({})) as { kind?: string; driftedBlocks?: DriftConflict[]; driftedProps?: DriftedProp[] }
+      const body = await res.json().catch(() => ({})) as { kind?: string; driftedBlocks?: DriftConflict[]; driftedProps?: DriftedProp[]; setAside?: boolean }
       const err = new Error(body.kind ?? `HTTP ${res.status}`) as Error & { driftedBlocks?: DriftConflict[]; driftedProps?: DriftedProp[] }
       if (body.driftedBlocks) err.driftedBlocks = body.driftedBlocks
       if (body.driftedProps)  err.driftedProps  = body.driftedProps
+      if (body.setAside && body.driftedProps) {
+        const ref = getEntityRef(entityId)
+        if (ref) { ref.status = 'drifted'; ref.refusal = body.driftedProps }
+      }
       throw err
     }
     const out = await res.json() as AcceptResponse

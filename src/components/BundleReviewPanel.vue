@@ -9,6 +9,7 @@
     <article v-if="manifest" class="manifest">
       <header class="manifest-head">
         <dl class="manifest-fields">
+          <dt>Status</dt><dd><span class="bundle-status" :class="`bundle-status--${status}`">{{ bundleStatusLabel(status) }}</span> <span class="muted">{{ countsText }}</span></dd>
           <dt>Bundle</dt><dd><code>{{ manifest.bundleId }}</code></dd>
           <template v-if="manifest.outlineId">
             <dt>Outline</dt><dd><code>{{ manifest.outlineId }}</code> (rev <code>{{ manifest.outlineRev?.slice(0, 8) }}</code>)</dd>
@@ -19,7 +20,7 @@
           <template v-else-if="manifest.origin">
             <dt>Kilde</dt><dd>Sanity <code>{{ manifest.origin.sanityType }}</code>, kjørt {{ manifest.origin.runAt.slice(0, 16).replace('T', ' ') }}</dd>
           </template>
-          <dt>Modell</dt><dd>{{ manifest.model }}</dd>
+          <template v-if="manifest.model !== 'none'"><dt>Modell</dt><dd>{{ manifest.model }}</dd></template>
           <dt>Generert</dt><dd>{{ manifest.createdAt }}</dd>
         </dl>
         <button
@@ -37,7 +38,7 @@
       </header>
       <p class="summary">{{ manifest.summary }}</p>
 
-      <p v-if="manifest.status === 'blocked'" class="bundle-blocked">
+      <p v-if="status === 'blocked'" class="bundle-blocked">
         <strong>Blokkert.</strong>
         Venter på {{ manifest.unresolvedRefs?.length ?? 0 }} barn-bundle{{ (manifest.unresolvedRefs?.length ?? 0) === 1 ? '' : 'r' }}
         som lager:
@@ -94,8 +95,9 @@
           >
             Forhåndsvis
           </button>
-          <template v-if="entry.status === 'pending'">
+          <template v-if="entry.status === 'pending' || entry.status === 'drifted'">
             <button
+              v-if="entry.status === 'pending'"
               type="button"
               class="action action--accept"
               :disabled="busy === entry.entityId || pendingDeps(entry.entityId).length > 0"
@@ -115,6 +117,9 @@
           </template>
         </div>
 
+        <p v-if="entry.status === 'drifted' && entry.refusal?.length" class="entity-error">
+          Satt til side: {{ refusalsText(entry.refusal) }} Forslaget er ikke brukt.
+        </p>
         <p v-if="pendingDeps(entry.entityId).length" class="entity-deps">
           Venter på: <code v-for="d in pendingDeps(entry.entityId)" :key="d" class="dep-chip">{{ d }}</code>
         </p>
@@ -138,6 +143,8 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 import { RouterLink } from 'vue-router'
+import { bundleCounts, bundleStatus, bundleStatusLabel } from '@/utils/bundleStatus.ts'
+import { refusalsText, type Refusal } from '@/utils/refusalText.ts'
 import { useProposalBundle, type EntityStatus } from '@/composables/useProposalBundle.ts'
 import { authFetch } from '@/composables/useAuth.ts'
 import AppModal from '@/components/AppModal.vue'
@@ -186,6 +193,16 @@ function onPreviewResolved(): void {
 }
 
 const hasPending = computed(() => (manifest.value?.entities ?? []).some((e) => e.status === 'pending'))
+const status     = computed(() => manifest.value ? bundleStatus(manifest.value) : 'pending')
+const countsText = computed(() => {
+  const c = bundleCounts(manifest.value?.entities ?? [])
+  return [
+    c.pending  ? `${c.pending} venter`      : '',
+    c.accepted ? `${c.accepted} godkjent`   : '',
+    c.denied   ? `${c.denied} avvist`       : '',
+    c.drifted  ? `${c.drifted} satt til side` : '',
+  ].filter(Boolean).join(' · ')
+})
 
 /**
  * For a given entity, return the list of edge targets that are also
@@ -251,7 +268,7 @@ function statusLabel(s: EntityStatus): string {
     case 'pending':  return 'Venter'
     case 'accepted': return 'Godkjent'
     case 'denied':   return 'Avvist'
-    case 'drifted':  return 'Drift'
+    case 'drifted':  return 'Satt til side'
   }
 }
 
@@ -261,9 +278,9 @@ async function onAccept(entityId: string) {
   try {
     await bundle.accept(entityId, {})
   } catch (e) {
-    const err = e as Error & { driftedBlocks?: unknown[]; driftedProps?: { prop: string }[] }
+    const err = e as Error & { driftedBlocks?: unknown[]; driftedProps?: Refusal[] }
     if (err.driftedProps?.length) {
-      actionError.value[entityId] = `Endret siden forslaget ble laget: ${err.driftedProps.map(d => d.prop).join(', ')} — forslaget er ikke brukt.`
+      actionError.value[entityId] = `${refusalsText(err.driftedProps)} Forslaget er ikke brukt.`
     } else if (err.driftedBlocks?.length) {
       actionError.value[entityId] = `Drift på ${err.driftedBlocks.length} blokk(er) — last siden på nytt før du godkjenner.`
     } else {
@@ -293,6 +310,20 @@ async function onDeny(entityId: string) {
 .bundle { display: flex; flex-direction: column; gap: var(--space-md); margin-top: var(--space-md); }
 
 .muted { color: var(--muted); }
+
+.bundle-status {
+  padding: 2px 8px;
+  border-radius: var(--radius-pill);
+  font-size: var(--size-caps);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-caps);
+  border: 1px solid var(--rule);
+  background: var(--paper-sunken);
+  color: var(--ink-soft);
+}
+.bundle-status--blocked { color: var(--danger); border-color: var(--danger); }
+.bundle-status--closed  { color: var(--moss);   border-color: var(--moss);   }
 .error { color: var(--danger); }
 
 .manifest {

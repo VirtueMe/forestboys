@@ -25,11 +25,14 @@ import {
   indexRemove,
   manifestSetStatus,
   putIntentLock,
+  setAside,
   type BundleManifest,
   type EntityPayload,
 } from '~/api/admin/proposals/_apply.ts'
 import { runCypher, type Neo4jEnv } from '~/_lib/neo4j.ts'
 import { sourceIndexKey } from '~/_lib/bundle-origin.ts'
+import { bundleCounts } from '../../../../../src/utils/bundleStatus.ts'
+import { refusalsText } from '../../../../../src/utils/refusalText.ts'
 
 interface Env extends Neo4jEnv {
   SESSION_SECRET: string
@@ -87,7 +90,8 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env, params }
     // Field values changed since the proposal was made → leave it for a per-entity look.
     const driftedProps = [...await checkEntityExists(env, entityId, payload.ops), ...await checkPropDrift(env, entityId, payload.ops), ...await checkDescriptionDrift(env, entityId, payload.ops)]
     if (driftedProps.length) {
-      results.push({ entityId, status: 'failed', reason: `drift: ${driftedProps.map(d => d.prop).join(', ')}` })
+      await setAside(env, bundleId, entityId, driftedProps)
+      results.push({ entityId, status: 'failed', reason: refusalsText(driftedProps) })
       continue
     }
 
@@ -135,7 +139,7 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env, params }
   // Final manifest read so the caller sees the post-state.
   const finalObj      = await env.PROPOSALS.get(`proposals/bundles/${bundleId}/manifest.json`)
   const finalManifest = finalObj ? await finalObj.json<BundleManifest>() : manifest
-  const remainingPending = finalManifest.entities.filter((e) => e.status === 'pending').length
+  const remainingPending = bundleCounts(finalManifest.entities).pending
   if (remainingPending === 0) {
     await indexRemove(env, sourceIndexKey(finalManifest), bundleId)
   }

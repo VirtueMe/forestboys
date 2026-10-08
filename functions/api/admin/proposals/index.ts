@@ -2,8 +2,8 @@
  * GET /api/admin/proposals — list every bundle in R2.
  *
  * Lightweight summary per bundle: bundleId, source label, outlineId (outline
- * bundles), summary, status,
- * createdAt, pendingEntityCount, model. Sorted newest-first. The list
+ * bundles), summary, status (derived, #185),
+ * createdAt, entity counts, model. Sorted newest-first. The list
  * is bounded by R2's per-prefix scan; we list manifests under
  * proposals/bundles/<bundleId>/manifest.json and read each.
  *
@@ -11,7 +11,8 @@
  */
 
 import { requireAdmin } from '~/_lib/require-admin.ts'
-import { originLabel, type BundleOriginFields } from '~/_lib/bundle-origin.ts'
+import { originKind, originLabel, type BundleOriginFields, type OriginKind } from '~/_lib/bundle-origin.ts'
+import { bundleCounts, bundleStatus, type BundleStatus } from '../../../../src/utils/bundleStatus.ts'
 
 interface Env {
   SESSION_SECRET: string
@@ -24,7 +25,7 @@ interface BundleManifest extends BundleOriginFields {
   createdAt:   string
   model:       string
   entities:    { entityId: string; status: string }[]
-  status?:     'pending' | 'blocked' | 'closed'
+  status?:     BundleStatus
   parentBundle?: string
 }
 
@@ -36,10 +37,14 @@ interface BundleSummary {
   summary:            string
   model:              string
   createdAt:          string
-  status:             'pending' | 'blocked' | 'closed'
+  /** Derived from the entities (src/utils/bundleStatus.ts), not the manifest's stored value. */
+  status:             BundleStatus
+  /** outline / package / sanity: where the bundle comes from, for those no model made. */
+  originKind:         OriginKind
   pendingCount:       number
   acceptedCount:      number
   deniedCount:        number
+  driftedCount:       number
   totalEntities:      number
   parentBundle:       string | null
 }
@@ -67,15 +72,7 @@ export const onRequestGet: PagesFunction<Env> = async ({ request, env }) => {
       const obj = await env.PROPOSALS.get(key)
       if (!obj) continue
       const m = await obj.json<BundleManifest>()
-      const counts = m.entities.reduce(
-        (acc, e) => {
-          if (e.status === 'pending')  acc.pending++
-          if (e.status === 'accepted') acc.accepted++
-          if (e.status === 'denied')   acc.denied++
-          return acc
-        },
-        { pending: 0, accepted: 0, denied: 0 },
-      )
+      const counts = bundleCounts(m.entities)
       bundles.push({
         bundleId:      m.bundleId,
         source:        originLabel(m),
@@ -83,10 +80,12 @@ export const onRequestGet: PagesFunction<Env> = async ({ request, env }) => {
         summary:       m.summary,
         model:         m.model,
         createdAt:     m.createdAt,
-        status:        m.status ?? 'pending',
+        status:        bundleStatus(m),
+        originKind:    originKind(m),
         pendingCount:  counts.pending,
         acceptedCount: counts.accepted,
         deniedCount:   counts.denied,
+        driftedCount:  counts.drifted,
         totalEntities: m.entities.length,
         parentBundle:  m.parentBundle ?? null,
       })
