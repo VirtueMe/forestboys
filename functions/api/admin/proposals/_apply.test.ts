@@ -6,7 +6,7 @@ vi.mock('~/_lib/neo4j.ts', () => ({ runCypher: vi.fn(), runCypherTx: vi.fn() }))
 vi.mock('~/_lib/link-guard.ts', () => ({ judgeStored: vi.fn(() => Promise.resolve({ blocked: [] })), storedContents: vi.fn(() => Promise.resolve([])) }))
 
 const { runCypher, runCypherTx } = await import('~/_lib/neo4j.ts')
-const { applyEntityOps, checkDescriptionDrift, checkEntityExists, checkOpLinks } = await import('./_apply.ts')
+const { applyEntityOps, checkDescriptionDrift, checkEntityExists, checkOpLinks, manifestSetStatus, setAside } = await import('./_apply.ts')
 const { judgeStored } = await import('~/_lib/link-guard.ts')
 
 type Row = Record<string, unknown>
@@ -216,5 +216,63 @@ describe('create-entity: an entity that already exists', () => {
     cypher.mockResolvedValue([{ n: 0 }] as never)
     await checkEntityExists(env, 'Source:granlund-rapport-1942', [{ op: 'create-entity', kind: 'Source', slug: 'granlund-rapport-1942', props: {} }] as never)
     expect(String(cypher.mock.calls[0][1])).toMatch(/\{id: \$slug\}/)
+  })
+})
+
+describe('setting an entity aside when accept refuses it (#185)', () => {
+  const BUNDLE = 'bundle:outline:2026-10-08T07:00:00.000Z'
+
+  /** A bucket in memory: objects by key, an etag that changes with every write. */
+  function bucket(objects: Record<string, unknown>) {
+    const store = new Map(Object.entries(objects).map(([k, v]) => [k, { body: JSON.stringify(v), etag: 1 }]))
+    return {
+      store,
+      PROPOSALS: {
+        get: (key: string) => {
+          const o = store.get(key)
+          return Promise.resolve(o ? { httpEtag: `"${o.etag}"`, json: () => Promise.resolve(JSON.parse(o.body)) } : null)
+        },
+        put: (key: string, body: string) => {
+          const o = store.get(key)
+          store.set(key, { body, etag: (o?.etag ?? 0) + 1 })
+          return Promise.resolve({})
+        },
+      },
+    }
+  }
+
+  const manifest = (statuses: string[]) => ({
+    bundleId: BUNDLE, outlineId: 'linge', entities: statuses.map((status, i) => ({ entityId: `Article:a${i}`, status, opSummary: ['create'] })),
+  })
+  const idx = (ids: string[]) => ({ bundleIds: ids })
+
+  it('marks it drifted with the reason, and takes it out of the open-bundle list for the entity', async () => {
+    const b = bucket({
+      [`proposals/bundles/${BUNDLE}/manifest.json`]: manifest(['pending', 'pending']),
+      'proposals/by-entity/Article:a0/index.json': idx([BUNDLE]),
+      'proposals/by-outline/linge/index.json': idx([BUNDLE]),
+    })
+    const after = await setAside(b as never, BUNDLE, 'Article:a0', [{ prop: 'entity', expected: null, actual: 'exists' }])
+    expect(after.entities[0]).toMatchObject({ status: 'drifted', refusal: [{ prop: 'entity', actual: 'exists' }] })
+    expect(JSON.parse(b.store.get('proposals/by-entity/Article:a0/index.json')!.body).bundleIds).toEqual([])
+    // Another entity still waits: the bundle stays in its source index.
+    expect(JSON.parse(b.store.get('proposals/by-outline/linge/index.json')!.body).bundleIds).toEqual([BUNDLE])
+  })
+
+  it('takes the bundle out of its source index when that was the last thing waiting', async () => {
+    const b = bucket({
+      [`proposals/bundles/${BUNDLE}/manifest.json`]: manifest(['pending']),
+      'proposals/by-entity/Article:a0/index.json': idx([BUNDLE]),
+      'proposals/by-outline/linge/index.json': idx([BUNDLE]),
+    })
+    await setAside(b as never, BUNDLE, 'Article:a0', [{ prop: 'entity', expected: null, actual: 'exists' }])
+    expect(JSON.parse(b.store.get('proposals/by-outline/linge/index.json')!.body).bundleIds).toEqual([])
+  })
+
+  it('leaves the refusal alone when an entity is denied after being set aside', async () => {
+    const b = bucket({ [`proposals/bundles/${BUNDLE}/manifest.json`]: manifest(['pending']) })
+    await setAside(b as never, BUNDLE, 'Article:a0', [{ prop: 'title', expected: 'a', actual: 'b' }])
+    const after = await manifestSetStatus(b as never, BUNDLE, 'Article:a0', 'denied')
+    expect(after.entities[0]).toMatchObject({ status: 'denied', refusal: [{ prop: 'title' }] })
   })
 })

@@ -280,13 +280,20 @@ person: record the origin and the channel («package», «sync event», «bot»)
 («Historikk»), per entity on its row, and in the preview window; reading it is one listing and one read per event, which is fine
 for tens of events.
 
-**Status** (#185) stays **derived**: `pending` while any entity is pending, `closed` when none is, `blocked` the one stored
-exception (cleared when its refs resolve). The events must never become a second source of truth that can disagree with the
-manifest.
+**Status** (#185, decided and built) is **derived**, never stored: `src/utils/bundleStatus.ts`, used by the list endpoint and the
+bundle page. `pending` while any entity is pending, `closed` when none is (every entity accepted, denied or drifted), `blocked`
+the one stored exception, and only while something still waits (a bundle with nothing left to decide is closed). The events must
+never become a second source of truth that can disagree with the manifest.
 
-Open (#185): an entity that accept refuses for a reason that will not go away (it exists, a property drifted) is marked `drifted`
-in the manifest, so it is not counted as waiting, and the bundle is `closed` or has a label of its own when everything in it is
-decided or drifted. Decide which.
+- **`blocked` clears only when its child bundle is sent** (`revalidateParent` in ingest). It does not clear on its own when the
+  missing target turns up in the graph some other way; the reviewer deletes the bundle or has it sent again. Re-checking the graph
+  on every read of the list would be a query per bundle, and the case is rare.
+- **A refused entity is set aside.** When accept (or «Godkjenn alle») refuses an entity for a reason that will not go away, namely
+  the entity already exists or a property or description changed since the proposal was made, the entity becomes `drifted` in the
+  manifest, carrying `refusal: [{ prop, expected, actual }]`, and leaves the open-bundle lists. It does not count as waiting, so
+  the bundle can be `closed` (decided: «Lukket», not a label of its own; the counts say «satt til side»). The reviewer can still
+  deny it (`deny` takes `pending` and `drifted`), which is how it is put away for good. A block drift (`modify-block` sha) is
+  **not** set aside: reloading the page and looking again is the answer there.
 
 ### Archive (proposed, #188)
 
@@ -365,6 +372,8 @@ Each entity carries one of: `pending | accepted | denied | drifted`.
 `drifted` is set when an op's `expectedSha` no longer matches Neo4j and
 the live state has moved past what the op assumed; the entity is
 filtered from the review UI and recoverable in `bundles/<bundleId>/drifted/`.
+In what is built (#185), accept sets it when it refuses an entity for a reason that will not go away (the entity exists, a
+property or description changed) and records why in the entity's `refusal`; see «Status» above.
 
 ### Per-entity payload
 

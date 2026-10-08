@@ -24,6 +24,7 @@
 
 import { requireAdmin } from '~/_lib/require-admin.ts'
 import { sourceIndexKey } from '~/_lib/bundle-origin.ts'
+import { bundleCounts } from '../../../../../../src/utils/bundleStatus.ts'
 import {
   ENTITY_ID_RE,
   indexRemove,
@@ -82,7 +83,8 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env, params }
 
   const entityRef = manifest.entities.find((e) => e.entityId === entityId)
   if (!entityRef) return json({ error: 'Entity not in bundle' }, 404)
-  if (entityRef.status !== 'pending') {
+  // A set-aside (drifted) entity can still be denied: that is how the reviewer puts it away for good.
+  if (entityRef.status !== 'pending' && entityRef.status !== 'drifted') {
     return json({ kind: 'already-decided', currentStatus: entityRef.status }, 409)
   }
 
@@ -108,7 +110,7 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env, params }
   // 7. Index pruning.
   await indexRemove(env, `proposals/by-entity/${entityId}/index.json`, bundleId)
 
-  const remainingPending = updatedManifest.entities.filter((e) => e.status === 'pending').length
+  const remainingPending = bundleCounts(updatedManifest.entities).pending
   const bundleClosed     = remainingPending === 0
   if (bundleClosed) {
     await indexRemove(env, sourceIndexKey(updatedManifest), bundleId)

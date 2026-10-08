@@ -138,3 +138,11 @@ export function originLabel(m: BundleOriginFields): string {
   if (m.origin?.type === 'package') return `package from ${m.origin.site}`
   return `Sanity ${m.origin?.type === 'sanity' ? m.origin.sanityType : '?'}`
 }
+
+export type OriginKind = 'outline' | 'package' | 'sanity'
+
+/** Where a bundle comes from, as a kind: the list shows it for the bundles no model made (`model` «none»). */
+export function originKind(m: BundleOriginFields): OriginKind {
+  if (m.outlineId) return 'outline'
+  return m.origin?.type === 'package' ? 'package' : 'sanity'
+}

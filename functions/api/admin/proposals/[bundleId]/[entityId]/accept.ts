@@ -37,12 +37,14 @@ import {
   indexRemove,
   manifestSetStatus,
   putIntentLock,
+  setAside,
   type BundleManifest,
   type EntityPayload,
 } from '~/api/admin/proposals/_apply.ts'
 import type { Neo4jEnv } from '~/_lib/neo4j.ts'
 import { runCypher } from '~/_lib/neo4j.ts'
 import { sourceIndexKey } from '~/_lib/bundle-origin.ts'
+import { bundleCounts } from '../../../../../../src/utils/bundleStatus.ts'
 
 interface Env extends Neo4jEnv {
   SESSION_SECRET: string
@@ -97,7 +99,12 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env, params }
   // 2b. Drift check.
   const drifted      = await checkDrift(env, entityId, payload.ops, expectedShas)
   const driftedProps = [...await checkEntityExists(env, entityId, payload.ops), ...await checkPropDrift(env, entityId, payload.ops), ...await checkDescriptionDrift(env, entityId, payload.ops)]
-  if (drifted.length || driftedProps.length) {
+  if (driftedProps.length) {
+    // Will not go away by reloading: set the entity aside, with the reason, so the bundle does not count it as waiting.
+    const after = await setAside(env, bundleId, entityId, driftedProps)
+    return json({ kind: 'drift', driftedBlocks: drifted, driftedProps, setAside: true, bundleClosed: bundleCounts(after.entities).pending === 0 }, 409)
+  }
+  if (drifted.length) {
     return json({ kind: 'drift', driftedBlocks: drifted, driftedProps }, 409)
   }
 
@@ -143,7 +150,7 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env, params }
   // 7. Index pruning.
   await indexRemove(env, `proposals/by-entity/${entityId}/index.json`, bundleId)
 
-  const remainingPending = updatedManifest.entities.filter((e) => e.status === 'pending').length
+  const remainingPending = bundleCounts(updatedManifest.entities).pending
   const bundleClosed     = remainingPending === 0
   if (bundleClosed) {
     await indexRemove(env, sourceIndexKey(updatedManifest), bundleId)

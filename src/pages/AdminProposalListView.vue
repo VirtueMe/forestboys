@@ -18,7 +18,7 @@
       <li v-for="b in bundles" :key="b.bundleId" class="bundle-row">
         <RouterLink :to="`/admin/proposals/${encodeURIComponent(b.bundleId)}`" class="bundle-link">
           <header class="bundle-row-head">
-            <span class="bundle-status" :class="`bundle-status--${b.status}`">{{ statusLabel(b.status) }}</span>
+            <span class="bundle-status" :class="`bundle-status--${b.status}`">{{ bundleStatusLabel(b.status) }}</span>
             <span class="bundle-outline"><code>{{ b.outlineId ?? b.source }}</code></span>
             <span class="bundle-meta">{{ b.createdAt.slice(0, 16).replace('T', ' ') }}</span>
           </header>
@@ -29,9 +29,10 @@
               <span v-if="b.pendingCount" class="count-pending">— {{ b.pendingCount }} venter</span>
               <span v-if="b.acceptedCount" class="count-accepted">— {{ b.acceptedCount }} godkjent</span>
               <span v-if="b.deniedCount" class="count-denied">— {{ b.deniedCount }} avvist</span>
+              <span v-if="b.driftedCount" class="count-denied">— {{ b.driftedCount }} satt til side</span>
             </span>
             <span v-if="b.parentBundle" class="bundle-child">barn-bundle</span>
-            <span class="bundle-model">{{ b.model }}</span>
+            <span class="bundle-model">{{ b.model === 'none' ? originKindLabel(b.originKind) : b.model }}</span>
           </footer>
         </RouterLink>
       </li>
@@ -44,6 +45,7 @@ import { ref, onMounted } from 'vue'
 import { RouterLink, useRoute, useRouter } from 'vue-router'
 import { authFetch } from '@/composables/useAuth.ts'
 import { deletedBundleFromQuery } from '@/utils/proposalNav.ts'
+import { bundleStatusLabel, type BundleStatus } from '@/utils/bundleStatus.ts'
 
 interface BundleSummary {
   bundleId:      string
@@ -53,7 +55,9 @@ interface BundleSummary {
   summary:       string
   model:         string
   createdAt:     string
-  status:        'pending' | 'blocked' | 'closed'
+  status:        BundleStatus
+  originKind:    'outline' | 'package' | 'sanity'
+  driftedCount:  number
   pendingCount:  number
   acceptedCount: number
   deniedCount:   number
@@ -87,11 +91,11 @@ onMounted(async () => {
   }
 })
 
-function statusLabel(s: 'pending' | 'blocked' | 'closed'): string {
-  switch (s) {
-    case 'pending': return 'Venter'
-    case 'blocked': return 'Blokkert'
-    case 'closed':  return 'Lukket'
+function originKindLabel(k: 'outline' | 'package' | 'sanity'): string {
+  switch (k) {
+    case 'outline': return 'fra outline'
+    case 'package': return 'fra pakke'
+    case 'sanity':  return 'fra Sanity'
   }
 }
 </script>
