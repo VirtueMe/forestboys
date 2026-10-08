@@ -20,7 +20,9 @@
     "test:e2e": "playwright test",
     "e2e:record": "tsx scripts/e2e/record-fixtures.ts",
     "prepare": "husky",
-    "prompts:test": "tsx scripts/prompts/test.ts"
+    "prompts:test": "tsx scripts/prompts/test.ts",
+    "pull:graph": "tsx scripts/tools/pull-production.ts",
+    "pull:bundles": "tsx scripts/tools/pull-production-r2.ts"
   },
   "dependencies": {
     "@portabletext/editor": "^6.6.2",
