@@ -31,6 +31,8 @@ import {
   type BundleManifest, type EntityPayload, type IngestBody, type ValidatedBundle,
 } from '~/_lib/bundle-validate.ts'
 import { keyProp, parseNodeRef } from '~/_lib/entity-ref.ts'
+import { channelOf, recordEvent } from '~/_lib/bundle-events.ts'
+import { bundleCounts } from '../../../src/utils/bundleStatus.ts'
 import { runCypher } from '~/_lib/neo4j.ts'
 
 interface Env {
@@ -80,7 +82,16 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
       validated.manifest.unresolvedRefs = refs.unresolved
     }
 
+    // A bundle sent again overwrites the manifest and puts every entity back to pending: say what it replaced.
+    const previous = await env.PROPOSALS.get(`proposals/bundles/${validated.manifest.bundleId}/manifest.json`)
+    const replaced = previous ? bundleCounts((await previous.json<BundleManifest>()).entities) : null
+
     await writeBundle(env, validated)
+
+    const ingestActor = channelOf(validated.manifest)
+    await recordEvent(env.PROPOSALS, validated.manifest.bundleId, ingestActor, replaced
+      ? { kind: 'resent', entities: validated.manifest.entities.length, replaced }
+      : { kind: 'received', entities: validated.manifest.entities.length, status: refs.unresolved.length ? 'blocked' : 'pending', ...(refs.unresolved.length ? { unresolvedRefs: refs.unresolved } : {}) })
 
     // Clear the pending-generation marker for this outline. Parents and
     // children alike count as "this outline finished a generation".
@@ -390,7 +401,11 @@ async function revalidateParent(env: Env, parentBundleId: string): Promise<void>
     httpMetadata: { contentType: 'application/json' },
   })
 
+  if (!wasBlocked && parent.status === 'blocked') {
+    await recordEvent(env.PROPOSALS, parent.bundleId, channelOf(parent), { kind: 'blocked', unresolvedRefs: refs.unresolved })
+  }
   if (wasBlocked && parent.status === 'pending') {
+    await recordEvent(env.PROPOSALS, parent.bundleId, channelOf(parent), { kind: 'unblocked' })
     await broadcast(env, bundleChannel(parent), {
       kind:     'bundle-status',
       bundleId: parent.bundleId,

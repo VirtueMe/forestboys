@@ -33,6 +33,7 @@ import { runCypher, type Neo4jEnv } from '~/_lib/neo4j.ts'
 import { sourceIndexKey } from '~/_lib/bundle-origin.ts'
 import { bundleCounts } from '../../../../../src/utils/bundleStatus.ts'
 import { refusalsText } from '../../../../../src/utils/refusalText.ts'
+import { actorOf, recordEvent } from '~/_lib/bundle-events.ts'
 
 interface Env extends Neo4jEnv {
   SESSION_SECRET: string
@@ -52,6 +53,7 @@ interface AcceptResult {
 export const onRequestPost: PagesFunction<Env> = async ({ request, env, params }) => {
   const guard = await requireAdmin(request, env)
   if (guard instanceof Response) return guard
+  const actor = actorOf(guard)
   if (!env.PROPOSALS) return json({ error: 'PROPOSALS R2 binding missing' }, 500)
 
   const bundleId = decodeURIComponent(String(params.bundleId))
@@ -104,7 +106,7 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env, params }
     const acceptedAt = new Date().toISOString()
     const intentKey  = `proposals/bundles/${bundleId}/accepted/${entityId.replace(':', '-')}-${acceptedAt}.json`
     const locked = await putIntentLock(env.PROPOSALS, intentKey,
-      JSON.stringify({ entityId, bundleId, acceptedAt, message, ops: payload.ops }))
+      JSON.stringify({ entityId, bundleId, acceptedAt, actor, message, ops: payload.ops }))
     if (!locked) {
       results.push({ entityId, status: 'failed', reason: 'concurrent accept in flight' })
       continue
@@ -114,7 +116,7 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env, params }
       const summary = await applyEntityOps(env, entityId, payload, bundleId, acceptedAt)
       await env.PROPOSALS.put(
         `history/${entityId}/${acceptedAt}-apply.json`,
-        JSON.stringify({ kind: 'apply', entityId, bundleId, acceptedAt, message, summary }),
+        JSON.stringify({ kind: 'apply', entityId, bundleId, acceptedAt, actor, message, summary }),
         { httpMetadata: { contentType: 'application/json' } },
       )
       await manifestSetStatus(env, bundleId, entityId, 'accepted')
@@ -135,6 +137,13 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env, params }
       results.push({ entityId, status: 'failed', reason: (e as Error).message })
     }
   }
+
+  // One event for the whole run: a bundle of 287 entities must not write 287 objects.
+  await recordEvent(env.PROPOSALS, bundleId, actor, {
+    kind:     'accepted-all',
+    accepted: results.filter((r) => r.status === 'accepted').map((r) => r.entityId),
+    refused:  results.filter((r) => r.status === 'failed').map((r) => ({ entityId: r.entityId, why: r.reason ?? 'ukjent grunn' })),
+  })
 
   // Final manifest read so the caller sees the post-state.
   const finalObj      = await env.PROPOSALS.get(`proposals/bundles/${bundleId}/manifest.json`)

@@ -45,6 +45,8 @@ import type { Neo4jEnv } from '~/_lib/neo4j.ts'
 import { runCypher } from '~/_lib/neo4j.ts'
 import { sourceIndexKey } from '~/_lib/bundle-origin.ts'
 import { bundleCounts } from '../../../../../../src/utils/bundleStatus.ts'
+import { refusalsText } from '../../../../../../src/utils/refusalText.ts'
+import { actorOf, recordEvent } from '~/_lib/bundle-events.ts'
 
 interface Env extends Neo4jEnv {
   SESSION_SECRET: string
@@ -61,6 +63,7 @@ interface AcceptBody {
 export const onRequestPost: PagesFunction<Env> = async ({ request, env, params }) => {
   const guard = await requireAdmin(request, env)
   if (guard instanceof Response) return guard
+  const actor = actorOf(guard)
 
   if (!env.PROPOSALS) return json({ error: 'PROPOSALS R2 binding missing' }, 500)
 
@@ -102,20 +105,25 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env, params }
   if (driftedProps.length) {
     // Will not go away by reloading: set the entity aside, with the reason, so the bundle does not count it as waiting.
     const after = await setAside(env, bundleId, entityId, driftedProps)
+    await recordEvent(env.PROPOSALS, bundleId, actor, { kind: 'refused', entityId, why: `${refusalsText(driftedProps)} Satt til side.` })
     return json({ kind: 'drift', driftedBlocks: drifted, driftedProps, setAside: true, bundleClosed: bundleCounts(after.entities).pending === 0 }, 409)
   }
   if (drifted.length) {
+    await recordEvent(env.PROPOSALS, bundleId, actor, { kind: 'refused', entityId, why: `Drift på ${drifted.length} blokk(er): ${drifted.map(d => d.blockPath).join(', ')}.` })
     return json({ kind: 'drift', driftedBlocks: drifted, driftedProps }, 409)
   }
 
   // 2c. Links the proposal adds that lead nowhere.
   const badLinks = await checkOpLinks(env, entityId, payload.ops)
-  if (badLinks.length) return json({ kind: 'links', links: badLinks }, 422)
+  if (badLinks.length) {
+    await recordEvent(env.PROPOSALS, bundleId, actor, { kind: 'refused', entityId, why: `Lenker som ikke fungerer: ${badLinks.map(l => `«${l.text}» → ${l.stored || '(tom)'}`).join(', ')}.` })
+    return json({ kind: 'links', links: badLinks }, 422)
+  }
 
   // 3. Intent lock.
   const acceptedAt = new Date().toISOString()
   const intentKey  = `proposals/bundles/${bundleId}/accepted/${entityId.replace(':', '-')}-${acceptedAt}.json`
-  const intentBody = JSON.stringify({ entityId, bundleId, acceptedAt, message, ops: payload.ops })
+  const intentBody = JSON.stringify({ entityId, bundleId, acceptedAt, actor, message, ops: payload.ops })
   const locked = await putIntentLock(env.PROPOSALS, intentKey, intentBody)
   if (!locked) return json({ error: 'Concurrent accept in flight' }, 409)
 
@@ -138,6 +146,7 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env, params }
       entityId,
       bundleId,
       acceptedAt,
+      actor,
       message,
       summary,
     }),
@@ -149,6 +158,7 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env, params }
 
   // 7. Index pruning.
   await indexRemove(env, `proposals/by-entity/${entityId}/index.json`, bundleId)
+  await recordEvent(env.PROPOSALS, bundleId, actor, { kind: 'accepted', entityId, message, summary: entityRef.opSummary })
 
   const remainingPending = bundleCounts(updatedManifest.entities).pending
   const bundleClosed     = remainingPending === 0

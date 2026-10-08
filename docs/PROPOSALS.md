@@ -230,11 +230,12 @@ R2 has **no append and no query**. So:
 proposals/bundles/<bundleId>/
   manifest.json                            today     entity list + per-entity status
   entity/<entityId>.json                   today     per-entity ops payload
-  accepted/<entityId>-<ts>.json            today     the ops that ran + message           → add the actor
-  denied/<entityId>-<ts>.json              today     the reason                           → add the actor
+  accepted/<entityId>-<ts>.json            built     the ops that ran + message + the actor          (#190)
+  denied/<entityId>-<ts>.json              built     the reason + the actor                          (#190)
   comments/<id>.json                       decided   one object per comment               (#186)
-  events/<ts>-<kind>-<rand>.json           proposed  one object per event                 (#190)
+  events/<ts>-<kind>-<rand>.json           built     one object per event                 (#190)
 
+proposals/deleted/<bundleId>.json          built     who deleted a bundle, when, what it held; the stub of the archive (#190)
 proposals/index/<bundleId>.json            proposed  one row per bundle for the list      (#184)
 proposals/archive/<bundleId>.json          proposed  a deleted bundle, whole              (#188)
 ```
@@ -263,7 +264,7 @@ Persons»), a **detail** comment is about one entity in it («the sources need c
 - Open: who may edit or delete a comment; whether the accept `message` and the deny `reason` become the first detail comment of
   the entity.
 
-### Events (proposed, #190)
+### Events (decided and built, #190)
 
 One object per event, in `events/`, named by time, then kind, then a short random suffix (two events in the same millisecond),
 so a plain listing returns them in order. Every event has `at`, `kind` and `actor`, then what is specific:
@@ -275,10 +276,24 @@ so a plain listing returns them in order. Every event has `at`, `kind` and `acto
   a bundle of 287 entities must not write 287 objects),
 - **commented** (a pointer, no text), **archived**, **restored**.
 
-The **actor** is the signed-in user from `requireAdmin` (accept, accept-all and deny must stop discarding it). Ingest is not a
-person: record the origin and the channel («package», «sync event», «bot») instead. The history is shown on the bundle page
-(«Historikk»), per entity on its row, and in the preview window; reading it is one listing and one read per event, which is fine
-for tens of events.
+The **actor** is the signed-in user from `requireAdmin` (`actorOf`: id and name, never the email); accept, accept-all and deny no
+longer discard it, and it is on their `accepted/` / `denied/` / `history/` records too. Ingest is not a person: the actor is the
+**channel**, `bot` (an outline), `package` or `sync` (`channelOf`). Code: `functions/_lib/bundle-events.ts`; the shape and the
+Norwegian text of each event in `src/utils/bundleEvents.ts`. `GET /api/admin/proposals/<id>` returns `events` with the bundle.
+
+- **A name change does not leave the old name in the history.** The event keeps the user's id and the name at the time; the bundle
+  endpoint looks the names up by id in the users table when it returns the log (`withCurrentNames`), and falls back to the stored
+  name for a user who is gone or when there is no table to ask (local dev without D1).
+- **Recording never fails the action.** The accept has already changed the graph when its event is written; an error answer
+  because the log could not be written would make the page say the opposite of the graph. A failure is logged
+  (`console.error`) and the event is lost.
+- **A resend leaves the log alone** and adds `resent`, with the counts of the statuses it replaced. A `refused` event is written
+  for every refusal: the entity exists or a property changed (the entity is then set aside, #185), a block drifted, a link in the
+  proposal leads nowhere. «Godkjenn alle» writes one `accepted-all` with the lists.
+- **Delete** erases the events with the bundle, so it writes `proposals/deleted/<bundleId>.json` first: who, when, the summary and
+  the entities with their statuses. It is the stub of the archive (#188), which keeps the whole bundle, log included.
+- **Shown** as «Historikk» on the bundle page and, per entity, under its row. Not yet in the preview window.
+- **Bundles that were in R2 before the log start empty.** The page says so; nothing is written from their manifests.
 
 **Status** (#185, decided and built) is **derived**, never stored: `src/utils/bundleStatus.ts`, used by the list endpoint and the
 bundle page. `pending` while any entity is pending, `closed` when none is (every entity accepted, denied or drifted), `blocked`

@@ -15,6 +15,7 @@
 import { ref, computed } from 'vue'
 import { authFetch } from './useAuth.ts'
 import type { BundleStatus } from '@/utils/bundleStatus.ts'
+import type { BundleEvent } from '@/utils/bundleEvents.ts'
 
 export type EntityStatus = 'pending' | 'accepted' | 'denied' | 'drifted'
 
@@ -88,6 +89,7 @@ export interface EntityPayload {
 interface BundleResponse {
   manifest: BundleManifest
   payloads: EntityPayload[]
+  events:   BundleEvent[]
 }
 
 interface AcceptResponse {
@@ -117,6 +119,7 @@ interface DriftConflict {
 export function useProposalBundle(bundleId: string) {
   const manifest = ref<BundleManifest | null>(null)
   const payloads = ref<EntityPayload[]>([])
+  const events   = ref<BundleEvent[]>([])
   const loading  = ref(false)
   const error    = ref<string | null>(null)
   const notFound = ref(false)
@@ -149,10 +152,12 @@ export function useProposalBundle(bundleId: string) {
       const body = await res.json() as BundleResponse
       manifest.value = body.manifest
       payloads.value = body.payloads
+      events.value   = body.events ?? []
     } catch (e) {
       error.value = (e as Error).message
       manifest.value = null
       payloads.value = []
+      events.value   = []
     } finally {
       loading.value = false
     }
@@ -249,6 +254,7 @@ export function useProposalBundle(bundleId: string) {
   return {
     manifest,
     payloads,
+    events,
     loading,
     error,
     notFound,

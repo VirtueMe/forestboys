@@ -95,3 +95,32 @@ describe('ingest: edge targets', () => {
     expect(bucket.store.size).toBe(0)
   })
 })
+
+describe('ingest: the bundle\'s event log (#190)', () => {
+  const eventsOf = (bucket: ReturnType<typeof fakeBucket>) =>
+    [...bucket.store.entries()].filter(([k]) => k.includes('/events/')).sort(([a], [b]) => a.localeCompare(b)).map(([, v]) => JSON.parse(v) as Record<string, unknown>)
+
+  it('writes a received event, with the channel as the actor and not a person', async () => {
+    cypher.mockResolvedValue([{ key: 'soe' }] as never)
+    const { bucket } = await send(bundle(['Organization:soe']))
+    expect(eventsOf(bucket)).toMatchObject([{ kind: 'received', entities: 1, status: 'pending', actor: { channel: 'bot' } }])
+  })
+
+  it('says what a blocked bundle waits for', async () => {
+    cypher.mockResolvedValue([] as never)
+    const { bucket } = await send(bundle(['Organization:soe']))
+    expect(eventsOf(bucket)).toMatchObject([{ kind: 'received', status: 'blocked', unresolvedRefs: ['Organization:soe'] }])
+  })
+
+  it('writes a resent event with the statuses it replaced, and keeps the earlier one', async () => {
+    cypher.mockResolvedValue([{ key: 'soe' }] as never)
+    const first = await send(bundle(['Organization:soe']))
+    const mKey = `proposals/bundles/bundle:some-outline:${NOW}/manifest.json`
+    const m = JSON.parse(first.bucket.store.get(mKey)!) as { entities: { status: string }[] }
+    m.entities[0].status = 'accepted'
+    first.bucket.store.set(mKey, JSON.stringify(m))
+    await send(bundle(['Organization:soe']), first.bucket)
+    expect(eventsOf(first.bucket).map(e => e.kind)).toEqual(['received', 'resent'])
+    expect(eventsOf(first.bucket)[1]).toMatchObject({ replaced: { accepted: 1, pending: 0 }, actor: { channel: 'bot' } })
+  })
+})
