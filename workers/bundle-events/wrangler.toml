@@ -6,6 +6,8 @@ compatibility_date = "2024-01-01"
 name       = "BUNDLE_EVENTS"
 class_name = "BundleEventsDO"
 
+# SQLite-backed: the only kind Cloudflare's free plan allows, and fine on a paid one. The class keeps its subscribers in
+# memory and uses no storage. Never deployed before #181, so there is no namespace of the older kind to migrate (#181).
 [[migrations]]
-tag         = "v1"
-new_classes = ["BundleEventsDO"]
+tag                = "v1"
+new_sqlite_classes = ["BundleEventsDO"]

@@ -8,7 +8,8 @@ import { readdirSync, readFileSync } from 'node:fs'
 import { join, relative } from 'node:path'
 import { describe, expect, it } from 'vitest'
 
-const FUNCTIONS = join(import.meta.dirname, '..', 'functions')
+const ROOT      = join(import.meta.dirname, '..')
+const FUNCTIONS = join(ROOT, 'functions')
 
 function sources(dir: string): string[] {
   return readdirSync(dir, { withFileTypes: true }).flatMap(e => {
@@ -29,5 +30,13 @@ describe('functions convention', () => {
 
   it('there is something to scan', () => {
     expect(sources(FUNCTIONS).length).toBeGreaterThan(20)
+  })
+
+  it('every name a function reads from env is listed in docs/CLOUDFLARE.md', () => {
+    const doc   = readFileSync(join(ROOT, 'docs', 'CLOUDFLARE.md'), 'utf8')
+    const names = new Set(sources(FUNCTIONS).flatMap(p => [...readFileSync(p, 'utf8').matchAll(/\benv\.([A-Z][A-Z0-9_]+)\b/g)].map(m => m[1])))
+    expect(names.size).toBeGreaterThan(15)
+    const missing = [...names].filter(n => !doc.includes(`\`${n}\``)).sort()
+    expect(missing).toEqual([])
   })
 })
