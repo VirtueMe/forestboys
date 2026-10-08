@@ -198,6 +198,121 @@ proposed changes in unrelated blocks.
 entity. One fetch tells the UI whether to render a marker badge at all,
 without doing an `R2.list()` on every page load.
 
+## Review records: events, comments, archive and the list's index
+
+*The shared decision of #191 (written down in #192).* Where per-bundle records live in R2, so that the six issues under #191
+(#184 filters and paging, #185 status, #186 comments, #188 archive, #189 the page after delete, #190 events) agree. Each part
+says whether it is **decided**, **proposed** (follows from what is decided, not yet built) or **open**. This is a prototype: the decisions are
+ours, taken as we build, and changed on what the use of it shows.
+
+### Why
+
+A bundle does not remember what happened to it, cannot say what state it is in, and the reviewer cannot find, annotate or put
+away the ones that matter. Found with the accept-test on production (2026-10-08): accept records carry no actor (`requireAdmin`
+returns the user and `accept.ts` / `deny.ts` discard it), a refusal is written nowhere, sending a bundle again overwrites it
+without a trace, «Slett» erases every object under the bundle, and the page shows none of it.
+
+### The rule (decided)
+
+R2 has **no append and no query**. So:
+
+- A record that several people or processes can write is **one object per record**, never an entry in a shared file. Two
+  editors on the same bundle never collide: there is no read-modify-write and no retry loop.
+- What a *listing* must know goes into the object's **custom metadata** (strings, at most 2 KB in all), so one
+  `list({ prefix, include: ['customMetadata'] })` answers counts and filters without reading a body. A listing returns 1,000 keys
+  per call: continue with the cursor.
+- A shared file with `If-Match` retries (see «Concurrency») is for the few indexes where a collision is rare and the content can
+  be rebuilt.
+
+### Layout
+
+```
+proposals/bundles/<bundleId>/
+  manifest.json                            today     entity list + per-entity status
+  entity/<entityId>.json                   today     per-entity ops payload
+  accepted/<entityId>-<ts>.json            today     the ops that ran + message           → add the actor
+  denied/<entityId>-<ts>.json              today     the reason                           → add the actor
+  comments/<id>.json                       decided   one object per comment               (#186)
+  events/<ts>-<kind>-<rand>.json           proposed  one object per event                 (#190)
+
+proposals/index/<bundleId>.json            proposed  one row per bundle for the list      (#184)
+proposals/archive/<bundleId>.json          proposed  a deleted bundle, whole              (#188)
+```
+
+`history/<entityId>/<ts>-<kind>.json` stays where it is: it is the log of what changed *an entity* and outlives the bundle. The
+new `events/` is the log of what happened *to the bundle*. They answer different questions, and an event for an accepted entity
+may point at the history object.
+
+### Comments (decided, #186)
+
+Two scopes, kept as **separate threads**: a **bundle** comment is about the bundle as a whole («test bundle», «Rolf has the
+Persons»), a **detail** comment is about one entity in it («the sources need checking», why this one was denied). One record shape:
+
+```json
+{ "id": "2026-10-08T07-30-00.870Z-02cc", "type": "entity", "entityId": "Unit:kompani-linge",
+  "at": "2026-10-08T07:30:00.870Z", "actor": { "name": "Rolf" }, "text": "Kildene må sjekkes." }
+```
+
+- `type` is `bundle` or `entity`; later an op or a block of a description can be another `type` without a change of layout.
+  `entityId` is **mandatory for `entity`** and absent for `bundle`; the server checks it.
+- `type` and `entityId` are also written as the object's custom metadata. The page lists once, shows the counts from that (the
+  bundle's in the header, an entity's on its row), reads the bodies of what it displays (the bundle thread, the open entity), in
+  parallel, and each block filters by `type` / `entityId`.
+- Comments are **not events**: the log carries a pointer («Rolf commented on Unit:kompani-linge») and no text, so a comment can
+  be corrected or removed without rewriting history. They follow the bundle into the archive.
+- Open: who may edit or delete a comment; whether the accept `message` and the deny `reason` become the first detail comment of
+  the entity.
+
+### Events (proposed, #190)
+
+One object per event, in `events/`, named by time, then kind, then a short random suffix (two events in the same millisecond),
+so a plain listing returns them in order. Every event has `at`, `kind` and `actor`, then what is specific:
+
+- **received** (how it arrived: the bot, a package, a sync run, a script; how many entities; pending or blocked and on what),
+  **resent** (the statuses it replaced), **blocked** / **unblocked**,
+- **accepted** (the entity, the message, a one-line summary of the ops), **denied** (the reason), **refused** (what and why, in
+  words: «finnes allerede», the property that drifted), **accepted-all** (one event with the list of entities, not one per entity:
+  a bundle of 287 entities must not write 287 objects),
+- **commented** (a pointer, no text), **archived**, **restored**.
+
+The **actor** is the signed-in user from `requireAdmin` (accept, accept-all and deny must stop discarding it). Ingest is not a
+person: record the origin and the channel («package», «sync event», «bot») instead. The history is shown on the bundle page
+(«Historikk»), per entity on its row, and in the preview window; reading it is one listing and one read per event, which is fine
+for tens of events.
+
+**Status** (#185) stays **derived**: `pending` while any entity is pending, `closed` when none is, `blocked` the one stored
+exception (cleared when its refs resolve). The events must never become a second source of truth that can disagree with the
+manifest.
+
+Open (#185): an entity that accept refuses for a reason that will not go away (it exists, a property drifted) is marked `drifted`
+in the manifest, so it is not counted as waiting, and the bundle is `closed` or has a label of its own when everything in it is
+decided or drifted. Decide which.
+
+### Archive (proposed, #188)
+
+«Slett» becomes archive: the bundle leaves the lists and the by-entity / by-source indexes as now, but is kept, with who, when and
+why. R2 cannot move objects, and a bundle can have hundreds (the biggest of #158 has 287 payloads), so the archive is **one
+object** with the manifest, the payloads, the `accepted/` and `denied/` records, the comments and the events in it: written first,
+then the originals deleted. A bundle that was not accepted can be restored. A purge for good is a separate, explicit act.
+
+### The list's index (proposed, open, #184)
+
+The list endpoint must stop listing every payload object and reading every manifest. It needs one **row per bundle**: id, status,
+origin, outline, created, counts, the kinds of entity, number of comments, archived, last event. A single shared `index/bundles.json`
+would be rewritten by every accept, so two editors on *different* bundles would collide. Prefer the rule above: **one small object
+per bundle**, `proposals/index/<bundleId>.json`, with the row in its custom metadata, so one listing returns the whole list, which
+the endpoint then filters, sorts and pages. The row is **derived from the manifest** (and the counts of comments and events), so
+it can always be rebuilt, and it is recomputed after every change to the bundle. Open: whether two editors on the *same* bundle
+need a retry on the row, or whether recomputing after the write is enough.
+
+### Open points
+
+Decided by us while building, with the simplest choice first, and revisited when the use of the prototype shows it is wrong:
+
+- Which filters the list gets (#184), and whether closed bundles are hidden by default.
+- Who may comment, edit and delete a comment (#186), and who may purge an archived bundle (#188).
+- Whether the bundles already in production (the 28 of #158) get a first event written from their manifest, or start empty.
+
 ## Bundle origin
 
 A bundle comes from one of three places (`functions/_lib/bundle-origin.ts`):
@@ -505,6 +620,9 @@ of shared files to defeat two-tab races:
 - `If-None-Match: *` on PUT → create-only. Used when writing to
   `accepted/<ts>-…json`, `denied/<ts>-…json`, `drifted/<ts>-…json`, and
   history-log entries.
+
+Records that several editors can write (comments, events, the list's row) do not use a shared
+file with `If-Match` at all: they are one object per record, see «Review records».
 
 Per-block proposal files are single-writer per accept (gated by
 `index.json`'s etag), so no conditional header on the block file itself.
