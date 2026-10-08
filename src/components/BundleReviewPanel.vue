@@ -123,8 +123,25 @@
         <p v-if="pendingDeps(entry.entityId).length" class="entity-deps">
           Venter på: <code v-for="d in pendingDeps(entry.entityId)" :key="d" class="dep-chip">{{ d }}</code>
         </p>
+        <ul v-if="entityEvents(entry.entityId).length" class="entity-events">
+          <li v-for="ev in entityEvents(entry.entityId)" :key="ev.id">
+            <time :datetime="ev.at">{{ ev.at.slice(0, 16).replace('T', ' ') }}</time> {{ actorName(ev.actor) }}: {{ eventText(ev) }}
+          </li>
+        </ul>
         <p v-if="actionError[entry.entityId]" class="entity-error">{{ actionError[entry.entityId] }}</p>
       </article>
+    </section>
+
+    <section v-if="manifest" class="history">
+      <h3 class="section-heading">Historikk</h3>
+      <p v-if="!bundle.events.value.length" class="muted">Ingen hendelser er skrevet ned for denne bundlen (den er eldre enn historikken).</p>
+      <ol v-else class="event-list">
+        <li v-for="ev in bundle.events.value" :key="ev.id" class="event">
+          <time class="event-at" :datetime="ev.at">{{ ev.at.slice(0, 16).replace('T', ' ') }}</time>
+          <span class="event-actor">{{ actorName(ev.actor) }}</span>
+          <span class="event-text">{{ eventText(ev) }}</span>
+        </li>
+      </ol>
     </section>
 
     <AppModal v-model="modalOpen" :title="modalTitle" size="page">
@@ -145,6 +162,7 @@ import { computed, onMounted, ref } from 'vue'
 import { RouterLink } from 'vue-router'
 import { bundleCounts, bundleStatus, bundleStatusLabel } from '@/utils/bundleStatus.ts'
 import { refusalsText, type Refusal } from '@/utils/refusalText.ts'
+import { actorName, eventEntity, eventText } from '@/utils/bundleEvents.ts'
 import { useProposalBundle, type EntityStatus } from '@/composables/useProposalBundle.ts'
 import { authFetch } from '@/composables/useAuth.ts'
 import AppModal from '@/components/AppModal.vue'
@@ -193,6 +211,7 @@ function onPreviewResolved(): void {
 }
 
 const hasPending = computed(() => (manifest.value?.entities ?? []).some((e) => e.status === 'pending'))
+const entityEvents = (entityId: string) => bundle.events.value.filter((e) => eventEntity(e) === entityId)
 const status     = computed(() => manifest.value ? bundleStatus(manifest.value) : 'pending')
 const countsText = computed(() => {
   const c = bundleCounts(manifest.value?.entities ?? [])
@@ -243,6 +262,7 @@ async function onAcceptAll(): Promise<void> {
     window.alert((e as Error).message)
   } finally {
     acceptingAll.value = false
+    void bundle.load()  // the history has a new line
   }
 }
 
@@ -288,6 +308,7 @@ async function onAccept(entityId: string) {
     }
   } finally {
     busy.value = null
+    void bundle.load()
   }
 }
 
@@ -302,6 +323,7 @@ async function onDeny(entityId: string) {
     actionError.value[entityId] = (e as Error).message
   } finally {
     busy.value = null
+    void bundle.load()
   }
 }
 </script>
@@ -310,6 +332,15 @@ async function onDeny(entityId: string) {
 .bundle { display: flex; flex-direction: column; gap: var(--space-md); margin-top: var(--space-md); }
 
 .muted { color: var(--muted); }
+
+.history { margin-bottom: var(--space-lg); }
+.event-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--space-xs); }
+.event { display: grid; grid-template-columns: max-content max-content 1fr; gap: var(--space-md); align-items: baseline; }
+.event-at { color: var(--muted); font-family: var(--font-mono); font-size: 12px; }
+.event-actor { font-weight: 600; }
+.entity-events { list-style: none; margin: var(--space-xs) 0 0; padding: 0; color: var(--muted); font-size: 13px; }
+.entity-events time { font-family: var(--font-mono); font-size: 12px; }
+@media (max-width: 600px) { .event { grid-template-columns: 1fr; gap: 0; } }
 
 .bundle-status {
   padding: 2px 8px;

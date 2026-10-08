@@ -25,6 +25,7 @@
 import { requireAdmin } from '~/_lib/require-admin.ts'
 import { sourceIndexKey } from '~/_lib/bundle-origin.ts'
 import { bundleCounts } from '../../../../../../src/utils/bundleStatus.ts'
+import { actorOf, recordEvent } from '~/_lib/bundle-events.ts'
 import {
   ENTITY_ID_RE,
   indexRemove,
@@ -60,6 +61,7 @@ interface DeniedCorpus {
 export const onRequestPost: PagesFunction<Env> = async ({ request, env, params }) => {
   const guard = await requireAdmin(request, env)
   if (guard instanceof Response) return guard
+  const actor = actorOf(guard)
 
   if (!env.PROPOSALS) return json({ error: 'PROPOSALS R2 binding missing' }, 500)
 
@@ -90,7 +92,7 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env, params }
 
   const deniedAt   = new Date().toISOString()
   const archiveKey = `proposals/bundles/${bundleId}/denied/${entityId.replace(':', '-')}-${deniedAt}.json`
-  const archiveBody = JSON.stringify({ entityId, bundleId, deniedAt, reason })
+  const archiveBody = JSON.stringify({ entityId, bundleId, deniedAt, actor, reason })
   const locked = await putIntentLock(env.PROPOSALS, archiveKey, archiveBody)
   if (!locked) return json({ error: 'Concurrent deny in flight' }, 409)
 
@@ -100,7 +102,7 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env, params }
   // 5. History.
   await env.PROPOSALS.put(
     `history/${entityId}/${deniedAt}-deny.json`,
-    JSON.stringify({ kind: 'deny', entityId, bundleId, deniedAt, reason }),
+    JSON.stringify({ kind: 'deny', entityId, bundleId, deniedAt, actor, reason }),
     { httpMetadata: { contentType: 'application/json' } },
   )
 
@@ -109,6 +111,7 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env, params }
 
   // 7. Index pruning.
   await indexRemove(env, `proposals/by-entity/${entityId}/index.json`, bundleId)
+  await recordEvent(env.PROPOSALS, bundleId, actor, { kind: 'denied', entityId, reason })
 
   const remainingPending = bundleCounts(updatedManifest.entities).pending
   const bundleClosed     = remainingPending === 0

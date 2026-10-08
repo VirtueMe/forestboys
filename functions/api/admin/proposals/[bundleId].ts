@@ -12,11 +12,13 @@
 
 import { requireAdmin } from '~/_lib/require-admin.ts'
 import { bundleChannel, sourceIndexKey, type BundleOriginFields, type DerivedFrom } from '~/_lib/bundle-origin.ts'
+import { actorOf, deletedKey, listEvents, withCurrentNames, type DeletedRecord } from '~/_lib/bundle-events.ts'
 
 interface Env {
   SESSION_SECRET: string
   PROPOSALS:      R2Bucket
   BUNDLE_EVENTS?: DurableObjectNamespace
+  milorg_users?:  D1Database
 }
 
 const BUNDLE_ID_RE = /^bundle:[a-z0-9-]+:[0-9TZ:.-]+$/
@@ -67,6 +69,7 @@ export const onRequestGet: PagesFunction<Env> = async ({ request, env, params })
     return json({
       manifest,
       payloads: payloads.filter((p): p is EntityPayload => p !== null),
+      events:   await withCurrentNames(env.milorg_users, await listEvents(env.PROPOSALS, bundleId)),
     })
   } catch (e) {
     return json({ error: (e as Error).message }, 502)
@@ -85,6 +88,7 @@ export const onRequestGet: PagesFunction<Env> = async ({ request, env, params })
 export const onRequestDelete: PagesFunction<Env> = async ({ request, env, params }) => {
   const guard = await requireAdmin(request, env)
   if (guard instanceof Response) return guard
+  const actor = actorOf(guard)
   if (!env.PROPOSALS) return json({ error: 'PROPOSALS R2 binding missing' }, 500)
 
   const bundleId = decodeURIComponent(String(params.bundleId))
@@ -97,6 +101,13 @@ export const onRequestDelete: PagesFunction<Env> = async ({ request, env, params
     const manifestObj = await env.PROPOSALS.get(manifestKey)
     if (!manifestObj) return json({ error: 'Bundle not found' }, 404)
     const manifest = await manifestObj.json<BundleManifest>()
+
+    // The bundle's own events go with it. What is kept until the archive (#188) keeps it all: who, when, what it held.
+    const record: DeletedRecord = {
+      bundleId, summary: manifest.summary, deletedAt: new Date().toISOString(), actor,
+      entities: manifest.entities.map((e) => ({ entityId: e.entityId, status: e.status })),
+    }
+    await env.PROPOSALS.put(deletedKey(bundleId), JSON.stringify(record), { httpMetadata: { contentType: 'application/json' } })
 
     // Prune per-entity indices first so the bundle stops appearing in
     // open-bundle lists even if the rest of the cleanup races.
