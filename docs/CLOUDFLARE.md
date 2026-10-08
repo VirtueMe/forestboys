@@ -31,7 +31,7 @@ document names every binding, variable and secret the code reads (names only, ne
 | `milorg_users` | D1 database `milorg-users` | login and the user list (`functions/auth`, `_lib/oauth.ts`, `api/admin/users`) |
 | `IMAGES` | R2 bucket `milorg-images` | `GET /images/*`, image upload on the pages editor |
 | `PROPOSALS` | R2 bucket `milorg-proposals` | bundles, their indexes and the ingest (`api/proposals`, `api/admin/proposals`) |
-| `BUNDLE_EVENTS` | Durable Object `BundleEventsDO` of the worker `milorg-bundle-events` | live updates to an open review page; **not bound yet** (see below) |
+| `BUNDLE_EVENTS` | Durable Object `BundleEventsDO` of the worker `milorg-bundle-events` (deployed 2026-10-08) | the live-update stream `GET /api/proposals/events?channel=<slug>`; ingest broadcasts `bundle-created` on the bundle's channel (see below) |
 
 R2 must be activated on the account before a bucket can exist. Use the Standard storage class (the free allowance
 applies to Standard only).
@@ -62,16 +62,22 @@ applies to Standard only).
 ## The bundle-events worker (the Durable Object)
 
 The class lives in `workers/bundle-events` (worker `milorg-bundle-events`). A Durable Object namespace is created when that
-worker is **deployed**; the Pages project only binds to it, and a Pages deployment never deploys another worker. Until the
-binding exists, ingest and the review pages work, and a page must be reloaded to see a new bundle (`broadcast()` returns
-at once when the binding is missing).
+worker is **deployed**; the Pages project only binds to it, and a Pages deployment never deploys another worker. The
+deploy comes first, then the binding in `wrangler.toml`: a binding to a worker that does not exist can fail the whole
+deployment. Without the binding ingest and the review pages still work (`broadcast()` returns at once).
 
-1. Deploy the worker (needs `npx wrangler login`, or `CLOUDFLARE_API_TOKEN`): `npm run deploy:do`. Its migration is
-   `new_sqlite_classes`: Cloudflare's free plan allows only SQLite-backed Durable Objects, and the class keeps its
-   subscribers in memory and uses no storage, so it makes no difference on a paid plan.
-2. Uncomment the `BUNDLE_EVENTS` block in `wrangler.toml` (`script_name = "milorg-bundle-events"`), and try it on a preview
-   deployment first: a binding to a worker that does not exist can fail the whole deployment.
-3. Check: open a bundle page, send a bundle, and see it appear without a reload.
+- **Deploy** (needs `npx wrangler login`, or `CLOUDFLARE_API_TOKEN`, in a terminal): `npm run deploy:do`. Its migration is
+  `new_sqlite_classes`: Cloudflare's free plan allows only SQLite-backed Durable Objects, and the class keeps its
+  subscribers in memory and uses no storage, so it makes no difference on a paid plan. Deployed once on 2026-10-08.
+- **What it does:** ingest posts `{kind: 'bundle-created', bundleId}` to the channel of the bundle (an outline's slug, or
+  `sanity-<type>`); anything subscribed to `/api/proposals/events?channel=<channel>` receives it as a server-sent event.
+- **Who listens:** only `OutlineDetail` (the «Forslag» tab of `/outlines/<slug>`, through `useEntityBundles`), and that tab
+  lists the bundles that touch the entity `Outline:<slug>`. The bundle page `/admin/proposals/<bundleId>` and the list do not
+  subscribe, and a bundle that does not touch the outline entity (the converted earlier absorptions of #158 touch
+  `EquipmentType:berit`, `Unit:…`) is not shown on the outline page, live or not.
+- **Check that the stream works** (locally, with `npm run dev:do` and `npm run dev:worker` running): subscribe with
+  `curl -N 'http://localhost:8788/api/proposals/events?channel=<slug>'`, send a bundle for that channel with
+  `scripts/bundles/send-bundles.ts`, and the `data:` line arrives.
 
-Locally `npm run dev:worker` passes the Durable Object on the command line (`--do`), and `npm run dev:do` runs the worker on
-its own.
+Locally the binding comes from the copy of `wrangler.toml` that `npm run dev:worker` runs from; it shows `[not connected]`
+until `npm run dev:do` runs the worker.

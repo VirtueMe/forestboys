@@ -7,8 +7,8 @@
  *
  * So wrangler is started in `.wrangler/dev-pages/`, which holds a copy of `wrangler.toml` without that one line, and
  * links to `functions/` and `.dev.vars`. Local state (D1, R2) stays in the project's `.wrangler/state`. Vite runs on
- * its own port and wrangler proxies to it. Both stop together, on Ctrl-C or when either ends. The Durable Object comes
- * from `--do`, because `wrangler.toml` does not bind it yet.
+ * its own port and wrangler proxies to it. Both stop together, on Ctrl-C or when either ends. The Durable Object
+ * (`BUNDLE_EVENTS`) comes from the copy of `wrangler.toml`; it shows «not connected» until `npm run dev:do` runs the worker.
  */
 
 import { spawn } from 'node:child_process'
@@ -29,7 +29,7 @@ for (const [name, target] of [['functions', join(root, 'functions')], ['.dev.var
 
 const children = [
   spawn('npx', ['vite', '--port', VITE_PORT, '--strictPort'], { cwd: root, stdio: 'inherit' }),
-  spawn('npx', ['wrangler', 'pages', 'dev', '--proxy', VITE_PORT, '--persist-to', join(root, '.wrangler', 'state'), '--do', 'BUNDLE_EVENTS=BundleEventsDO@milorg-bundle-events'], { cwd: dir, stdio: 'inherit' }),
+  spawn('npx', ['wrangler', 'pages', 'dev', '--proxy', VITE_PORT, '--persist-to', join(root, '.wrangler', 'state')], { cwd: dir, stdio: 'inherit' }),
 ]
 
 let stopping = false

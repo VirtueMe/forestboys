@@ -20,16 +20,13 @@ bucket_name = "milorg-images"
 binding = "PROPOSALS"
 bucket_name = "milorg-proposals"
 
-# BUNDLE_EVENTS (the live-update Durable Object, workers/bundle-events) is not bound here yet: it points at another
-# worker, `milorg-bundle-events`, which has to be deployed first (`npx wrangler deploy --config
-# workers/bundle-events/wrangler.toml`), and a binding to a worker that does not exist can fail the whole deployment.
-# Ingest and the review pages work without it (a page reloads to see a new bundle). Locally `npm run dev:worker`
-# passes it on the command line (--do). Add it here once the worker is deployed (#174):
-#
-# [[durable_objects.bindings]]
-# name        = "BUNDLE_EVENTS"
-# class_name  = "BundleEventsDO"
-# script_name = "milorg-bundle-events"
+# The live-update Durable Object (#181): a review page updates when a bundle arrives. The class lives in a separate
+# worker, `milorg-bundle-events` (workers/bundle-events), which has to exist first: `npm run deploy:do`. This only binds
+# to it. A binding to a worker that does not exist can fail the whole deployment. See docs/CLOUDFLARE.md.
+[[durable_objects.bindings]]
+name        = "BUNDLE_EVENTS"
+class_name  = "BundleEventsDO"
+script_name = "milorg-bundle-events"
 
 [vars]
 # GitHub OAuth App "MILORG CLOUDFLARE" (#14) — the client id is public; GITHUB_CLIENT_SECRET
