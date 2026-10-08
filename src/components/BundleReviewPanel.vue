@@ -1,6 +1,9 @@
 <template>
   <section class="bundle">
-    <p v-if="bundle.error.value" class="error">{{ bundle.error.value }}</p>
+    <p v-if="bundle.error.value" class="error">
+      {{ bundle.error.value }}
+      <RouterLink v-if="bundle.notFound.value" to="/admin/proposals">Til listen over forslag</RouterLink>
+    </p>
     <p v-else-if="bundle.loading.value" class="muted">Laster…</p>
 
     <article v-if="manifest" class="manifest">
@@ -134,6 +137,7 @@
 
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
+import { RouterLink } from 'vue-router'
 import { useProposalBundle, type EntityStatus } from '@/composables/useProposalBundle.ts'
 import { authFetch } from '@/composables/useAuth.ts'
 import AppModal from '@/components/AppModal.vue'
