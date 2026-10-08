@@ -8,6 +8,7 @@
     "dev:worker": "node scripts/tools/dev-worker.ts",
     "dev:bot": "tsx scripts/bot/local-runner.ts",
     "dev:do": "wrangler dev --config workers/bundle-events/wrangler.toml --port 8790",
+    "deploy:do": "wrangler deploy --config workers/bundle-events/wrangler.toml",
     "build": "vue-tsc -b && vite build",
     "preview": "vite preview",
     "lint": "eslint .",

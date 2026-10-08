@@ -61,10 +61,12 @@ orientation for contributors and coding agents is in [`AGENTS.md`](./AGENTS.md).
 | `main`   | The Neo4j app. Protected: changes land through pull requests with CI green. | Cloudflare Pages (`forestboys`)      |
 | `sanity` | The original Sanity-backed app, kept running because Jan uses it daily.     | GitHub Pages, no further development |
 
-Every pull request gets a Cloudflare preview. Build command and output directory
-live in the Cloudflare Pages dashboard, not in `wrangler.toml`. Bindings (D1, R2,
-Durable Object) are declared in `wrangler.toml`; secrets are set in the Pages
-project settings.
+Every pull request gets a Cloudflare preview. The build command lives in the
+Cloudflare Pages dashboard; `wrangler.toml` holds the output directory, the
+bindings (D1, R2) and the plain variables, and Pages reads it on every
+deployment. Secrets are set in the Pages project settings. What each binding,
+variable and secret is for, and the rules that have cost time, are in
+[`docs/CLOUDFLARE.md`](docs/CLOUDFLARE.md).
 
 ## Local development
 
