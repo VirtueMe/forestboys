@@ -62,12 +62,20 @@ jobs:
   # The ruleset «Protect main» (Settings → Rules) requires this check by its NAME, «End-to-end (Playwright)»
   # (#149). Renaming the job leaves every PR waiting for a check that never reports, until the ruleset is
   # changed to the new name. Change both together.
+  #
+  # The job always runs and reports, so the ruleset is met; the `changes` step decides whether the expensive
+  # steps follow (#173). It skips them only when every file the PR changed is on the safe list in
+  # scripts/e2e/e2e-needed.ts; a push to main, and any other file, runs the whole job. A skipped run says so in the
+  # job's summary: a green check is then not a test result.
   e2e:
     name: End-to-end (Playwright)
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v7
+        with:
+          # On a pull request this is the merge commit; its first parent is the base, which `changes` diffs against.
+          fetch-depth: 2
 
       - name: Set up Node.js
         uses: actions/setup-node@v7
@@ -75,26 +83,33 @@ jobs:
           node-version-file: .nvmrc
           cache: npm
 
+      - name: Do the changes need the end-to-end tests?
+        id: changes
+        run: node scripts/e2e/e2e-needed.ts
+
       - name: Install
+        if: steps.changes.outputs.run == 'true'
         run: npm ci
 
       - name: Install the headless Chromium and the libraries it needs
+        if: steps.changes.outputs.run == 'true'
         run: npx playwright install --with-deps --only-shell chromium
 
       - name: End-to-end tests
+        if: steps.changes.outputs.run == 'true'
         run: npm run test:e2e
 
       # A test that failed and passed on the retry leaves the job green. This lists those in the job's summary
       # and as warnings, so they are looked at (#149). It never fails the job: not for flaky tests, and not if
       # the report itself is missing or the script breaks.
       - name: Flaky tests
-        if: ${{ !cancelled() }}
+        if: ${{ !cancelled() && steps.changes.outputs.run == 'true' }}
         continue-on-error: true
         run: node scripts/e2e/flaky-summary.ts test-results/e2e-report.json
 
       # The report has the traces of failed tests (open one with `npx playwright show-trace`).
       - name: Keep the report and the traces
-        if: ${{ !cancelled() }}
+        if: ${{ !cancelled() && steps.changes.outputs.run == 'true' }}
         uses: actions/upload-artifact@v7
         with:
           name: playwright-report
