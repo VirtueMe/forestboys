@@ -4,8 +4,8 @@
  * for sync bundles (functions/_lib/bundle-origin.ts). `outlineId=` still
  * works as the older name for the same parameter.
  *
- * The DO class itself lives in `functions/_middleware.ts` so Pages'
- * bundler keeps it in the entrypoint.
+ * The `BUNDLE_EVENTS` Durable Object lives in the separate worker `milorg-bundle-events` (workers/bundle-events), which
+ * Pages only binds to (wrangler.toml, docs/CLOUDFLARE.md). Ingest broadcasts on this channel when a bundle arrives.
  */
 
 interface Env {
