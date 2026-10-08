@@ -45,6 +45,7 @@ interface BundleSummary {
   acceptedCount:      number
   deniedCount:        number
   driftedCount:       number
+  commentCount:       number
   totalEntities:      number
   parentBundle:       string | null
 }
@@ -57,11 +58,15 @@ export const onRequestGet: PagesFunction<Env> = async ({ request, env }) => {
   // List manifest objects directly. R2 list returns keys ordered
   // lexicographically; we'll sort by createdAt after.
   const manifestKeys: string[] = []
+  // The same listing counts the comments of every bundle: their keys are under the bundle's prefix.
+  const commentCounts = new Map<string, number>()
   let cursor: string | undefined
   do {
     const listing = await env.PROPOSALS.list({ prefix: 'proposals/bundles/', cursor, limit: 1000 })
     for (const obj of listing.objects) {
       if (obj.key.endsWith('/manifest.json')) manifestKeys.push(obj.key)
+      const inComments = obj.key.match(/^proposals\/bundles\/([^/]+)\/comments\//)
+      if (inComments) commentCounts.set(inComments[1], (commentCounts.get(inComments[1]) ?? 0) + 1)
     }
     cursor = listing.truncated ? listing.cursor : undefined
   } while (cursor)
@@ -86,6 +91,7 @@ export const onRequestGet: PagesFunction<Env> = async ({ request, env }) => {
         acceptedCount: counts.accepted,
         deniedCount:   counts.denied,
         driftedCount:  counts.drifted,
+        commentCount:  commentCounts.get(m.bundleId) ?? 0,
         totalEntities: m.entities.length,
         parentBundle:  m.parentBundle ?? null,
       })

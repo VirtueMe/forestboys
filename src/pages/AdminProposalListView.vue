@@ -30,6 +30,7 @@
               <span v-if="b.acceptedCount" class="count-accepted">— {{ b.acceptedCount }} godkjent</span>
               <span v-if="b.deniedCount" class="count-denied">— {{ b.deniedCount }} avvist</span>
               <span v-if="b.driftedCount" class="count-denied">— {{ b.driftedCount }} satt til side</span>
+              <span v-if="b.commentCount">— {{ b.commentCount }} {{ b.commentCount === 1 ? 'kommentar' : 'kommentarer' }}</span>
             </span>
             <span v-if="b.parentBundle" class="bundle-child">barn-bundle</span>
             <span class="bundle-model">{{ b.model === 'none' ? originKindLabel(b.originKind) : b.model }}</span>
@@ -58,6 +59,7 @@ interface BundleSummary {
   status:        BundleStatus
   originKind:    'outline' | 'package' | 'sanity'
   driftedCount:  number
+  commentCount:  number
   pendingCount:  number
   acceptedCount: number
   deniedCount:   number

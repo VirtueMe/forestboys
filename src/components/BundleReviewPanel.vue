@@ -38,6 +38,11 @@
       </header>
       <p class="summary">{{ manifest.summary }}</p>
 
+      <details class="bundle-comments" :open="bundle.commentCounts.value.bundle > 0">
+        <summary>Kommentarer til bundlen ({{ bundle.commentCounts.value.bundle }})</summary>
+        <BundleComments :bundle-id="bundleId" type="bundle" @changed="void bundle.load()" />
+      </details>
+
       <p v-if="status === 'blocked'" class="bundle-blocked">
         <strong>Blokkert.</strong>
         Venter på {{ manifest.unresolvedRefs?.length ?? 0 }} barn-bundle{{ (manifest.unresolvedRefs?.length ?? 0) === 1 ? '' : 'r' }}
@@ -123,6 +128,10 @@
         <p v-if="pendingDeps(entry.entityId).length" class="entity-deps">
           Venter på: <code v-for="d in pendingDeps(entry.entityId)" :key="d" class="dep-chip">{{ d }}</code>
         </p>
+        <details class="entity-comments" :open="(bundle.commentCounts.value.entities[entry.entityId] ?? 0) > 0">
+          <summary>Kommentarer ({{ bundle.commentCounts.value.entities[entry.entityId] ?? 0 }})</summary>
+          <BundleComments :bundle-id="bundleId" type="entity" :entity-id="entry.entityId" @changed="void bundle.load()" />
+        </details>
         <ul v-if="entityEvents(entry.entityId).length" class="entity-events">
           <li v-for="ev in entityEvents(entry.entityId)" :key="ev.id">
             <time :datetime="ev.at">{{ ev.at.slice(0, 16).replace('T', ' ') }}</time> {{ actorName(ev.actor) }}: {{ eventText(ev) }}
@@ -166,6 +175,7 @@ import { actorName, eventEntity, eventText } from '@/utils/bundleEvents.ts'
 import { useProposalBundle, type EntityStatus } from '@/composables/useProposalBundle.ts'
 import { authFetch } from '@/composables/useAuth.ts'
 import AppModal from '@/components/AppModal.vue'
+import BundleComments from '@/components/BundleComments.vue'
 import EntityPreviewPanel from '@/components/EntityPreviewPanel.vue'
 import { PREVIEW_KINDS } from '@/utils/previewKinds.ts'
 
@@ -332,6 +342,9 @@ async function onDeny(entityId: string) {
 .bundle { display: flex; flex-direction: column; gap: var(--space-md); margin-top: var(--space-md); }
 
 .muted { color: var(--muted); }
+
+.bundle-comments, .entity-comments { margin-top: var(--space-sm); }
+.bundle-comments > summary, .entity-comments > summary { cursor: pointer; color: var(--ink-soft); font-size: 14px; margin-bottom: var(--space-xs); }
 
 .history { margin-bottom: var(--space-lg); }
 .event-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--space-xs); }

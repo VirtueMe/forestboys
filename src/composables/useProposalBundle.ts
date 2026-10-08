@@ -16,6 +16,7 @@ import { ref, computed } from 'vue'
 import { authFetch } from './useAuth.ts'
 import type { BundleStatus } from '@/utils/bundleStatus.ts'
 import type { BundleEvent } from '@/utils/bundleEvents.ts'
+import type { CommentCounts } from '@/utils/bundleComments.ts'
 
 export type EntityStatus = 'pending' | 'accepted' | 'denied' | 'drifted'
 
@@ -90,6 +91,7 @@ interface BundleResponse {
   manifest: BundleManifest
   payloads: EntityPayload[]
   events:   BundleEvent[]
+  commentCounts: CommentCounts
 }
 
 interface AcceptResponse {
@@ -120,6 +122,7 @@ export function useProposalBundle(bundleId: string) {
   const manifest = ref<BundleManifest | null>(null)
   const payloads = ref<EntityPayload[]>([])
   const events   = ref<BundleEvent[]>([])
+  const commentCounts = ref<CommentCounts>({ bundle: 0, entities: {} })
   const loading  = ref(false)
   const error    = ref<string | null>(null)
   const notFound = ref(false)
@@ -153,11 +156,13 @@ export function useProposalBundle(bundleId: string) {
       manifest.value = body.manifest
       payloads.value = body.payloads
       events.value   = body.events ?? []
+      commentCounts.value = body.commentCounts ?? { bundle: 0, entities: {} }
     } catch (e) {
       error.value = (e as Error).message
       manifest.value = null
       payloads.value = []
       events.value   = []
+      commentCounts.value = { bundle: 0, entities: {} }
     } finally {
       loading.value = false
     }
@@ -255,6 +260,7 @@ export function useProposalBundle(bundleId: string) {
     manifest,
     payloads,
     events,
+    commentCounts,
     loading,
     error,
     notFound,
