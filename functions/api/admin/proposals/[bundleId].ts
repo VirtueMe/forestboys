@@ -13,6 +13,8 @@
 import { requireAdmin } from '~/_lib/require-admin.ts'
 import { bundleChannel, sourceIndexKey, type BundleOriginFields, type DerivedFrom } from '~/_lib/bundle-origin.ts'
 import { actorOf, deletedKey, listEvents, withCurrentNames, type DeletedRecord } from '~/_lib/bundle-events.ts'
+import { listCommentRefs } from '~/_lib/bundle-comments.ts'
+import { countComments } from '../../../../src/utils/bundleComments.ts'
 
 interface Env {
   SESSION_SECRET: string
@@ -70,6 +72,8 @@ export const onRequestGet: PagesFunction<Env> = async ({ request, env, params })
       manifest,
       payloads: payloads.filter((p): p is EntityPayload => p !== null),
       events:   await withCurrentNames(env.milorg_users, await listEvents(env.PROPOSALS, bundleId)),
+      // One listing with the metadata: how many comments each thread has, with no comment read.
+      commentCounts: countComments(await listCommentRefs(env.PROPOSALS, bundleId)),
     })
   } catch (e) {
     return json({ error: (e as Error).message }, 502)

@@ -39,6 +39,13 @@ describe('eventText', () => {
     expect(eventText(ev({ kind: 'received', entities: 3, status: 'pending' }))).toBe('Mottatt: 3 enheter')
     expect(eventText(ev({ kind: 'received', entities: 2, status: 'blocked', unresolvedRefs: ['Unit:x'] }))).toContain('blokkert av Unit:x')
   })
+  it('points at a comment and never carries its text', () => {
+    expect(eventText(ev({ kind: 'commented', commentId: 'c1', scope: 'entity', entityId: 'Unit:a' }))).toBe('Kommenterte Unit:a')
+    expect(eventText(ev({ kind: 'commented', commentId: 'c1', scope: 'bundle' }))).toBe('Kommenterte bundlen')
+    expect(eventText(ev({ kind: 'comment-removed', commentId: 'c1', scope: 'bundle' }))).toBe('Fjernet en kommentar på bundlen')
+    expect(eventEntity(ev({ kind: 'commented', commentId: 'c1', scope: 'entity', entityId: 'Unit:a' }))).toBe('Unit:a')
+    expect(eventEntity(ev({ kind: 'commented', commentId: 'c1', scope: 'bundle' }))).toBeNull()
+  })
   it('puts accept-all in one line, with what the guard refused', () => {
     expect(eventText(ev({ kind: 'accepted-all', accepted: ['Unit:a', 'Unit:b'], refused: [{ entityId: 'Unit:c', why: 'Finnes allerede i grafen.' }] })))
       .toBe('Godkjente alle: godkjente 2 enheter, 1 ble ikke godkjent: Unit:c (Finnes allerede i grafen.)')

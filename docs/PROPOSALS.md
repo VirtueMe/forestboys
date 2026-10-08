@@ -244,7 +244,7 @@ proposals/archive/<bundleId>.json          proposed  a deleted bundle, whole    
 new `events/` is the log of what happened *to the bundle*. They answer different questions, and an event for an accepted entity
 may point at the history object.
 
-### Comments (decided, #186)
+### Comments (decided and built, #186)
 
 Two scopes, kept as **separate threads**: a **bundle** comment is about the bundle as a whole («test bundle», «Rolf has the
 Persons»), a **detail** comment is about one entity in it («the sources need checking», why this one was denied). One record shape:
@@ -261,8 +261,21 @@ Persons»), a **detail** comment is about one entity in it («the sources need c
   parallel, and each block filters by `type` / `entityId`.
 - Comments are **not events**: the log carries a pointer («Rolf commented on Unit:kompani-linge») and no text, so a comment can
   be corrected or removed without rewriting history. They follow the bundle into the archive.
-- Open: who may edit or delete a comment; whether the accept `message` and the deny `reason` become the first detail comment of
-  the entity.
+- **Who and what** (decided as a prototype, revised on use): admins only, like the review endpoints. Plain text, at most 2,000
+  characters. A comment is **not edited**: an editor removes it and writes it again, and **any admin may remove any comment**
+  (these are notes between editors, and housekeeping includes tidying them). No «resolved» flag. When editors get access to the
+  review pages, the rule becomes: an editor removes only their own comments (`comment.actor.id`), an admin any; not built, as
+  only admins reach these endpoints today. The log records both
+  («commented», «comment-removed»), with the entity if it is about one, and never the text.
+- **The accept message and the deny reason stay where they are**: they are in the log and under the entity's row
+  («Historikk», #190), so they are not copied into comments. A reviewer who wants to say more writes a comment.
+- **Counts:** `GET /api/admin/proposals/<id>` returns `commentCounts` (`{ bundle, entities: { <entityId>: n } }`) from one listing
+  with the custom metadata, no comment read; the list endpoint counts the `comments/` keys of the listing it already makes.
+  A thread's bodies are read only when it is asked for: `GET …/<id>/comments?type=bundle` or `?type=entity&entityId=…`
+  (`POST` adds one, `DELETE …/comments/<commentId>` removes one). A comment follows its bundle: deleted with it until the archive
+  (#188) keeps it.
+- **Shown** as a «Kommentarer» block under the bundle's summary and one under each entity row, each open when it has a comment;
+  the list shows the number. Not yet in the preview window, and the «has a comment» filter is #184.
 
 ### Events (decided and built, #190)
 
@@ -274,7 +287,7 @@ so a plain listing returns them in order. Every event has `at`, `kind` and `acto
 - **accepted** (the entity, the message, a one-line summary of the ops), **denied** (the reason), **refused** (what and why, in
   words: «finnes allerede», the property that drifted), **accepted-all** (one event with the list of entities, not one per entity:
   a bundle of 287 entities must not write 287 objects),
-- **commented** (a pointer, no text), **archived**, **restored**.
+- **commented** / **comment-removed** (a pointer, no text, built with #186), **archived**, **restored**.
 
 The **actor** is the signed-in user from `requireAdmin` (`actorOf`: id and name, never the email); accept, accept-all and deny no
 longer discard it, and it is on their `accepted/` / `denied/` / `history/` records too. Ingest is not a person: the actor is the

@@ -18,7 +18,7 @@ export const eventsPrefix = (bundleId: string) => `proposals/bundles/${bundleId}
  * does not leave the old one in the history: names are read from the users table by id when the log is read. A user who is
  * gone, or no table to ask (local dev without D1), keeps the stored name.
  */
-export async function withCurrentNames(db: D1Database | undefined, events: BundleEvent[]): Promise<BundleEvent[]> {
+export async function withCurrentNames<T extends { actor: EventActor }>(db: D1Database | undefined, events: T[]): Promise<T[]> {
   const ids = [...new Set(events.flatMap(e => ('id' in e.actor && e.actor.id ? [e.actor.id] : [])))]
   if (!db || !ids.length) return events
   try {

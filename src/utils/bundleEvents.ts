@@ -20,6 +20,9 @@ export type BundleEventBody =
   | { kind: 'denied';       entityId: string; reason: string }
   | { kind: 'refused';      entityId: string; why: string }
   | { kind: 'accepted-all'; accepted: string[]; refused: { entityId: string; why: string }[] }
+  // A pointer to a comment, never its text: a comment can be removed without rewriting the history (#186).
+  | { kind: 'commented';       commentId: string; scope: 'bundle' | 'entity'; entityId?: string }
+  | { kind: 'comment-removed'; commentId: string; scope: 'bundle' | 'entity'; entityId?: string }
 
 export type BundleEvent = BundleEventBody & {
   /** The object's name under `events/`: unique and sorts by time. */
@@ -39,7 +42,7 @@ export function actorName(a: EventActor): string {
 
 /** The entity an event is about, if it is about one: it is shown on that entity's row too. */
 export function eventEntity(e: BundleEvent): string | null {
-  return 'entityId' in e ? e.entityId : null
+  return 'entityId' in e && e.entityId ? e.entityId : null
 }
 
 const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`
@@ -64,6 +67,10 @@ export function eventText(e: BundleEvent): string {
       return `Avviste ${e.entityId}: «${e.reason}»`
     case 'refused':
       return `Kunne ikke godkjenne ${e.entityId}: ${e.why}`
+    case 'commented':
+      return e.scope === 'entity' ? `Kommenterte ${e.entityId}` : 'Kommenterte bundlen'
+    case 'comment-removed':
+      return e.scope === 'entity' ? `Fjernet en kommentar på ${e.entityId}` : 'Fjernet en kommentar på bundlen'
     case 'accepted-all': {
       const parts = [`godkjente ${plural(e.accepted.length, 'enhet', 'enheter')}`]
       if (e.refused.length) parts.push(`${e.refused.length} ble ikke godkjent: ${e.refused.map(r => `${r.entityId} (${r.why})`).join('; ')}`)
