@@ -31,6 +31,7 @@ import {
   type BundleManifest, type EntityPayload, type IngestBody, type ValidatedBundle,
 } from '~/_lib/bundle-validate.ts'
 import { keyProp, parseNodeRef } from '~/_lib/entity-ref.ts'
+import { runCypher } from '~/_lib/neo4j.ts'
 
 interface Env {
   PROPOSALS:         R2Bucket
@@ -41,6 +42,7 @@ interface Env {
   BOT_DISPATCH_URL?: string  // local-runner only — for resolve dispatch
   NEO4J_URI:         string
   NEO4J_HTTP_URI?:   string
+  NEO4J_DATABASE?:   string
   NEO4J_USERNAME:    string
   NEO4J_PASSWORD:    string
   BUNDLE_EVENTS?:    DurableObjectNamespace  // SSE pub-sub
@@ -70,6 +72,14 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
   if (typeof validated === 'string') return json({ error: validated }, 400)
 
   try {
+    // Ask the graph first: if it cannot be asked, nothing is stored (502), so a broken connection is never taken for
+    // a missing entity. Before #176 a failed lookup was logged and every target counted as unresolved.
+    const refs = await resolveBundleRefs(env, validated)
+    if (refs.unresolved.length) {
+      validated.manifest.status         = 'blocked'
+      validated.manifest.unresolvedRefs = refs.unresolved
+    }
+
     await writeBundle(env, validated)
 
     // Clear the pending-generation marker for this outline. Parents and
@@ -83,16 +93,7 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
       bundleId: validated.manifest.bundleId,
     })
 
-    // Resolve unmet refs into manifest.status / unresolvedRefs.
-    const refs = await resolveBundleRefs(env, validated)
     if (refs.unresolved.length) {
-      validated.manifest.status         = 'blocked'
-      validated.manifest.unresolvedRefs = refs.unresolved
-      await env.PROPOSALS.put(
-        `proposals/bundles/${validated.manifest.bundleId}/manifest.json`,
-        JSON.stringify(validated.manifest),
-        { httpMetadata: { contentType: 'application/json' } },
-      )
       // Watcher index: each unresolved ref records who's waiting.
       for (const id of refs.unresolved) {
         await appendWatcher(env, id, validated.manifest.bundleId)
@@ -287,49 +288,17 @@ async function resolveBundleRefs(env: Env, v: ValidatedBundle): Promise<RefScan>
   const found = new Set<string>()
   for (const [kind, keys] of Object.entries(byKind)) {
     const prop = keyProp(kind)
-    try {
-      const rows = await runCypher<{ key: string }>(
-        env,
-        `MATCH (n:\`${kind}\`) WHERE n.${prop} IN $keys RETURN n.${prop} AS key`,
-        { keys },
-      )
-      for (const r of rows) found.add(`${kind}:${r.key}`)
-    } catch (e) {
-      console.error(`resolveBundleRefs ${kind}:`, (e as Error).message)
-    }
+    // Read access: it only looks. A failure is thrown, not counted as «not found».
+    const rows = await runCypher<{ key: string }>(
+      env,
+      `MATCH (n:\`${kind}\`) WHERE n.${prop} IN $keys RETURN n.${prop} AS key`,
+      { keys },
+      'Read',
+    )
+    for (const r of rows) found.add(`${kind}:${r.key}`)
   }
 
   return { unresolved: toCheck.filter((id) => !found.has(id)) }
-}
-
-async function runCypher<T>(env: Env, statement: string, parameters: Record<string, unknown>): Promise<T[]> {
-  const uri  = (env.NEO4J_HTTP_URI ?? coerceHttp(env.NEO4J_URI)).replace(/\/$/, '')
-  const auth = btoa(`${env.NEO4J_USERNAME}:${env.NEO4J_PASSWORD}`)
-  const res  = await fetch(`${uri}/db/neo4j/tx/commit`, {
-    method:  'POST',
-    headers: { Authorization: `Basic ${auth}`, 'Content-Type': 'application/json', Accept: 'application/json' },
-    body:    JSON.stringify({ statements: [{ statement, parameters }] }),
-  })
-  if (!res.ok) throw new Error(`Neo4j ${res.status}`)
-  interface CypherResp {
-    results: { columns: string[]; data: { row: unknown[] }[] }[]
-    errors:  { code: string; message: string }[]
-  }
-  const data = await res.json<CypherResp>()
-  if (data.errors?.length) throw new Error(data.errors[0].message)
-  const r = data.results[0]
-  if (!r) return []
-  return r.data.map(({ row }) => {
-    const obj: Record<string, unknown> = {}
-    r.columns.forEach((c, i) => { obj[c] = row[i] })
-    return obj as T
-  })
-}
-
-function coerceHttp(u: string): string {
-  if (u.startsWith('neo4j+s://')) return 'https://' + u.slice('neo4j+s://'.length)
-  if (u.startsWith('bolt://'))    return 'http://'  + u.slice('bolt://'.length).replace(':7687', ':7474')
-  return u
 }
 
 interface WatcherFile { watchers: string[] }
