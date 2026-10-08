@@ -32,7 +32,7 @@
         :data="relationsData"
         :demote-blockers="demoteBlockers"
         @saved-scalar="onSavedScalar"
-        @kind-flipped="() => loadEvent(String(route.params.slug))"
+        @kind-flipped="() => loadEvent(detailSlug)"
         @slug-changed="onSlugChanged"
         @saved-sections="sections => savedSections = sections"
       />
@@ -172,7 +172,8 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, inject } from 'vue'
-import { useRoute, useRouter, RouterLink } from 'vue-router'
+import { useRouter, RouterLink } from 'vue-router'
+import { useDetailSlug } from '@/composables/useDetailSlug.ts'
 import { fetchEventDetailBySlug } from '../composables/useLocationCache.ts'
 import { useAuth } from '../composables/useAuth.ts'
 import { usePlaceRoute } from '../composables/usePlaceRoute.ts'
@@ -190,7 +191,7 @@ import type { RelationEntry } from '../components/relation/RelationStrategy.ts'
 import EventEditPane from '../components/event/EventEditPane.vue'
 import type { EventRelationsData } from '../components/event/EventRelations.vue'
 
-const route = useRoute()
+const detailSlug = useDetailSlug()
 const router = useRouter()
 const event = ref<IdbEventDetail | null>(null)
 const loading = ref(true)
@@ -336,7 +337,7 @@ function handleInternalLinks(e: MouseEvent) {
 }
 
 onMounted(async () => {
-  const slug = route.params.slug as string
+  const slug = detailSlug.value
   // Run Neo4j load in parallel; let the Sanity fetch fail independently
   // (the slug may be Neo4j-only with no Sanity counterpart).
   const [sanityResult] = await Promise.allSettled([

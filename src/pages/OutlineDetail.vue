@@ -102,7 +102,8 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, watch, inject } from 'vue'
-import { useRoute, RouterLink } from 'vue-router'
+import { RouterLink } from 'vue-router'
+import { useDetailSlug } from '@/composables/useDetailSlug.ts'
 import { useOutlineData } from '../composables/useOutlineData.ts'
 import { OutlineDataKey } from '../composables/proposalDataInjection.ts'
 import { useEntityBundles } from '../composables/useEntityBundles.ts'
@@ -115,7 +116,7 @@ import type { Section } from '../components/SectionsEditor.vue'
 
 const mode = ref<AdminViewMode>('preview')
 
-const route  = useRoute()
+const detailSlug = useDetailSlug()
 const { user } = useAuth()
 const isAdmin = computed(() => user.value?.role === 'admin')
 
@@ -164,8 +165,8 @@ const descriptionHtml = computed<string>(() => {
   return parts.join('')
 })
 
-onMounted(() => { void load(route.params.slug as string) })
-watch(() => route.params.slug as string, (s) => { if (s) void load(s) })
+onMounted(() => { if (detailSlug.value) void load(detailSlug.value) })
+watch(detailSlug, (s) => { if (s) void load(s) })
 
 const requesting    = ref(false)
 const requestResult = ref<{ issueNumber: number; issueUrl: string } | null>(null)

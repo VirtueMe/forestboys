@@ -10,7 +10,7 @@
  *
  * Three pieces are identical across kinds; this composable owns them:
  *
- *  - `isCreate` derived from the route param.
+ *  - `isCreate` derived from the slug (useDetailSlug).
  *  - The `mode` ref (Preview ↔ Edit), forced to `edit` on create so the
  *    user lands typing instead of staring at an empty preview.
  *  - The `pendingDescription` recovery handoff: when the create flow
@@ -24,7 +24,8 @@
  * successful Lagre dismisses the recovery banner.
  */
 import { ref, computed, watch, inject } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
+import { useRouter } from 'vue-router'
+import { useDetailSlug } from './useDetailSlug.ts'
 import { consumePendingDescription, type PendingDescription, type PendingKind } from './usePendingDescription.ts'
 import { ProposalPreviewKey } from './proposalDataInjection.ts'
 import type { AdminViewMode } from '@/components/AdminViewTabs.vue'
@@ -37,10 +38,9 @@ export interface UseDetailCreateModeOptions {
 }
 
 export function useDetailCreateMode(opts: UseDetailCreateModeOptions) {
-  const route  = useRoute()
   const router = useRouter()
 
-  const slug      = computed(() => String(route.params.slug))
+  const slug      = useDetailSlug()
   const isCreate  = computed(() => slug.value === 'new')
   const mode      = ref<AdminViewMode>('preview')
   const pendingDescription = ref<PendingDescription | null>(null)

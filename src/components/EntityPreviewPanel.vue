@@ -52,7 +52,7 @@ import { neo4jQuery } from '@/composables/useNeo4j.ts'
 import {
   PersonDataKey, UnitDataKey, OrganizationDataKey, StationDataKey, TransportDataKey,
   OutlineDataKey, EventDataKey, LocationDataKey, EquipmentDataKey, ArticleDataKey, SourceDataKey,
-  ProposalPreviewKey,
+  ProposalPreviewKey, ProposalPreviewSlugKey,
 } from '@/composables/proposalDataInjection.ts'
 import { useProposalPersonData }       from '@/composables/useProposalPersonData.ts'
 import { useProposalUnitData }         from '@/composables/useProposalUnitData.ts'
@@ -101,6 +101,7 @@ const proposalData =
   null
 
 provide(ProposalPreviewKey, true)
+provide(ProposalPreviewSlugKey, props.slug)
 
 if (proposalData) {
   switch (props.kind) {

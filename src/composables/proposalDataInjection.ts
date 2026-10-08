@@ -42,3 +42,10 @@ export const SourceDataKey:       InjectionKey<ReturnType<typeof useSourceData>>
  * auto-flip-to-edit so the user can't mutate live state from the modal.
  */
 export const ProposalPreviewKey: InjectionKey<boolean> = Symbol('ProposalPreview')
+
+/**
+ * The slug of the entity a preview panel was given (#178). A detail page reads its entity from the URL's `:slug`; the
+ * window on a bundle page (`/admin/proposals/<bundleId>`) has none, so the panel provides the slug it was opened with
+ * and `useDetailSlug()` hands that to the page.
+ */
+export const ProposalPreviewSlugKey: InjectionKey<string> = Symbol('ProposalPreviewSlug')
