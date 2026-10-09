@@ -45,7 +45,7 @@
     "@google/design.md": "0.4.0",
     "@playwright/test": "1.63.0",
     "@types/geojson": "^7946.0.16",
-    "@types/node": "^24.12.2",
+    "@types/node": "^26.6.4",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
     "@types/yargs": "^17.0.35",
