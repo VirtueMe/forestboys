@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.9.0](https://github.com/VirtueMe/forestboys/compare/v0.8.0...v0.9.0) (2026-10-09)
+
+
+### Features
+
+* **pwa:** link the web app manifest, served from the site name ([30d0af4](https://github.com/VirtueMe/forestboys/commit/30d0af4b783d81c58d5c74f2c042a3f2ea55321b)), closes [#204](https://github.com/VirtueMe/forestboys/issues/204)
+
 ## [0.8.0](https://github.com/VirtueMe/forestboys/compare/v0.7.0...v0.8.0) (2026-10-09)
 
 
