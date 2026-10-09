@@ -1310,16 +1310,6 @@ select.field-input {
   line-height: 1.3;
 }
 
-.preview-content :deep(p) {
-  margin: 0 0 0.75em;
-  line-height: 1.7;
-  font-size: 13px;
-  color: var(--muted);
-}
-.preview-content :deep(p:last-child) { margin-bottom: 0; }
-.preview-content :deep(strong) { font-weight: 500; color: var(--ink); }
-.preview-content :deep(em) { font-style: italic; }
-.preview-content :deep(a) { color: var(--focus); text-decoration: underline; }
 
 .card-preview .section-wrap { position: relative; }
 

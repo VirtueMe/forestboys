@@ -387,7 +387,8 @@ boxes in up to four rows above, joined to their dot by a leader line.
 ### Portable Text rendering
 
 Long-form prose output from Sanity Portable Text → HTML. Use `body` type at
-`prose-max-width`. Inline styles:
+`prose-max-width`. Set once on `.portable-text` in
+`main.css`; components do not restyle it. Inline styles:
 
 - Links: `ink` with `1px solid rule` underline (not standard browser
   underline), becomes `faded-red` on hover
@@ -395,6 +396,9 @@ Long-form prose output from Sanity Portable Text → HTML. Use `body` type at
 - Strong: weight 600, no color change
 - Blockquote: `2px solid rule` left border, `md` left padding, `ink-soft`
   text
+- Paragraphs: `sm` (8px) below, preserving single line breaks as typed
+- Headings: serif `h3` size, weight 600, `md` above and `sm` below
+- `pre.pre-table` (tab-separated roster rows): mono, `paper-sunken` tint, scrolls sideways
 - Inline source reference (`SourceRef.vue`): pill-shaped, see "Filter chip"
 - Lists (`ul`, `ol`): markers sit inside the content column, so the list has
   `lg` (24px) left padding, room for a two-digit number. `xs` (4px) between

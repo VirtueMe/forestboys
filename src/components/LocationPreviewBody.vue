@@ -70,5 +70,4 @@ const descriptionHtml = computed<string>(() => {
   color: var(--ink-soft);
   margin: 0 0 var(--space-sm);
 }
-.portable-text :deep(p) { margin: 0.5em 0 0.75em; line-height: 1.55; }
 </style>

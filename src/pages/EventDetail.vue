@@ -459,51 +459,12 @@ onMounted(async () => {
   letter-spacing: 0.05em;
 }
 
-/* ── Portable text ────────────────────────────────────────── */
-.portable-text :deep(p) {
-  margin: 0 0 0.75em;
-  font-size: 14px;
-  line-height: 1.75;
-  color: var(--ink);
-  white-space: pre-line;
-}
 
-.portable-text :deep(p:last-child) { margin-bottom: 0; }
 
-.portable-text :deep(pre.pre-table) {
-  font-family: 'Courier New', Courier, monospace;
-  font-size: 11px;
-  tab-size: 4;
-  white-space: pre-wrap;
-  overflow-x: auto;
-  background: color-mix(in srgb, var(--rule) 50%, var(--paper-raised));
-  border-radius: 3px;
-  padding: 8px 10px;
-  line-height: 1.65;
-  color: var(--ink);
-  margin: 0 0 0.75em;
-}
 
-.portable-text :deep(strong) {
-  font-weight: 600;
-  color: var(--ink);
-}
 
-.portable-text :deep(u) { text-decoration: underline; }
-.portable-text :deep(em) { font-style: italic; }
 
-.portable-text :deep(a.internal-link),
-.portable-text :deep(a.external-link) {
-  color: var(--focus);
-  text-decoration: underline;
-  cursor: pointer;
-}
 
-.portable-text :deep(a.external-link::after) {
-  content: ' ↗';
-  font-size: 11px;
-  opacity: 0.6;
-}
 
 /* ── Section links ────────────────────────────────────────── */
 .section-link {

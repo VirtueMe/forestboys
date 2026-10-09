@@ -102,7 +102,6 @@ const descriptionHtml = computed<string>(() => {
   color: var(--ink-soft);
   margin: 0 0 var(--space-sm);
 }
-.portable-text :deep(p) { margin: 0.5em 0 0.75em; line-height: 1.55; }
 .src-referrers { list-style: none; margin: 0; padding: 0; font-family: var(--font-sans); font-size: var(--size-body-ui); }
 .src-ref-kind {
   font-size: var(--size-caps);

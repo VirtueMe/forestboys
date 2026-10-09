@@ -119,13 +119,6 @@ function sectionFootnoteCitesOf(s: Section): (Citation & { footnoteNumber: numbe
 .section-wrap { position: relative; }
 .section-wrap + .section-wrap { margin-top: var(--space-sm); }
 
-.portable-text {
-  font-family: var(--font-serif);
-  font-size: var(--size-body);
-  line-height: var(--leading-prose);
-  color: var(--ink);
-  max-width: var(--prose-max-width);
-}
 
 .is-quote {
   border-left: 2px solid var(--rule);
@@ -135,35 +128,8 @@ function sectionFootnoteCitesOf(s: Section): (Citation & { footnoteNumber: numbe
   color: var(--ink-soft);
 }
 
-.portable-text :deep(p) { margin: 0 0 0.75em; }
-.portable-text :deep(p:last-child) { margin-bottom: 0; }
 
-.portable-text :deep(h1),
-.portable-text :deep(h2),
-.portable-text :deep(h3),
-.portable-text :deep(h4),
-.portable-text :deep(h5),
-.portable-text :deep(h6) {
-  font-family: var(--font-serif);
-  font-size: var(--size-h3);
-  font-weight: 600;
-  margin: 1em 0 0.4em;
-  color: var(--ink);
-}
 
-.portable-text :deep(strong) { font-weight: 600; }
-.portable-text :deep(em)     { font-style: italic; }
-.portable-text :deep(a) {
-  color: var(--ink);
-  text-decoration: underline;
-  text-decoration-color: var(--rule);
-  text-underline-offset: 3px;
-  cursor: pointer;
-}
-.portable-text :deep(a:hover) {
-  color: var(--faded-red);
-  text-decoration-color: var(--faded-red);
-}
 
 .sourced-from {
   display: flex;
