@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.9.2](https://github.com/VirtueMe/forestboys/compare/v0.9.1...v0.9.2) (2026-10-09)
+
+
+### Bug fixes
+
+* **editor:** keep the expanded editor 960px wide on large screens ([c637402](https://github.com/VirtueMe/forestboys/commit/c6374025eb98b7cae9b0b157d3c4f2f18c32746f)), closes [#214](https://github.com/VirtueMe/forestboys/issues/214)
+* **editor:** keep two-digit list numbers on one line ([24a6eab](https://github.com/VirtueMe/forestboys/commit/24a6eab3a8934cdb7574fc907958f6e1633faf67)), closes [#213](https://github.com/VirtueMe/forestboys/issues/213)
+
 ## [0.9.1](https://github.com/VirtueMe/forestboys/compare/v0.9.0...v0.9.1) (2026-10-09)
 
 
