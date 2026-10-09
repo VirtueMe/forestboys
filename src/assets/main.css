@@ -153,6 +153,19 @@ section.section {
 }
 section.section:last-of-type { margin-bottom: var(--space-xl); }
 
+/* ── Portable Text lists ───────────────────────────────────────
+ * Shared by every component that renders blocksToHtml() output inside
+ * .portable-text. Low specificity on purpose: a component's own
+ * :deep(ul) rule still wins where it needs a tighter layout. */
+.portable-text ul,
+.portable-text ol {
+  margin: 0 0 var(--space-sm);
+  padding-left: var(--space-lg);
+}
+.portable-text li { margin: var(--space-xs) 0; }
+.portable-text li > ul,
+.portable-text li > ol { margin: var(--space-xs) 0 0; }
+
 .section-heading {
   font-family: var(--font-sans);
   font-size: var(--size-caps);

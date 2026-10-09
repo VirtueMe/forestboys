@@ -396,6 +396,10 @@ Long-form prose output from Sanity Portable Text → HTML. Use `body` type at
 - Blockquote: `2px solid rule` left border, `md` left padding, `ink-soft`
   text
 - Inline source reference (`SourceRef.vue`): pill-shaped, see "Filter chip"
+- Lists (`ul`, `ol`): markers sit inside the content column, so the list has
+  `lg` (24px) left padding, room for a two-digit number. `xs` (4px) between
+  items, `sm` (8px) below the list, matching a paragraph. A nested list sits
+  inside its parent item with the same padding and no extra space above it
 
 ## Anti-patterns
 

@@ -137,10 +137,18 @@ export function blocksToHtml(blocks?: SanityBlock[] | unknown | null): string {
     }
   }
 
-  function closeLists(toLevel = 0) {
-    while (listStack.length > 0 && listStack[listStack.length - 1].level >= toLevel) {
-      parts.push(`</${listStack.pop()!.tag}>`)
-    }
+  // Every open list has an open <li> (its last item), closed on the same line as its content.
+  function closeLi() {
+    parts[parts.length - 1] += '</li>'
+  }
+
+  function closeTop() {
+    closeLi()
+    parts.push(`</${listStack.pop()!.tag}>`)
+  }
+
+  function closeLists() {
+    while (listStack.length > 0) closeTop()
   }
 
   for (const block of blocks as SanityBlock[]) {
@@ -157,14 +165,22 @@ export function blocksToHtml(blocks?: SanityBlock[] | unknown | null): string {
 
     if (block.listItem) {
       flushPre()
-      const tag  = block.listItem === 'number' ? 'ol' : 'ul'
+      const tag   = block.listItem === 'number' ? 'ol' : 'ul'
       const level = block.level ?? 1
-      closeLists(level + 1)
-      if (listStack.length === 0 || listStack[listStack.length - 1].level < level) {
+      while (listStack.length > 0 && listStack[listStack.length - 1].level > level) closeTop()
+      if (listStack.length > 0 && listStack[listStack.length - 1].level === level) {
+        if (listStack[listStack.length - 1].tag === tag) {
+          closeLi()
+        } else {
+          closeTop()
+          parts.push(`<${tag}>`)
+          listStack.push({ tag, level })
+        }
+      } else {
         parts.push(`<${tag}>`)
         listStack.push({ tag, level })
       }
-      parts.push(`<li>${inner}</li>`)
+      parts.push(`<li>${inner}`)
     } else {
       closeLists()
       switch (block.style) {

@@ -115,6 +115,32 @@ describe('blocksToHtml', () => {
     expect(blocksToHtml([block({ text: 'a', listItem: 'number' })])).toBe('<ol>\n<li>a</li>\n</ol>')
   })
 
+  it('puts a nested list inside the parent <li>', () => {
+    const html = blocksToHtml([
+      block({ text: 'a', listItem: 'number', level: 1 }),
+      block({ text: 'b', listItem: 'bullet', level: 2 }),
+      block({ text: 'c', listItem: 'number', level: 1 }),
+    ])
+    expect(html).toBe('<ol>\n<li>a\n<ul>\n<li>b</li>\n</ul></li>\n<li>c</li>\n</ol>')
+  })
+
+  it('closes every open list when a paragraph follows a nested list', () => {
+    const html = blocksToHtml([
+      block({ text: 'a', listItem: 'bullet', level: 1 }),
+      block({ text: 'b', listItem: 'bullet', level: 2 }),
+      block({ text: 'after' }),
+    ])
+    expect(html).toBe('<ul>\n<li>a\n<ul>\n<li>b</li>\n</ul></li>\n</ul>\n<p>after</p>')
+  })
+
+  it('starts a new list when the list type changes at the same level', () => {
+    const html = blocksToHtml([
+      block({ text: 'a', listItem: 'bullet', level: 1 }),
+      block({ text: 'b', listItem: 'number', level: 1 }),
+    ])
+    expect(html).toBe('<ul>\n<li>a</li>\n</ul>\n<ol>\n<li>b</li>\n</ol>')
+  })
+
   it('merges consecutive tab-separated rows into one <pre>', () => {
     const html = blocksToHtml([block({ text: 'a\tb' }), block({ text: 'c\td' }), block({ text: 'end' })])
     expect(html).toBe('<pre class="pre-table">a\tb\nc\td</pre>\n<p>end</p>')

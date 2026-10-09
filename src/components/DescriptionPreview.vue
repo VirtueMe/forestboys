@@ -138,13 +138,6 @@ function sectionFootnoteCitesOf(s: Section): (Citation & { footnoteNumber: numbe
 .portable-text :deep(p) { margin: 0 0 0.75em; }
 .portable-text :deep(p:last-child) { margin-bottom: 0; }
 
-.portable-text :deep(ul),
-.portable-text :deep(ol) {
-  margin: 0.5em 0 0.75em;
-  padding-left: 1.5em;
-}
-.portable-text :deep(li) { margin: 0.25em 0; }
-
 .portable-text :deep(h1),
 .portable-text :deep(h2),
 .portable-text :deep(h3),

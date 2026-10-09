@@ -381,11 +381,6 @@ function handleInternalLinks(e: MouseEvent) {
   font-size: 0.85em;
   opacity: 0.6;
 }
-.portable-text :deep(ul),
-.portable-text :deep(ol) {
-  margin: 0 0 0.75em 1.25em;
-  padding: 0;
-}
 .portable-text :deep(li) {
   font-family: var(--font-serif);
   font-size: var(--size-body);
