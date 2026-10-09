@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.9.1](https://github.com/VirtueMe/forestboys/compare/v0.9.0...v0.9.1) (2026-10-09)
+
+
+### Bug fixes
+
+* **descriptions:** nest lists correctly and style them in one place ([f554bba](https://github.com/VirtueMe/forestboys/commit/f554bba988e5aa3f08c6bcc923380e2744c908af))
+
 ## [0.9.0](https://github.com/VirtueMe/forestboys/compare/v0.8.0...v0.9.0) (2026-10-09)
 
 
