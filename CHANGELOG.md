@@ -1,5 +1,53 @@
 # Changelog
 
+## [0.7.0](https://github.com/VirtueMe/forestboys/compare/v0.6.0...v0.7.0) (2026-10-09)
+
+
+### Features
+
+* **admin:** «Slett» archives a bundle, which can be read and restored ([f27e955](https://github.com/VirtueMe/forestboys/commit/f27e95546b9a51bd820f4b540f05ee65844af347))
+* **admin:** a bundle can be annotated, as a whole and per entity ([bf7fe38](https://github.com/VirtueMe/forestboys/commit/bf7fe382793faffdc4079ced0ef9e0fe686670db))
+* **admin:** a bundle records its events, with who did what and when ([c893bf7](https://github.com/VirtueMe/forestboys/commit/c893bf7664868884200331d6f473cad18a5cb3fd))
+* **admin:** filter and page the proposals list from an index ([c78b85f](https://github.com/VirtueMe/forestboys/commit/c78b85ff67a3547ffa17bb7189fba0f6040213d9))
+* **bundles:** nodes and edges an accepted bundle creates say where they came from ([7ff8b38](https://github.com/VirtueMe/forestboys/commit/7ff8b3869f50de55d7ad2c1aaedcc1ae61431f8e)), closes [#157](https://github.com/VirtueMe/forestboys/issues/157)
+* **bundles:** packages of entity snapshots, and the comparison that turns them into ops ([3db576c](https://github.com/VirtueMe/forestboys/commit/3db576c4e22c43485bd5a8bfd84385ceb58939c8)), closes [#159](https://github.com/VirtueMe/forestboys/issues/159)
+* **bundles:** refuse to create an entity that already exists ([580a98b](https://github.com/VirtueMe/forestboys/commit/580a98bb7355e069d2ecb4e1662b70b8ef2a0365))
+* **bundles:** scripts that write a package for a list of entities and turn a package into a bundle ([5f97e90](https://github.com/VirtueMe/forestboys/commit/5f97e90d234fe34cf062b56592a7c9ba02cd2ed5)), closes [#159](https://github.com/VirtueMe/forestboys/issues/159)
+* **bundles:** send bundle files to a site's ingest ([c0f21fd](https://github.com/VirtueMe/forestboys/commit/c0f21fd3c1424d8b5fe50791f5c6b9d8fcb55ce9))
+* **bundles:** set-description, three more kinds and a package origin in ingest and apply ([a5007b9](https://github.com/VirtueMe/forestboys/commit/a5007b90f9c1d4cd5c83355b17d679e4b693fbed)), closes [#161](https://github.com/VirtueMe/forestboys/issues/161)
+* **outlines:** convert the nodes made from outlines into bundles for Jan to accept ([787ca70](https://github.com/VirtueMe/forestboys/commit/787ca70d17e55c04d39a6c5ed33e25cc7788d110)), closes [#158](https://github.com/VirtueMe/forestboys/issues/158)
+* **outlines:** the version of an outline is a hash of its text, and the accept records what was absorbed ([bcbaa22](https://github.com/VirtueMe/forestboys/commit/bcbaa224be214b85651f5212df0e04a0bcae2cf1)), closes [#157](https://github.com/VirtueMe/forestboys/issues/157)
+* **preview:** review preview for Article ([56998e1](https://github.com/VirtueMe/forestboys/commit/56998e124976b02b5bb740e45271294f88fed1fe))
+* **preview:** review preview for EquipmentType ([1d1d9b0](https://github.com/VirtueMe/forestboys/commit/1d1d9b0cd462eadd17a742109bd9a065338f5ca5))
+* **preview:** review preview for Source ([7d1c02d](https://github.com/VirtueMe/forestboys/commit/7d1c02de96590f57bbbb474507b70c083bdd2cf4))
+
+
+### Bug fixes
+
+* **a11y:** edit mode meets the design checks: placeholder, editor name, target size ([98274b5](https://github.com/VirtueMe/forestboys/commit/98274b587ab4639f36e637a9b11abbbfd4348aa8)), closes [#146](https://github.com/VirtueMe/forestboys/issues/146)
+* **a11y:** events have an h1 and h2 sections ([a8bb601](https://github.com/VirtueMe/forestboys/commit/a8bb6010fb526319da7ebb1b63519f14651b6b1e)), closes [#132](https://github.com/VirtueMe/forestboys/issues/132)
+* **a11y:** section headings on the entity pages are h2 ([fccaf17](https://github.com/VirtueMe/forestboys/commit/fccaf1718ceabe97ca70d561ccd0cac8083cf4f4)), closes [#132](https://github.com/VirtueMe/forestboys/issues/132)
+* **a11y:** the edit panes' section headings are h2 ([e70cba9](https://github.com/VirtueMe/forestboys/commit/e70cba92b0df41cbc9620317590daebfb580f484)), closes [#132](https://github.com/VirtueMe/forestboys/issues/132)
+* **a11y:** the external-link arrow is hidden from screen readers ([94fa1d4](https://github.com/VirtueMe/forestboys/commit/94fa1d454f850e949d5bc710390e4ddd91168ce4)), closes [#139](https://github.com/VirtueMe/forestboys/issues/139)
+* **a11y:** the organisation filter has a name ([0c29eb9](https://github.com/VirtueMe/forestboys/commit/0c29eb92ef39cf236fb34b96d0f4fb94a3099855)), closes [#139](https://github.com/VirtueMe/forestboys/issues/139)
+* **a11y:** the person page's section headings are h2 ([7e011f2](https://github.com/VirtueMe/forestboys/commit/7e011f2766d7ccab244a9080b9421fd883114304)), closes [#132](https://github.com/VirtueMe/forestboys/issues/132)
+* **admin:** derive a bundle's status and set aside what accept refuses ([ed6ee9f](https://github.com/VirtueMe/forestboys/commit/ed6ee9fe2df3636ec7c6c3b86e62c78f78ebd080))
+* **admin:** leave a deleted bundle for the list and say so ([f1b9c21](https://github.com/VirtueMe/forestboys/commit/f1b9c210ffc9e942f72ba0eb87f4eba97342c383))
+* **api:** ingest asks the graph through the Query API, and a failed lookup is a failure ([efcd1e1](https://github.com/VirtueMe/forestboys/commit/efcd1e14adc211dec6c140246d251d4f98263d74)), closes [#176](https://github.com/VirtueMe/forestboys/issues/176)
+* **design:** muted and faded-red meet AA, and nothing is tolerated ([87e7d47](https://github.com/VirtueMe/forestboys/commit/87e7d470816373ffc27aec29d4a76b969548ab23)), closes [#134](https://github.com/VirtueMe/forestboys/issues/134)
+* **editor:** Lagre saves what is on the screen, not the last reported draft ([dcc96a8](https://github.com/VirtueMe/forestboys/commit/dcc96a823aee2d90e64623ba23d33c9aeb751d0a)), closes [#145](https://github.com/VirtueMe/forestboys/issues/145)
+* **editor:** no heading on a list item: the toolbar refuses it, the check ignores it ([e4ce3a2](https://github.com/VirtueMe/forestboys/commit/e4ce3a25bc3d85617245cbb02cd22ec94d352a1b)), closes [#144](https://github.com/VirtueMe/forestboys/issues/144)
+* **preview:** the preview window gets the entity's slug from the panel, not the URL ([b957580](https://github.com/VirtueMe/forestboys/commit/b95758098bb4e9460b501d0bc94591a586af1ac4)), closes [#178](https://github.com/VirtueMe/forestboys/issues/178)
+* **tools:** stop dev:worker cleanly on Ctrl-C ([1275114](https://github.com/VirtueMe/forestboys/commit/12751148aec7ee788356f28cd77be50c4d295b02)), closes [#201](https://github.com/VirtueMe/forestboys/issues/201)
+
+
+### Documentation
+
+* **agents:** describe the Neo4j app, not the Sanity-backed one ([304685b](https://github.com/VirtueMe/forestboys/commit/304685b926c895dcac0aee423f5f04eb0ed1fc8e)), closes [#37](https://github.com/VirtueMe/forestboys/issues/37)
+* **bundles:** origin stamps, the version of an outline and its state ([dde25eb](https://github.com/VirtueMe/forestboys/commit/dde25eb85d048d591293de32264e9c2710fbd222)), closes [#157](https://github.com/VirtueMe/forestboys/issues/157)
+* **design:** follow the DESIGN.md spec, and declare the colour pairs ([9f37f19](https://github.com/VirtueMe/forestboys/commit/9f37f19d05f5d15dc7d922edab774fb61e002a39)), closes [#134](https://github.com/VirtueMe/forestboys/issues/134)
+* **proposals:** write down the shared decision for the per-bundle records ([ca5579b](https://github.com/VirtueMe/forestboys/commit/ca5579b276b85af629e154f820013687fccb7ac2))
+
 ## [0.6.0](https://github.com/VirtueMe/forestboys/compare/v0.5.0...v0.6.0) (2026-10-06)
 
 
