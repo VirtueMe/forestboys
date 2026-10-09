@@ -10,6 +10,7 @@
 
 import { requireAdmin } from '~/_lib/require-admin.ts'
 import { actorOf, recordEvent, withCurrentNames } from '~/_lib/bundle-events.ts'
+import { refreshRow } from '~/_lib/bundle-index.ts'
 import { listCommentRefs, readThread, writeComment } from '~/_lib/bundle-comments.ts'
 import { validateComment } from '../../../../../src/utils/bundleComments.ts'
 
@@ -64,6 +65,7 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env, params }
     await recordEvent(env.PROPOSALS, bundleId, actor, {
       kind: 'commented', commentId: comment.id, scope: comment.type, ...(comment.entityId ? { entityId: comment.entityId } : {}),
     })
+    await refreshRow(env.PROPOSALS, bundleId)
     return json({ comment }, 201)
   } catch (e) {
     return json({ error: (e as Error).message }, 502)

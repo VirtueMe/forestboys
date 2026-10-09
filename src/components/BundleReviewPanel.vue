@@ -79,8 +79,29 @@
     <section v-if="manifest" class="entity-list">
       <h3 class="section-heading">Påvirkede enheter ({{ manifest.entities.length }})</h3>
 
+      <form v-if="manifest.entities.length > FILTER_FROM" class="entity-filters" role="search" @submit.prevent>
+        <div class="entity-tabs" role="group" aria-label="Status">
+          <button
+            v-for="t in entityTabs" :key="t.value" type="button" class="entity-tab"
+            :class="{ 'entity-tab--on': page.status === t.value }" :aria-pressed="page.status === t.value"
+            @click="setEntityFilter({ status: t.value })"
+          >
+            {{ t.label }} <span class="entity-tab-n">{{ page.counts[t.value] }}</span>
+          </button>
+        </div>
+        <input v-model="entityText" type="search" class="entity-q" placeholder="Søk i enhets-id" aria-label="Søk i enhetene" @input="setEntityFilter({ q: entityText })" />
+        <select v-if="page.kinds.length > 1" :value="entityFilter.kind ?? ''" aria-label="Enhetstype" @change="setEntityFilter({ kind: ($event.target as HTMLSelectElement).value || null })">
+          <option value="">Alle typer</option>
+          <option v-for="k in page.kinds" :key="k" :value="k">{{ k }}</option>
+        </select>
+        <select :value="entityFilter.limit" aria-label="Per side" @change="setEntityFilter({ limit: Number(($event.target as HTMLSelectElement).value) })">
+          <option v-for="n in PAGE_SIZES" :key="n" :value="n">{{ n }} per side</option>
+        </select>
+      </form>
+      <p v-if="!page.rows.length" class="muted">Ingen enheter passer.</p>
+
       <article
-        v-for="entry in manifest.entities"
+        v-for="entry in page.rows"
         :key="entry.entityId"
         class="entity-card"
         :class="`entity-card--${entry.status}`"
@@ -142,6 +163,12 @@
         </ul>
         <p v-if="actionError[entry.entityId]" class="entity-error">{{ actionError[entry.entityId] }}</p>
       </article>
+
+      <nav v-if="page.total > entityFilter.limit" class="entity-pager" aria-label="Sider">
+        <button type="button" :disabled="entityFilter.offset === 0" @click="setEntityFilter({ offset: Math.max(0, entityFilter.offset - entityFilter.limit) }, false)">‹ Forrige</button>
+        <span class="muted">{{ entityFilter.offset + 1 }}–{{ Math.min(entityFilter.offset + entityFilter.limit, page.total) }} av {{ page.total }}</span>
+        <button type="button" :disabled="entityFilter.offset + entityFilter.limit >= page.total" @click="setEntityFilter({ offset: entityFilter.offset + entityFilter.limit }, false)">Neste ›</button>
+      </nav>
     </section>
 
     <section v-if="manifest" class="history">
@@ -175,6 +202,8 @@ import { RouterLink } from 'vue-router'
 import { bundleCounts, bundleStatus, bundleStatusLabel } from '@/utils/bundleStatus.ts'
 import { refusalsText, type Refusal } from '@/utils/refusalText.ts'
 import { actorName, eventEntity, eventText } from '@/utils/bundleEvents.ts'
+import { DEFAULT_ENTITY_FILTER, FILTER_FROM, filterEntities, type EntityFilter, type EntityStatusFilter } from '@/utils/entityFilter.ts'
+import { PAGE_SIZES } from '@/utils/bundleIndex.ts'
 import { useProposalBundle, type EntityStatus } from '@/composables/useProposalBundle.ts'
 import { authFetch } from '@/composables/useAuth.ts'
 import AppModal from '@/components/AppModal.vue'
@@ -221,6 +250,18 @@ function onPreviewResolved(): void {
   modalOpen.value = false
   preview.value   = null
   void bundle.load()  // refresh statuses after accept/deny
+}
+
+// The entities of a big bundle are filtered and paged here: the manifest has them all. It opens on what still waits.
+const entityFilter = ref<EntityFilter>({ ...DEFAULT_ENTITY_FILTER })
+const entityText   = ref('')
+const page         = computed(() => filterEntities(manifest.value?.entities ?? [], entityFilter.value))
+const entityTabs: { value: EntityStatusFilter; label: string }[] = [
+  { value: 'pending', label: 'Venter' }, { value: 'accepted', label: 'Godkjent' }, { value: 'denied', label: 'Avvist' },
+  { value: 'drifted', label: 'Satt til side' }, { value: 'all', label: 'Alle' },
+]
+function setEntityFilter(patch: Partial<EntityFilter>, resetPage = true): void {
+  entityFilter.value = { ...entityFilter.value, ...patch, ...(resetPage && !('offset' in patch) ? { offset: 0 } : {}) }
 }
 
 const hasPending = computed(() => (manifest.value?.entities ?? []).some((e) => e.status === 'pending'))
@@ -350,6 +391,17 @@ async function onDeny(entityId: string) {
 .bundle { display: flex; flex-direction: column; gap: var(--space-md); margin-top: var(--space-md); }
 
 .muted { color: var(--muted); }
+
+.entity-filters { display: flex; flex-wrap: wrap; gap: var(--space-sm) var(--space-md); align-items: center; margin-bottom: var(--space-md); font-family: var(--font-sans); font-size: var(--size-label); }
+.entity-tabs { display: flex; gap: var(--space-xs); flex-wrap: wrap; }
+.entity-tab { font: inherit; padding: 4px 10px; cursor: pointer; background: var(--paper-sunken); border: 1px solid var(--rule); border-radius: var(--radius-pill); color: var(--ink-soft); }
+.entity-tab--on { color: var(--ink); border-color: var(--ink-soft); font-weight: 600; }
+.entity-tab-n { color: var(--muted); font-family: var(--font-mono); font-size: 12px; }
+.entity-q { flex: 1 1 180px; font: inherit; padding: 5px 10px; background: var(--paper-raised); border: 1px solid var(--rule); border-radius: var(--radius-md); color: var(--ink); }
+.entity-filters select { font: inherit; padding: 4px 8px; background: var(--paper-raised); border: 1px solid var(--rule); border-radius: var(--radius-md); color: var(--ink); }
+.entity-pager { display: flex; align-items: center; justify-content: center; gap: var(--space-md); margin-top: var(--space-md); font-family: var(--font-sans); }
+.entity-pager button { font: inherit; padding: 4px 12px; cursor: pointer; background: var(--paper-sunken); border: 1px solid var(--rule); border-radius: var(--radius-md); color: var(--ink); }
+.entity-pager button:disabled { opacity: .5; cursor: default; }
 
 .bundle-comments, .entity-comments { margin-top: var(--space-sm); }
 .bundle-comments > summary, .entity-comments > summary { cursor: pointer; color: var(--ink-soft); font-size: 14px; margin-bottom: var(--space-xs); }

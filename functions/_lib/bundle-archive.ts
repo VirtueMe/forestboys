@@ -11,6 +11,7 @@ import { indexAdd, indexRemove } from '~/api/admin/proposals/_apply.ts'
 import { sourceIndexKey } from './bundle-origin.ts'
 import { recordEvent } from './bundle-events.ts'
 import { writeComment } from './bundle-comments.ts'
+import { refreshRow, removeRow } from './bundle-index.ts'
 import type { BundleManifest } from './bundle-validate.ts'
 import {
   ARCHIVE_PREFIX, OPERATION_LIMIT, archiveKey, fromMetadata, operationsNeeded, purgedKey, summaryOf, toMetadata,
@@ -84,6 +85,7 @@ export async function archiveBundle(bucket: R2Bucket, bundleId: string, actor: E
   await indexRemove({ PROPOSALS: bucket }, sourceIndexKey(manifest), bundleId)
 
   for (let i = 0; i < listed.length; i += 1000) await bucket.delete(listed.slice(i, i + 1000).map(o => o.key))
+  await removeRow(bucket, bundleId)
   return summary
 }
 
@@ -130,6 +132,7 @@ export async function restoreBundle(bucket: R2Bucket, bundleId: string, actor: E
     const comment = await writeComment(bucket, bundleId, actor, { type: 'bundle', text: `Gjenopprettet: ${reason}` }, iso(1))
     await recordEvent(bucket, bundleId, actor, { kind: 'commented', commentId: comment.id, scope: 'bundle' }, iso(1))
   }
+  await refreshRow(bucket, bundleId)
   await bucket.delete(archiveKey(bundleId))
 }
 

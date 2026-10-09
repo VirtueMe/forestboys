@@ -32,6 +32,7 @@ import {
 } from '~/_lib/bundle-validate.ts'
 import { keyProp, parseNodeRef } from '~/_lib/entity-ref.ts'
 import { channelOf, recordEvent } from '~/_lib/bundle-events.ts'
+import { refreshRow } from '~/_lib/bundle-index.ts'
 import { bundleCounts } from '../../../src/utils/bundleStatus.ts'
 import { runCypher } from '~/_lib/neo4j.ts'
 
@@ -92,6 +93,8 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
     await recordEvent(env.PROPOSALS, validated.manifest.bundleId, ingestActor, replaced
       ? { kind: 'resent', entities: validated.manifest.entities.length, replaced }
       : { kind: 'received', entities: validated.manifest.entities.length, status: refs.unresolved.length ? 'blocked' : 'pending', ...(refs.unresolved.length ? { unresolvedRefs: refs.unresolved } : {}) })
+
+    await refreshRow(env.PROPOSALS, validated.manifest.bundleId)
 
     // Clear the pending-generation marker for this outline. Parents and
     // children alike count as "this outline finished a generation".
@@ -400,6 +403,7 @@ async function revalidateParent(env: Env, parentBundleId: string): Promise<void>
   await env.PROPOSALS.put(manifestKey, JSON.stringify(parent), {
     httpMetadata: { contentType: 'application/json' },
   })
+  await refreshRow(env.PROPOSALS, parent.bundleId)
 
   if (!wasBlocked && parent.status === 'blocked') {
     await recordEvent(env.PROPOSALS, parent.bundleId, channelOf(parent), { kind: 'blocked', unresolvedRefs: refs.unresolved })

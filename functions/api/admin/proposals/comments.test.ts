@@ -113,8 +113,8 @@ describe('reading the threads', () => {
 
   it('counts the comments of each bundle in the list', async () => {
     const { env } = await filled()
-    const { bundles } = await (await (listApi.onRequestGet as unknown as (c: never) => Promise<Response>)({ request: new Request('https://site.example/x'), env } as never)).json<{ bundles: { bundleId: string; commentCount: number }[] }>()
-    expect(bundles).toMatchObject([{ bundleId: B, commentCount: 4 }])
+    const { bundles } = await (await (listApi.onRequestGet as unknown as (c: never) => Promise<Response>)({ request: new Request('https://site.example/x'), env } as never)).json<{ bundles: { bundleId: string; comments: number }[] }>()
+    expect(bundles).toMatchObject([{ bundleId: B, comments: 4 }])
   })
 
   it('shows the name a user has now', async () => {
