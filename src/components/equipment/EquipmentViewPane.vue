@@ -215,10 +215,7 @@ const totalLinkCount = computed(() => props.externalRefs.length)
   color: var(--ink);
 }
 .portable-text :deep(p:last-child) { margin-bottom: 0; }
-.portable-text :deep(ul),
-.portable-text :deep(ol) { margin: 0.5em 0 0.75em; padding-left: 1.5em; }
 .portable-text :deep(li) {
-  margin: 0.25em 0;
   font-size: 14px;
   line-height: 1.65;
   color: var(--ink);
