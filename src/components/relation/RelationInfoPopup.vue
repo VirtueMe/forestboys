@@ -189,25 +189,6 @@ onBeforeUnmount(() => { window.removeEventListener('keydown', onKey) })
   align-items: center;
 }
 
-.popup-body {
-  font-family: var(--font-serif);
-  font-size: var(--size-body);
-  line-height: var(--leading-prose);
-  color: var(--ink);
-}
-.popup-body :deep(p) { margin: 0 0 0.75em; }
-.popup-body :deep(p:last-child) { margin-bottom: 0; }
-.popup-body :deep(a) {
-  color: var(--ink);
-  text-decoration: underline;
-  text-decoration-color: var(--rule);
-  text-underline-offset: 3px;
-}
-.popup-body :deep(a:hover) {
-  color: var(--faded-red);
-  text-decoration-color: var(--faded-red);
-}
-
 .relation-role {
   font-family: var(--font-sans);
   font-size: var(--size-caps);

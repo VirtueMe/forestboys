@@ -533,34 +533,6 @@ function formatDate(iso?: string | null): string {
 .description-date   { font-variant-numeric: tabular-nums; }
 
 .portable-text { margin-top: 4px; }
-.portable-text :deep(p) {
-  margin: 0 0 0.75em;
-  font-size: 14px;
-  line-height: 1.65;
-  color: var(--ink);
-}
-.portable-text :deep(p:last-child) { margin-bottom: 0; }
-.portable-text :deep(li) {
-  font-size: 14px;
-  line-height: 1.65;
-  color: var(--ink);
-}
-.portable-text :deep(h1),
-.portable-text :deep(h2),
-.portable-text :deep(h3),
-.portable-text :deep(h4) {
-  font-size: 14px;
-  font-weight: 700;
-  margin: 1em 0 0.4em;
-  color: var(--focus);
-}
-.portable-text :deep(strong) { font-weight: 600; }
-.portable-text :deep(em)     { font-style: italic; }
-.portable-text :deep(a) {
-  color: var(--focus);
-  text-decoration: underline;
-  cursor: pointer;
-}
 
 /* Course table */
 .course-table-wrap { overflow-x: auto; margin-top: 10px; }

@@ -153,16 +153,75 @@ section.section {
 }
 section.section:last-of-type { margin-bottom: var(--space-xl); }
 
-/* ── Portable Text lists ───────────────────────────────────────
+/* ── Portable Text ─────────────────────────────────────────────
  * Shared by every component that renders blocksToHtml() output inside
- * .portable-text. Low specificity on purpose: a component's own
- * :deep(ul) rule still wins where it needs a tighter layout. */
+ * .portable-text (DESIGN.md, "Portable Text rendering"). Low specificity
+ * on purpose: a component's own rule on its own class still wins. */
+.portable-text {
+  font-family: var(--font-serif);
+  font-size: var(--size-body);
+  line-height: var(--leading-prose);
+  color: var(--ink);
+  max-width: var(--prose-max-width);
+}
+.portable-text > :last-child { margin-bottom: 0; }
+.portable-text p {
+  margin: 0 0 var(--space-sm);
+  white-space: pre-line;
+}
+.portable-text h1,
+.portable-text h2,
+.portable-text h3,
+.portable-text h4,
+.portable-text h5,
+.portable-text h6 {
+  font-size: var(--size-h3);
+  font-weight: 600;
+  margin: var(--space-md) 0 var(--space-sm);
+}
+.portable-text blockquote {
+  margin: 0 0 var(--space-sm);
+  padding-left: var(--space-md);
+  border-left: 2px solid var(--rule);
+  color: var(--ink-soft);
+}
+.portable-text strong { font-weight: 600; }
+.portable-text a {
+  color: var(--ink);
+  text-decoration: underline;
+  text-decoration-color: var(--rule);
+  text-underline-offset: 3px;
+}
+.portable-text a:hover {
+  color: var(--faded-red);
+  text-decoration-color: var(--faded-red);
+}
+.portable-text a.external-link::after {
+  content: ' ↗';
+  font-size: 0.85em;
+  opacity: 0.6;
+}
+.portable-text pre.pre-table {
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 11px;
+  tab-size: 4;
+  white-space: pre-wrap;
+  overflow-x: auto;
+  background: color-mix(in srgb, var(--rule) 50%, var(--paper-raised));
+  border-radius: 3px;
+  padding: 8px 10px;
+  line-height: 1.65;
+  margin: 0 0 var(--space-sm);
+}
 .portable-text ul,
 .portable-text ol {
   margin: 0 0 var(--space-sm);
   padding-left: var(--space-lg);
 }
-.portable-text li { margin: var(--space-xs) 0; }
+.portable-text li {
+  margin: var(--space-xs) 0;
+  white-space: pre-line;
+}
 .portable-text li > ul,
 .portable-text li > ol { margin: var(--space-xs) 0 0; }
 

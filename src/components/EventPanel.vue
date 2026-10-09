@@ -332,62 +332,6 @@ function handleInternalLinks(e: MouseEvent) {
   margin: 0 0 var(--space-sm);
 }
 
-/* ── Portable text ────────────────────────────────────────── */
-.portable-text :deep(p) {
-  font-family: var(--font-serif);
-  font-size: var(--size-body);
-  line-height: 1.7;
-  color: var(--ink);
-  margin: 0 0 0.75em;
-  white-space: pre-wrap;
-}
-.portable-text :deep(p:last-child) { margin-bottom: 0; }
-.portable-text :deep(h1),
-.portable-text :deep(h2),
-.portable-text :deep(h3),
-.portable-text :deep(h4),
-.portable-text :deep(h5),
-.portable-text :deep(h6) {
-  font-family: var(--font-serif);
-  font-weight: 600;
-  color: var(--ink);
-  margin: 0.75em 0 0.4em;
-}
-.portable-text :deep(h1) { font-size: var(--size-h2); }
-.portable-text :deep(h2) { font-size: var(--size-h3); }
-.portable-text :deep(h3),
-.portable-text :deep(h4),
-.portable-text :deep(h5),
-.portable-text :deep(h6) { font-size: var(--size-body); }
-.portable-text :deep(blockquote) {
-  border-left: 3px solid var(--rule);
-  margin: 0.75em 0;
-  padding: 0.25em 0 0.25em 1em;
-  color: var(--muted);
-  font-style: italic;
-}
-.portable-text :deep(strong) { font-weight: 600; color: var(--ink); }
-.portable-text :deep(em)     { font-style: italic; }
-.portable-text :deep(u)      { text-decoration: underline; }
-.portable-text :deep(a.internal-link),
-.portable-text :deep(a.external-link) {
-  color: var(--faded-red);
-  text-decoration: underline;
-  text-underline-offset: 2px;
-  cursor: pointer;
-}
-.portable-text :deep(a.external-link::after) {
-  content: ' ↗';
-  font-size: 0.85em;
-  opacity: 0.6;
-}
-.portable-text :deep(li) {
-  font-family: var(--font-serif);
-  font-size: var(--size-body);
-  line-height: 1.7;
-  color: var(--ink);
-  white-space: pre-wrap;
-}
 
 /* ── Links ────────────────────────────────────────────────── */
 .link-list { display: flex; flex-direction: column; gap: var(--space-xs); }

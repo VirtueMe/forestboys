@@ -436,9 +436,6 @@ onMounted(async () => {
 .heading-level-3 { font-size: 18px; }
 
 .block-body {
-  font-size: 15px;
-  line-height: 1.75;
-  color: var(--ink);
   max-width: 720px;
   margin: 0 auto;
   text-align: left;
@@ -491,38 +488,10 @@ onMounted(async () => {
 
 .card-desc { margin: 0; }
 
-.card-desc :deep(p) {
-  margin: 0 0 0.75em;
-  line-height: 1.7;
-  font-size: 13px;
-  color: var(--muted);
-}
 
-.card-desc :deep(p:last-child) { margin-bottom: 0; }
-.card-desc :deep(strong) { font-weight: 500; color: var(--ink); }
-.card-desc :deep(u) { text-decoration: underline; }
-.card-desc :deep(em) { font-style: italic; }
 
-.card-desc :deep(a.internal-link),
-.card-desc :deep(a.external-link) {
-  color: var(--focus);
-  text-decoration: underline;
-  cursor: pointer;
-}
 
-.card-desc :deep(a.external-link::after) {
-  content: ' ↗';
-  font-size: 11px;
-  opacity: 0.6;
-}
 
-.card-desc :deep(blockquote) {
-  border-left: 3px solid var(--rule);
-  padding-left: 12px;
-  color: var(--muted);
-  font-style: italic;
-  margin: 0.5em 0;
-}
 
 .card-desc :deep(code) {
   font-family: monospace;

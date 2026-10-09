@@ -333,10 +333,6 @@ async function onRequestBundle(): Promise<void> {
   margin: 0 0 8px;
 }
 
-.portable-text :deep(p)  { margin: 0 0 8px; line-height: 1.55; color: var(--ink); }
-.portable-text :deep(h1),
-.portable-text :deep(h2),
-.portable-text :deep(h3) { margin: 16px 0 8px; color: var(--ink); }
 
 .link-list {
   display: flex;

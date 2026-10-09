@@ -420,12 +420,6 @@ onMounted(async () => {
   line-height: 1.3;
 }
 
-.block-body {
-  font-size: 14px;
-  line-height: 1.7;
-  color: var(--ink);
-}
-
 .block-card {
   background: var(--paper-raised);
   border: 1px solid var(--rule);
@@ -457,18 +451,7 @@ onMounted(async () => {
   line-height: 1.3;
 }
 
-.card-desc :deep(p) {
-  margin: 0 0 0.75em;
-  line-height: 1.7;
-  font-size: 13px;
-  color: var(--muted);
-}
 
-.card-desc :deep(p:last-child) { margin-bottom: 0; }
-.card-desc :deep(a) {
-  color: var(--focus);
-  text-decoration: underline;
-}
 
 .section-wrap { position: relative; }
 
