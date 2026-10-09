@@ -1,7 +1,7 @@
 <template>
   <nav class="nav">
     <div class="nav-inner">
-      <router-link to="/" class="logo">Milorg 2</router-link>
+      <router-link to="/" class="logo">{{ site.shortName }}</router-link>
 
       <!-- Desktop links -->
       <div class="links">
@@ -81,6 +81,7 @@
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAuth } from '../composables/useAuth.ts'
+import { useSiteSettings } from '../composables/useSiteSettings.ts'
 
 interface NavItem {
   label: string
@@ -102,6 +103,7 @@ const router = useRouter()
 const open = ref(false)
 const userMenuOpen = ref(false)
 const { user, logout } = useAuth()
+const { site } = useSiteSettings()
 const isAdmin = computed(() => user.value?.role === 'admin')
 
 watch(() => route.path, () => { open.value = false; userMenuOpen.value = false })

@@ -43,6 +43,8 @@ export async function replayPage(page: Page, target: PageTarget, options: Replay
     misses.push(`${route.request().method()} ${new URL(route.request().url()).pathname}`)
     return route.fulfill({ status: 404, json: { error: 'not recorded' } })
   })
+  // The site's name (#153) is not part of a page's content, so it is not recorded: every page gets the defaults.
+  await page.route('**/api/site-settings/site', route => route.fulfill({ json: { name: 'Milorg 2 Utforsker', shortName: 'Milorg 2' } }))
   await page.route('**/sanity/**', route => {
     const url = new URL(route.request().url())
     const hit = gets.get(url.pathname + url.search)
