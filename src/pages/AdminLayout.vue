@@ -87,6 +87,11 @@
           <div class="nav-group-label">Nettsted</div>
           <ul class="nav-list">
             <li>
+              <router-link to="/admin/site" class="nav-link nav-link-nested" active-class="active">
+                Innstillinger
+              </router-link>
+            </li>
+            <li>
               <router-link to="/admin/changelog" class="nav-link nav-link-nested" active-class="active">
                 Endringslogg
               </router-link>

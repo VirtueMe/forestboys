@@ -30,6 +30,7 @@ const AdminSourcesView         = () => import('../pages/AdminSourcesView.vue')
 const AdminRanksView           = () => import('../pages/AdminRanksView.vue')
 const AdminRolesView           = () => import('../pages/AdminRolesView.vue')
 const AdminChangelogView       = () => import('../pages/AdminChangelogView.vue')
+const AdminSiteView            = () => import('../pages/AdminSiteView.vue')
 const AdminUsersView           = () => import('../pages/AdminUsersView.vue')
 const AdminProposalListView    = () => import('../pages/AdminProposalListView.vue')
 const AdminProposalBundleView  = () => import('../pages/AdminProposalBundleView.vue')
@@ -82,6 +83,7 @@ const router = createRouter({
         { path: 'roles',                component: AdminRolesView },
         { path: 'users',                component: AdminUsersView },
         { path: 'changelog',            component: AdminChangelogView },
+        { path: 'site',                 component: AdminSiteView },
         { path: 'review',                                    component: ReviewView },
         { path: 'quality',                                   redirect: '/admin/quality/links' },
         { path: 'quality/links',                             component: AdminQualityLinksView },

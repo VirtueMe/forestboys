@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
-  CHANGELOG_DEFAULTS, parseChangelogSettings, parseCount, readChangelogSettings, writeChangelogSettings,
+  CHANGELOG_DEFAULTS, SITE_DEFAULTS, parseChangelogSettings, parseCount, parseName, parseSiteSettings,
+  readChangelogSettings, readSiteSettings, writeChangelogSettings, writeSiteSettings,
 } from './site-settings.ts'
 
 /** D1 stand-in: a key → value map answering the two statements the module uses. */
@@ -70,5 +71,53 @@ describe('writeChangelogSettings', () => {
     const db = fakeDb({})
     await writeChangelogSettings(db, { initial: 10, step: 4 })
     expect(db.writes).toEqual([['changelog.initial', '10'], ['changelog.step', '4']])
+  })
+})
+
+describe('parseName', () => {
+  it('trims and accepts 1..max characters', () => {
+    expect(parseName('  Motstandsbevegelsen ', 24)).toBe('Motstandsbevegelsen')
+    expect(parseName('x'.repeat(24), 24)).toBe('x'.repeat(24))
+  })
+
+  it('rejects empty, blank, too long and non-text', () => {
+    for (const v of ['', '   ', 'x'.repeat(25), 5, null, undefined]) expect(parseName(v, 24)).toBeNull()
+  })
+})
+
+describe('parseSiteSettings', () => {
+  it('needs both names', () => {
+    expect(parseSiteSettings({ name: ' A ', shortName: 'B' })).toEqual({ ok: true, value: { name: 'A', shortName: 'B' } })
+    expect(parseSiteSettings({ name: 'A' }).ok).toBe(false)
+    expect(parseSiteSettings({ name: 'A', shortName: ' ' }).ok).toBe(false)
+    expect(parseSiteSettings(null).ok).toBe(false)
+  })
+})
+
+describe('readSiteSettings', () => {
+  it('defaults to the current names when nothing is saved', async () => {
+    expect(await readSiteSettings(fakeDb({}))).toEqual(SITE_DEFAULTS)
+    expect(SITE_DEFAULTS).toEqual({ name: 'Milorg 2 Utforsker', shortName: 'Milorg 2' })
+  })
+
+  it('uses saved names and defaults the missing or blank one', async () => {
+    expect(await readSiteSettings(fakeDb({ 'site.name': 'Motstandsbevegelsen', 'site.shortName': 'MB' })))
+      .toEqual({ name: 'Motstandsbevegelsen', shortName: 'MB' })
+    expect(await readSiteSettings(fakeDb({ 'site.name': 'Motstandsbevegelsen' })))
+      .toEqual({ name: 'Motstandsbevegelsen', shortName: SITE_DEFAULTS.shortName })
+    expect(await readSiteSettings(fakeDb({ 'site.name': '  ' }))).toEqual(SITE_DEFAULTS)
+  })
+
+  it('falls back to defaults without a binding or before the migration has run', async () => {
+    expect(await readSiteSettings(undefined)).toEqual(SITE_DEFAULTS)
+    expect(await readSiteSettings(fakeDb({}, { failRead: true }))).toEqual(SITE_DEFAULTS)
+  })
+})
+
+describe('writeSiteSettings', () => {
+  it('upserts both keys', async () => {
+    const db = fakeDb({})
+    await writeSiteSettings(db, { name: 'Motstandsbevegelsen', shortName: 'MB' })
+    expect(db.writes).toEqual([['site.name', 'Motstandsbevegelsen'], ['site.shortName', 'MB']])
   })
 })
