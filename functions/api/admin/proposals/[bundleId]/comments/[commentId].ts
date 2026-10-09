@@ -5,6 +5,7 @@
 
 import { requireAdmin } from '~/_lib/require-admin.ts'
 import { actorOf, recordEvent } from '~/_lib/bundle-events.ts'
+import { refreshRow } from '~/_lib/bundle-index.ts'
 import { commentKey } from '~/_lib/bundle-comments.ts'
 import { COMMENT_ID_RE, type BundleComment } from '../../../../../../src/utils/bundleComments.ts'
 
@@ -34,6 +35,7 @@ export const onRequestDelete: PagesFunction<Env> = async ({ request, env, params
     await recordEvent(env.PROPOSALS, bundleId, actorOf(guard), {
       kind: 'comment-removed', commentId, scope: comment.type, ...(comment.entityId ? { entityId: comment.entityId } : {}),
     })
+    await refreshRow(env.PROPOSALS, bundleId)
     return json({ ok: true })
   } catch (e) {
     return json({ error: (e as Error).message }, 502)

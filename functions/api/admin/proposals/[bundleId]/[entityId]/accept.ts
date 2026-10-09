@@ -47,6 +47,7 @@ import { sourceIndexKey } from '~/_lib/bundle-origin.ts'
 import { bundleCounts } from '../../../../../../src/utils/bundleStatus.ts'
 import { refusalsText } from '../../../../../../src/utils/refusalText.ts'
 import { actorOf, recordEvent } from '~/_lib/bundle-events.ts'
+import { refreshRow } from '~/_lib/bundle-index.ts'
 
 interface Env extends Neo4jEnv {
   SESSION_SECRET: string
@@ -106,6 +107,7 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env, params }
     // Will not go away by reloading: set the entity aside, with the reason, so the bundle does not count it as waiting.
     const after = await setAside(env, bundleId, entityId, driftedProps)
     await recordEvent(env.PROPOSALS, bundleId, actor, { kind: 'refused', entityId, why: `${refusalsText(driftedProps)} Satt til side.` })
+    await refreshRow(env.PROPOSALS, bundleId)
     return json({ kind: 'drift', driftedBlocks: drifted, driftedProps, setAside: true, bundleClosed: bundleCounts(after.entities).pending === 0 }, 409)
   }
   if (drifted.length) {
@@ -159,6 +161,7 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env, params }
   // 7. Index pruning.
   await indexRemove(env, `proposals/by-entity/${entityId}/index.json`, bundleId)
   await recordEvent(env.PROPOSALS, bundleId, actor, { kind: 'accepted', entityId, message, summary: entityRef.opSummary })
+  await refreshRow(env.PROPOSALS, bundleId)
 
   const remainingPending = bundleCounts(updatedManifest.entities).pending
   const bundleClosed     = remainingPending === 0

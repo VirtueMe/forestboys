@@ -235,7 +235,7 @@ proposals/bundles/<bundleId>/
   comments/<id>.json                       decided   one object per comment               (#186)
   events/<ts>-<kind>-<rand>.json           built     one object per event                 (#190)
 
-proposals/index/<bundleId>.json            proposed  one row per bundle for the list      (#184)
+proposals/index/<bundleId>.json            built     one row per bundle for the list, in the metadata (#184)
 proposals/archive/<bundleId>.json          built     an archived bundle, whole, one object          (#188)
 proposals/purged/<bundleId>.json           built     who purged an archived bundle for good, when, why (#188)
 ```
@@ -359,21 +359,42 @@ Code: `functions/_lib/bundle-archive.ts`; the shape, metadata and budget in `src
 - Sending a bundle again after it was archived makes a new bundle with the same id; archiving that one again overwrites the
   earlier archive object. Rare, and accepted.
 
-### The list's index (proposed, open, #184)
+### The list's index and its filters (decided and built, #184)
 
-The list endpoint must stop listing every payload object and reading every manifest. It needs one **row per bundle**: id, status,
-origin, outline, created, counts, the kinds of entity, number of comments, archived, last event. A single shared `index/bundles.json`
-would be rewritten by every accept, so two editors on *different* bundles would collide. Prefer the rule above: **one small object
-per bundle**, `proposals/index/<bundleId>.json`, with the row in its custom metadata, so one listing returns the whole list, which
-the endpoint then filters, sorts and pages. The row is **derived from the manifest** (and the counts of comments and events), so
-it can always be rebuilt, and it is recomputed after every change to the bundle. Open: whether two editors on the *same* bundle
-need a retry on the row, or whether recomputing after the write is enough.
+The list used to list every object under `proposals/bundles/` (the payloads, the intent locks…) and read each manifest in turn.
+It now reads **one index object per bundle**, `proposals/index/<bundleId>.json`, whose **custom metadata is the row** the list
+shows (`src/utils/bundleIndex.ts`: id, summary, created, last change, status, origin, counts, comments, entity kinds); one
+listing returns every row, a call per thousand bundles, and **no object is read**. Code: `functions/_lib/bundle-index.ts`.
+
+- **The row is derived** from the manifest and the comments, so it can always be rebuilt, and it is recomputed after every
+  change to a bundle: ingest and a resend, accept, accept-all, deny, a refusal that sets an entity aside, a comment added or
+  removed, a parent unblocked; archive removes it and restore brings it back. Two editors on the same bundle both recompute
+  from the bundle as it is, so recomputing after the write is enough: no retry loop. A refresh that fails is logged and the
+  action it follows is not failed; the row is wrong until the next change or a rebuild.
+- **Rebuild:** `POST /api/admin/proposals/reindex` («Bygg indeksen på nytt» at the foot of the list) reads each manifest and
+  rewrites every row, and drops the row of a bundle that is gone. It is the one path that costs a manifest read per bundle, so it
+  is an explicit act. An **empty index is built once, by the first load** (the bundles from before the index).
+- **The question** is the URL's query, so a link can be shared and the back button works: `status` (`pending`, the default, is
+  the review queue; `blocked`, `closed`, `all`), `origin` (outline, package, sanity), `kind` (an entity type in it), `q`, `commented=1`,
+  `sort` (`newest`, `oldest`, `pending` = most waiting, `touched` = last changed), `limit` (10, 20 or 40) and `offset`. The
+  answer is `{ bundles, total, facets }`; the facets are the counts by status and the kinds there are, for the tabs and the menus.
+  Filtering, sorting and paging are done in the Worker over the rows. A wrong or missing parameter is the default, so an old link opens.
+- **The text finds** the summary, the bundle id, the origin and the outline. **Not the entity ids:** a bundle has up to hundreds,
+  and the metadata is 2 KB. Finding an entity in a bundle is done on the bundle's page.
+- **Archived bundles are not in the index:** Arkiv is a list of its own (#188), from the archive objects' metadata.
+- **The bundle page** filters and pages its entities in the browser (the manifest has them all): the tabs by status with counts,
+  a text on the entity id, the type, 10 / 20 / 40 a page. It **opens on what still waits**, and on everything when nothing does.
+  The bar shows only above 10 entities.
+- **Cost:** the list is `ceil(bundles / 1000)` R2 calls whatever is in the bundles (a test counts them); it was a listing of every
+  object plus a read per bundle. Accept, deny and the others add one read, one listing and one write for their row. Cloudflare's
+  limit on the operations of one request, and whether R2 calls count against it on this plan, has **not** been checked
+  against the account; the numbers above are what the code does, and the archive refuses a bundle that would need more than 950.
 
 ### Open points
 
 Decided by us while building, with the simplest choice first, and revisited when the use of the prototype shows it is wrong:
 
-- Which filters the list gets (#184), and whether closed bundles are hidden by default.
+- Which filters the list gets (#184) is decided above (the review queue by default; closed ones are one tab away), and revised on use.
 - Who may comment, edit and delete a comment (#186), and who may purge an archived bundle (#188).
 - Whether the bundles already in production (the 28 of #158) get a first event written from their manifest, or start empty.
 

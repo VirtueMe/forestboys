@@ -26,6 +26,7 @@ import { requireAdmin } from '~/_lib/require-admin.ts'
 import { sourceIndexKey } from '~/_lib/bundle-origin.ts'
 import { bundleCounts } from '../../../../../../src/utils/bundleStatus.ts'
 import { actorOf, recordEvent } from '~/_lib/bundle-events.ts'
+import { refreshRow } from '~/_lib/bundle-index.ts'
 import {
   ENTITY_ID_RE,
   indexRemove,
@@ -112,6 +113,7 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env, params }
   // 7. Index pruning.
   await indexRemove(env, `proposals/by-entity/${entityId}/index.json`, bundleId)
   await recordEvent(env.PROPOSALS, bundleId, actor, { kind: 'denied', entityId, reason })
+  await refreshRow(env.PROPOSALS, bundleId)
 
   const remainingPending = bundleCounts(updatedManifest.entities).pending
   const bundleClosed     = remainingPending === 0

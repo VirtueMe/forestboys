@@ -34,6 +34,7 @@ import { sourceIndexKey } from '~/_lib/bundle-origin.ts'
 import { bundleCounts } from '../../../../../src/utils/bundleStatus.ts'
 import { refusalsText } from '../../../../../src/utils/refusalText.ts'
 import { actorOf, recordEvent } from '~/_lib/bundle-events.ts'
+import { refreshRow } from '~/_lib/bundle-index.ts'
 
 interface Env extends Neo4jEnv {
   SESSION_SECRET: string
@@ -144,6 +145,8 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env, params }
     accepted: results.filter((r) => r.status === 'accepted').map((r) => r.entityId),
     refused:  results.filter((r) => r.status === 'failed').map((r) => ({ entityId: r.entityId, why: r.reason ?? 'ukjent grunn' })),
   })
+
+  await refreshRow(env.PROPOSALS, bundleId)
 
   // Final manifest read so the caller sees the post-state.
   const finalObj      = await env.PROPOSALS.get(`proposals/bundles/${bundleId}/manifest.json`)
