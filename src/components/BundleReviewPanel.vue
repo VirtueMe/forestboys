@@ -2,7 +2,10 @@
   <section class="bundle">
     <p v-if="bundle.error.value" class="error">
       {{ bundle.error.value }}
-      <RouterLink v-if="bundle.notFound.value" to="/admin/proposals">Til listen over forslag</RouterLink>
+      <template v-if="bundle.notFound.value">
+        <RouterLink to="/admin/proposals">Til listen over forslag</RouterLink> ·
+        <RouterLink :to="`/admin/proposals/archive/${encodeURIComponent(bundleId)}`">Se i Arkiv</RouterLink>
+      </template>
     </p>
     <p v-else-if="bundle.loading.value" class="muted">Laster…</p>
 
@@ -33,7 +36,7 @@
           {{ acceptingAll ? 'Godkjenner…' : 'Godkjenn alle' }}
         </button>
         <button type="button" class="bundle-delete" :disabled="deleting" @click="onDelete">
-          {{ deleting ? 'Sletter…' : 'Slett' }}
+          {{ deleting ? 'Arkiverer…' : 'Arkiver' }}
         </button>
       </header>
       <p class="summary">{{ manifest.summary }}</p>
@@ -278,10 +281,15 @@ async function onAcceptAll(): Promise<void> {
 
 const deleting = ref(false)
 async function onDelete(): Promise<void> {
-  if (!window.confirm('Slett denne bundle? Alle ops i den forsvinner.')) return
+  const reason = window.prompt('Hvorfor arkiverer du denne bundlen? Den forsvinner fra listene, men ligger i Arkiv, og kan gjenopprettes derfra hvis ingenting i den er godkjent.')?.trim()
+  if (!reason) return
   deleting.value = true
   try {
-    const res = await authFetch(`/api/admin/proposals/${encodeURIComponent(props.bundleId)}`, { method: 'DELETE' })
+    const res = await authFetch(`/api/admin/proposals/${encodeURIComponent(props.bundleId)}`, {
+      method:  'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({ reason }),
+    })
     if (!res.ok) {
       const body = await res.json().catch(() => ({})) as { error?: string }
       window.alert(body.error ?? `HTTP ${res.status}`)

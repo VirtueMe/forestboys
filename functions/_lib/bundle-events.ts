@@ -68,9 +68,9 @@ export async function writeEvent(
 
 /** `writeEvent` that logs a failure instead of throwing it. */
 export async function recordEvent(
-  bucket: R2Bucket, bundleId: string, actor: EventActor, body: BundleEventBody,
+  bucket: R2Bucket, bundleId: string, actor: EventActor, body: BundleEventBody, at?: string,
 ): Promise<void> {
-  try { await writeEvent(bucket, bundleId, actor, body) }
+  try { await writeEvent(bucket, bundleId, actor, body, at) }
   catch (e) { console.error(`event ${body.kind} for ${bundleId} not recorded:`, (e as Error).message) }
 }
 
@@ -93,14 +93,3 @@ export async function listEvents(bucket: R2Bucket, bundleId: string): Promise<Bu
   }))
   return events.filter((e): e is BundleEvent => e !== null)
 }
-
-/** What is kept of a deleted bundle until the archive (#188) keeps all of it: who, when, and what it held. */
-export interface DeletedRecord {
-  bundleId:  string
-  summary:   string
-  deletedAt: string
-  actor:     EventActor
-  entities:  { entityId: string; status: string }[]
-}
-
-export const deletedKey = (bundleId: string) => `proposals/deleted/${bundleId}.json`

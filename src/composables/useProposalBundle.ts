@@ -149,7 +149,7 @@ export function useProposalBundle(bundleId: string) {
       const res = await authFetch(`/api/admin/proposals/${encodeURIComponent(bundleId)}`)
       if (res.status === 404) {
         notFound.value = true
-        throw new Error('Bundlen finnes ikke (slettet?)')
+        throw new Error('Bundlen finnes ikke (arkivert?)')
       }
       if (!res.ok) throw new Error(`HTTP ${res.status}`)
       const body = await res.json() as BundleResponse

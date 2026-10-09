@@ -11,8 +11,10 @@
  */
 
 import { requireAdmin } from '~/_lib/require-admin.ts'
-import { bundleChannel, sourceIndexKey, type BundleOriginFields, type DerivedFrom } from '~/_lib/bundle-origin.ts'
-import { actorOf, deletedKey, listEvents, withCurrentNames, type DeletedRecord } from '~/_lib/bundle-events.ts'
+import { bundleChannel, type BundleOriginFields, type DerivedFrom } from '~/_lib/bundle-origin.ts'
+import { actorOf, listEvents, withCurrentNames } from '~/_lib/bundle-events.ts'
+import { ArchiveError, archiveBundle } from '~/_lib/bundle-archive.ts'
+import { validateReason } from '../../../../src/utils/bundleArchive.ts'
 import { listCommentRefs } from '~/_lib/bundle-comments.ts'
 import { countComments } from '../../../../src/utils/bundleComments.ts'
 
@@ -81,55 +83,31 @@ export const onRequestGet: PagesFunction<Env> = async ({ request, env, params })
 }
 
 /**
- * DELETE /api/admin/proposals/<bundleId> — remove a bundle entirely.
+ * DELETE /api/admin/proposals/<bundleId> — «Slett» archives the bundle (#188).
  *
- * Drops manifest + every per-entity payload, then prunes the bundleId
- * from the per-entity and source indices. Intent locks under the
- * bundle are also removed. Used for cleanup when a bundle is stale or
- * the bot's output was bad enough that Jan wants it gone instead of
- * denying entity-by-entity.
+ * Body: `{ reason }`, written down so the next editor knows why. The whole bundle (manifest, payloads, the accepted / denied
+ * records, the comments and the log) is kept as one object under proposals/archive/, with who and when, and leaves the lists and
+ * the open-bundle indexes as a deleted one always did. It can be looked at in the archive and, if nothing in it was accepted,
+ * restored. Admin-session-gated.
  */
 export const onRequestDelete: PagesFunction<Env> = async ({ request, env, params }) => {
   const guard = await requireAdmin(request, env)
   if (guard instanceof Response) return guard
-  const actor = actorOf(guard)
   if (!env.PROPOSALS) return json({ error: 'PROPOSALS R2 binding missing' }, 500)
 
   const bundleId = decodeURIComponent(String(params.bundleId))
   if (!BUNDLE_ID_RE.test(bundleId)) {
     return json({ error: 'bundleId must match `bundle:<channel>:<isoTimestamp>`' }, 400)
   }
+  const reason = validateReason(await request.json().catch(() => null))
+  if (typeof reason !== 'string') return json(reason, 400)
 
   try {
-    const manifestKey = `proposals/bundles/${bundleId}/manifest.json`
-    const manifestObj = await env.PROPOSALS.get(manifestKey)
+    const manifestObj = await env.PROPOSALS.get(`proposals/bundles/${bundleId}/manifest.json`)
     if (!manifestObj) return json({ error: 'Bundle not found' }, 404)
     const manifest = await manifestObj.json<BundleManifest>()
 
-    // The bundle's own events go with it. What is kept until the archive (#188) keeps it all: who, when, what it held.
-    const record: DeletedRecord = {
-      bundleId, summary: manifest.summary, deletedAt: new Date().toISOString(), actor,
-      entities: manifest.entities.map((e) => ({ entityId: e.entityId, status: e.status })),
-    }
-    await env.PROPOSALS.put(deletedKey(bundleId), JSON.stringify(record), { httpMetadata: { contentType: 'application/json' } })
-
-    // Prune per-entity indices first so the bundle stops appearing in
-    // open-bundle lists even if the rest of the cleanup races.
-    for (const ent of manifest.entities) {
-      await indexRemove(env.PROPOSALS, `proposals/by-entity/${ent.entityId}/index.json`, bundleId)
-    }
-    await indexRemove(env.PROPOSALS, sourceIndexKey(manifest), bundleId)
-
-    // Delete payloads + manifest + intent locks under the bundle prefix.
-    const prefix = `proposals/bundles/${bundleId}/`
-    let cursor: string | undefined
-    const keys: string[] = []
-    do {
-      const listing = await env.PROPOSALS.list({ prefix, cursor })
-      for (const obj of listing.objects) keys.push(obj.key)
-      cursor = listing.truncated ? listing.cursor : undefined
-    } while (cursor)
-    if (keys.length) await env.PROPOSALS.delete(keys)
+    const summary = await archiveBundle(env.PROPOSALS, bundleId, actorOf(guard), reason)
 
     if (env.BUNDLE_EVENTS) {
       try {
@@ -144,23 +122,11 @@ export const onRequestDelete: PagesFunction<Env> = async ({ request, env, params
       }
     }
 
-    return json({ ok: true, deletedKeys: keys.length })
+    return json({ ok: true, archived: summary })
   } catch (e) {
+    if (e instanceof ArchiveError) return json({ error: e.message }, e.status)
     return json({ error: (e as Error).message }, 502)
   }
-}
-
-async function indexRemove(bucket: R2Bucket, key: string, bundleId: string): Promise<void> {
-  const existing = await bucket.get(key)
-  if (!existing) return
-  const etag    = existing.httpEtag.replace(/^"(.*)"$/, '$1')
-  const index   = await existing.json<{ bundleIds: string[] }>()
-  const next    = { bundleIds: index.bundleIds.filter((b) => b !== bundleId) }
-  if (next.bundleIds.length === index.bundleIds.length) return
-  await bucket.put(key, JSON.stringify(next), {
-    httpMetadata: { contentType: 'application/json' },
-    onlyIf:       { etagMatches: etag },
-  })
 }
 
 function json(data: unknown, status = 200): Response {

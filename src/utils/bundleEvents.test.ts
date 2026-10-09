@@ -46,6 +46,11 @@ describe('eventText', () => {
     expect(eventEntity(ev({ kind: 'commented', commentId: 'c1', scope: 'entity', entityId: 'Unit:a' }))).toBe('Unit:a')
     expect(eventEntity(ev({ kind: 'commented', commentId: 'c1', scope: 'bundle' }))).toBeNull()
   })
+  it('says that a bundle was archived, and why, and that it came back', () => {
+    expect(eventText(ev({ kind: 'archived', reason: 'Testbundle' }))).toBe('Arkiverte bundlen: «Testbundle»')
+    expect(eventText(ev({ kind: 'restored' }))).toBe('Gjenopprettet fra arkivet')
+    expect(eventText(ev({ kind: 'restored', reason: 'Rolf trenger den likevel' }))).toBe('Gjenopprettet fra arkivet: «Rolf trenger den likevel»')
+  })
   it('puts accept-all in one line, with what the guard refused', () => {
     expect(eventText(ev({ kind: 'accepted-all', accepted: ['Unit:a', 'Unit:b'], refused: [{ entityId: 'Unit:c', why: 'Finnes allerede i grafen.' }] })))
       .toBe('Godkjente alle: godkjente 2 enheter, 1 ble ikke godkjent: Unit:c (Finnes allerede i grafen.)')
