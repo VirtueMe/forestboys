@@ -179,18 +179,20 @@ onBeforeUnmount(() => {
    data-level (1, 2, …) and data-list-index (the item's number within its list: it restarts after a
    paragraph, or a list of the other kind, as the page does when it makes a new <ol>). Markers and
    indent are drawn here: indent per level, bullets that change with the level, plain numbers like
-   the page's nested <ol>s. */
-.pt-editable [data-list-item] { position: relative; padding-left: 1.6em; }
-.pt-editable [data-list-item][data-level="2"] { padding-left: 3.2em; }
-.pt-editable [data-list-item][data-level="3"] { padding-left: 4.8em; }
+   the page's nested <ol>s. The marker box fits "30." on one line (nowrap), and the padding sits
+   0.4em past it. */
+.pt-editable [data-list-item] { position: relative; padding-left: 2em; }
+.pt-editable [data-list-item][data-level="2"] { padding-left: 3.6em; }
+.pt-editable [data-list-item][data-level="3"] { padding-left: 5.2em; }
 .pt-editable [data-list-item][data-level="4"],
-.pt-editable [data-list-item][data-level="5"] { padding-left: 6.4em; }
+.pt-editable [data-list-item][data-level="5"] { padding-left: 6.8em; }
 
 .pt-editable [data-list-item]::before {
   position: absolute;
   left: 0;
-  width: 1.2em;
+  width: 1.6em;
   text-align: right;
+  white-space: nowrap;
   color: var(--muted);
 }
 .pt-editable [data-list-item][data-level="2"]::before { left: 1.6em; }
