@@ -75,7 +75,7 @@ export default defineConfig(({ mode }) => {
       vueDevTools(),
       VitePWA({
         registerType: 'autoUpdate',
-        manifest: false, // we supply public/manifest.json
+        manifest: false, // served by functions/manifest.json.ts, from the site-name setting
         workbox: {
           globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
           // The app is one 2.4 MB entry chunk: rolldown 1.x no longer splits the
