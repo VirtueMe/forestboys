@@ -235,9 +235,9 @@ proposals/bundles/<bundleId>/
   comments/<id>.json                       decided   one object per comment               (#186)
   events/<ts>-<kind>-<rand>.json           built     one object per event                 (#190)
 
-proposals/deleted/<bundleId>.json          built     who deleted a bundle, when, what it held; the stub of the archive (#190)
 proposals/index/<bundleId>.json            proposed  one row per bundle for the list      (#184)
-proposals/archive/<bundleId>.json          proposed  a deleted bundle, whole              (#188)
+proposals/archive/<bundleId>.json          built     an archived bundle, whole, one object          (#188)
+proposals/purged/<bundleId>.json           built     who purged an archived bundle for good, when, why (#188)
 ```
 
 `history/<entityId>/<ts>-<kind>.json` stays where it is: it is the log of what changed *an entity* and outlives the bundle. The
@@ -303,8 +303,7 @@ Norwegian text of each event in `src/utils/bundleEvents.ts`. `GET /api/admin/pro
 - **A resend leaves the log alone** and adds `resent`, with the counts of the statuses it replaced. A `refused` event is written
   for every refusal: the entity exists or a property changed (the entity is then set aside, #185), a block drifted, a link in the
   proposal leads nowhere. «Godkjenn alle» writes one `accepted-all` with the lists.
-- **Delete** erases the events with the bundle, so it writes `proposals/deleted/<bundleId>.json` first: who, when, the summary and
-  the entities with their statuses. It is the stub of the archive (#188), which keeps the whole bundle, log included.
+- **Delete** archives the bundle with its log (#188), so the log is part of the archive and is shown there, read-only.
 - **Shown** as «Historikk» on the bundle page and, per entity, under its row. Not yet in the preview window.
 - **Bundles that were in R2 before the log start empty.** The page says so; nothing is written from their manifests.
 
@@ -323,12 +322,42 @@ never become a second source of truth that can disagree with the manifest.
   deny it (`deny` takes `pending` and `drifted`), which is how it is put away for good. A block drift (`modify-block` sha) is
   **not** set aside: reloading the page and looking again is the answer there.
 
-### Archive (proposed, #188)
+### Archive (decided and built, #188)
 
-«Slett» becomes archive: the bundle leaves the lists and the by-entity / by-source indexes as now, but is kept, with who, when and
-why. R2 cannot move objects, and a bundle can have hundreds (the biggest of #158 has 287 payloads), so the archive is **one
-object** with the manifest, the payloads, the `accepted/` and `denied/` records, the comments and the events in it: written first,
-then the originals deleted. A bundle that was not accepted can be restored. A purge for good is a separate, explicit act.
+«Slett» became **«Arkiver»**: the bundle leaves the lists and the by-entity / by-source indexes as before, but is kept, with who,
+when and why. R2 cannot move objects, and a bundle can have hundreds (the biggest of #158 has 287 payloads), so the archive is
+**one object**, `proposals/archive/<bundleId>.json`: the summary below and `objects`, every object that was under the bundle's
+prefix (manifest, payloads, `accepted/` and `denied/` records, comments with their metadata, the log) by its path below the prefix.
+Code: `functions/_lib/bundle-archive.ts`; the shape, metadata and budget in `src/utils/bundleArchive.ts`.
+
+- **Order, because there is no transaction:** whether it fits is checked first (a refusal writes nothing), then the reason's
+  comment and the `archived` event are written (so the archived bundle says it), the archive object is written, the bundle leaves the indexes, and only then are the originals deleted. A failure half way leaves a bundle that is
+  both archived and still there, and a second try finishes it. A restore writes the manifest last and removes the archive object
+  last, for the same reason.
+- **The reason is required** (at least 4 characters; the page asks) and is **also written as a comment on the bundle**
+  («Arkivert: …»), before the snapshot, so it is in the bundle's thread, goes into the archive and is still there after a restore;
+  the log has a pointer for it and the `archived` event with the reason, in that order. The reason stays on the archive object too:
+  the list of the archive shows it from the metadata without reading a comment. The object's custom metadata is the summary of the row
+  (id, summary, created, archived at / by, reason, status, counts, restorable; the long texts cut to stay under R2's 2 KB), so
+  **one listing gives the whole archive** with no archived bundle read (`GET /api/admin/proposals/archive`). The name of who
+  archived it is read by id when shown, like the log's.
+- **Read** at `/admin/proposals/archive/<bundleId>`: read-only, with the entities, the comments and the log
+  (`GET …/archive/<bundleId>`).
+- **Restore** (`POST …/archive/<bundleId>/restore`, «Gjenopprett») only for a bundle **nothing of which was accepted**: an
+  accepted entity's ops are in the graph, so that bundle stays an archived record. 409 if a bundle with the same id is there
+  already. The objects come back as they were (the comments' metadata too), the pending entities are on the open-bundle lists
+  again, and the log gets `restored`. An **optional reason** (the page asks; cancelling stops, an empty answer restores without one)
+  is written like the archive's: a comment «Gjenopprettet: …» on the bundle, and the reason on the `restored` event.
+- **Purge** (`DELETE …/archive/<bundleId>`, «Fjern for godt…», with a reason) removes the archive object for good. A short record
+  stays, `proposals/purged/<bundleId>.json`: the summary, who archived it and why, who purged it and why. Nothing is purged
+  by itself: no retention, the storage is small. The confirmation says what is lost.
+- **Bounded:** archive and restore make about one operation per object and two per pending entity (its indexes): the biggest
+  bundle of #158, all 287 entities pending, is under 900. A bundle that would need more than **950** is refused, with the number
+  (413), before anything changes. A test counts the operations.
+- **Which bundles can be archived:** any (pending, blocked, refused, accepted); an accepted one only to the archive, never a purge
+  except through the archive.
+- Sending a bundle again after it was archived makes a new bundle with the same id; archiving that one again overwrites the
+  earlier archive object. Rare, and accepted.
 
 ### The list's index (proposed, open, #184)
 

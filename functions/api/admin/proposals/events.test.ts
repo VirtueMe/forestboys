@@ -90,16 +90,17 @@ describe('what an action leaves in the log (#190)', () => {
     expect(events.map(e => 'name' in e.actor && e.actor.name).sort()).toEqual(['Jan', 'Rolf'])
   })
 
-  it('delete: the log goes with the bundle, and a record of who deleted it and what it held stays', async () => {
+  it('delete archives: the log goes into the archive with who, when and why, and the bundle leaves its prefix', async () => {
     const { bucket, env } = setup()
     await deny(ctx(env, 'Unit:a', post({ reason: 'feil enhet helt' })))
     expect(bucket.keys(key('events/'))).toHaveLength(1)
-    const res = await bundleApi.onRequestDelete(ctx(env, undefined, new Request('https://site.example/x', { method: 'DELETE' })))
+    const res = await bundleApi.onRequestDelete(ctx(env, undefined, new Request('https://site.example/x', { method: 'DELETE', body: JSON.stringify({ reason: 'Testbundle, ikke i bruk' }) })))
     expect(res.status).toBe(200)
     expect(bucket.keys(`proposals/bundles/${B}/`)).toEqual([])
-    expect(bucket.json(`proposals/deleted/${B}.json`)).toMatchObject({
-      bundleId: B, summary: 'Test', actor: { name: 'Rolf' }, entities: [{ entityId: 'Unit:a', status: 'denied' }, { entityId: 'Unit:b', status: 'pending' }],
-    })
+    const archive = bucket.json(`proposals/archive/${B}.json`) as { archivedBy: string; archivedById: string; reason: string; objects: Record<string, { value: Record<string, unknown> }> }
+    expect(archive).toMatchObject({ bundleId: B, summary: 'Test', archivedBy: 'Rolf', archivedById: 'u-rolf', reason: 'Testbundle, ikke i bruk' })
+    const kinds = Object.entries(archive.objects).filter(([k]) => k.startsWith('events/')).map(([, o]) => o.value.kind).sort()
+    expect(kinds).toEqual(['archived', 'commented', 'denied'])
   })
 
   it('the bundle page gets the log with the bundle', async () => {

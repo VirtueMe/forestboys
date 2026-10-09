@@ -33,6 +33,8 @@ const AdminChangelogView       = () => import('../pages/AdminChangelogView.vue')
 const AdminUsersView           = () => import('../pages/AdminUsersView.vue')
 const AdminProposalListView    = () => import('../pages/AdminProposalListView.vue')
 const AdminProposalBundleView  = () => import('../pages/AdminProposalBundleView.vue')
+const AdminProposalArchiveView = () => import('../pages/AdminProposalArchiveView.vue')
+const AdminProposalArchivedBundleView = () => import('../pages/AdminProposalArchivedBundleView.vue')
 const AdminProposalEntityPreview = () => import('../pages/AdminProposalEntityPreview.vue')
 
 const MAP_PARAMS = ['lat', 'lng', 'z', 'orgs', 'dists', 'q', 'si']
@@ -84,6 +86,8 @@ const router = createRouter({
         { path: 'quality',                                   redirect: '/admin/quality/links' },
         { path: 'quality/links',                             component: AdminQualityLinksView },
         { path: 'proposals',                                 component: AdminProposalListView },
+        { path: 'proposals/archive',                         component: AdminProposalArchiveView },
+        { path: 'proposals/archive/:bundleId',                component: AdminProposalArchivedBundleView },
         { path: 'proposals/:bundleId',                       component: AdminProposalBundleView },
         { path: 'proposals/:bundleId/preview/:kind/:slug',   component: AdminProposalEntityPreview },
       ],

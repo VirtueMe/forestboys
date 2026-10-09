@@ -2,11 +2,11 @@
   <section class="proposal-list-page">
     <header class="page-head">
       <h1>Forslag</h1>
-      <p class="muted">Alle bundles i R2 — nyeste øverst.</p>
+      <p class="muted">Alle bundles i R2 — nyeste øverst. <RouterLink to="/admin/proposals/archive">Arkiv</RouterLink></p>
     </header>
 
     <p v-if="deletedId" class="notice" role="status">
-      Bundle slettet: <code>{{ deletedId }}</code>
+      Bundle arkivert: <code>{{ deletedId }}</code>. Den ligger i <RouterLink to="/admin/proposals/archive">Arkiv</RouterLink> og kan gjenopprettes derfra.
     </p>
 
     <p v-if="error" class="error">{{ error }}</p>

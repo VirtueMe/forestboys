@@ -145,10 +145,15 @@ describe('removing a comment', () => {
     expect((await call(removal.onRequestDelete, env, del, { commentId: '../manifest' })).status).toBe(400)
   })
 
-  it('goes with the bundle when it is deleted', async () => {
+  it('goes into the archive with the bundle when it is deleted', async () => {
     const { bucket, env } = setup()
     await call(comments.onRequestPost, env, post({ type: 'bundle', text: 'x' }))
-    await call(bundleApi.onRequestDelete, env, { request: new Request('https://site.example/x', { method: 'DELETE' }) })
+    await call(bundleApi.onRequestDelete, env, { request: new Request('https://site.example/x', { method: 'DELETE', body: JSON.stringify({ reason: 'Testbundle' }) }) })
     expect(bucket.keys(key(''))).toEqual([])
+    const archive = bucket.json(`proposals/archive/${B}.json`) as { objects: Record<string, { value: { text?: string }; customMetadata?: Record<string, string> }> }
+    const kept = Object.entries(archive.objects).filter(([k]) => k.startsWith('comments/'))
+    // the one written here, and the reason for archiving, which is a comment too
+    expect(kept.map(([, o]) => o.value.text).sort()).toEqual(['Arkivert: Testbundle', 'x'])
+    expect(kept[0][1]).toMatchObject({ customMetadata: { type: 'bundle' } })
   })
 })

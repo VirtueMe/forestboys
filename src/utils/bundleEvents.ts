@@ -21,6 +21,8 @@ export type BundleEventBody =
   | { kind: 'refused';      entityId: string; why: string }
   | { kind: 'accepted-all'; accepted: string[]; refused: { entityId: string; why: string }[] }
   // A pointer to a comment, never its text: a comment can be removed without rewriting the history (#186).
+  | { kind: 'archived';        reason: string }
+  | { kind: 'restored';        reason?: string }
   | { kind: 'commented';       commentId: string; scope: 'bundle' | 'entity'; entityId?: string }
   | { kind: 'comment-removed'; commentId: string; scope: 'bundle' | 'entity'; entityId?: string }
 
@@ -67,6 +69,10 @@ export function eventText(e: BundleEvent): string {
       return `Avviste ${e.entityId}: «${e.reason}»`
     case 'refused':
       return `Kunne ikke godkjenne ${e.entityId}: ${e.why}`
+    case 'archived':
+      return `Arkiverte bundlen: «${e.reason}»`
+    case 'restored':
+      return `Gjenopprettet fra arkivet${e.reason ? `: «${e.reason}»` : ''}`
     case 'commented':
       return e.scope === 'entity' ? `Kommenterte ${e.entityId}` : 'Kommenterte bundlen'
     case 'comment-removed':
