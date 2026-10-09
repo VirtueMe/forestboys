@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.8.0](https://github.com/VirtueMe/forestboys/compare/v0.7.0...v0.8.0) (2026-10-09)
+
+
+### Features
+
+* **admin:** the site's name is a setting an admin can change ([f7f19ad](https://github.com/VirtueMe/forestboys/commit/f7f19ad47c521f46aaa07ea80b77f1eff3c34a07))
+* **design:** use the flag favicon, PWA icons and a 404 page ([16f8084](https://github.com/VirtueMe/forestboys/commit/16f80840b46fb4c32eb3338d394bb9d8efb0c6e2)), closes [#105](https://github.com/VirtueMe/forestboys/issues/105)
+
+
+### Bug fixes
+
+* **design:** centre the 404 art and give the button room ([5e17bf2](https://github.com/VirtueMe/forestboys/commit/5e17bf24bc47bc417f82f83fff1ebb2b1676a6e1)), closes [#105](https://github.com/VirtueMe/forestboys/issues/105)
+
 ## [0.7.0](https://github.com/VirtueMe/forestboys/compare/v0.6.0...v0.7.0) (2026-10-09)
 
 
