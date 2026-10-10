@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.10.0](https://github.com/VirtueMe/forestboys/compare/v0.9.2...v0.10.0) (2026-10-10)
+
+
+### Features
+
+* **middleware:** answer 404 for unknown entity pages ([b0cf2c5](https://github.com/VirtueMe/forestboys/commit/b0cf2c5708d2aa079fb0a64cc071fe51f0a85cd4)), closes [#220](https://github.com/VirtueMe/forestboys/issues/220)
+* **routing:** drop the 404.html redirect ([efd1355](https://github.com/VirtueMe/forestboys/commit/efd13551406d5c44c75cee9520769249fcf52a20)), closes [#220](https://github.com/VirtueMe/forestboys/issues/220)
+* **sitemap:** keep the list of existing pages in KV ([143a739](https://github.com/VirtueMe/forestboys/commit/143a7396e57c0e1f77bda2f972afd0869e4f780d)), closes [#220](https://github.com/VirtueMe/forestboys/issues/220)
+* **sitemap:** let the daily sync ask for a rebuild ([68903b2](https://github.com/VirtueMe/forestboys/commit/68903b255fcd9957ffb669d0b0ac525528ffdfff)), closes [#220](https://github.com/VirtueMe/forestboys/issues/220)
+* **sitemap:** rebuild the list when a page is created, renamed or deleted ([5cb4d1c](https://github.com/VirtueMe/forestboys/commit/5cb4d1caa4e8da8262b7d85278f75d22fb9fc357)), closes [#220](https://github.com/VirtueMe/forestboys/issues/220)
+* **sitemap:** serve sitemap.txt and robots.txt ([3c9a1d0](https://github.com/VirtueMe/forestboys/commit/3c9a1d0a01571b1e4c25706613ef6ac8cc992280)), closes [#220](https://github.com/VirtueMe/forestboys/issues/220)
+
 ## [0.9.2](https://github.com/VirtueMe/forestboys/compare/v0.9.1...v0.9.2) (2026-10-09)
 
 
