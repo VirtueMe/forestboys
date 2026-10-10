@@ -151,8 +151,13 @@ Every entity is directly linkable. Opening a direct URL loads the entity from In
 
 ---
 
-## SPA routing on GitHub Pages
+## SPA routing and HTTP status codes
 
-The app uses `createWebHistory`. A `404.html` in `public/` redirects deep links back to
-`index.html` with the path encoded as a query param. The service worker handles navigation
-requests for returning visitors.
+The app uses `createWebHistory`. There is no `404.html`: Cloudflare Pages answers every path that is not a file with
+`index.html`. `functions/_middleware.ts` sets the status for entity routes (`/person/:slug`, `/district/:slug`,
+`/organization/:slug`, `/outlines/:slug`, `/station/:slug`, `/location/:slug`, `/equipment/:slug`, `/transport/:slug`,
+`/events/:slug`, `/map/:slug`): 200 when the slug is in the list of pages that exist, 404 when it is not (the app still
+renders `NotFoundView`), and 200 when there is no list. The same list is `/sitemap.txt`. See `functions/_lib/sitemap.ts`.
+
+The `?p=` restore in `index.html` stays for a while so links redirected by the old `404.html` still resolve. The
+service worker handles navigation requests for returning visitors.
