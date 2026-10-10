@@ -69,6 +69,15 @@ jobs:
         if: ${{ !cancelled() }}
         run: npx tsx scripts/sync/sync-description.ts --type=all --production ${{ (github.event_name == 'schedule' || inputs.write) && '--write' || '' }}
 
+      # The site's list of pages (sitemap.txt, 404 check) is rebuilt on the site's own writes; these syncs write to the
+      # graph directly, so ask it to rebuild once they are done (#220).
+      - name: Rebuild the sitemap
+        if: ${{ !cancelled() }}
+        env:
+          SITE_URL:          ${{ secrets.SITE_URL }}
+          BOT_INGEST_SECRET: ${{ secrets.BOT_INGEST_SECRET }}
+        run: npx tsx scripts/sync/rebuild-sitemap.ts ${{ (github.event_name == 'schedule' || inputs.write) && '--write' || '' }}
+
       - name: Heartbeat
         if: ${{ !cancelled() }}
         run: npx tsx scripts/sync/heartbeat.ts --production ${{ (github.event_name == 'schedule' || inputs.write) && '--write' || '' }}
