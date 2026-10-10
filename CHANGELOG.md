@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.10.2](https://github.com/VirtueMe/forestboys/compare/v0.10.1...v0.10.2) (2026-10-10)
+
+
+### Documentation
+
+* **schema:** define the CourseOverview node ([be4e841](https://github.com/VirtueMe/forestboys/commit/be4e8417149aec984ce02b8f789828f27a4c60af))
+
 ## [0.10.1](https://github.com/VirtueMe/forestboys/compare/v0.10.0...v0.10.1) (2026-10-10)
 
 
