@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.10.1](https://github.com/VirtueMe/forestboys/compare/v0.10.0...v0.10.1) (2026-10-10)
+
+
+### Bug fixes
+
+* **pwa:** let sitemap.txt, robots.txt and manifest.json reach the network ([26477f0](https://github.com/VirtueMe/forestboys/commit/26477f0212d28266bee9a2e6c918da0b5de1c37b))
+
 ## [0.10.0](https://github.com/VirtueMe/forestboys/compare/v0.9.2...v0.10.0) (2026-10-10)
 
 
