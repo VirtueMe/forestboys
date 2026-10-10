@@ -85,8 +85,9 @@ export default defineConfig(({ mode }) => {
           maximumFileSizeToCacheInBytes: 3 * 1024 * 1024,
           // Server routes (Pages Functions) must reach the network. Without
           // this the service worker answers their navigations with index.html:
-          // /auth/github then shows the app's blank 404 instead of redirecting.
-          navigateFallbackDenylist: [/^\/auth\//, /^\/api\//, /^\/images\//],
+          // /auth/github then shows the app's blank 404 instead of redirecting. The same goes for the
+          // text files the site serves itself (#223).
+          navigateFallbackDenylist: [/^\/auth\//, /^\/api\//, /^\/images\//, /^\/(sitemap\.txt|robots\.txt|manifest\.json)$/],
           runtimeCaching: [
             {
               urlPattern: /^https:\/\/\w+\.apicdn\.sanity\.io\//,
