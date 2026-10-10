@@ -18,8 +18,9 @@
 
 import { requireAdmin } from '~/_lib/require-admin.ts'
 import { runCypher, type Neo4jEnv } from '~/_lib/neo4j.ts'
+import { invalidateSitemap, type SitemapBinding } from '~/_lib/sitemap.ts'
 
-interface Env extends Neo4jEnv {
+interface Env extends Neo4jEnv, SitemapBinding {
   SESSION_SECRET: string
 }
 
@@ -53,7 +54,7 @@ function isStringOrNull(v: unknown): v is string | null {
  */
 interface CreateBody extends Body { slug?: string }
 
-export const onRequestPost: PagesFunction<Env> = async ({ request, env, params }) => {
+export const onRequestPost: PagesFunction<Env> = async ({ request, env, params, waitUntil }) => {
   const guard = await requireAdmin(request, env)
   if (guard instanceof Response) return guard
 
@@ -106,6 +107,8 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env, params }
       foundedDate:   body.foundedDate ?? null,
       dissolvedDate: body.dissolvedDate ?? null,
     })
+
+    waitUntil(invalidateSitemap(env))
 
     return json({ ok: true, slug })
   } catch (e) {

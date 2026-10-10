@@ -42,6 +42,7 @@ import {
   type EntityPayload,
 } from '~/api/admin/proposals/_apply.ts'
 import type { Neo4jEnv } from '~/_lib/neo4j.ts'
+import { invalidateSitemap, opsChangeUrls, type SitemapBinding } from '~/_lib/sitemap.ts'
 import { runCypher } from '~/_lib/neo4j.ts'
 import { sourceIndexKey } from '~/_lib/bundle-origin.ts'
 import { bundleCounts } from '../../../../../../src/utils/bundleStatus.ts'
@@ -49,7 +50,7 @@ import { refusalsText } from '../../../../../../src/utils/refusalText.ts'
 import { actorOf, recordEvent } from '~/_lib/bundle-events.ts'
 import { refreshRow } from '~/_lib/bundle-index.ts'
 
-interface Env extends Neo4jEnv {
+interface Env extends Neo4jEnv, SitemapBinding {
   SESSION_SECRET: string
   PROPOSALS:      R2Bucket
 }
@@ -61,7 +62,7 @@ interface AcceptBody {
   expectedShas?: unknown
 }
 
-export const onRequestPost: PagesFunction<Env> = async ({ request, env, params }) => {
+export const onRequestPost: PagesFunction<Env> = async ({ request, env, params, waitUntil }) => {
   const guard = await requireAdmin(request, env)
   if (guard instanceof Response) return guard
   const actor = actorOf(guard)
@@ -133,6 +134,7 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env, params }
   let summary
   try {
     summary = await applyEntityOps(env, entityId, payload, bundleId, acceptedAt)
+    if (opsChangeUrls(payload.ops)) waitUntil(invalidateSitemap(env))
   } catch (e) {
     // Apply failed — leave the intent-lock for the janitor to clean up
     // (see PROPOSALS.md § "Failure recovery"). Re-trying the accept will
