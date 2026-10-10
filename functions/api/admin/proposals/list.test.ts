@@ -46,7 +46,7 @@ function oldBundles(n: number, statuses: Status[] = ['pending']) {
 
 const env = (bucket: unknown) => ({ PROPOSALS: bucket, SESSION_SECRET: 's' })
 const get = (qs = '') => new Request(`https://site.example/x?${qs}`)
-const call = (fn: unknown, e: unknown, request: Request, params: Record<string, string> = {}) => (fn as (c: never) => Promise<Response>)({ request, env: e, params } as never)
+const call = (fn: unknown, e: unknown, request: Request, params: Record<string, string> = {}) => (fn as (c: never) => Promise<Response>)({ request, env: e, params, waitUntil: () => {} } as never)
 const list = async (e: unknown, qs = '') => (await call(listApi.onRequestGet, e, get(qs))).json<{ bundles: { bundleId: string; status: string; comments: number; counts: Record<string, number> }[]; total: number; facets: { status: Record<string, number>; kinds: string[] } }>()
 const rowOf0 = (b: ReturnType<typeof memoryR2>, bundleId: string) => b.meta(`proposals/index/${bundleId}.json`)
 

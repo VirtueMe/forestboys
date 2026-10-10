@@ -36,7 +36,7 @@ function setup(ids = ['Unit:a', 'Unit:b']) {
   return { bucket, env: { PROPOSALS: bucket, SESSION_SECRET: 's' } }
 }
 const post = (body: unknown = {}) => new Request('https://site.example/x', { method: 'POST', body: JSON.stringify(body) })
-const ctx = (env: unknown, entityId?: string, request = post()) => ({ request, env, params: { bundleId: B, ...(entityId ? { entityId } : {}) } }) as never
+const ctx = (env: unknown, entityId?: string, request = post()) => ({ request, env, waitUntil: () => {}, params: { bundleId: B, ...(entityId ? { entityId } : {}) } }) as never
 
 beforeEach(() => { guards.exists = false })
 

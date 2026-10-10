@@ -13,6 +13,7 @@
  * history log.
  */
 
+import { invalidateSitemap, opsChangeUrls, type SitemapBinding } from '~/_lib/sitemap.ts'
 import { requireAdmin } from '~/_lib/require-admin.ts'
 import {
   applyEntityOps,
@@ -36,7 +37,7 @@ import { refusalsText } from '../../../../../src/utils/refusalText.ts'
 import { actorOf, recordEvent } from '~/_lib/bundle-events.ts'
 import { refreshRow } from '~/_lib/bundle-index.ts'
 
-interface Env extends Neo4jEnv {
+interface Env extends Neo4jEnv, SitemapBinding {
   SESSION_SECRET: string
   PROPOSALS:      R2Bucket
 }
@@ -51,7 +52,7 @@ interface AcceptResult {
   reason?:  string
 }
 
-export const onRequestPost: PagesFunction<Env> = async ({ request, env, params }) => {
+export const onRequestPost: PagesFunction<Env> = async ({ request, env, params, waitUntil }) => {
   const guard = await requireAdmin(request, env)
   if (guard instanceof Response) return guard
   const actor = actorOf(guard)
@@ -115,6 +116,7 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env, params }
 
     try {
       const summary = await applyEntityOps(env, entityId, payload, bundleId, acceptedAt)
+      if (opsChangeUrls(payload.ops)) waitUntil(invalidateSitemap(env))
       await env.PROPOSALS.put(
         `history/${entityId}/${acceptedAt}-apply.json`,
         JSON.stringify({ kind: 'apply', entityId, bundleId, acceptedAt, actor, message, summary }),

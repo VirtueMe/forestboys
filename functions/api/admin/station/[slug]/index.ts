@@ -16,8 +16,9 @@ import { requireAdmin } from '~/_lib/require-admin.ts'
 import { runCypher, type Neo4jEnv } from '~/_lib/neo4j.ts'
 import { STATION_CATEGORIES, isStationCategory } from '~/_lib/station-category.ts'
 import { parseSourceRefs, unknownSources } from '~/_lib/source-refs.ts'
+import { invalidateSitemap, type SitemapBinding } from '~/_lib/sitemap.ts'
 
-interface Env extends Neo4jEnv { SESSION_SECRET: string }
+interface Env extends Neo4jEnv, SitemapBinding { SESSION_SECRET: string }
 
 interface CreateBody {
   slug?:          string
@@ -39,7 +40,7 @@ function coord(v: unknown): number | null {
   return v
 }
 
-export const onRequestPost: PagesFunction<Env> = async ({ request, env, params }) => {
+export const onRequestPost: PagesFunction<Env> = async ({ request, env, params, waitUntil }) => {
   const guard = await requireAdmin(request, env)
   if (guard instanceof Response) return guard
 
@@ -86,6 +87,8 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env, params }
       sourceRefs:    refs.refs,
       lat, lng,
     })
+
+    waitUntil(invalidateSitemap(env))
 
     return json({ ok: true, slug })
   } catch (e) {
