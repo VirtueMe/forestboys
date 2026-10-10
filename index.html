@@ -17,7 +17,7 @@
       href="https://fonts.googleapis.com/css2?family=Crimson+Pro:wght@400;600&family=Public+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400&display=swap"
     />
     <script>
-      // Decode SPA redirect from 404.html
+      // Decode the SPA redirect of the old 404.html (removed in #220); kept so old links still resolve
       (function () {
         var p = window.location.search.slice(1).split('&').filter(function (s) { return s.startsWith('p=') })[0]
         if (p) window.history.replaceState(null, null, '/' + decodeURIComponent(p.slice(2)))
