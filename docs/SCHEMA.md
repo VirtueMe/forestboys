@@ -302,6 +302,7 @@ Formations / sub-groups: Kompani Linge, KP F, Eksportgrupper, MTB squadrons, Mil
 **Inbound:**
 - `(:Person)-[:MEMBER_OF]->(u)`
 - `(:Unit)-[:PART_OF]->(u)` — nested sub-units
+- `(:CourseOverview)-[:HAS_COURSE]->(u)` — when `u` is a course
 - `(:Operation)-[:ORCHESTRATED_BY]->(u)` (rare)
 
 **Rules:**
@@ -310,6 +311,30 @@ Formations / sub-groups: Kompani Linge, KP F, Eksportgrupper, MTB squadrons, Mil
 - Course units (`type:"course"`) carry the additional course-specific properties listed above.
 
 **Legacy:** `(d:Description)-[:ABOUT]->(:Unit)` from the sanity-outline-migration. Migration target: convert to `(:Unit)-[:HAS_CONTENT]->(:Description)`.
+
+---
+
+### CourseOverview
+
+**Identity**: `slug` · **Display**: `canonicalName`
+**Properties**: `sourceRefs[]`
+
+A named collection of courses with its own description, e.g. the courses of Kompani Linge 1941–45. It only holds courses: people attend the courses, never the overview. It is a node of its own and **not** a `Unit`: a unit is a formation, and `PART_OF` carries the membership traversals. A course is already `PART_OF` its unit; being listed in an overview is a different relation.
+
+Nothing that can be derived is stored: the number of courses, the totals of students and missing, the date range and the list of participants are read from the courses.
+
+**Outbound:**
+
+| Edge            | To                        | Notes                                                               |
+|-----------------|---------------------------|---------------------------------------------------------------------|
+| `HAS_COURSE`    | `Unit {type:"course"}`    | 0..n per course (a course may be in several overviews); no edge properties — courses sort by their own `order` |
+| `HAS_CONTENT`   | `Description`             | sections, in order; `Description.id` = `desc:courseoverview:<slug>:<order>` |
+| `HAS_IMAGE`     | `Source`                  | gallery                                                             |
+| `REFERENCED_IN` | `Source`                  | external links                                                      |
+
+**Rules:**
+- No short `summary` property: the description is `Description` nodes only (see *Description model*).
+- Route `/kursoversikt/:slug`; entity id `CourseOverview:<slug>`.
 
 ---
 
