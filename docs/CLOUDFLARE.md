@@ -31,6 +31,8 @@ document names every binding, variable and secret the code reads (names only, ne
 | `milorg_users` | D1 database `milorg-users` | login and the user list (`functions/auth`, `_lib/oauth.ts`, `api/admin/users`) |
 | `IMAGES` | R2 bucket `milorg-images` | `GET /images/*`, image upload on the pages editor |
 | `PROPOSALS` | R2 bucket `milorg-proposals` | bundles, their indexes and the ingest (`api/proposals`, `api/admin/proposals`) |
+| `ASSETS` | the static app (`dist/`); Pages adds it itself, nothing to configure | the middleware fetches `index.html` through it to answer an entity page with 200 or 404 (#220) |
+| `SITEMAP` | KV namespace: one key, the list of pages that exist (#220) | `functions/_lib/sitemap.ts`, `/sitemap.txt`, the 404 check in `functions/_middleware.ts`; every write that changes the set of URLs rebuilds it. Without it the middleware fails open (200) |
 | `BUNDLE_EVENTS` | Durable Object `BundleEventsDO` of the worker `milorg-bundle-events` (deployed 2026-10-08) | the live-update stream `GET /api/proposals/events?channel=<slug>`; ingest broadcasts `bundle-created` on the bundle's channel (see below) |
 
 R2 must be activated on the account before a bucket can exist. Use the Standard storage class (the free allowance
