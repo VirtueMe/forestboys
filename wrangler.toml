@@ -20,6 +20,13 @@ bucket_name = "milorg-images"
 binding = "PROPOSALS"
 bucket_name = "milorg-proposals"
 
+# The list of pages that exist (#220): the sitemap and the 404 check. KV, not the Cache API: a write is global, a cache
+# delete reaches one data centre. Created with `npx wrangler kv namespace create SITEMAP`; do not also define it in the
+# dashboard. Production and Preview share the namespace.
+[[kv_namespaces]]
+binding = "SITEMAP"
+id      = "90c55c401a994eec8816bda987226849"
+
 # The live-update Durable Object (#181): a review page updates when a bundle arrives. The class lives in a separate
 # worker, `milorg-bundle-events` (workers/bundle-events), which has to exist first: `npm run deploy:do`. This only binds
 # to it. A binding to a worker that does not exist can fail the whole deployment. See docs/CLOUDFLARE.md.
