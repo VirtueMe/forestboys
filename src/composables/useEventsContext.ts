@@ -231,26 +231,30 @@ export function useEventsContext() {
 
   /** `force` reloads even when the detail is already held (after an admin save). */
   async function loadDetail(event: IdbEvent, force = false): Promise<void> {
-    if (detailCache[event.slug] && !force) return
-    fetchingSlug.value = event.slug
+    // The slug as it is now: a rename changes `event.slug` in place (renameEvent), and an answer for the old slug that
+    // arrives after it must not be taken for an answer about the new one (#96).
+    const slug = event.slug
+    if (detailCache[slug] && !force) return
+    fetchingSlug.value = slug
     detailError.value  = false
+    const stale = () => visibleEvent.value?.slug !== slug
     try {
       // Prefer Neo4j; fall back to Sanity-IDB if Neo4j has no entry.
-      let detail = await fetchEventDetailFromNeo4j(event.slug)
+      let detail = await fetchEventDetailFromNeo4j(slug)
       if (!detail) {
-        try { detail = await fetchEventDetailBySlug(event.slug) }
+        try { detail = await fetchEventDetailBySlug(slug) }
         catch { detail = null }
       }
-      if (!detail) { detailError.value = true; return }
-      detailCache[event.slug] = detail
+      if (!detail) { if (!stale()) detailError.value = true; return }
+      detailCache[slug] = detail
     } catch {
-      detailError.value = true
+      if (!stale()) detailError.value = true
     } finally {
-      if (fetchingSlug.value === event.slug) fetchingSlug.value = null
+      if (fetchingSlug.value === slug) fetchingSlug.value = null
     }
   }
 
-  watch(visibleEvent, (event) => { if (event) void loadDetail(event) }, { immediate: true })
+  watch(visibleEvent, (event) => { detailError.value = false; if (event) void loadDetail(event) }, { immediate: true })
 
   // An admin saved something: drop the details held for other events and
   // reload the open one in place (the old text stays up until the new arrives).
