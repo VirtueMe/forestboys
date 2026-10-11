@@ -159,5 +159,12 @@ The app uses `createWebHistory`. There is no `404.html`: Cloudflare Pages answer
 `/events/:slug`, `/map/:slug`): 200 when the slug is in the list of pages that exist, 404 when it is not (the app still
 renders `NotFoundView`), and 200 when there is no list. The same list is `/sitemap.txt`. See `functions/_lib/sitemap.ts`.
 
+An unknown slug that is the old address of a renamed page (a `SlugAlias`, docs/SCHEMA.md; #96) is a **302** to the page,
+not a 404: `/person/old/medlemmer` → `/person/new/medlemmer`, keeping the prefix the reader used (`/location/` stays
+`/location/`), the rest of the path and the query. The middleware reads the old addresses from the same KV list (a line
+with a tab, `old<TAB>new`), so it asks the graph nothing; `/sitemap.txt` does not list them. In the app the same happens
+for a reader who never reaches the server: `DetailPage` looks the slug up when a page finds nothing
+(`src/utils/aliasRedirect.ts`), and `/events/:slug` goes through `resolveSlug`, which knows aliases too.
+
 The `?p=` restore in `index.html` stays for a while so links redirected by the old `404.html` still resolve. The
 service worker handles navigation requests for returning visitors.
