@@ -1,0 +1,123 @@
+/**
+ * Slug rename against a real Neo4j (the local one): the statements are valid Cypher and do what they claim (#96).
+ * Opt in with `npm run test:neo4j`. Like the apply tests, it refuses anything but localhost and touches only nodes whose
+ * slug or id starts with `zz-test-`; everything it made is removed afterwards.
+ */
+import { afterAll, beforeAll, describe, expect, it } from 'vitest'
+import { runCypher, type Neo4jEnv } from './neo4j.ts'
+import { findAlias, slugClaim } from './slug-alias.ts'
+import { planRename, renameSlug } from './slug-rename.ts'
+
+const E = (globalThis as unknown as { process: { env: Record<string, string | undefined> } }).process.env
+const ENABLED = E.NEO4J_TEST === '1'
+
+const env = {
+  NEO4J_URI: E.NEO4J_URI ?? '', NEO4J_HTTP_URI: E.NEO4J_HTTP_URI,
+  NEO4J_USERNAME: E.NEO4J_USERNAME ?? '', NEO4J_PASSWORD: E.NEO4J_PASSWORD ?? '',
+} as Neo4jEnv
+
+const RUN = Math.random().toString(36).slice(2, 8)
+const P = `zz-test-${RUN}-`
+const AT = '2026-10-11T12:00:00.000Z'
+
+/** A description with one link to `href` (a `link` mark) and one person mark to `person`. */
+const withLinks = (href: string, person?: string) => JSON.stringify([{
+  _type: 'block', _key: 'b1',
+  markDefs: [{ _key: 'l1', _type: 'link', href }, ...(person ? [{ _key: 'p1', _type: 'person', slug: person }] : [])],
+  children: [{ _type: 'span', _key: 's1', text: 'se her', marks: ['l1'] }, ...(person ? [{ _type: 'span', _key: 's2', text: ' og ham', marks: ['p1'] }] : [])],
+}])
+
+const count = async (cypher: string, params: Record<string, unknown> = {}) => Number((await runCypher<{ n: number }>(env, cypher, params))[0].n)
+
+async function cleanup() {
+  await runCypher(env, `MATCH (n) WHERE n.slug STARTS WITH 'zz-test-' OR n.id STARTS WITH 'zz-test-' OR n.id CONTAINS ':zz-test-' DETACH DELETE n`, {})
+}
+
+describe.skipIf(!ENABLED)('slug rename, against the local Neo4j', () => {
+  beforeAll(async () => {
+    const host = env.NEO4J_URI.replace(/^[a-z0-9+.-]+:\/\//, '').replace(/[:/].*$/, '')
+    if (!/^(localhost|127\.0\.0\.1|::1)$/.test(host)) throw new Error(`NEO4J_URI points at ${host}: this test only runs against localhost`)
+    await cleanup()
+  })
+  afterAll(cleanup)
+
+  const seed = async () => {
+    await runCypher(env, `
+      CREATE (a:Operation {slug: $a, canonicalName: 'Gammel'})-[:HAS_CONTENT]->(:Description {id: $da, order: 1, content: $ca})
+      CREATE (b:Incident {slug: $b, canonicalName: 'Annen'})-[:HAS_CONTENT]->(:Description {id: $db, order: 1, content: $cb})
+      CREATE (p:Person {slug: $p, canonicalName: 'Ham'})-[:HAS_CONTENT]->(:Description {id: $dp, order: 1, content: $cp})`,
+      {
+        a: `${P}old`, b: `${P}other`, p: `${P}ham`,
+        da: `desc:Operation:${P}old:1`, db: `desc:Incident:${P}other:1`, dp: `desc:Person:${P}ham:1`,
+        ca: withLinks(`/events/${P}other`),
+        cb: withLinks(`/events/${P}old`, `${P}ham`),
+        cp: withLinks(`/events/${P}old`),
+      })
+  }
+
+  it('reads what a rename would change, and writes nothing', async () => {
+    await seed()
+    const plan = await planRename(env, { label: 'Operation', from: `${P}old`, to: `${P}new` })
+    expect('error' in plan).toBe(false)
+    if ('error' in plan) return
+    expect(plan.route).toBe('/events/')
+    expect(plan.rewrites).toHaveLength(2)                 // the incident's text and the person's text
+    expect(plan.ownDescriptions).toBe(1)
+    expect(plan.restoresAlias).toBe(false)
+    expect(await count(`MATCH (n:Operation {slug: $s}) RETURN count(n) AS n`, { s: `${P}old` })).toBe(1)
+    expect(await count(`MATCH (a:SlugAlias) WHERE a.slug STARTS WITH $p RETURN count(a) AS n`, { p: P })).toBe(0)
+  })
+
+  it('renames: new slug, an alias to the entity, the own description id and the links to it follow', async () => {
+    const r = await renameSlug(env, { label: 'Operation', from: `${P}old`, to: `${P}new` }, AT)
+    expect(r).toMatchObject({ ok: true, descriptions: 2, links: 2, skipped: 0 })
+
+    expect(await count(`MATCH (n:Operation {slug: $s}) RETURN count(n) AS n`, { s: `${P}old` })).toBe(0)
+    expect(await count(`MATCH (n:Operation {slug: $s}) RETURN count(n) AS n`, { s: `${P}new` })).toBe(1)
+    expect(await count(`MATCH (:SlugAlias {route: '/events/', slug: $o, kind: 'Operation', createdAt: $at})-[:ALIAS_OF]->(:Operation {slug: $n}) RETURN count(*) AS n`,
+      { o: `${P}old`, n: `${P}new`, at: AT })).toBe(1)
+    expect(await count(`MATCH (:Operation {slug: $n})-[:HAS_CONTENT]->(d:Description {id: $id}) RETURN count(d) AS n`, { n: `${P}new`, id: `desc:Operation:${P}new:1` })).toBe(1)
+
+    const hrefs = await runCypher<{ c: string }>(env, `MATCH (d:Description) WHERE d.id IN $ids RETURN d.content AS c`, { ids: [`desc:Incident:${P}other:1`, `desc:Person:${P}ham:1`] })
+    expect(hrefs.map(h => h.c).join('')).toContain(`/events/${P}new`)
+    expect(hrefs.map(h => h.c).join('')).not.toContain(`/events/${P}old`)
+    // The link to a different page, and the person mark, are untouched.
+    expect(hrefs.map(h => h.c).join('')).toContain(`"slug":"${P}ham"`)
+    expect(await count(`MATCH (d:Description {id: $id}) WHERE d.content CONTAINS $h RETURN count(d) AS n`, { id: `desc:Operation:${P}new:1`, h: `/events/${P}other` })).toBe(1)
+  })
+
+  it('an old slug leads to the page, and is taken', async () => {
+    expect(await findAlias(env, '/events/', `${P}old`)).toEqual({ label: 'Operation', slug: `${P}new` })
+    expect(await findAlias(env, '/events/', `${P}nothing`)).toBeNull()
+    expect(await findAlias(env, '/person/', `${P}old`)).toBeNull()           // another address space
+    expect(await slugClaim(env, '/events/', `${P}old`)).toBe('alias')
+    expect(await slugClaim(env, '/events/', `${P}new`)).toBe('live')
+    expect(await slugClaim(env, '/events/', `${P}old`, `${P}new`)).toBeNull()  // the owner may take it back
+    expect(await slugClaim(env, '/person/', `${P}old`)).toBeNull()
+
+    const toOld = await renameSlug(env, { label: 'Incident', from: `${P}other`, to: `${P}old` })
+    expect(toOld).toMatchObject({ status: 409 })
+    const toLive = await renameSlug(env, { label: 'Incident', from: `${P}other`, to: `${P}new` })
+    expect(toLive).toMatchObject({ status: 409 })
+  })
+
+  it('renames again: the aliases all point at the entity, none at another alias; taking a name back drops its alias', async () => {
+    expect(await renameSlug(env, { label: 'Operation', from: `${P}new`, to: `${P}newer` }, AT)).toMatchObject({ ok: true })
+    expect(await count(`MATCH (a:SlugAlias)-[:ALIAS_OF]->(:Operation {slug: $n}) WHERE a.slug IN $s RETURN count(a) AS n`, { n: `${P}newer`, s: [`${P}old`, `${P}new`] })).toBe(2)
+    expect(await count(`MATCH (:SlugAlias)-[:ALIAS_OF]->(x:SlugAlias) RETURN count(x) AS n`)).toBe(0)
+
+    const back = await planRename(env, { label: 'Operation', from: `${P}newer`, to: `${P}old` })
+    expect(back).toMatchObject({ restoresAlias: true })
+    expect(await renameSlug(env, { label: 'Operation', from: `${P}newer`, to: `${P}old` }, AT)).toMatchObject({ ok: true })
+    expect(await findAlias(env, '/events/', `${P}old`)).toBeNull()                            // live again
+    expect(await findAlias(env, '/events/', `${P}newer`)).toEqual({ label: 'Operation', slug: `${P}old` })
+  })
+
+  it('refuses what cannot be renamed', async () => {
+    expect(await renameSlug(env, { label: 'Operation', from: `${P}nothing`, to: `${P}x` })).toMatchObject({ status: 404 })
+    expect(await renameSlug(env, { label: 'Operation', from: `${P}old`, to: 'Bad Slug' })).toMatchObject({ status: 400 })
+    expect(await renameSlug(env, { label: 'Operation', from: `${P}old`, to: 'new' })).toMatchObject({ status: 400 })
+    expect(await renameSlug(env, { label: 'Operation', from: `${P}old`, to: `${P}old` })).toMatchObject({ status: 400 })
+    expect(await renameSlug(env, { label: 'Unit', from: `${P}old`, to: `${P}x` })).toMatchObject({ status: 400 })
+  })
+})
