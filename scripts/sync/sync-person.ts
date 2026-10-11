@@ -58,6 +58,7 @@ import {
 import { imageSources, importableLinks, linkSource, parsePerson, personClaims, rankEdge, sanMigRef } from '../lib/person-rule.ts'
 import { deletionStmts, deletionSummary, planDeletions } from '../lib/person-deletions.ts'
 import { writeStampUndo } from '../lib/stamp-undo.ts'
+import { PERSON_RENAME_ALIASES, DROP_DANGLING_ALIASES, dropShadowedAliases } from '../../functions/_lib/slug-alias-cypher.ts'
 loadEnv()
 
 const write = process.argv.includes('--write')
@@ -260,7 +261,12 @@ function renameStmts(renames: Rename[]): Stmt[] {
            SET d.id = 'desc:person:' + p.slug + ':' + toString(coalesce(d.order, 1))`,
     params: { renames: renames.map(r => ({ id: r.id, to: to(r) })) },
   })
-  return [phase(r => `__renaming__${r.id}`), phase(r => r.to)]
+  return [
+    phase(r => `__renaming__${r.id}`), phase(r => r.to),
+    // The old slug stays as an alias (#96); one that another person has taken over in this run is theirs.
+    { text: PERSON_RENAME_ALIASES, params: { renames: renames.map(r => ({ id: r.id, from: r.from })), at: new Date().toISOString() } },
+    { text: dropShadowedAliases('Person', '/person/'), params: {} },
+  ]
 }
 
 function planNew(s: Doc): Plan {
@@ -490,6 +496,9 @@ async function main() {
         })
       }
       if (deleted.length) console.log(`Deleted ${deleted.length} people.`)
+      // A slug a new person took over, or the alias of a person who is gone, is no alias any more (#96).
+      await ws.run(dropShadowedAliases('Person', '/person/'))
+      await ws.run(DROP_DANGLING_ALIASES)
       const newest = sanityDocs.map(d => d._updatedAt).reduce((a, b) => (b > a ? b : a))
       await ws.run(`
         MERGE (s:SyncState {source: 'sanity', type: 'person'})

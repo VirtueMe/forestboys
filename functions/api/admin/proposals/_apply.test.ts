@@ -30,7 +30,7 @@ const payload = (entityId: string, ops: unknown[]) => ({ entityId, ops, derivedF
 const statements = () => cypher.mock.calls.map(c => String(c[1]))
 const writes = () => cypher.mock.calls.filter(c => /SET d\.content|CREATE \(e\)-\[:HAS_CONTENT/.test(String(c[1])))
 
-beforeEach(() => { cypher.mockReset(); tx.mockReset(); vi.mocked(judgeStored).mockClear() })
+beforeEach(() => { cypher.mockReset(); cypher.mockResolvedValue([] as never); tx.mockReset(); vi.mocked(judgeStored).mockClear() })
 
 describe('set-description: applying it', () => {
   const op = { op: 'set-description', order: 1, expectedSha: 'x', content: NEW }
@@ -131,11 +131,12 @@ describe('the kinds keyed by id (a Source) and by slug (the rest)', () => {
       { op: 'set-props', props: { title: { from: 'a', to: 'b' } } }, { op: 'delete-entity' },
     ]), 'b', AT)
     const sts = created(tx.mock.calls).map(s => s.statement)
-    // A delete first removes what the entity owns (#187), then the node; both find a Source by id.
-    expect(sts).toHaveLength(3)
+    // A delete first removes what the entity owns (#187) and its old addresses (#96), then the node; all find a Source by id.
+    expect(sts).toHaveLength(4)
     expect(sts[0]).toBe('MATCH (n:`Source` {id: $slug}) SET n += $set')
     expect(sts[1]).toMatch(/^MATCH \(n:`Source` \{id: \$slug\}\)\s+OPTIONAL MATCH \(n\)-\[:HAS_CONTENT\|/)
-    expect(sts[2]).toBe('MATCH (n:`Source` {id: $slug}) DETACH DELETE n')
+    expect(sts[2]).toBe('MATCH (a:SlugAlias)-[:ALIAS_OF]->(n:`Source` {id: $slug}) DETACH DELETE a')
+    expect(sts[3]).toBe('MATCH (n:`Source` {id: $slug}) DETACH DELETE n')
     tx.mockReset()
     await applyEntityOps(env, 'Transport:mtb-683', payload('Transport:mtb-683', [{ op: 'set-props', props: { regser: { from: 'a', to: 'b' } } }]), 'b', AT)
     expect(created(tx.mock.calls)[0].statement).toBe('MATCH (n:`Transport` {slug: $slug}) SET n += $set')

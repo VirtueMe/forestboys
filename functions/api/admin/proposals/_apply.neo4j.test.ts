@@ -172,6 +172,45 @@ describe.skipIf(!ENABLED)('apply, against the local Neo4j', () => {
     expect(Number(orphans[0].n)).toBe(0)
   })
 
+  it('a slug in set-props renames the page: alias, links and description ids follow; a Unit just gets the property (#96)', async () => {
+    const q = (cypher: string, params: Record<string, unknown> = {}) => runCypher<{ n: number }>(env, cypher, params)
+    const link = (href: string) => JSON.stringify([{ _type: 'block', _key: 'b', markDefs: [{ _key: 'l', _type: 'link', href }], children: [{ _type: 'span', _key: 's', text: 'her', marks: ['l'] }] }])
+    await apply(`Operation:${P}ren-a`, [{ op: 'create-entity', kind: 'Operation', slug: `${P}ren-a`, props: { canonicalName: 'A' }, descriptions: [{ order: 1, content: BLOCKS('Tekst.') }] }], SYNC)
+    await apply(`Person:${P}ren-p`, [{ op: 'create-entity', kind: 'Person', slug: `${P}ren-p`, props: {}, descriptions: [{ order: 1, content: link(`/events/${P}ren-a`) }] }], SYNC)
+
+    const summary = await apply(`Operation:${P}ren-a`, [
+      { op: 'set-props', props: { slug: { from: `${P}ren-a`, to: `${P}ren-b` }, canonicalName: { from: 'A', to: 'B' } } },
+    ], SYNC)
+    expect(summary.appliedOps.join('|')).toMatch(/rename Operation:.*ren-a → .*ren-b \(1 descriptions, 1 links rewritten\)/)
+    expect(await props('Operation', 'slug', `${P}ren-a`)).toBeNull()
+    expect(await props('Operation', 'slug', `${P}ren-b`)).toMatchObject({ canonicalName: 'B' })
+    expect(Number((await q(`MATCH (:SlugAlias {route: '/events/', slug: $o})-[:ALIAS_OF]->(:Operation {slug: $n}) RETURN count(*) AS n`, { o: `${P}ren-a`, n: `${P}ren-b` }))[0].n)).toBe(1)
+    expect(Number((await q(`MATCH (d:Description {id: $id}) RETURN count(d) AS n`, { id: `desc:Operation:${P}ren-b:1` }))[0].n)).toBe(1)
+    expect(Number((await q(`MATCH (:Person {slug: $p})-[:HAS_CONTENT]->(d:Description) WHERE d.content CONTAINS $h RETURN count(d) AS n`, { p: `${P}ren-p`, h: `/events/${P}ren-b` }))[0].n)).toBe(1)
+
+    // A Unit has no address of its own: the property is set as before, with no alias.
+    await apply(`Unit:${P}ren-u`, [{ op: 'create-entity', kind: 'Unit', slug: `${P}ren-u`, props: {} }], SYNC)
+    await apply(`Unit:${P}ren-u`, [{ op: 'set-props', props: { slug: { from: `${P}ren-u`, to: `${P}ren-v` } } }], SYNC)
+    expect(await props('Unit', 'slug', `${P}ren-v`)).not.toBeNull()
+    expect(Number((await q(`MATCH (a:SlugAlias) WHERE a.slug = $s RETURN count(a) AS n`, { s: `${P}ren-u` }))[0].n)).toBe(0)
+  })
+
+  it('a new page cannot take an old address, and deleting a page takes its old addresses with it (#96)', async () => {
+    const count = async (cypher: string, params: Record<string, unknown>) => Number((await runCypher<{ n: number }>(env, cypher, params))[0].n)
+    await apply(`Operation:${P}old-a`, [{ op: 'create-entity', kind: 'Operation', slug: `${P}old-a`, props: {} }], SYNC)
+    await apply(`Operation:${P}old-a`, [{ op: 'set-props', props: { slug: { from: `${P}old-a`, to: `${P}old-b` } } }], SYNC)
+
+    // `old-a` is an old address of `old-b`: an Incident (same /events/ address space) may not be created there.
+    await expect(apply(`Incident:${P}old-a`, [{ op: 'create-entity', kind: 'Incident', slug: `${P}old-a`, props: {} }], SYNC)).rejects.toThrow(/gammelt navn/)
+    expect(await props('Incident', 'slug', `${P}old-a`)).toBeNull()
+    // Another address space is free.
+    await apply(`Person:${P}old-a`, [{ op: 'create-entity', kind: 'Person', slug: `${P}old-a`, props: {} }], SYNC)
+    expect(await props('Person', 'slug', `${P}old-a`)).not.toBeNull()
+
+    await apply(`Operation:${P}old-b`, [{ op: 'delete-entity' }], SYNC)
+    expect(await count(`MATCH (a:SlugAlias) WHERE a.slug STARTS WITH $p RETURN count(a) AS n`, { p: `${P}old-` })).toBe(0)
+  })
+
   it('an outline: the archive records what was absorbed, and a changed text makes it stale with what it produced marked older', async () => {
     const slug = `${P}outline-b`
     await runCypher(env, `CREATE (o:Outline {slug: $s, canonicalName: 'Testoutline'}) CREATE (o)-[:HAS_CONTENT]->(:Description {id: $d, order: 1, content: $c})`,

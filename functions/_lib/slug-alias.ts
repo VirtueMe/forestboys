@@ -45,3 +45,15 @@ export async function slugClaim(env: Neo4jEnv, route: string, slug: string, owne
     RETURN count(a) AS c`, { route, slug, owner: ownerSlug ?? '' }, 'Read')
   return Number(alias?.c ?? 0) > 0 ? 'alias' : null
 }
+
+/** True when `slug` is an old slug of some page on the address space `label` lives in (false for a kind with no route). */
+export async function aliasTaken(env: Neo4jEnv, label: string, slug: string): Promise<boolean> {
+  const route = routeOf(label)
+  return route ? (await slugClaim(env, route, slug)) === 'alias' : false
+}
+
+/** What the answer to a create with a taken slug says, in the editors' words. */
+export const aliasTakenMessage = (slug: string) => `Slug er et gammelt navn på en annen side: ${slug}`
+
+// The statements the Sanity sync runs live in slug-alias-cypher.ts: pure strings, so a script can import them without the Worker code.
+export { PERSON_RENAME_ALIASES, DROP_DANGLING_ALIASES, dropShadowedAliases } from './slug-alias-cypher.ts'
