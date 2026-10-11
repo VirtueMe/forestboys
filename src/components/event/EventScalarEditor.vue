@@ -91,9 +91,27 @@
             {{ slugEditable ? '✓' : '✎' }}
           </button>
         </div>
-        <span v-if="slugTaken" class="slug-hint">Slug finnes allerede for en hendelse eller operasjon.</span>
+        <span v-if="slugTaken" class="slug-hint">{{ slugTakenByAlias ? 'Slug er et gammelt navn på en annen side.' : 'Slug finnes allerede for en hendelse eller operasjon.' }}</span>
       </div>
     </div>
+
+    <AppModal v-model="renameOpen" title="Endre adressen?">
+      <div v-if="renamePlan" class="blocker-modal-body">
+        <p class="blocker-intro">
+          Adressen endres fra
+          <code class="rename-path">/events/{{ renamePlan.from }}</code> til
+          <code class="rename-path">/events/{{ renamePlan.to }}</code>.
+          {{ renamePlan.restoresAlias ? 'Dette var tidligere adressen til siden; henvisningen fra den gamle fjernes.' : 'Den gamle adressen sender leseren videre til den nye.' }}
+        </p>
+        <p class="rename-links">{{ linksSummary(renamePlan) }}</p>
+        <footer class="blocker-actions">
+          <button type="button" class="blocker-cancel" @click="renameOpen = false">Avbryt</button>
+          <button type="button" class="edit-btn-primary" :disabled="saving" @click="confirmRename">
+            Endre adressen og lagre
+          </button>
+        </footer>
+      </div>
+    </AppModal>
 
     <div class="edit-row">
       <label class="edit-label" for="edit-event-date">Dato</label>
@@ -133,6 +151,7 @@ import AppModal from '@/components/AppModal.vue'
 import { authFetch } from '@/composables/useAuth.ts'
 import { neo4jQuery } from '@/composables/useNeo4j.ts'
 import { slugify, SLUG_RE } from '@/utils/slug.ts'
+import { linksSummary, type RenamePreview } from '@/utils/renameSummary.ts'
 import type { EventKind, EventNode } from '@/composables/useEventData.ts'
 
 export interface DemoteBlockers {
@@ -174,9 +193,13 @@ const baseline     = ref<EventScalarDraft>({ name: '', date: '', slug: '', kind:
 const saving       = ref(false)
 const error        = ref<string | null>(null)
 const blockerOpen  = ref(false)
+const renameOpen   = ref(false)
+const renamePlan   = ref<RenamePreview | null>(null)
+let renameConfirmed = false
 
 const slugEditable = ref(false)
 const slugTaken    = ref(false)
+const slugTakenByAlias = ref(false)
 const slugChecking = ref(false)
 let slugCheckTimer: ReturnType<typeof setTimeout> | null = null
 
@@ -184,6 +207,7 @@ watch(() => draft.value.slug, (s) => {
   // Reset taken flag whenever the input changes; only the latest value
   // matters for save eligibility.
   slugTaken.value    = false
+  slugTakenByAlias.value = false
   slugChecking.value = false
   if (slugCheckTimer) clearTimeout(slugCheckTimer)
   if (s === baseline.value.slug) return       // unchanged — nothing to check
@@ -191,11 +215,18 @@ watch(() => draft.value.slug, (s) => {
   slugChecking.value = true
   slugCheckTimer = setTimeout(async () => {
     try {
-      const rows = await neo4jQuery<{ slug: string }>(
-        `MATCH (n {slug: $slug}) WHERE n:Incident OR n:Operation RETURN n.slug AS slug LIMIT 1`,
-        { slug: s },
+      // A live page, or the old address of another page (#96): either way the slug is taken.
+      const rows = await neo4jQuery<{ slug: string; alias: boolean }>(
+        `MATCH (n {slug: $slug}) WHERE n:Incident OR n:Operation RETURN n.slug AS slug, false AS alias LIMIT 1
+         UNION
+         MATCH (a:SlugAlias {route: '/events/', slug: $slug})-[:ALIAS_OF]->(t) WHERE t.slug <> $own
+         RETURN a.slug AS slug, true AS alias LIMIT 1`,
+        { slug: s, own: baseline.value.slug },
       )
-      if (draft.value.slug === s) slugTaken.value = rows.length > 0
+      if (draft.value.slug === s) {
+        slugTaken.value        = rows.length > 0
+        slugTakenByAlias.value = rows.some(r => r.alias)
+      }
     } catch { /* silent — server still validates on PATCH */ }
     finally {
       if (draft.value.slug === s) slugChecking.value = false
@@ -318,10 +349,43 @@ async function forceDemote() {
   }
 }
 
+/** A changed slug asks first: the new address, and what is rewritten to it (#96). Nothing is written by the question. */
+async function askRename(slug: string): Promise<void> {
+  saving.value = true
+  error.value  = null
+  try {
+    const res = await authFetch(`/api/admin/event/${encodeURIComponent(slug)}/rename-preview`, {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({ slug: draft.value.slug.trim() }),
+    })
+    const out = await res.json().catch(() => ({})) as Partial<RenamePreview> & { error?: string }
+    if (!res.ok) {
+      if (res.status === 409) { slugTaken.value = true; slugEditable.value = true }
+      error.value = out.error ?? `HTTP ${res.status}`
+      return
+    }
+    renamePlan.value = out as RenamePreview
+    renameOpen.value = true
+  } catch (e) {
+    error.value = (e as Error).message
+  } finally {
+    saving.value = false
+  }
+}
+
+function confirmRename() {
+  renameOpen.value = false
+  renameConfirmed  = true
+  void save()
+}
+
 async function save() {
   if (!dirty.value || saving.value) return
   const slug = props.saved.slug
   if (!slug) return
+  if (draft.value.slug !== baseline.value.slug && !renameConfirmed) { await askRename(slug); return }
+  renameConfirmed = false
   saving.value = true
   error.value  = null
   try {
@@ -466,6 +530,8 @@ defineExpose({ draft, dirty })
 .info-marker:hover,
 .info-marker.open { background: var(--faded-red-soft); }
 
+.rename-path { font-family: var(--font-mono); font-size: var(--size-mono); color: var(--ink); overflow-wrap: anywhere; }
+.rename-links { margin: 0; color: var(--ink); line-height: 1.5; }
 .blocker-modal-body {
   padding: var(--space-md);
   font-family: var(--font-sans);
