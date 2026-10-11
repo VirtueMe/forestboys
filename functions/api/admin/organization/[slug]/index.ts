@@ -19,6 +19,7 @@
 import { requireAdmin } from '~/_lib/require-admin.ts'
 import { runCypher, type Neo4jEnv } from '~/_lib/neo4j.ts'
 import { invalidateSitemap, type SitemapBinding } from '~/_lib/sitemap.ts'
+import { aliasTaken, aliasTakenMessage } from '~/_lib/slug-alias.ts'
 
 interface Env extends Neo4jEnv, SitemapBinding {
   SESSION_SECRET: string
@@ -80,6 +81,7 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env, params, 
       `OPTIONAL MATCH (n:Organization {slug: $slug}) RETURN n IS NOT NULL AS exists`,
       { slug })
     if (hit?.exists) return json({ error: `Slug finnes allerede for en organisasjon: ${slug}` }, 409)
+    if (await aliasTaken(env, 'Organization', slug)) return json({ error: aliasTakenMessage(slug) }, 409)
 
     const norm = (s: string | null | undefined): string | null =>
       typeof s === 'string' && s.trim() ? s.trim() : null

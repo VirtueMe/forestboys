@@ -5,7 +5,7 @@
  */
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import { runCypher, type Neo4jEnv } from './neo4j.ts'
-import { findAlias, slugClaim } from './slug-alias.ts'
+import { findAlias, slugClaim, PERSON_RENAME_ALIASES, DROP_DANGLING_ALIASES, dropShadowedAliases } from './slug-alias.ts'
 import { planRename, renameSlug } from './slug-rename.ts'
 
 const E = (globalThis as unknown as { process: { env: Record<string, string | undefined> } }).process.env
@@ -111,6 +111,27 @@ describe.skipIf(!ENABLED)('slug rename, against the local Neo4j', () => {
     expect(await renameSlug(env, { label: 'Operation', from: `${P}newer`, to: `${P}old` }, AT)).toMatchObject({ ok: true })
     expect(await findAlias(env, '/events/', `${P}old`)).toBeNull()                            // live again
     expect(await findAlias(env, '/events/', `${P}newer`)).toEqual({ label: 'Operation', slug: `${P}old` })
+  })
+
+  it('the person sync keeps old slugs as aliases; a slug another person takes over in the same run is theirs (#96)', async () => {
+    // p1 was `a` and is now `c`; p2 was `b` and is now `a` (the freed slug reused); p3 was `d` and is now `e`, then gone.
+    await runCypher(env, `
+      CREATE (:Person {sanityId: $i1, slug: $c}), (:Person {sanityId: $i2, slug: $a}), (:Person {sanityId: $i3, slug: $e})`,
+      { i1: `${P}sid1`, i2: `${P}sid2`, i3: `${P}sid3`, a: `${P}pa`, c: `${P}pc`, e: `${P}pe` })
+    const renames = [{ id: `${P}sid1`, from: `${P}pa` }, { id: `${P}sid2`, from: `${P}pb` }, { id: `${P}sid3`, from: `${P}pd` }]
+    await runCypher(env, PERSON_RENAME_ALIASES, { renames, at: AT })
+    await runCypher(env, dropShadowedAliases('Person', '/person/'))
+    expect(await findAlias(env, '/person/', `${P}pa`)).toBeNull()                              // live again, on p2
+    expect(await findAlias(env, '/person/', `${P}pb`)).toEqual({ label: 'Person', slug: `${P}pa` })
+    expect(await findAlias(env, '/person/', `${P}pd`)).toEqual({ label: 'Person', slug: `${P}pe` })
+
+    await runCypher(env, `MATCH (p:Person {slug: $e}) DETACH DELETE p`, { e: `${P}pe` })
+    await runCypher(env, DROP_DANGLING_ALIASES)
+    expect(await count(`MATCH (a:SlugAlias {slug: $d}) RETURN count(a) AS n`, { d: `${P}pd` })).toBe(0)
+    // Run twice: the same aliases, not more.
+    await runCypher(env, PERSON_RENAME_ALIASES, { renames: renames.slice(0, 2), at: AT })
+    await runCypher(env, PERSON_RENAME_ALIASES, { renames: renames.slice(0, 2), at: AT })
+    expect(await count(`MATCH (a:SlugAlias {slug: $b})-[:ALIAS_OF]->() RETURN count(a) AS n`, { b: `${P}pb` })).toBe(1)
   })
 
   it('refuses what cannot be renamed', async () => {

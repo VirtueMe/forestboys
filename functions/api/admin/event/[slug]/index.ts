@@ -17,6 +17,7 @@
 import { requireAdmin } from '~/_lib/require-admin.ts'
 import { runCypher, type Neo4jEnv } from '~/_lib/neo4j.ts'
 import { invalidateSitemap, type SitemapBinding } from '~/_lib/sitemap.ts'
+import { planRename, renameSlug } from '~/_lib/slug-rename.ts'
 
 interface Env extends Neo4jEnv, SitemapBinding {
   SESSION_SECRET: string
@@ -64,14 +65,13 @@ export const onRequestPatch: PagesFunction<Env> = async ({ request, env, params,
     `, { slug })
     if (!current?.kind) return json({ error: 'Node not found or not an Incident/Operation' }, 404)
 
-    // Slug collision check (skip if unchanged).
-    if (body.slug !== undefined && body.slug !== slug) {
-      const [hit] = await runCypher<{ exists: boolean }>(env, `
-        OPTIONAL MATCH (n {slug: $newSlug})
-        WHERE n:Incident OR n:Operation
-        RETURN n IS NOT NULL AS exists
-      `, { newSlug: body.slug })
-      if (hit?.exists) return json({ error: `Slug finnes allerede: ${body.slug}` }, 409)
+    // A rename keeps the old slug as an alias and rewrites the links to it (#96): validated first, so a refused
+    // slug leaves the other fields alone.
+    const label    = current.kind === 'operation' ? 'Operation' : 'Incident'
+    const renaming = body.slug !== undefined && body.slug !== slug
+    if (renaming) {
+      const plan = await planRename(env, { label, from: slug, to: body.slug! })
+      if ('error' in plan) return json({ error: plan.error }, plan.status)
     }
 
     const nameProp = current.kind === 'operation' ? 'codeName' : 'title'
@@ -79,18 +79,28 @@ export const onRequestPatch: PagesFunction<Env> = async ({ request, env, params,
     const params2: Record<string, unknown> = { slug }
     if (body.name !== undefined) { setClauses.push(`n.${nameProp} = $name`); params2.name = body.name.trim() }
     if (body.date !== undefined) { setClauses.push(`n.date = $date`);      params2.date = body.date }
-    if (body.slug !== undefined && body.slug !== slug) {
-      setClauses.push(`n.slug = $newSlug`); params2.newSlug = body.slug
-    }
 
-    if (!setClauses.length) return json({ ok: true, kind: current.kind, unchanged: true })
+    if (!setClauses.length && !renaming) return json({ ok: true, kind: current.kind, unchanged: true })
+
+    if (setClauses.length) {
+      await runCypher(env, `
+        MATCH (n {slug: $slug})
+        WHERE n:Incident OR n:Operation
+        SET ${setClauses.join(', ')}
+      `, params2)
+    }
+    let renamed: { descriptions: number; links: number; skipped: number } | null = null
+    if (renaming) {
+      const r = await renameSlug(env, { label, from: slug, to: body.slug! })
+      if ('error' in r) return json({ error: r.error }, r.status)
+      renamed = { descriptions: r.descriptions, links: r.links, skipped: r.skipped }
+    }
 
     const [updated] = await runCypher<{ slug: string; name: string | null; date: string | null }>(env, `
       MATCH (n {slug: $slug})
       WHERE n:Incident OR n:Operation
-      SET ${setClauses.join(', ')}
       RETURN n.slug AS slug, n.${nameProp} AS name, n.date AS date
-    `, params2)
+    `, { slug: renaming ? body.slug : slug })
 
     // The old address goes and the new one comes (#220).
     if (body.slug !== undefined && body.slug !== slug) waitUntil(invalidateSitemap(env))
@@ -101,6 +111,7 @@ export const onRequestPatch: PagesFunction<Env> = async ({ request, env, params,
       slug: updated?.slug ?? slug,
       name: updated?.name ?? null,
       date: updated?.date ?? null,
+      ...(renamed ? { renamed } : {}),
     })
   } catch (e) {
     return json({ error: (e as Error).message }, 502)

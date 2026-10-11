@@ -25,6 +25,8 @@
  */
 
 import { runCypher, runCypherTx, type Neo4jEnv } from '~/_lib/neo4j.ts'
+import { aliasTaken, aliasTakenMessage, routeOf } from '~/_lib/slug-alias.ts'
+import { renameSlug } from '~/_lib/slug-rename.ts'
 import { stableSha } from '~/_lib/stable-sha.ts'
 import { originStamp, sourceIndexKey, type BundleOriginFields, type DerivedFrom } from '~/_lib/bundle-origin.ts'
 import { bundleCounts } from '../../../../src/utils/bundleStatus.ts'
@@ -323,10 +325,13 @@ export async function applyEntityOps(
   // Written on what this bundle creates, in the same transaction (docs/BUNDLE-FORMAT.md, #157).
   const stamp = originStamp(payload.derivedFrom, bundleId)
   const txStatements: { statement: string; parameters?: Record<string, unknown> }[] = []
+  let rename: string | null = null
 
   for (const op of payload.ops) {
     switch (op.op) {
       case 'create-entity': {
+        // A page cannot take over an old address (#96): the old slug still leads to the page that was renamed.
+        if (await aliasTaken(env, op.kind, op.slug)) throw new Error(`create-entity: ${aliasTakenMessage(op.slug)}`)
         // Strip the descriptions field if Claude leaked it into props
         // (older malformed bundles) so it doesn't land as a node prop.
         const { descriptions: _drop, ...sanitizedProps } = op.props
@@ -398,6 +403,8 @@ export async function applyEntityOps(
       case 'delete-entity': {
         // Its text, names and the notes about it first, while the edges that find them still exist (#187).
         txStatements.push(deleteOwnedStatement(kind, slug))
+        // Its old addresses go with it: they would lead to a page that is gone (#96).
+        txStatements.push({ statement: `MATCH (a:SlugAlias)-[:ALIAS_OF]->${nodePattern('n', kind, 'slug')} DETACH DELETE a`, parameters: { slug } })
         txStatements.push({
           statement: `MATCH ${nodePattern('n', kind, 'slug')} DETACH DELETE n`,
           parameters: { slug },
@@ -415,6 +422,11 @@ export async function applyEntityOps(
       }
       case 'set-props': {
         const set = Object.fromEntries(Object.entries(op.props).map(([k, v]) => [k, v.to ?? null]))
+        // A page with an address of its own is renamed by the rename helper, after the rest: it keeps the old slug as an
+        // alias and rewrites the links to it (#96). Other kinds (a Unit, a Source) just get the property.
+        const renameTo = routeOf(kind) && typeof set.slug === 'string' && set.slug !== slug ? set.slug : null
+        if (renameTo) { rename = renameTo; delete set.slug }
+        if (!Object.keys(set).length) break      // only the rename; it is reported when it runs
         txStatements.push({
           // A null in `SET n += map` removes that property.
           statement: `MATCH ${nodePattern('n', kind, 'slug')} SET n += $set`,
@@ -451,6 +463,13 @@ export async function applyEntityOps(
     if (op.op !== 'set-description') continue
     await applySetDescription(env, kind, slug, op, bundleId, acceptedAt)
     summary.appliedOps.push(`description ${op.order} on ${entityId}`)
+  }
+
+  // Rename after the rest, which all match the entity by its current slug (#96).
+  if (rename) {
+    const r = await renameSlug(env, { label: kind, from: slug, to: rename })
+    if ('error' in r) throw new Error(`rename ${entityId} → ${rename}: ${r.error}`)
+    summary.appliedOps.push(`rename ${entityId} → ${rename} (${r.descriptions} descriptions, ${r.links} links rewritten)`)
   }
 
   // Relabel last — every op above matches the entity by its current label.
