@@ -23,6 +23,8 @@ Original repo: `artemagvanian/milorg-2` (Vue 3, Vite, no Bootstrap, no Tailwind)
 No `:child` param. Nav: "Hendelsekatalog" → `/events`.
 Redirect: `/event/:slug` → `/events/:slug` (old URLs still work).
 
+Changing the slug of an event (edit mode, Slug field) asks first: the editor calls `POST /api/admin/event/:slug/rename-preview`, which writes nothing, and shows the new address and how many links in how many descriptions are rewritten (#96). On confirm the rename keeps the old slug as an alias, so `/events/<old>` redirects to the page (docs/ROUTING.md). A slug that is a live page or the old address of another page is refused.
+
 ---
 
 ## `<keep-alive>` — what it means
