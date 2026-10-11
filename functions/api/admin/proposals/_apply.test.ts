@@ -131,7 +131,11 @@ describe('the kinds keyed by id (a Source) and by slug (the rest)', () => {
       { op: 'set-props', props: { title: { from: 'a', to: 'b' } } }, { op: 'delete-entity' },
     ]), 'b', AT)
     const sts = created(tx.mock.calls).map(s => s.statement)
-    expect(sts).toEqual(['MATCH (n:`Source` {id: $slug}) SET n += $set', 'MATCH (n:`Source` {id: $slug}) DETACH DELETE n'])
+    // A delete first removes what the entity owns (#187), then the node; both find a Source by id.
+    expect(sts).toHaveLength(3)
+    expect(sts[0]).toBe('MATCH (n:`Source` {id: $slug}) SET n += $set')
+    expect(sts[1]).toMatch(/^MATCH \(n:`Source` \{id: \$slug\}\)\s+OPTIONAL MATCH \(n\)-\[:HAS_CONTENT\|/)
+    expect(sts[2]).toBe('MATCH (n:`Source` {id: $slug}) DETACH DELETE n')
     tx.mockReset()
     await applyEntityOps(env, 'Transport:mtb-683', payload('Transport:mtb-683', [{ op: 'set-props', props: { regser: { from: 'a', to: 'b' } } }]), 'b', AT)
     expect(created(tx.mock.calls)[0].statement).toBe('MATCH (n:`Transport` {slug: $slug}) SET n += $set')

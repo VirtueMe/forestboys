@@ -135,6 +135,43 @@ describe.skipIf(!ENABLED)('apply, against the local Neo4j', () => {
     expect(await props('Source', 'id', `${P}src`)).toBeNull()
   })
 
+  it('delete-entity takes the entity\'s own text with it, and the notes that were about it, and nothing else (#187)', async () => {
+    const q = (cypher: string, params: Record<string, unknown> = {}) => runCypher<{ n: number }>(env, cypher, params)
+    const descs = async (ids: string[]) => Number((await q(`MATCH (d:Description) WHERE d.id IN $ids RETURN count(d) AS n`, { ids }))[0].n)
+    // A unit and a person with a text each; the person has a note about the unit and a note about another unit; the unit has a name.
+    await apply(`Unit:${P}del-u`, [{ op: 'create-entity', kind: 'Unit', slug: `${P}del-u`, props: {}, descriptions: [{ order: 1, content: BLOCKS('Enhet.') }] }], SYNC)
+    await apply(`Unit:${P}keep-u`, [{ op: 'create-entity', kind: 'Unit', slug: `${P}keep-u`, props: {} }], SYNC)
+    await apply(`Person:${P}del-p`, [{ op: 'create-entity', kind: 'Person', slug: `${P}del-p`, props: {}, descriptions: [{ order: 1, content: BLOCKS('Person.') }] }], SYNC)
+    await runCypher(env, `
+      MATCH (p:Person {slug: $p}), (u:Unit {slug: $u}), (k:Unit {slug: $k})
+      CREATE (p)-[:MEMBER_OF]->(u), (p)-[:MEMBER_OF]->(k)
+      CREATE (p)-[:HAS_MEMBERSHIP_NOTE]->(:Description {id: $n1, order: 1, content: $c})-[:ABOUT_UNIT]->(u)
+      CREATE (p)-[:HAS_MEMBERSHIP_NOTE]->(:Description {id: $n2, order: 1, content: $c})-[:ABOUT_UNIT]->(k)
+      CREATE (u)-[:HAS_NAME]->(:Name {id: $nm, value: 'Gammelt navn'})`,
+      { p: `${P}del-p`, u: `${P}del-u`, k: `${P}keep-u`, n1: `desc:membership:${P}1`, n2: `desc:membership:${P}2`, nm: `${P}name-1`, c: BLOCKS('Notat.') })
+    const own = (await q(`MATCH (:Unit {slug: $u})-[:HAS_CONTENT]->(d:Description) RETURN count(d) AS n`, { u: `${P}del-u` }))[0].n
+    expect(Number(own)).toBe(1)
+
+    // Deleting the unit: its text, its name and the note about it go; the person, their own text and the other note stay.
+    await apply(`Unit:${P}del-u`, [{ op: 'delete-entity' }], SYNC)
+    expect(await props('Unit', 'slug', `${P}del-u`)).toBeNull()
+    expect(Number((await q(`MATCH (d:Description) WHERE d.content = $c AND NOT (d)--() RETURN count(d) AS n`, { c: BLOCKS('Enhet.') }))[0].n)).toBe(0)
+    expect(await descs([`desc:membership:${P}1`])).toBe(0)
+    expect(Number((await q(`MATCH (m:Name {id: $i}) RETURN count(m) AS n`, { i: `${P}name-1` }))[0].n)).toBe(0)
+    expect(await descs([`desc:membership:${P}2`])).toBe(1)
+    expect(await props('Person', 'slug', `${P}del-p`)).not.toBeNull()
+    expect(Number((await q(`MATCH (:Person {slug: $p})-[:HAS_CONTENT]->(d:Description) RETURN count(d) AS n`, { p: `${P}del-p` }))[0].n)).toBe(1)
+
+    // Deleting the person: their text and the note they own go with them.
+    await apply(`Person:${P}del-p`, [{ op: 'delete-entity' }], SYNC)
+    expect(await descs([`desc:membership:${P}2`])).toBe(0)
+    expect(await props('Unit', 'slug', `${P}keep-u`)).not.toBeNull()
+
+    // No Description made by this test is left without a connection.
+    const orphans = await q(`MATCH (d:Description) WHERE NOT (d)--() AND (d.id STARTS WITH $a OR d.id CONTAINS $b) RETURN count(d) AS n`, { a: `desc:membership:${P}`, b: P })
+    expect(Number(orphans[0].n)).toBe(0)
+  })
+
   it('an outline: the archive records what was absorbed, and a changed text makes it stale with what it produced marked older', async () => {
     const slug = `${P}outline-b`
     await runCypher(env, `CREATE (o:Outline {slug: $s, canonicalName: 'Testoutline'}) CREATE (o)-[:HAS_CONTENT]->(:Description {id: $d, order: 1, content: $c})`,
