@@ -7,6 +7,9 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import { runCypher, type Neo4jEnv } from './neo4j.ts'
 import { findAlias, slugClaim, PERSON_RENAME_ALIASES, DROP_DANGLING_ALIASES, dropShadowedAliases } from './slug-alias.ts'
 import { planRename, renameSlug } from './slug-rename.ts'
+import { buildSitemap } from './sitemap.ts'
+import { resolveSlug } from '../../src/utils/slugResolver.ts'
+import { aliasRedirect } from '../../src/utils/aliasRedirect.ts'
 
 const E = (globalThis as unknown as { process: { env: Record<string, string | undefined> } }).process.env
 const ENABLED = E.NEO4J_TEST === '1'
@@ -132,6 +135,23 @@ describe.skipIf(!ENABLED)('slug rename, against the local Neo4j', () => {
     await runCypher(env, PERSON_RENAME_ALIASES, { renames: renames.slice(0, 2), at: AT })
     await runCypher(env, PERSON_RENAME_ALIASES, { renames: renames.slice(0, 2), at: AT })
     expect(await count(`MATCH (a:SlugAlias {slug: $b})-[:ALIAS_OF]->() RETURN count(a) AS n`, { b: `${P}pb` })).toBe(1)
+  })
+
+  it('the resolver, the in-app redirect and the list all follow an old slug (#96)', async () => {
+    // From the earlier tests: the Operation was renamed old → new → newer → old; `newer` and `new` are its aliases now.
+    const read = (cypher: string, params?: Record<string, unknown>) => runCypher(env, cypher, params ?? {}, 'Read')
+    expect(await resolveSlug(`${P}newer`, read)).toMatchObject({ path: `/events/${P}old`, slug: `${P}old` })
+    expect(await aliasRedirect(`/events/${P}new/x`, read)).toBe(`/events/${P}old/x`)
+    expect(await aliasRedirect(`/events/${P}old`, read)).toBeNull()                           // live: not an alias
+
+    let stored = ''
+    const kv = { put: (_k: string, v: string) => { stored = v; return Promise.resolve() } } as unknown as KVNamespace
+    const sm = await buildSitemap({ ...env, SITEMAP: kv })
+    expect(sm.aliases.get(`/events/${P}newer`)).toBe(`/events/${P}old`)
+    expect(sm.known.has(`/events/${P}old`)).toBe(true)
+    expect(sm.known.has(`/events/${P}newer`)).toBe(false)                                     // an alias is not a page
+    expect(sm.paths.some(p => p.includes(P) && p.includes('newer'))).toBe(false)              // and not in sitemap.txt
+    expect(stored).toContain(`/events/${P}newer\t/events/${P}old`)
   })
 
   it('refuses what cannot be renamed', async () => {

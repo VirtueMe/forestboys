@@ -17,8 +17,8 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
   if (!ok) return json({ error: 'Invalid signature' }, 401)
 
   try {
-    const paths = await buildSitemap(env)
-    return json({ ok: true, urls: paths.length })
+    const { paths, aliases } = await buildSitemap(env)
+    return json({ ok: true, urls: paths.length, aliases: aliases.size })
   } catch (e) {
     return json({ error: (e as Error).message }, 502)
   }

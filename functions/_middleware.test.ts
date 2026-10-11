@@ -1,8 +1,8 @@
 import { describe, expect, it, vi } from 'vitest'
 import { onRequest } from './_middleware.ts'
-import { pageStatus } from './_lib/sitemap.ts'
+import { clearSitemapCache, pageStatus } from './_lib/sitemap.ts'
 
-const known = { paths: [], known: new Set(['/person/linge', '/person/kåre']) }
+const known = { paths: [], known: new Set(['/person/linge', '/person/kåre']), aliases: new Map<string, string>() }
 
 describe('pageStatus', () => {
   it('is 200 for a known entity, with encoding, case, slash and child page', () => {
@@ -18,6 +18,7 @@ describe('pageStatus', () => {
 })
 
 function run(path: string, method = 'GET', kv?: string) {
+  clearSitemapCache()
   const next = vi.fn(() => Promise.resolve(new Response('next', { headers: { 'Content-Type': 'application/json' } })))
   const ASSETS = { fetch: vi.fn(() => Promise.resolve(new Response('<html></html>', { headers: { 'Content-Type': 'application/json' } }))) }
   const SITEMAP = kv === undefined ? undefined : { getWithMetadata: () => Promise.resolve({ value: kv, metadata: { builtAt: Date.now() } }) }
@@ -43,6 +44,17 @@ describe('middleware', () => {
     expect(res.status).toBe(404)
     expect(await res.text()).toBe('<html></html>')
     expect(miss.next).not.toHaveBeenCalled()
+  })
+  it('an old address of a renamed page is a 302 to the page, keeping the rest of the path and the query (#96)', async () => {
+    const list = '/person/new-name\n/events/x\n/person/old-name\t/person/new-name\n/events/old-x\t/events/x'
+    const moved = await run('/person/old-name/medlemmer?a=1', 'GET', list).res
+    expect(moved.status).toBe(302)
+    expect(moved.headers.get('Location')).toBe('https://x.test/person/new-name/medlemmer?a=1')
+    const ev = await run('/events/Old-X', 'GET', list).res
+    expect(ev.headers.get('Location')).toBe('https://x.test/events/x')
+    // A page that exists is never redirected, whatever aliases say; an unknown slug with no alias is still a 404.
+    expect((await run('/person/new-name', 'GET', list).res).status).toBe(200)
+    expect((await run('/person/nobody', 'GET', list).res).status).toBe(404)
   })
   it('fails open: no KV binding means 200', async () => {
     expect((await run('/person/whatever').res).status).toBe(200)

@@ -23,7 +23,10 @@
  *   :pageClass — string             — extra class for page-specific styles
  */
 import { ref, watch } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import { useDetailSlug } from '@/composables/useDetailSlug.ts'
+import { neo4jQuery } from '@/composables/useNeo4j.ts'
+import { aliasRedirect } from '@/utils/aliasRedirect.ts'
 
 const props = defineProps<{
   load:         (slug: string) => Promise<void>
@@ -46,6 +49,18 @@ async function run(slug: string) {
 }
 
 watch(detailSlug, run, { immediate: true })
+
+// A slug that finds nothing may be the old address of a page that was renamed: go to the page (#96).
+const route  = useRoute()
+const router = useRouter()
+watch([() => props.notFound, loading], async ([missing, busy]) => {
+  if (!missing || busy) return
+  const path = route.path
+  try {
+    const to = await aliasRedirect(path, neo4jQuery)
+    if (to && route.path === path) void router.replace({ path: to, query: route.query, hash: route.hash })
+  } catch (err) { console.error('[DetailPage] alias lookup', err) }
+})
 </script>
 
 <style scoped>
