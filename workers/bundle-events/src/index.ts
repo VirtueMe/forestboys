@@ -34,11 +34,14 @@ export class BundleEventsDO {
     if (request.method === 'GET' && url.pathname === '/subscribe') {
       const subscribers = this.subscribers
       const encoder     = this.encoder
+      let self: ReadableStreamDefaultController<Uint8Array>
       const stream = new ReadableStream<Uint8Array>({
         start(controller) {
+          self = controller
           subscribers.add(controller)
           controller.enqueue(encoder.encode(': connected\n\n'))
         },
+        cancel() { subscribers.delete(self) },   // the client closed: forget it now, not at the next broadcast
       })
       return new Response(stream, {
         headers: {

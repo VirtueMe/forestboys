@@ -8,8 +8,8 @@
  * looks identical everywhere.
  *
  * SSE realtime updates are outline-scoped today; pass `realtimeOutlineId`
- * to subscribe to an SSE channel. Other kinds re-fetch on bundle
- * actions only (good enough until a per-entity channel is added).
+ * to subscribe to an SSE channel (visible tab only, 10 minutes at most). Other kinds
+ * re-fetch on bundle actions only (good enough until a per-entity channel is added).
  */
 import { ref, computed, onUnmounted, watch, type Ref, type ComputedRef } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
@@ -96,25 +96,56 @@ export function useEntityBundles(opts: EntityBundlesOptions) {
   }
   watch(() => route.hash, syncFromHash, { immediate: true })
 
-  // SSE — only when an outlineId is supplied (today's channel keying).
+  // SSE — only when an outlineId is supplied (today's channel keying). An open stream keeps the Durable Object awake,
+  // and that is billed by the second, so it is open only while the tab is visible and for at most STREAM_MAX_MS.
+  // Coming back to the tab reopens it with a refetch. After the cap it stays closed until then: a page left open and
+  // visible stops getting live updates after 10 minutes, which is the point.
+  const STREAM_MAX_MS = 10 * 60 * 1000
   let eventSource: EventSource | null = null
-  function openEventStream(outlineId: string): void {
-    if (eventSource) eventSource.close()
-    eventSource = new EventSource(`/api/proposals/events?channel=${encodeURIComponent(outlineId)}`)
+  let capTimer: ReturnType<typeof setTimeout> | undefined
+  let streamChannel: string | null = null
+
+  function closeEventStream(): void {
+    clearTimeout(capTimer)
+    eventSource?.close()
+    eventSource = null
+  }
+  function openEventStream(channel: string): void {
+    closeEventStream()
+    streamChannel = channel
+    eventSource = new EventSource(`/api/proposals/events?channel=${encodeURIComponent(channel)}`)
     eventSource.onmessage = () => {
       if (opts.slug.value) void loadOpenBundles(opts.slug.value)
     }
+    capTimer = setTimeout(closeEventStream, STREAM_MAX_MS)
+  }
+  function onVisibilityChange(): void {
+    if (document.hidden) { closeEventStream(); return }
+    if (!streamChannel || eventSource) return
+    if (opts.slug.value) void loadOpenBundles(opts.slug.value)   // whatever arrived while the stream was closed
+    openEventStream(streamChannel)
   }
   if (opts.realtimeOutlineId) {
     watch(
       () => [opts.realtimeOutlineId?.value, opts.isAdmin.value] as const,
       ([oid, admin]) => {
-        if (admin && typeof oid === 'string' && oid) openEventStream(oid)
+        if (admin && typeof oid === 'string' && oid) {
+          streamChannel = oid
+          if (!document.hidden) openEventStream(oid)
+        } else {
+          streamChannel = null
+          closeEventStream()
+        }
       },
       { immediate: true },
     )
+    document.addEventListener('visibilitychange', onVisibilityChange)
   }
-  onUnmounted(() => { eventSource?.close(); eventSource = null })
+  onUnmounted(() => {
+    document.removeEventListener('visibilitychange', onVisibilityChange)
+    streamChannel = null
+    closeEventStream()
+  })
 
   // Refetch on kind + slug + admin changes.
   watch(
