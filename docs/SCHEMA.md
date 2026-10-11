@@ -231,11 +231,13 @@ Vocabularies:
 | `INVOLVED_IN`         | `Incident`                                | `role, outcome`                                       |
 | `PARTICIPATED_IN`     | `Operation`                               | `role, startDate, endDate`                            |
 | `STATIONED_AT`        | `Location` \| `Station`                  | `id, role, startDate, endDate, state, sourceRef, sourceRefs` — one edge per stay (docs/PERSON-STATIONED-AT.md) |
+| `ATTENDED`            | `Unit {type:"course"}`                    | `startDate, endDate, passed` — course attendance; all three may be null, dates are partial (`YYYY`, `YYYY-MM`, `YYYY-MM-DD`), `passed` is a boolean |
 | `CREW_OF`             | `Transport`                               | `role` (controlled vocab — RAF WWII + SOE dispatcher) |
 | `BORN_AT`             | `Location`                                | —                                                     |
 | `HOME_AT`             | `Location`                                | —                                                     |
 | `HAS_CONTENT`         | `Description`                             | sections                                              |
 | `HAS_MEMBERSHIP_NOTE` | `Description`                             | relation-scoped — note then `ABOUT_UNIT` to the Unit  |
+| `HAS_ATTENDANCE_NOTE` | `Description`                             | relation-scoped — note then `ABOUT_UNIT` to the course |
 | `HAS_INCIDENT_NOTE`   | `Description`                             | relation-scoped — note then `ABOUT_INCIDENT`          |
 | `HAS_OPERATION_NOTE`  | `Description`                             | relation-scoped — note then `ABOUT_OPERATION`         |
 | `HAS_STATIONED_NOTE`  | `Description`                             | per stay — `Description.stayId` = the edge's `id`, then `ABOUT_PLACE` |
@@ -243,6 +245,7 @@ Vocabularies:
 **Rules:**
 - Every `Person` MUST have exactly one `RANK` edge (the rank they are known by). The default is `Rank{canonicalName:"Menig"}` (tier 1) with `sourceRef = 'sanity-migration:person:<id>:default:menig-soldier-baseline'`. The `HELD_RANK` history is optional.
 - `MEMBER_OF` typically points at the most-specific Unit; parent Units/Orgs are reached via `PART_OF` traversal.
+- `ATTENDED` is course attendance and is kept apart from membership: its target is always a `Unit {type:"course"}` (the editors skip any other unit). It is written as a whole set from either side (`PATCH /api/admin/person/:slug/attendances`, `PATCH /api/admin/unit/:slug/attendees`), which replaces that person's or that course's `ATTENDED` edges. The note for one attendance is keyed by the course (`PATCH /api/admin/person/:slug/attendance-note/:unitSlug`), so it survives a replace.
 
 ---
 
@@ -302,6 +305,7 @@ Formations / sub-groups: Kompani Linge, KP F, Eksportgrupper, MTB squadrons, Mil
 **Inbound:**
 - `(:Person)-[:MEMBER_OF]->(u)`
 - `(:Unit)-[:PART_OF]->(u)` — nested sub-units
+- `(:Person)-[:ATTENDED]->(u)` — when `u` is a course
 - `(:CourseOverview)-[:HAS_COURSE]->(u)` — when `u` is a course
 - `(:Operation)-[:ORCHESTRATED_BY]->(u)` (rare)
 
@@ -676,13 +680,13 @@ A full source document — OSS memos, SOE reports, articles, scanned corresponde
 | `MENTIONS`        | (any)         | inline @-tags  |
 | `RESPONDS_TO`     | `Description` | corrections    |
 | `ABOUT`           | (any)         | legacy ABOUT shape |
-| `ABOUT_UNIT`      | `Unit`        | relation-scoped notes (paired with `HAS_MEMBERSHIP_NOTE` from Person, `HAS_MEMBER_UNIT_NOTE` from Organization) |
+| `ABOUT_UNIT`      | `Unit`        | relation-scoped notes (paired with `HAS_MEMBERSHIP_NOTE` and `HAS_ATTENDANCE_NOTE` from Person, `HAS_MEMBER_UNIT_NOTE` from Organization) |
 | `ABOUT_INCIDENT`  | `Incident`    | relation-scoped notes (paired with `HAS_INCIDENT_NOTE` from Person) |
 | `ABOUT_OPERATION` | `Operation`   | relation-scoped notes (paired with `HAS_OPERATION_NOTE` from Person) |
 
 **Inbound:**
 - `(any)-[:HAS_CONTENT {order}]->(d)` — the canonical pattern
-- `(:Person)-[:HAS_MEMBERSHIP_NOTE|HAS_INCIDENT_NOTE|HAS_OPERATION_NOTE]->(d)` — person-scoped notes
+- `(:Person)-[:HAS_MEMBERSHIP_NOTE|HAS_INCIDENT_NOTE|HAS_OPERATION_NOTE|HAS_ATTENDANCE_NOTE]->(d)` — person-scoped notes
 - `(:Organization)-[:HAS_MEMBER_UNIT_NOTE]->(d)` — org-scoped notes about a member unit
 
 **Rules:**
