@@ -812,7 +812,7 @@ R2 mutations bracket the Neo4j transaction:
    - For `create-entity`: `CREATE (e:<Kind> {...})` + outbound `CREATE` edges
    - For `modify-block`: locate Description, replace block by `_key`, stamp `previous*`
    - For `add-edge` / `remove-edge`: the obvious mutations
-   - For `delete-entity`: `DETACH DELETE` (with confirmation guard)
+   - For `delete-entity`: `DETACH DELETE` (with confirmation guard), after deleting what the entity owns: its Descriptions and Names and the relation notes about it (`docs/SCHEMA.md`, Description rules; #187)
    - For `obsolete-outline`: set `archivedAt` + `archivedReason` properties
 3. **Cleanup** — patch `bundles/<bundleId>/manifest.json` with
    `If-Match` to flip the entity's status to `accepted`. Append to

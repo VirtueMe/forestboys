@@ -685,6 +685,14 @@ A full source document — OSS memos, SOE reports, articles, scanned corresponde
 - `(:Person)-[:HAS_MEMBERSHIP_NOTE|HAS_INCIDENT_NOTE|HAS_OPERATION_NOTE]->(d)` — person-scoped notes
 - `(:Organization)-[:HAS_MEMBER_UNIT_NOTE]->(d)` — org-scoped notes about a member unit
 
+**Rules:**
+- **A Description never outlives what it belongs to.** Deleting an entity (`delete-entity`, `_apply.ts` `deleteOwnedStatement`) deletes, in the same transaction: the Descriptions it points at with `HAS_CONTENT` or a relation note (`HAS_MEMBERSHIP_NOTE`, `HAS_INCIDENT_NOTE`, `HAS_OPERATION_NOTE`, `HAS_STATIONED_NOTE`, `HAS_RANK_NOTE`, `HAS_ATTENDANCE_NOTE`, `HAS_MEMBER_UNIT_NOTE`); its `Name` nodes (`HAS_NAME`); and the relation notes on other entities whose `ABOUT*` edge ends at it, when it is the note's only subject (the relation is deleted with the entity, so the note has nothing to be about). Shared nodes (`Source`, `Rank`, images, other entities) and Descriptions that only `MENTIONS` or `CITES` it stay.
+- **Orphans** (a Description with no connection at all, left by deletes before #187) are found with:
+
+```cypher
+MATCH (d:Description) WHERE NOT (d)--() RETURN d.id, d.content
+```
+
 ---
 
 ### Rank
