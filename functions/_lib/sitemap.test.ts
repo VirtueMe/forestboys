@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
-import { opsChangeUrls, canonicalPath, entityPath, normalizePath, readSitemap, renderSitemap, SITEMAP_KEY, MAX_AGE_MS } from './sitemap.ts'
+import { opsChangeUrls, redirectTarget, canonicalPath, entityPath, normalizePath, readSitemap, renderSitemap, SITEMAP_KEY, MAX_AGE_MS } from './sitemap.ts'
 
 describe('normalizePath', () => {
   it('makes encoded and plain æøå, case and trailing slash agree', () => {
@@ -74,5 +74,18 @@ describe('opsChangeUrls', () => {
   it('is false for edits that leave the set of URLs alone', () => {
     expect(opsChangeUrls([{ op: 'modify-block' }, { op: 'set-kind' }, { op: 'obsolete-outline' }])).toBe(false)
     expect(opsChangeUrls([{ op: 'set-props', props: { date: { from: null, to: '1944' } } }])).toBe(false)
+  })
+})
+
+describe('old addresses in the list (#96)', () => {
+  const sm = (aliases: Record<string, string>) => ({ paths: [], known: new Set<string>(), aliases: new Map(Object.entries(aliases)) })
+  it('redirectTarget keeps the prefix the reader used, the rest of the path, and is case and encoding blind', () => {
+    const s = sm({ '/person/old': '/person/new', '/map/old-sted': '/map/nytt-sted' })
+    expect(redirectTarget('/person/old', s)).toBe('/person/new')
+    expect(redirectTarget('/Person/OLD/medlemmer', s)).toBe('/person/new/medlemmer')
+    expect(redirectTarget('/location/old-sted', s)).toBe('/location/nytt-sted')
+    expect(redirectTarget('/person/other', s)).toBeNull()
+    expect(redirectTarget('/people', s)).toBeNull()
+    expect(redirectTarget('/person/old', null)).toBeNull()
   })
 })

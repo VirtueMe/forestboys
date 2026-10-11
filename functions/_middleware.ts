@@ -5,7 +5,8 @@
  *    whatever the slug. Crawlers, link previews and archives read the status, so a page that exists answers 200 and
  *    one that does not answers 404 — with the same `index.html`, so the app still renders (`NotFoundView`). «Exists»
  *    is the KV list in `_lib/sitemap.ts`. When there is no list and none can be built, the answer is 200: a wrong 404
- *    hides a real page, a wrong 200 is what the site did before.
+ *    hides a real page, a wrong 200 is what the site did before. An unknown slug that is the old address of a
+ *    renamed page is a 302 to the page instead (#96).
  * 2. Puts the site's name (an admin setting, #153) into the `<title>` of the HTML it serves, so the tab, search results
  *    and link previews have it without the app running.
  *
@@ -14,7 +15,7 @@
  */
 
 import { readSiteSettings } from '~/_lib/site-settings.ts'
-import { entityPath, pageStatus, readSitemap, type SitemapEnv } from '~/_lib/sitemap.ts'
+import { entityPath, pageStatus, readSitemap, redirectTarget, type SitemapEnv } from '~/_lib/sitemap.ts'
 
 interface Env extends SitemapEnv {
   milorg_users?: D1Database
@@ -29,7 +30,11 @@ export const onRequest: PagesFunction<Env> = async (ctx) => {
 
   let res: Response
   if (isPage) {
-    const status = pageStatus(url.pathname, await readSitemap(ctx.env, ctx.waitUntil.bind(ctx)))
+    const sitemap = await readSitemap(ctx.env, ctx.waitUntil.bind(ctx))
+    const status = pageStatus(url.pathname, sitemap)
+    // An old address of a renamed page goes to the page (#96); the list holds them, so this asks the graph nothing.
+    const moved = status === 404 ? redirectTarget(url.pathname, sitemap) : null
+    if (moved) return Response.redirect(new URL(moved + url.search, url).toString(), 302)
     // The shell itself, not what the static host would answer for this path (its 404 page, while there is one).
     const shell = await ctx.env.ASSETS.fetch(new Request(new URL('/', url), { headers: ctx.request.headers }))
     res = new Response(shell.body, { status: shell.ok ? status : shell.status, headers: shell.headers })

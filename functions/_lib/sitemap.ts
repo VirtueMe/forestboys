@@ -6,10 +6,12 @@
  * write and the others would 404 a new page until the TTL ran out. A KV write is global within about a minute.
  *
  * The value is one canonical path per line (`/person/kåre` is stored as `/person/k%C3%A5re`), the metadata carries
- * `builtAt`. A path is compared in its normalised form (`normalizePath`): decoded, lower case, no trailing slash.
+ * `builtAt`. A line with a tab is not a page but an old address and where it leads now (`/events/old<TAB>/events/new`, #96):
+ * the middleware answers it with a redirect instead of a 404, with no graph query. `/sitemap.txt` lists only the pages. A path is compared in its normalised form (`normalizePath`): decoded, lower case, no trailing slash.
  */
 
 import { runCypher, type Neo4jEnv } from '~/_lib/neo4j.ts'
+import { ALIAS_ROWS, routeOf } from '~/_lib/slug-alias.ts'
 
 export interface SitemapBinding {
   SITEMAP?: KVNamespace
@@ -88,13 +90,25 @@ async function entityPaths(env: Neo4jEnv): Promise<string[]> {
   return out
 }
 
+/** Every old slug and the canonical path of the page it leads to now. */
+async function aliasLines(env: Neo4jEnv): Promise<string[]> {
+  const rows = await runCypher<{ label: string; slug: string; target: string }>(env, ALIAS_ROWS, {}, 'Read')
+  const out: string[] = []
+  for (const r of rows) {
+    const route = routeOf(r.label)
+    if (route && r.slug && r.target) out.push(`${canonicalPath(route, r.slug)}\t${canonicalPath(route, r.target)}`)
+  }
+  return out
+}
+
 /** Query the graph and store the list. Throws when the graph or the KV binding is unavailable. */
-export async function buildSitemap(env: SitemapEnv): Promise<string[]> {
+export async function buildSitemap(env: SitemapEnv): Promise<Sitemap> {
   if (!env.SITEMAP) throw new Error('SITEMAP KV binding missing')
   if (!env.NEO4J_URI || !env.NEO4J_USERNAME || !env.NEO4J_PASSWORD) throw new Error('Neo4j is not configured')
   const paths = [...new Set([...STATIC_ROUTES, ...await entityPaths(env as Neo4jEnv)])].sort()
-  await env.SITEMAP.put(SITEMAP_KEY, paths.join('\n'), { metadata: { builtAt: Date.now() } })
-  return paths
+  const aliases = (await aliasLines(env as Neo4jEnv)).sort()
+  await env.SITEMAP.put(SITEMAP_KEY, [...paths, ...aliases].join('\n'), { metadata: { builtAt: Date.now() } })
+  return parse([...paths, ...aliases].join('\n'))
 }
 
 /** Called by every write that changes the set of URLs; pass it to `waitUntil` so the response is not delayed. */
@@ -108,19 +122,31 @@ export function opsChangeUrls(ops: { op: string; props?: object }[]): boolean {
 }
 
 export interface Sitemap {
-  /** Canonical paths, as stored. */
+  /** Canonical paths of the pages, as stored. */
   paths: string[]
   /** The same, normalised, for lookups. */
   known: Set<string>
+  /** Old address (normalised) → canonical path of the page it leads to now. */
+  aliases: Map<string, string>
 }
 
 // An isolate keeps the parsed list for a minute: a 50 000-line split per request would be wasted work.
 const LOCAL_TTL_MS = 60_000
 let local: { at: number; value: string; sitemap: Sitemap } | null = null
 
+/** Forget the list an isolate is holding (tests). */
+export function clearSitemapCache(): void { local = null }
+
 function parse(value: string): Sitemap {
-  const paths = value.split('\n').filter(Boolean)
-  return { paths, known: new Set(paths.map(normalizePath)) }
+  const paths: string[] = []
+  const aliases = new Map<string, string>()
+  for (const line of value.split('\n')) {
+    if (!line) continue
+    const [from, to] = line.split('\t')
+    if (to !== undefined) aliases.set(normalizePath(from), to)
+    else paths.push(line)
+  }
+  return { paths, known: new Set(paths.map(normalizePath)), aliases }
 }
 
 /**
@@ -132,10 +158,7 @@ export async function readSitemap(env: SitemapEnv, waitUntil: (p: Promise<unknow
   if (local && Date.now() - local.at < LOCAL_TTL_MS) return local.sitemap
   try {
     const { value, metadata } = await env.SITEMAP.getWithMetadata<{ builtAt?: number }>(SITEMAP_KEY)
-    if (value === null) {
-      const paths = await buildSitemap(env)
-      return { paths, known: new Set(paths.map(normalizePath)) }
-    }
+    if (value === null) return await buildSitemap(env)
     if (Date.now() - (metadata?.builtAt ?? 0) > MAX_AGE_MS) waitUntil(invalidateSitemap(env))
     const sitemap = local?.value === value ? local.sitemap : parse(value)
     local = { at: Date.now(), value, sitemap }
@@ -151,6 +174,20 @@ export function pageStatus(path: string, sitemap: Sitemap | null): 200 | 404 {
   const entity = entityPath(path)
   if (!entity || !sitemap) return 200
   return sitemap.known.has(entity) ? 200 : 404
+}
+
+/**
+ * Where an old address leads now, or null: `/person/old/medlemmer` → `/person/new/medlemmer`. The prefix the reader used is
+ * kept (`/location/` stays `/location/`), and so is anything after the slug.
+ */
+export function redirectTarget(path: string, sitemap: Sitemap | null): string | null {
+  const entity = entityPath(path)
+  const to = entity && sitemap?.aliases.get(entity)
+  if (!to) return null
+  const [, typed, , ...rest] = path.split(/[?#]/)[0].split('/')
+  const prefix = normalizePath('/' + typed).slice(1)
+  const slug = to.split('/')[2]
+  return `/${prefix}/${slug}${rest.length ? '/' + rest.join('/') : ''}`
 }
 
 /** The body of `/sitemap.txt`: one absolute URL per line. */

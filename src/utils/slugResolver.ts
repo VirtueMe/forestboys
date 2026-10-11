@@ -59,11 +59,16 @@ const KINDS = Object.keys(KIND_ROUTES).map(l => `n:${l}`).join(' OR ')
 /** The slug as the database spells it, hyphens and the like removed, to compare with the keys. */
 const FLAT = "toLower(replace(replace(replace(replace(replace(n.slug, '-', ''), ' ', ''), '_', ''), '.', ''), '/', ''))"
 
+// The second part: a former slug of a renamed page leads to the page it has now (#96).
 const CYPHER = `
   MATCH (n) WHERE n.slug IS NOT NULL AND (${KINDS})
     AND (n.slug = $exact OR ${FLAT} IN $keys)
-  RETURN labels(n)[0] AS label, n.slug AS slug
-  LIMIT 40`
+  RETURN labels(n)[0] AS label, n.slug AS slug, null AS target
+  LIMIT 40
+  UNION
+  MATCH (a:SlugAlias)-[:ALIAS_OF]->(n) WHERE a.slug = $exact
+  RETURN labels(n)[0] AS label, a.slug AS slug, n.slug AS target
+  LIMIT 10`
 
 /** A page that can be a link target: its kind and slug, or an old slug that now leads to `target`. */
 export interface SlugRow { label: string; slug: string; target?: string }
@@ -106,7 +111,7 @@ export async function resolveSlug(slug: string, query: QueryFn): Promise<SlugHit
   if (!key) return null
 
   const rows = (await query(CYPHER, { exact, keys: zeroVariants(key) }))
-    .map(r => ({ label: String(r.label), slug: String(r.slug) }))
+    .map(r => ({ label: String(r.label), slug: String(r.slug), ...(typeof r.target === 'string' && r.target ? { target: r.target } : {}) }))
   const m = matchSlug(rows, exact)
   return m.kind === 'hit' ? m.hit : null
 }
