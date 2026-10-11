@@ -517,8 +517,10 @@ The old slug of a renamed page (#96). A node of its own and not a property of th
 **Outbound:** `(:SlugAlias)-[:ALIAS_OF]->(n)` — straight at the entity, never at another alias (renaming twice gives two aliases, no chain).
 
 **Rules:**
-- Written only by the rename helper (`functions/_lib/slug-rename.ts`), in one transaction with the new slug, the entity's own `Description` ids (`desc:<kind>:<slug>:<order>` follow the slug) and the links in descriptions that pointed at the old slug (rewritten, `src/utils/linkCheck.ts`).
+- Written by the rename helper (`functions/_lib/slug-rename.ts`: the event editor, and a `set-props` on `slug` in an accepted bundle) and by the Sanity person sync, which follows Sanity's renames. The helper works in one transaction with the new slug, the entity's own `Description` ids (`desc:<kind>:<slug>:<order>` follow the slug) and the links in descriptions that pointed at the old slug (rewritten, `src/utils/linkCheck.ts`).
 - An entity that takes an old slug back drops that alias.
+- A create (an editor, or `create-entity` in a bundle) refuses a slug that is an alias on its address space. The Sanity sync is the exception: Sanity decides, so a slug it hands to another person is theirs, and the alias goes.
+- Deleting the entity deletes its aliases.
 - The link checker treats a link to an alias as `fixable`, with the entity's current slug as the suggestion.
 
 ---
