@@ -16,6 +16,13 @@ const desc = (over: Partial<DescriptionRow>): DescriptionRow =>
   ({ label: 'Operation', slug: 'ax-13', name: 'AX 13', descId: 'd1', order: 1, content: null, ...over })
 
 describe('auditDescriptions', () => {
+  it('an old slug is fixable: its alias row leads to the page it now belongs to (#96)', () => {
+    const slugs = [...SLUGS, { label: 'Operation', slug: 'ax-13' }, { label: 'Operation', slug: 'ax-0013', target: 'ax-13' }]
+    const a = auditDescriptions(slugs, [desc({ slug: 'sub004', content: content('/events/ax-0013') })])
+    expect(a.rows).toHaveLength(1)
+    expect(a.rows[0]).toMatchObject({ verdict: 'fixable', stored: '/events/ax-0013', suggestion: { path: '/events/ax-13', slug: 'ax-13' } })
+  })
+
   it('lists only the links that are not fine, with whose they are', () => {
     const a = auditDescriptions(SLUGS, [desc({ content: content('sub004', 'gone') })])
     expect(a.checked).toBe(2)

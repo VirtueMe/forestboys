@@ -11,6 +11,7 @@
 import { requireAdmin } from '~/_lib/require-admin.ts'
 import { runCypher, type Neo4jEnv } from '~/_lib/neo4j.ts'
 import { auditDescriptions, type DescriptionRow } from '~/_lib/link-audit.ts'
+import { ALIAS_ROWS } from '~/_lib/slug-alias.ts'
 import { KIND_ROUTES } from '../../../../src/utils/slugResolver.ts'
 
 interface Env extends Neo4jEnv {
@@ -40,7 +41,10 @@ export const onRequestGet: PagesFunction<Env> = async ({ request, env }) => {
              p.slug AS pageSlug, CASE WHEN p IS NULL THEN null ELSE n.id END AS cardId
     `, {}, 'Read')
 
-    return json(auditDescriptions(slugs, descriptions))
+    // A former slug leads to the page it now belongs to: its links are fixable, with the new slug as the suggestion.
+    const aliases = await runCypher<{ label: string; slug: string; target: string }>(env, ALIAS_ROWS, {}, 'Read')
+
+    return json(auditDescriptions([...slugs, ...aliases], descriptions))
   } catch (e) {
     return json({ error: (e as Error).message }, 502)
   }

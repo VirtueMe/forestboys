@@ -126,6 +126,13 @@ export function linkSlugs(content: unknown): string[] {
   return out
 }
 
+/** Every link in `content` that names a page of ours: how it is stored, and the page it names (as typed, not looked up). */
+export function linkTargets(content: unknown): { source: 'link' | 'person'; stored: string; route: string; slug: string }[] {
+  const out: { source: 'link' | 'person'; stored: string; route: string; slug: string }[] = []
+  for (const l of links(content)) if (l.target && l.target !== 'empty') out.push({ source: l.source, stored: l.stored, route: l.target.route, slug: l.target.slug })
+  return out
+}
+
 /** Every internal link and person link in `content` (Portable Text, or its JSON string) with a verdict. */
 export function checkLinks(content: unknown, index: SlugIndex): LinkFinding[] {
   const out: LinkFinding[] = []
