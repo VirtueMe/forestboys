@@ -25,6 +25,7 @@ This document defines the graph. It deliberately says nothing about how it's que
 - The literal `new` is reserved as a slug — used by the in-page create form.
 - `slug` uniqueness is scoped to the label (a `Person {slug:"x"}` and a `Unit {slug:"x"}` may coexist, but two `Person {slug:"x"}` may not).
 - Migration rounds MERGE on `sanityId`; reads MATCH on `slug`.
+- A renamed page keeps its old slug as a `SlugAlias` (below). A slug is taken when a live node **or** an alias has it in the same address space (`/events/` for Operation and Incident alike), so a new page cannot take over an old address.
 
 ---
 
@@ -503,6 +504,22 @@ Migration target: `Event` → `Incident`, normalize `DEPARTED_FROM_STATION` → 
 | `title` (display)                                       | → `canonicalName`                                                             |
 | `sanityId` (only key on un-migrated nodes)              | → `slug` populated from the Sanity slug field                                 |
 
+
+---
+
+### SlugAlias
+
+**Identity**: `route` + `slug` (unique together; constraint `slug_alias_route_slug`, `scripts/migrations/add-slug-alias-constraint.cypher`)
+**Properties**: `route` (the address space: `/events/`, `/person/`, `/map/`, … from `KIND_ROUTES`), `slug` (the old slug), `kind` (the label the entity had when it was renamed), `createdAt`
+
+The old slug of a renamed page (#96). A node of its own and not a property of the entity, so the entity and the Sanity sync diff stay clean.
+
+**Outbound:** `(:SlugAlias)-[:ALIAS_OF]->(n)` — straight at the entity, never at another alias (renaming twice gives two aliases, no chain).
+
+**Rules:**
+- Written only by the rename helper (`functions/_lib/slug-rename.ts`), in one transaction with the new slug, the entity's own `Description` ids (`desc:<kind>:<slug>:<order>` follow the slug) and the links in descriptions that pointed at the old slug (rewritten, `src/utils/linkCheck.ts`).
+- An entity that takes an old slug back drops that alias.
+- The link checker treats a link to an alias as `fixable`, with the entity's current slug as the suggestion.
 
 ---
 
