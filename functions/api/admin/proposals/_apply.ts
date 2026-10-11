@@ -107,6 +107,40 @@ export function archiveOutlineStatement(a: { slug: string; at: string; reason: s
   }
 }
 
+/**
+ * What an entity owns and so goes with it when it is deleted (#187). `DETACH DELETE` removes a node and its
+ * relationships, not the nodes at the other end, so without this every deleted entity with a text left its
+ * Descriptions in the graph with no connection, still holding the old text.
+ *
+ * - Owned: the Descriptions an entity points at with `HAS_CONTENT` or one of the relation notes
+ *   (`HAS_MEMBERSHIP_NOTE`, `HAS_STATIONED_NOTE`, …), and its `Name` nodes (`HAS_NAME`).
+ * - Notes about it: a relation note on another entity whose `ABOUT_*` edge ends at this one (a person's membership
+ *   note about the unit). The relation is deleted with the entity, so the note has nothing to be about. Only when
+ *   this entity is the note's only subject.
+ *
+ * Not deleted: anything shared (Sources, Ranks, images, other entities), and a Description that merely mentions the
+ * entity (`MENTIONS`, `CITES`).
+ */
+const OWNED_EDGES = ['HAS_CONTENT', 'HAS_MEMBERSHIP_NOTE', 'HAS_INCIDENT_NOTE', 'HAS_OPERATION_NOTE', 'HAS_STATIONED_NOTE',
+  'HAS_RANK_NOTE', 'HAS_ATTENDANCE_NOTE', 'HAS_MEMBER_UNIT_NOTE', 'HAS_NAME'].join('|')
+const ABOUT_EDGES = ['ABOUT', 'ABOUT_UNIT', 'ABOUT_INCIDENT', 'ABOUT_OPERATION', 'ABOUT_PLACE', 'ABOUT_RANK'].join('|')
+
+export function deleteOwnedStatement(kind: string, slug: string): { statement: string; parameters: Record<string, unknown> } {
+  return {
+    statement: `MATCH ${nodePattern('n', kind, 'slug')}
+                OPTIONAL MATCH (n)-[:${OWNED_EDGES}]->(o) WHERE o:Description OR o:Name
+                WITH n, collect(DISTINCT o) AS owned
+                OPTIONAL MATCH (a:Description)-[:${ABOUT_EDGES}]->(n)
+                  WHERE NOT EXISTS { (a)-[:${ABOUT_EDGES}]->(m) WHERE m <> n }
+                WITH owned, collect(DISTINCT a) AS about
+                WITH owned + about AS gone
+                UNWIND gone AS x
+                WITH DISTINCT x
+                DETACH DELETE x`,
+    parameters: { slug },
+  }
+}
+
 /** Compare each set-props op's `from` against the live node. */
 export async function checkPropDrift(env: Neo4jEnv, entityId: string, ops: BundleOp[]): Promise<DriftedProp[]> {
   const setOps = ops.filter((o): o is Extract<BundleOp, { op: 'set-props' }> => o.op === 'set-props')
@@ -362,6 +396,8 @@ export async function applyEntityOps(
         break
       }
       case 'delete-entity': {
+        // Its text, names and the notes about it first, while the edges that find them still exist (#187).
+        txStatements.push(deleteOwnedStatement(kind, slug))
         txStatements.push({
           statement: `MATCH ${nodePattern('n', kind, 'slug')} DETACH DELETE n`,
           parameters: { slug },
