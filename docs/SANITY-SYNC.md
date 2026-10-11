@@ -155,7 +155,7 @@ Slug changes follow Sanity. The graph app isn't live, while the live site
 already uses Sanity's slugs, and Jan reuses freed slugs (the Reidulf Larsen
 split: the old person became `reidulf-larsen-wt`, a new one took
 `reidulf-larsen`). Renames run first, in one transaction, via temporary
-slugs; description ids follow the slug.
+slugs; description ids follow the slug. A renamed person keeps the old slug as a `SlugAlias` (#96, docs/SCHEMA.md), so the old address still leads to the page. A slug Sanity hands to another person in the same run is theirs: the alias goes (`dropShadowedAliases`), as does the alias of a person who is deleted. The sync does not rewrite links in descriptions: the text it imports from Sanity already carries Sanity's slugs.
 
 ### Review — no baseline
 
