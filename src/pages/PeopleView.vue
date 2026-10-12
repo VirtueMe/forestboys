@@ -306,7 +306,7 @@ onUnmounted(() => ro?.disconnect())
 
 .sep {
   font-size: 11px;
-  color: var(--rule);
+  color: var(--muted);
 }
 
 /* ── Count bar ──────────────────────────────────────────────── */

@@ -52,7 +52,7 @@ const year = new Date().getFullYear()
 .sep {
   font-family: var(--font-sans);
   font-size: var(--size-caps);
-  color: var(--rule);
+  color: var(--muted);
   flex-shrink: 0;
 }
 
