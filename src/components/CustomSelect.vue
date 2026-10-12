@@ -222,7 +222,7 @@ onUnmounted(() => document.removeEventListener('click', onDocClick, true))
 
 .label-mobile  { display: none; }
 .label-desktop { display: inline; }
-.sep { color: var(--rule); }
+.sep { color: var(--muted); }
 
 .type-pill {
   display: inline-block;
