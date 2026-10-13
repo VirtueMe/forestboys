@@ -331,7 +331,7 @@
      "thumbnailUrl": null
     }
    ],
-   "truncatedFrom": 2284
+   "truncatedFrom": 2307
   },
   {
    "query": "\n    MATCH (i:Incident)\n    RETURN i.slug AS slug,\n           i.title + CASE WHEN i.date IS NOT NULL THEN ' · ' + i.date ELSE '' END AS name\n    ORDER BY i.date DESC, i.title\n  ",
@@ -459,7 +459,7 @@
    ]
   },
   {
-   "query": "\n  MATCH (n) WHERE n.slug IS NOT NULL AND (n:Operation OR n:Incident OR n:Person OR n:Location OR n:Transport OR n:Station OR n:Outline OR n:Organization OR n:EquipmentType)\n    AND (n.slug = $exact OR toLower(replace(replace(replace(replace(replace(n.slug, '-', ''), ' ', ''), '_', ''), '.', ''), '/', '')) IN $keys)\n  RETURN labels(n)[0] AS label, n.slug AS slug\n  LIMIT 40",
+   "query": "\n  MATCH (n) WHERE n.slug IS NOT NULL AND (n:Operation OR n:Incident OR n:Person OR n:Location OR n:Transport OR n:Station OR n:Outline OR n:Organization OR n:EquipmentType)\n    AND (n.slug = $exact OR toLower(replace(replace(replace(replace(replace(n.slug, '-', ''), ' ', ''), '_', ''), '.', ''), '/', '')) IN $keys)\n  RETURN labels(n)[0] AS label, n.slug AS slug, null AS target\n  LIMIT 40\n  UNION\n  MATCH (a:SlugAlias)-[:ALIAS_OF]->(n) WHERE a.slug = $exact\n  RETURN labels(n)[0] AS label, a.slug AS slug, n.slug AS target\n  LIMIT 10",
    "params": {
     "exact": "forste-mote-om-mostandsbevegelse-i-london",
     "keys": [
@@ -469,7 +469,8 @@
    "rows": [
     {
      "label": "Operation",
-     "slug": "forste-mote-om-mostandsbevegelse-i-london"
+     "slug": "forste-mote-om-mostandsbevegelse-i-london",
+     "target": null
     }
    ]
   },
@@ -741,7 +742,7 @@
      "name": "Første møte om Motstandsbevegelse i London"
     }
    ],
-   "truncatedFrom": 2284
+   "truncatedFrom": 2307
   },
   {
    "query": "\n      MATCH (p:Person)\n      RETURN p.slug AS slug,\n             p.canonicalName + CASE WHEN p.birthYear IS NOT NULL THEN ' (' + toString(p.birthYear) + ')' ELSE '' END AS name\n      ORDER BY p.canonicalName\n    ",
@@ -848,7 +849,7 @@
      "name": "2 britiske offiserer"
     }
    ],
-   "truncatedFrom": 3957
+   "truncatedFrom": 3960
   },
   {
    "query": "MATCH (p:Person)-[:INVOLVED_IN|PARTICIPATED_IN]->(:`Operation` {slug: $slug})\n       RETURN DISTINCT p.slug AS slug, p.canonicalName AS name\n       ORDER BY name",
@@ -1259,36 +1260,8 @@
      "name": "ANGLO-NORWEGIAN COLLABORATION COMMITTEE"
     },
     {
-     "slug": "cossac",
-     "name": "COSSAC"
-    },
-    {
      "slug": "den-norske-regjering",
      "name": "Den norske regjering"
-    },
-    {
-     "slug": "eksportgruppene",
-     "name": "EXPORT grupper "
-    },
-    {
-     "slug": "eksportgruppe-torsvik",
-     "name": "Eksportgruppe  Torsvik"
-    },
-    {
-     "slug": "eksportgruppe-kvalen",
-     "name": "Eksportgruppe Kvalen"
-    },
-    {
-     "slug": "eksportgruppe-nielsen",
-     "name": "Eksportgruppe Nielsen"
-    },
-    {
-     "slug": "eksportgruppe-skytterholm",
-     "name": "Eksportgruppe Skytterholm"
-    },
-    {
-     "slug": "eksportgruppe-walle",
-     "name": "Eksportgruppe Walle"
     },
     {
      "slug": "flukt",
@@ -1337,9 +1310,37 @@
     {
      "slug": "linge-course-e",
      "name": "Kompani Linge — Kurs E"
+    },
+    {
+     "slug": "linge-course-ee",
+     "name": "Kompani Linge — Kurs EE"
+    },
+    {
+     "slug": "linge-course-f",
+     "name": "Kompani Linge — Kurs F"
+    },
+    {
+     "slug": "linge-course-fa",
+     "name": "Kompani Linge — Kurs FA"
+    },
+    {
+     "slug": "linge-course-g",
+     "name": "Kompani Linge — Kurs G"
+    },
+    {
+     "slug": "linge-course-h",
+     "name": "Kompani Linge — Kurs H"
+    },
+    {
+     "slug": "linge-course-i",
+     "name": "Kompani Linge — Kurs I"
+    },
+    {
+     "slug": "linge-course-k",
+     "name": "Kompani Linge — Kurs K"
     }
    ],
-   "truncatedFrom": 84
+   "truncatedFrom": 72
   },
   {
    "query": "\n      MATCH (u:Unit)-[:PARTICIPATED_IN]->(op:Operation {slug: $slug})\n      RETURN u.slug AS targetSlug, u.canonicalName AS targetName\n      ORDER BY targetName\n    ",
