@@ -4,25 +4,27 @@
  */
 
 import {
+  defineAnnotation,
+  defineDecorator,
   defineSchema,
+  defineTextBlock,
   EditorProvider,
   PortableTextEditable,
   useEditor,
   useEditorSelector,
   type EditorSelection,
   type PortableTextBlock,
-  type RenderAnnotationFunction,
-  type RenderDecoratorFunction,
-  type RenderStyleFunction,
+  type TextBlockRenderProps,
 } from '@portabletext/editor'
 import { defineBehavior, execute, forward } from '@portabletext/editor/behaviors'
-import { BehaviorPlugin, EventListenerPlugin } from '@portabletext/editor/plugins'
+import { BehaviorPlugin, EventListenerPlugin, NodePlugin } from '@portabletext/editor/plugins'
 import {
   getActiveAnnotations, getFocusTextBlock, getSelectedTextBlocks, getSelectedValue, getSelection, isActiveDecorator, isActiveListItem, isActiveStyle, isSelectionExpanded,
 } from '@portabletext/editor/selectors'
 import React from 'react'
 import { neo4jQuery } from '@/composables/useNeo4j.ts'
 import { linkTextRange, selectionTextRange, splitMarks, type SpanPoint, type TextRange } from '@/utils/linkText.ts'
+import { listIndexes, type ListBlock } from '@/utils/listIndex.ts'
 import { hasLinkMark, resolveLinkTarget, type SanityBlock } from '@/utils/portableText.ts'
 
 const DECORATORS = ['strong', 'em', 'underline'] as const
@@ -67,58 +69,79 @@ const schemaDefinition = defineSchema({
   blockObjects: [],
 })
 
-const renderDecorator: RenderDecoratorFunction = props => {
-  switch (props.value) {
-    case 'strong':    return React.createElement('strong', null, props.children)
-    case 'em':        return React.createElement('em', null, props.children)
-    case 'underline': return React.createElement('u', null, props.children)
-    default:          return React.createElement(React.Fragment, null, props.children)
-  }
+// How the marks, the styles and the two annotations are drawn. Registered nodes, not the render props
+// of PortableTextEditable: the editor removed those in 8.0. Module-level, so the plugin registers once.
+const decoratorTags = { strong: 'strong', em: 'em', underline: 'u' } as const
+
+const styleTags: Record<string, string> = {
+  h3: 'h3', h4: 'h4', h5: 'h5', h6: 'h6', blockquote: 'blockquote',
 }
 
-const renderStyle: RenderStyleFunction = props => {
-  switch (props.schemaType.value) {
-    case 'h3':         return React.createElement('h3', null, props.children)
-    case 'h4':         return React.createElement('h4', null, props.children)
-    case 'h5':         return React.createElement('h5', null, props.children)
-    case 'h6':         return React.createElement('h6', null, props.children)
-    case 'blockquote': return React.createElement('blockquote', null, props.children)
-    default:           return React.createElement('p', null, props.children)
-  }
+function TextBlock(props: TextBlockRenderProps) {
+  const { node, children, attributes, renderDefault } = props
+  const editor = useEditor()
+  const index  = useEditorSelector(editor, snapshot => listIndexes(snapshot.context.value as ListBlock[]).get(node._key))
+  const listed = node.listItem !== undefined && node.level !== undefined
+  return renderDefault({
+    ...props,
+    attributes: {
+      ...attributes,
+      ...(listed ? { 'data-list-item': node.listItem, 'data-level': node.level, 'data-list-index': index } : {}),
+    },
+    children: React.createElement(styleTags[node.style ?? ''] ?? 'p', null, children),
+  })
 }
 
-const renderAnnotation: RenderAnnotationFunction = props => {
-  if (props.schemaType.name === 'link') {
-    const href = (props.value as { href?: string }).href?.trim() ?? ''
-    return React.createElement(
-      'a',
-      {
-        className: `pt-link-mark${href ? '' : ' pt-link-mark--dead'}`,
-        href:      href || undefined,
-        title:     href || 'Lenken har ingen adresse',
-        onClick:   (e: React.MouseEvent) => e.preventDefault(),   // editing, not navigating
-      },
-      props.children,
-    )
-  }
-  if (props.schemaType.name === 'person') {
-    const v    = props.value as { slug?: string; name?: string }
-    const slug = v.slug ?? ''
-    const name = v.name ?? slug
-    return React.createElement(
-      'a',
-      {
-        className:  'pt-person-mark',
-        'data-slug': slug,
-        href:       `/person/${slug}`,
-        title:      name ? `${name} (/${slug})` : `/${slug}`,
-        onClick:    (e: React.MouseEvent) => e.preventDefault(),
-      },
-      props.children,
-    )
-  }
-  return React.createElement(React.Fragment, null, props.children)
-}
+const nodes = [
+  ...DECORATORS.map(name => defineDecorator({
+    type:   name,
+    render: ({ children }) => React.createElement(decoratorTags[name], null, children),
+  })),
+
+  // A text block: its style as the element inside, and the list item's attributes on the wrapper, which the
+  // CSS in PortableTextEditor.vue draws (the editor no longer puts them there once a text block is registered).
+  defineTextBlock({
+    type:   'block',
+    render: props => React.createElement(TextBlock, props),
+  }),
+
+  defineAnnotation({
+    type: 'link',
+    render: ({ annotation, children }) => {
+      const href = (annotation as { href?: string }).href?.trim() ?? ''
+      return React.createElement(
+        'a',
+        {
+          className: `pt-link-mark${href ? '' : ' pt-link-mark--dead'}`,
+          href:      href || undefined,
+          title:     href || 'Lenken har ingen adresse',
+          onClick:   (e: React.MouseEvent) => e.preventDefault(),   // editing, not navigating
+        },
+        children,
+      )
+    },
+  }),
+
+  defineAnnotation({
+    type: 'person',
+    render: ({ annotation, children }) => {
+      const v    = annotation as { slug?: string; name?: string }
+      const slug = v.slug ?? ''
+      const name = v.name ?? slug
+      return React.createElement(
+        'a',
+        {
+          className:   'pt-person-mark',
+          'data-slug': slug,
+          href:        `/person/${slug}`,
+          title:       name ? `${name} (/${slug})` : `/${slug}`,
+          onClick:     (e: React.MouseEvent) => e.preventDefault(),
+        },
+        children,
+      )
+    },
+  }),
+]
 
 export interface Props {
   value:    PortableTextBlock[]
@@ -658,13 +681,11 @@ export function PortableTextEditorReact({ value, label, generation, onChange, ex
       },
     }),
     React.createElement(ValueReader, { registerReader }),
+    React.createElement(NodePlugin, { nodes }),
     React.createElement(BehaviorPlugin, { behaviors: [replaceWords, listItemIsNoHeading] }),
     React.createElement(Toolbar, { expanded, onToggleExpand }),
     React.createElement(PortableTextEditable, {
       'aria-label': label,
-      renderDecorator,
-      renderStyle,
-      renderAnnotation,
       className: 'pt-editable',
     }),
   )
