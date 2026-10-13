@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.12.1](https://github.com/VirtueMe/forestboys/compare/v0.12.0...v0.12.1) (2026-10-13)
+
+
+### Bug fixes
+
+* **descriptions:** keep tab-bearing prose out of the table block ([fcc1cde](https://github.com/VirtueMe/forestboys/commit/fcc1cdea7e38be56cd03381f9b4cf1ffeb7c2804))
+
 ## [0.12.0](https://github.com/VirtueMe/forestboys/compare/v0.11.0...v0.12.0) (2026-10-13)
 
 
