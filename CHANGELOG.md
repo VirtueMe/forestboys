@@ -1,5 +1,34 @@
 # Changelog
 
+## [0.11.0](https://github.com/VirtueMe/forestboys/compare/v0.10.1...v0.11.0) (2026-10-13)
+
+
+### Features
+
+* **slugs:** ask before a slug is changed and show what is rewritten ([ea4d16a](https://github.com/VirtueMe/forestboys/commit/ea4d16a95f3598027e33b4db6a2e0a94d1b3a67a))
+* **slugs:** keep a renamed page's old slug as an alias and rewrite links to it ([ed690ac](https://github.com/VirtueMe/forestboys/commit/ed690acacaa067d441256db30e6df9155d9b5461))
+* **slugs:** redirect the old address of a renamed page to the page ([f9b626c](https://github.com/VirtueMe/forestboys/commit/f9b626c25c3e3c3464f164d3277afda99b912a68))
+* **slugs:** rename through the helper, and let creates and deletes respect aliases ([8407573](https://github.com/VirtueMe/forestboys/commit/8407573391b29a47364364ba2ccf81da39408d04))
+
+
+### Bug fixes
+
+* **design:** use muted for separator text, not the rule colour ([499ca6f](https://github.com/VirtueMe/forestboys/commit/499ca6ffb837d9a2656abeb49438b8f28052a4f5))
+* **events:** an answer for the old slug no longer marks the renamed event as missing ([5802f77](https://github.com/VirtueMe/forestboys/commit/5802f7732db3076814669a8ea7720fa2a213d5a4))
+* **proposals:** delete an entity's own text, names and notes with it ([e22e8a3](https://github.com/VirtueMe/forestboys/commit/e22e8a3e706562b27bc27a0a71573d5d84f2b30b))
+* **proposals:** stop the bundle stream from holding the Durable Object awake ([fa11696](https://github.com/VirtueMe/forestboys/commit/fa11696090dd55a622cf72418eb9d3420a7fb0d7))
+
+
+### Documentation
+
+* **events:** the slug preview in the editor ([a52d621](https://github.com/VirtueMe/forestboys/commit/a52d621f70c0be4d79df1d7d54dc4cae718183d7)), closes [#96](https://github.com/VirtueMe/forestboys/issues/96)
+* **routing:** old addresses are a 302, in the server and in the app ([d866dd9](https://github.com/VirtueMe/forestboys/commit/d866dd94b81fa862c58a5c20de2f701b22d240ed)), closes [#96](https://github.com/VirtueMe/forestboys/issues/96)
+* **schema:** a Description never outlives its entity ([b95bf06](https://github.com/VirtueMe/forestboys/commit/b95bf06aa2c6d9b398083d3a30ffdad8b051a6fc))
+* **schema:** define the CourseOverview node ([be4e841](https://github.com/VirtueMe/forestboys/commit/be4e8417149aec984ce02b8f789828f27a4c60af))
+* **schema:** document the ATTENDED and HAS_ATTENDANCE_NOTE edges ([48e9add](https://github.com/VirtueMe/forestboys/commit/48e9adde652518c0bebbc66a469fe608c15d70cb))
+* **schema:** SlugAlias node and a uniqueness constraint for it ([5183faf](https://github.com/VirtueMe/forestboys/commit/5183faf50957a0e49e9b181cc9656292c823849f))
+* **slugs:** who writes aliases, and the sync exception ([72579fb](https://github.com/VirtueMe/forestboys/commit/72579fb7aca580bb35563b27f30d96962b690f4d)), closes [#96](https://github.com/VirtueMe/forestboys/issues/96)
+
 ## [0.10.1](https://github.com/VirtueMe/forestboys/compare/v0.10.0...v0.10.1) (2026-10-10)
 
 
