@@ -4,6 +4,7 @@
  *   npm run dev:worker                      # the local worker, which reads the local graph (.dev.vars)
  *   npx tsx scripts/e2e/record-fixtures.ts          # a dry run: what would be recorded
  *   npx tsx scripts/e2e/record-fixtures.ts --write  # writes e2e/fixtures/<kind>-<slug>.json
+ *   npx tsx scripts/e2e/record-fixtures.ts --only <slug> [--write]   # one page, when the others should stay as they are
  *
  * It opens each page in a browser, as a visitor who is not logged in, and keeps every
  * `POST /api/neo4j/query` and every same-origin `/sanity/` GET with its answer. A page that has an edit mode
@@ -24,6 +25,8 @@ import { capRows, requestKey, STAND_IN_ADMIN, type PageRecording, type RecordedG
 const ROOT = join(import.meta.dirname, '..', '..')
 const BASE = process.env.RECORD_BASE ?? 'http://localhost:8788'
 const WRITE = process.argv.includes('--write')
+const onlyAt = process.argv.indexOf('--only')
+const ONLY = onlyAt === -1 ? null : process.argv[onlyAt + 1]
 
 const host = new URL(BASE).hostname
 if (host !== 'localhost' && host !== '127.0.0.1') {
@@ -87,7 +90,9 @@ async function record(target: PageTarget, browser: Browser): Promise<PageRecordi
 
 const browser = await chromium.launch()
 try {
-  for (const target of PAGES) {
+  const targets = ONLY ? PAGES.filter(t => t.slug === ONLY) : PAGES
+  if (targets.length === 0) throw new Error(`--only ${ONLY}: no page in e2e/pages.ts has that slug.`)
+  for (const target of targets) {
     const recording = await record(target, browser)
     const text = JSON.stringify(recording, null, 1) + '\n'
     console.log(`${target.path.padEnd(28)} ${String(recording.queries.length).padStart(3)} queries, ${recording.gets.length} sanity gets, ${(text.length / 1024).toFixed(0)} KB`)
