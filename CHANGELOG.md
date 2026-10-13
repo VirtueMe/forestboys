@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.12.0](https://github.com/VirtueMe/forestboys/compare/v0.11.0...v0.12.0) (2026-10-13)
+
+
+### Features
+
+* **quality:** list descriptions with broken block structure ([9097bd3](https://github.com/VirtueMe/forestboys/commit/9097bd302b211046bdb562f279a7a286b0adf3ff))
+
+
+### Bug fixes
+
+* **editor:** move the Portable Text editor to 8, with node registrations ([882912d](https://github.com/VirtueMe/forestboys/commit/882912d7dd2390e7884fdbbe2b0b36b03500d2bf))
+
 ## [0.11.0](https://github.com/VirtueMe/forestboys/compare/v0.10.1...v0.11.0) (2026-10-13)
 
 
