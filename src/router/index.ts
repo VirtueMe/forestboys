@@ -21,6 +21,7 @@ import AccessView    from '../pages/AccessView.vue'
 import NotFoundView  from '../pages/NotFoundView.vue'
 import ReviewView    from '../pages/ReviewView.vue'
 import AdminQualityLinksView from '../pages/AdminQualityLinksView.vue'
+import AdminQualityHtmlView from '../pages/AdminQualityHtmlView.vue'
 import { ensureUser } from '../composables/useAuth.ts'
 
 // Admin routes are lazy-loaded so their chunks (including @portabletext/editor,
@@ -88,6 +89,7 @@ const router = createRouter({
         { path: 'review',                                    component: ReviewView },
         { path: 'quality',                                   redirect: '/admin/quality/links' },
         { path: 'quality/links',                             component: AdminQualityLinksView },
+        { path: 'quality/html',                              component: AdminQualityHtmlView },
         { path: 'proposals',                                 component: AdminProposalListView },
         { path: 'proposals/archive',                         component: AdminProposalArchiveView },
         { path: 'proposals/archive/:bundleId',                component: AdminProposalArchivedBundleView },

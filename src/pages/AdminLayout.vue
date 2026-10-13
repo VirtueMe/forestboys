@@ -107,6 +107,11 @@
                 Ødelagte lenker
               </router-link>
             </li>
+            <li>
+              <router-link to="/admin/quality/html" class="nav-link nav-link-nested" active-class="active">
+                Oppbygning
+              </router-link>
+            </li>
           </ul>
         </div>
 
@@ -168,6 +173,7 @@ const crumb = computed(() => {
   if (route.path.startsWith('/admin/users'))     return 'Brukere'
   if (route.path.startsWith('/admin/proposals')) return 'Forslag'
   if (route.path.startsWith('/admin/review'))    return 'Gjennomgang'
+  if (route.path.startsWith('/admin/quality/html')) return 'Datakvalitet · Oppbygning'
   if (route.path.startsWith('/admin/quality'))   return 'Datakvalitet · Lenker'
   const pageSlug = String(route.params.slug ?? '')
   const page = PAGES.find(p => p.slug === pageSlug)
