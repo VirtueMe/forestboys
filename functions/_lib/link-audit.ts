@@ -41,7 +41,7 @@ export interface Audit {
   checked: number
 }
 
-function ownerPath(d: DescriptionRow): string | null {
+export function ownerPath(d: Pick<DescriptionRow, 'label' | 'slug' | 'pageSlug' | 'cardId'>): string | null {
   if (d.label === 'Card') {
     return d.pageSlug ? `/admin/pages/${encodeURIComponent(d.pageSlug)}${d.cardId ? `?card=${encodeURIComponent(d.cardId)}` : ''}` : null
   }
