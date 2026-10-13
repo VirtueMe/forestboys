@@ -58,6 +58,16 @@ export const fixtures: Record<string, Block[]> = {
     block('p1', 'Tekst under overskriftene.'),
   ],
 
+  // What the other marks and styles are drawn as: italic, underline, a quote, and a link with no address.
+  marks: [
+    {
+      _key: 'm1', _type: 'block', style: 'normal',
+      markDefs: [{ _key: 'mdead', _type: 'link' }],
+      children: [span('c1', 'kursiv', ['em']), span('c2', ' '), span('c3', 'understrek', ['underline']), span('c4', ' '), span('c5', 'død lenke', ['mdead'])],
+    },
+    block('q1', 'Et sitat.', { style: 'blockquote' }),
+  ],
+
   // Enough text that the editor's box scrolls inside itself (#123).
   long: Array.from({ length: 40 }, (_, i) => block(`p${i}`, `Avsnitt nummer ${i + 1}. `.repeat(6))),
 }
