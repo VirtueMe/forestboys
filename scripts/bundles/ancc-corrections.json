@@ -16,5 +16,35 @@
     "from": "\nf.\tRole of U.S.A. assault groups.",
     "to": "\n7.\tRole of U.S.A. assault groups.",
     "why": "the scan read 7. as f."
+  },
+  {
+    "key": "ancc-14",
+    "from": "8. Interference with export of fish to Germany.",
+    "to": "6. Interference with export of fish to Germany.",
+    "why": "the scan read 6. as 8.; the agenda and the memo both say 6. (PDF p.154, folio 150)"
+  },
+  {
+    "key": "ancc-14",
+    "from": "very deep antipathy with you",
+    "to": "very deep sympathy with you",
+    "why": "the scan reads sympathy (PDF p.158, folio 154)"
+  },
+  {
+    "key": "ancc-14",
+    "from": "MINUTES OF THE  ANGLO-NORWEGIAN COLLABORATION COMMITTEE to be held on Friday, 8th January 1943, at 3 p.m.",
+    "to": "MINUTES of the Fourteenth Meeting of the ANGLO-NORWEGIAN COLLABORATION COMMITTEE held on Friday, 8th January, 1943.",
+    "why": "the heading mixed the agenda's wording (to be held ... at 3 p.m.) into the minutes' title (PDF p.153, folio 149)"
+  },
+  {
+    "key": "ancc-14",
+    "from": "at the loss of who was drowned",
+    "to": "at the loss of SM who was drowned",
+    "why": "the scan has SM after «loss of» (PDF p.153, folio 149)"
+  },
+  {
+    "key": "ancc-23",
+    "from": "\n(a) (b) (c) and (d) appear separately on the Agenda.",
+    "to": "\n1.(a) (b) (c) and (d) appear separately on the Agenda.",
+    "why": "the sub-point number 1. was lost (PDF p.88, folio 85); the list's own heading there is I., not 1. (left as it is: it needs an anchor to correct)"
   }
 ]
