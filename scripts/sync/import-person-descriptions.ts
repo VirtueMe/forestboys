@@ -31,6 +31,7 @@
 
 import neo4j from 'neo4j-driver'
 import { loadEnv } from '../lib/env.ts'
+import { preformattedFromSanity } from '../lib/preformatted-blocks.ts'
 import { fieldSha } from '../lib/sanity-sha.ts'
 loadEnv()
 
@@ -93,7 +94,7 @@ async function main() {
       items.push({
         slug:      p.slug,
         id:        `desc:person:${p.slug}:1`,
-        content:   JSON.stringify(d.description),
+        content:   JSON.stringify(preformattedFromSanity(d.description)),
         sourceRef: `sanity-migration:person:${d._id}:description`,
         updatedAt: d._updatedAt,
         sha:       fieldSha(d.description),

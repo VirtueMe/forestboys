@@ -109,3 +109,20 @@ describe('verifyStamps: the stamps give the verdicts the baseline file gives', (
     expect(differ).toEqual([])
   })
 })
+
+describe('a description with a table block (#260)', () => {
+  const table = { _key: 't', _type: 'block', style: 'normal', markDefs: [], children: [{ _key: 's', _type: 'span', marks: [], text: '1.\tOne' }] }
+  const descField = FIELDS.find(f => f.name === 'description')!
+  const descVerdict = (g: GraphPerson, s: Doc) => classify(g, s, undefined).find(v => v.field === 'description')?.verdict
+
+  it('takes a graph that holds the table marked as what Sanity would give: nothing to apply', () => {
+    const s = sanityDoc({ description: [table] })
+    const g = person({ content: [JSON.stringify([{ ...table, style: 'preformatted' }])] })
+    expect(descVerdict(g, s)).toBeUndefined()
+  })
+
+  it('stamps Sanity\'s own text and, because the rule marks the table, what the rule made of it', () => {
+    const stamps = stampFor(descField, sanityDoc({ description: [table] }))
+    expect(Object.keys(stamps).sort()).toEqual(['description_graphSha', 'description_sha'])
+  })
+})
