@@ -205,3 +205,33 @@ describe('classifyEvent with a table block in the description (#260)', () => {
     expect(verdictOf(classifyEvent(g, doc({ description: [table] }), undefined, l), 'description')).toBe('reset')
   })
 })
+
+describe('a description split into sections (#259)', () => {
+  const l = lookups()
+  const raw = [{ _key: 'b1', _type: 'block', markDefs: [], children: [{ _key: 's1', _type: 'span', marks: [], text: 'The whole minutes.' }] }]
+  const stamps = stampsFor(doc({ description: raw }), l)
+  const firstPart = JSON.stringify([{ ...raw[0], children: [{ ...raw[0].children[0], text: 'The whole' }] }])
+
+  it('is left alone: the order-1 section is only the first part, so it is neither a reset nor a conflict', () => {
+    const g = graphEvent({ description: firstPart, stamps, sections: 12 })
+    expect(classifyEvent(g, doc({ description: raw }), undefined, l)).toEqual([])
+    expect(classifyEvent(g, doc({ description: [{ ...raw[0], children: [{ ...raw[0].children[0], text: 'Changed in Sanity.' }] }] }), undefined, l)).toEqual([])
+  })
+
+  it('is still reset when the event has one section and the graph differs', () => {
+    const g = graphEvent({ description: firstPart, stamps, sections: 1 })
+    expect(verdictOf(classifyEvent(g, doc({ description: raw }), undefined, l), 'description')).toBe('reset')
+    expect(verdictOf(classifyEvent(graphEvent({ description: firstPart, stamps }), doc({ description: raw }), undefined, l), 'description')).toBe('reset')
+  })
+
+  it('does not count in the calibration, so a split event does not fail it', () => {
+    const g = graphEvent({ description: firstPart, stamps, sections: 3 })
+    const checks = calibrateEvents(new Map([['e1', g]]), new Map([['e1', doc({ description: raw })]]), new Map(), l, new Set())
+    expect(checks.description).toBeUndefined()
+  })
+
+  it('leaves the other fields of a split event to the usual rules', () => {
+    const g = graphEvent({ description: firstPart, stamps: { ...stamps, title_sha: sha('Old title') }, sections: 3, name: 'Old title' })
+    expect(verdictOf(classifyEvent(g, doc({ title: 'New title', description: raw }), undefined, l), 'title')).toBe('clean')
+  })
+})

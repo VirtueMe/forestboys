@@ -364,6 +364,15 @@ bundles.
   the other types' descriptions keep the `conflict` rule of `sync-description.ts`.
   **Temporary:** at the cutover the graph becomes the authority — empty `RESET_FROM_SANITY` so
   the graph's edits count again. `--keep-graph-edits` switches it off for one run.
+- **A description split into sections is left alone** (#259). The ANCC minutes are cut into one section per
+  numbered item (bundles from `scripts/bundles/split-minutes-package.ts`). The sync reads only the order-1
+  section, so after the cut it holds the first part of the text, and the `reset` rule above would write
+  Sanity's whole text over it and leave the other sections, so the minutes would be there twice. An event whose
+  graph holds more than one Description therefore has no verdict for `description` (`isSplit` in
+  `scripts/lib/event-sync.ts`), and calibration skips it. Nothing is lost: Sanity's text is still in Sanity, and
+  the graph is the authority after the cutover. No Operation had more than one section on 2026-10-14, so
+  this rule touched nothing when it was made. **A later change to such an event's description in Sanity does not
+  come through**; it is a change to make in the graph, or to ask Jan about.
 - Refuses to write unless calibration is 100%; backs up touched events first.
 
 ### Tables in descriptions (#260)

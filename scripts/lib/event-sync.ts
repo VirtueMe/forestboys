@@ -59,6 +59,8 @@ export interface GraphEvent {
   /** Links not added in the editor. */
   links:           string[]
   description:     string | null
+  /** How many Descriptions the event holds. More than one: an editor split the text, and the description is the graph's (#259). Missing counts as one. */
+  sections?:       number
   /** `<field>_sha` — the field's value as last taken in from Sanity. */
   stamps:          Record<string, string>
 }
@@ -147,6 +149,7 @@ export function classifyEvent(
 ): { field: string; verdict: EventVerdict }[] {
   const out: { field: string; verdict: EventVerdict }[] = []
   for (const f of EVENT_FIELDS) {
+    if (isSplit(g, f)) continue
     const now = f.fromSanity(s, l), graph = f.fromGraph(g)
     const stamp = baselineSha(g, f, base, l)
     const resets = reset.has(f.name) && graph !== now
@@ -162,6 +165,13 @@ export function classifyEvent(
   }
   return out
 }
+
+/**
+ * A description that holds more than one section was split by an editor or a bundle (#259): the order-1 section the
+ * sync reads is only the first part of the text, so comparing it with Sanity's whole text means nothing, and
+ * rewriting it from Sanity would leave the text twice. The sync says nothing about it until the cutover.
+ */
+const isSplit = (g: GraphEvent, f: { name: string }) => f.name === 'description' && (g.sections ?? 1) > 1
 
 /** Events with no stamp yet whose baseline file entry is the version the graph took in — they are stamped from it (#80). */
 export const eventsToStamp = (graph: Map<string, GraphEvent>, base: Map<string, Doc>): GraphEvent[] =>
@@ -199,6 +209,7 @@ export function calibrateEvents(
     const s = sanity.get(g.sanityId), b = base.get(g.sanityId)
     if (!s) continue
     for (const f of EVENT_FIELDS) {
+      if (isSplit(g, f)) continue
       const stamp = baselineSha(g, f, b, l)
       if (stamp === undefined || sha(f.fromSanity(s, l)) !== stamp) continue   // no baseline, or Sanity changed
       if (reset.has(f.name)) continue
@@ -254,10 +265,11 @@ export async function fetchGraphEvents(): Promise<Map<string, GraphEvent>> {
              [(e)-[r:REFERENCED_IN]->(s:Source) WHERE s.url IS NOT NULL AND coalesce(r.sourceRef, '') <> 'admin-edit' | s.url] AS links,
              head([(e)-[:HAS_CONTENT]->(d:Description) WHERE d.id = 'desc:event:' + e.sanityId | d.content]
                   + [(d:Description)-[:ABOUT]->(e) WHERE d.id = 'desc:event:' + e.sanityId | d.content]) AS description,
+             size([(e)-[:HAS_CONTENT]->(d:Description) | d]) AS sections,
              [k IN keys(e) WHERE k ENDS WITH '_sha' | [k, e[k]]] AS stampPairs`)
     return new Map(r.records.map(rec => {
-      const { stampPairs, ...rest } = rec.toObject() as Omit<GraphEvent, 'stamps'> & { stampPairs: [string, string][] }
-      const g: GraphEvent = { ...rest, stamps: Object.fromEntries(stampPairs) }
+      const { stampPairs, sections, ...rest } = rec.toObject() as Omit<GraphEvent, 'stamps' | 'sections'> & { stampPairs: [string, string][]; sections: unknown }
+      const g: GraphEvent = { ...rest, sections: Number(String(sections)), stamps: Object.fromEntries(stampPairs) }
       return [g.sanityId, g]
     }))
   } finally {
