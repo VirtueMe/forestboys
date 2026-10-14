@@ -141,29 +141,11 @@ describe('blocksToHtml', () => {
     expect(html).toBe('<ul>\n<li>a</li>\n</ul>\n<ol>\n<li>b</li>\n</ol>')
   })
 
-  it('merges consecutive tab-separated rows into one <pre>', () => {
-    const html = blocksToHtml([block({ text: 'a\tb' }), block({ text: 'c\td' }), block({ text: 'end' })])
-    expect(html).toBe('<pre class="pre-table">a\tb\nc\td</pre>\n<p>end</p>')
-  })
-
-  it('keeps a roster with long, column-padded rows as a <pre>', () => {
-    const row = 'Laks\t24.03.1945\t25.03.1945 858\tB-24L-5-FO\t44-49338\tBrer Rabbitt\t9A-D\t2Lt. Orban\t12\t9 NC\tChaffinch\tHS8-146 s178'
-    expect(blocksToHtml([block({ text: row })])).toBe(`<pre class="pre-table">${row}</pre>`)
-    const padded = `6          6          2${' '.repeat(40)}04:10${' '.repeat(40)}Div North Creak\tx`
-    expect(blocksToHtml([block({ text: padded })])).toContain('<pre class="pre-table">')
-  })
-
-  it('renders a block of minutes with tabbed headings and prose as paragraphs, not a <pre>', () => {
-    const text = '(a)\tWater-tight containers\nIt was reported that testing is still proceeding. SN and T have the matter in hand, and it was resolved that this item should now be omitted.\n(b)\tPay and allowances'
-    const html = blocksToHtml([block({ text }), block({ text: 'next' })])
+  it('draws a tab in an ordinary paragraph as a paragraph: only the preformatted style makes a table (#260)', () => {
+    const rows = 'Laks\t24.03.1945\t25.03.1945 858\tB-24L-5-FO\t44-49338\tBrer Rabbitt\t9A-D\t2Lt. Orban\t12\t9 NC\tChaffinch\tHS8-146 s178'
+    const html = blocksToHtml([block({ text: 'a\tb' }), block({ text: 'c\td' }), block({ text: rows }), block({ text: '1.\tPoints arising' })])
     expect(html).not.toContain('<pre')
-    expect(html).toBe(`<p>${text.replace(/\n/g, '<br>')}</p>\n<p>next</p>`)
-  })
-
-  it('does not merge a prose block into the roster rows around it', () => {
-    const prose = 'x\ty\n' + 'A long sentence of plain prose that goes on well past a hundred characters without any tab or padding in it.'
-    const html = blocksToHtml([block({ text: 'a\tb' }), block({ text: prose }), block({ text: 'c\td' })])
-    expect(html).toBe(`<pre class="pre-table">a\tb</pre>\n<p>${prose.replace(/\n/g, '<br>')}</p>\n<pre class="pre-table">c\td</pre>`)
+    expect(html).toBe(`<p>a\tb</p>\n<p>c\td</p>\n<p>${rows}</p>\n<p>1.\tPoints arising</p>`)
   })
 
   it('renders the preformatted style as a <pre>, with or without a tab, and merges consecutive blocks', () => {
