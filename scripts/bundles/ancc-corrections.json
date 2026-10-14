@@ -1,0 +1,20 @@
+[
+  {
+    "key": "ancc-24",
+    "from": "\np.\tPolicy of future operations",
+    "to": "\n5.\tPolicy of future operations",
+    "why": "the scan read 5. as p."
+  },
+  {
+    "key": "ancc-24",
+    "from": "\nb.\tRole of W/T units after D-day.",
+    "to": "\n6.\tRole of W/T units after D-day.",
+    "why": "the scan read 6. as b."
+  },
+  {
+    "key": "ancc-24",
+    "from": "\nf.\tRole of U.S.A. assault groups.",
+    "to": "\n7.\tRole of U.S.A. assault groups.",
+    "why": "the scan read 7. as f."
+  }
+]
