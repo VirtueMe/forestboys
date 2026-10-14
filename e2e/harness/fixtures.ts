@@ -66,6 +66,7 @@ export const fixtures: Record<string, Block[]> = {
       children: [span('c1', 'kursiv', ['em']), span('c2', ' '), span('c3', 'understrek', ['underline']), span('c4', ' '), span('c5', 'død lenke', ['mdead'])],
     },
     block('q1', 'Et sitat.', { style: 'blockquote' }),
+    block('t1', '1.  Første\n2.  Andre', { style: 'preformatted' }),
   ],
 
   // Enough text that the editor's box scrolls inside itself (#123).

@@ -166,6 +166,16 @@ describe('blocksToHtml', () => {
     expect(html).toBe(`<pre class="pre-table">a\tb</pre>\n<p>${prose.replace(/\n/g, '<br>')}</p>\n<pre class="pre-table">c\td</pre>`)
   })
 
+  it('renders the preformatted style as a <pre>, with or without a tab, and merges consecutive blocks', () => {
+    const html = blocksToHtml([block({ text: '1. One', style: 'preformatted' }), block({ text: '2. Two', style: 'preformatted' }), block({ text: 'end' })])
+    expect(html).toBe('<pre class="pre-table">1. One\n2. Two</pre>\n<p>end</p>')
+  })
+
+  it('does not merge a heading or a quote into the preformatted rows around it', () => {
+    const html = blocksToHtml([block({ text: 'a', style: 'preformatted' }), block({ text: 'H', style: 'h3' }), block({ text: 'b', style: 'preformatted' })])
+    expect(html).toBe('<pre class="pre-table">a</pre>\n<h3>H</h3>\n<pre class="pre-table">b</pre>')
+  })
+
   it('ignores non-block items', () => {
     expect(blocksToHtml([{ _key: 'i', _type: 'image' }])).toBe('')
   })

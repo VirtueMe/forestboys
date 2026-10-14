@@ -204,6 +204,8 @@ export function blocksToHtml(blocks?: SanityBlock[] | unknown | null): string {
         case 'h5':         flushPre(); parts.push(`<h5>${inner}</h5>`); break
         case 'h6':         flushPre(); parts.push(`<h6>${inner}</h6>`); break
         case 'blockquote': flushPre(); parts.push(`<blockquote>${inner}</blockquote>`); break
+        // Chosen in the editor (#260): consecutive blocks are one <pre>, like the tab-bearing ones below.
+        case 'preformatted': if (inner) preBuffer.push(inner); break
         default:
           if (inner && isTableBlock(block)) {
             // Tab-bearing blocks without prose are roster/table rows — buffer and merge into one <pre>
