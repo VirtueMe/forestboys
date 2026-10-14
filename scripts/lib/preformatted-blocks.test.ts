@@ -40,8 +40,9 @@ describe('markPreformatted', () => {
     expect(markPreformatted(once)).toEqual({ blocks: once, marked: 0 })
   })
 
-  it('draws the same HTML as the renderer did before, so nothing changes visibly', () => {
-    const drawnBefore = blocksToHtml(before)
-    expect(blocksToHtml(markPreformatted(before).blocks)).toBe(drawnBefore)
+  it('gives the renderer a box for the marked blocks and a paragraph for the rest', () => {
+    const html = blocksToHtml(markPreformatted(before).blocks)
+    expect(html).toContain('<pre class="pre-table">a\tb\nc\td</pre>')
+    expect(html).toContain('<p>Intro.</p>')
   })
 })

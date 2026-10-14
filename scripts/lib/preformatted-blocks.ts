@@ -2,9 +2,10 @@
  * The blocks the renderer used to draw as a table by looking for tabs (`isTableBlock`, #256), found
  * again so that the editor's own style can be set on them (#260).
  *
- * The rule is a frozen copy of the renderer's: it is what decided how production looked on the day the
- * renderer stopped deciding, so it must not change with it. A block is a table row when it has a tab,
- * unless it also carries prose: a line longer than PROSE_LINE_MIN with no tab and no column padding.
+ * The rule is the renderer's own as it was on the day the renderer stopped deciding (it is gone from there
+ * now), and it must not change: it decided how production looked, and it is what the sync uses to mark
+ * the tables in what Sanity gives. A block is a table row when it has a tab, unless it also carries
+ * prose: a line longer than PROSE_LINE_MIN with no tab and no column padding.
  */
 
 import type { SanityBlock } from '../../src/utils/portableText.ts'

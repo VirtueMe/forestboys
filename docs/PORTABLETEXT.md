@@ -295,8 +295,9 @@ A table, a roster or any text that must keep its spacing is a block with the sty
 editor has a button for it (the table icon, next to the quote), and `blocksToHtml` draws consecutive
 `preformatted` blocks as one `<pre class="pre-table">`. Nothing is guessed: a tab in an ordinary paragraph
 is just a tab. Before #260 the renderer called any tab-bearing block without prose a table (`isTableBlock`,
-#256); `scripts/migrations/preformatted-table-blocks.ts` set the style on those blocks once, and
-`scripts/lib/preformatted-blocks.ts` keeps a frozen copy of the old rule for it.
+#256); `scripts/migrations/preformatted-table-blocks.ts` set the style on those blocks once (production,
+2026-10-14), the renderer's guess is gone, and `scripts/lib/preformatted-blocks.ts` keeps the old rule, frozen,
+for the migration and for the sync.
 
 Sanity has no such style, so everything that takes a description in from Sanity runs it through
 `preformattedFromSanity` (the description sync, the event and person rules, the importers). The graph and

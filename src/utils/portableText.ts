@@ -123,25 +123,12 @@ function renderSpans(
   }).join('')
 }
 
-// A tab marks a roster or table row, unless the block also carries prose: a long line
-// with no tab and no column padding (minutes with "(a)<tab>Item" headings and paragraphs).
-// The thresholds were calibrated against production's tab-bearing blocks (#256); short
-// numbered agenda lines still look like a table and stay one.
-const PROSE_LINE_MIN = 100
-const COLUMN_PADDING = / {3,}/
-
-function isTableBlock(block: SanityBlock): boolean {
-  const text = (block.children ?? []).map(c => c.text ?? '').join('')
-  if (!text.includes('\t')) return false
-  return !text.split('\n').some(line => line.length > PROSE_LINE_MIN && !line.includes('\t') && !COLUMN_PADDING.test(line))
-}
-
 export function blocksToHtml(blocks?: SanityBlock[] | unknown | null): string {
   if (!Array.isArray(blocks) || blocks.length === 0) return ''
 
   const parts: string[] = []
   const listStack: { tag: string; level: number }[] = []
-  const preBuffer: string[] = []  // accumulate consecutive tab-bearing blocks
+  const preBuffer: string[] = []  // accumulate consecutive preformatted blocks
 
   function flushPre() {
     if (preBuffer.length > 0) {
@@ -204,16 +191,11 @@ export function blocksToHtml(blocks?: SanityBlock[] | unknown | null): string {
         case 'h5':         flushPre(); parts.push(`<h5>${inner}</h5>`); break
         case 'h6':         flushPre(); parts.push(`<h6>${inner}</h6>`); break
         case 'blockquote': flushPre(); parts.push(`<blockquote>${inner}</blockquote>`); break
-        // Chosen in the editor (#260): consecutive blocks are one <pre>, like the tab-bearing ones below.
+        // A table is what an editor said it is (#260): consecutive preformatted blocks are one <pre>.
         case 'preformatted': if (inner) preBuffer.push(inner); break
         default:
-          if (inner && isTableBlock(block)) {
-            // Tab-bearing blocks without prose are roster/table rows — buffer and merge into one <pre>
-            preBuffer.push(inner)
-          } else {
-            flushPre()
-            if (inner) parts.push(`<p>${inner}</p>`)
-          }
+          flushPre()
+          if (inner) parts.push(`<p>${inner}</p>`)
       }
     }
   }
