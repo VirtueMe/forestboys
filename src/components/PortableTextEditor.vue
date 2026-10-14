@@ -263,6 +263,19 @@ onBeforeUnmount(() => {
   margin: 0 0 0.75em;
 }
 
+/* Fixed-width text, the same box the page draws (.pre-table in main.css). */
+.pt-editable pre {
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 11px;
+  tab-size: 4;
+  white-space: pre-wrap;
+  background: color-mix(in srgb, var(--rule) 50%, var(--paper-raised));
+  border-radius: 3px;
+  padding: 8px 10px;
+  line-height: 1.65;
+  margin: 0 0 0.75em;
+}
+
 /* Links: ink with a hairline underline, faded-red on hover (DESIGN.md). */
 .pt-link-mark {
   color: var(--ink);

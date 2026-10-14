@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test'
-import { caretAtEndOf, openEditor, reportedTexts } from './helpers/editor.ts'
+import { blocksOf, caretAtEndOf, openEditor, reportedTexts } from './helpers/editor.ts'
 
 // The toolbar and the full-window mode (#123).
 test.describe('the toolbar and the box', () => {
@@ -82,5 +82,28 @@ test.describe('the full window', () => {
     await page.keyboard.press('Escape')
     await expect(page.getByRole('group', { name: 'Overskriftsnivå' })).toHaveCount(0)
     await expect(host(page)).toBeVisible()
+  })
+})
+
+// The table button (#260): a block is a table because an editor said so, not because it has a tab.
+test.describe('the table button', () => {
+  const button = (page: import('@playwright/test').Page) => page.getByRole('button', { name: 'Tabell' })
+
+  test('makes the block under the caret preformatted, and a second click makes it a paragraph again', async ({ page }) => {
+    await openEditor(page, 'paragraph')
+    await caretAtEndOf(page, 'Første avsnitt.')
+    await button(page).click()
+    await expect(page.locator('.pt-editable pre')).toContainText('Første avsnitt.')
+    await expect.poll(async () => (await blocksOf(page))[0].style).toBe('preformatted')
+
+    await button(page).click()
+    await expect(page.locator('.pt-editable pre')).toHaveCount(0)
+    await expect.poll(async () => (await blocksOf(page))[0].style).toBe('normal')
+  })
+
+  test('the button says what it is, and a stored preformatted block is drawn as a box', async ({ page }) => {
+    await openEditor(page, 'marks')
+    await expect(page.locator('.pt-editable pre')).toHaveCount(1)
+    await expect(button(page)).toHaveAttribute('title', 'Tabell (fast bredde)')
   })
 })

@@ -40,6 +40,8 @@ const schemaDefinition = defineSchema({
     { name: 'h5' },
     { name: 'h6' },
     { name: 'blockquote' },
+    // Fixed-width text kept as typed: the box the renderer draws (#260). Set here, never guessed from tabs.
+    { name: 'preformatted' },
   ],
   annotations: [
     // The shape Sanity stores: `{ _type: 'link', href }`. Some stored links have no
@@ -74,7 +76,7 @@ const schemaDefinition = defineSchema({
 const decoratorTags = { strong: 'strong', em: 'em', underline: 'u' } as const
 
 const styleTags: Record<string, string> = {
-  h3: 'h3', h4: 'h4', h5: 'h5', h6: 'h6', blockquote: 'blockquote',
+  h3: 'h3', h4: 'h4', h5: 'h5', h6: 'h6', blockquote: 'blockquote', preformatted: 'pre',
 }
 
 function TextBlock(props: TextBlockRenderProps) {
@@ -228,6 +230,14 @@ const numberListIcon = React.createElement(
   [3.5, 8, 12.5].map(y => React.createElement('path', { key: `l${y}`, d: `M6 ${y}h8` })),
 )
 
+/** A box with a row and two columns marked out: a table of fixed-width text. */
+const preformattedIcon = React.createElement(
+  'svg',
+  { width: 16, height: 16, viewBox: '0 0 16 16', fill: 'none', stroke: 'currentColor', strokeWidth: 1.5, strokeLinejoin: 'round', 'aria-hidden': true },
+  React.createElement('rect', { x: 2, y: 3, width: 12, height: 10, rx: 1 }),
+  React.createElement('path', { d: 'M2 7h12M6.5 7v6' }),
+)
+
 /** Two chain links: the link icon of Sanity's editor (Feather «link»). */
 const linkIcon = React.createElement(
   'svg',
@@ -282,15 +292,26 @@ const selectionInList = (snapshot: Parameters<typeof getSelectedTextBlocks>[0]) 
 
 const IN_LIST_TITLE = 'Overskrifter kan ikke brukes i en liste'
 
-function StyleButton({ name, label, heading }: { name: string; label: string; heading?: boolean }) {
+const PREFORMATTED_IN_LIST_TITLE = 'Tabell kan ikke brukes i en liste'
+
+function StyleButton({ name, label, heading, title, ariaLabel, inListTitle }: {
+  name: string
+  label: React.ReactNode
+  heading?: boolean
+  title?: string
+  ariaLabel?: string
+  /** For a style a list item cannot have: what the disabled button says. */
+  inListTitle?: string
+}) {
   const editor = useEditor()
   const active = useEditorSelector(editor, isActiveStyle(name))
-  const blocked = useEditorSelector(editor, snapshot => !!heading && selectionInList(snapshot))
+  const blocked = useEditorSelector(editor, snapshot => (!!heading || !!inListTitle) && selectionInList(snapshot))
   return React.createElement(ToolbarButton, {
     label,
     active,
     disabled: blocked,
-    title:    blocked ? IN_LIST_TITLE : undefined,
+    title:    blocked ? (inListTitle ?? IN_LIST_TITLE) : title,
+    ariaLabel,
     onClick: () => editor.send({ type: 'style.toggle', style: name }),
   })
 }
@@ -657,6 +678,7 @@ function Toolbar({ expanded, onToggleExpand }: { expanded: boolean; onToggleExpa
       React.createElement(DeepHeadingMenu),
     ),
     React.createElement(StyleButton,     { name: 'blockquote', label: '❝' }),
+    React.createElement(StyleButton,     { name: 'preformatted', label: preformattedIcon, title: 'Tabell (fast bredde)', ariaLabel: 'Tabell', inListTitle: PREFORMATTED_IN_LIST_TITLE }),
     React.createElement('span',          { className: 'pt-tb-sep' }),
     React.createElement(DecoratorButton, { name: 'strong',    label: 'B' }),
     React.createElement(DecoratorButton, { name: 'em',        label: 'I' }),

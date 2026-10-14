@@ -12,6 +12,13 @@ test.describe('what the editor draws', () => {
     await expect(editable.locator('p')).toHaveText('Tekst under overskriftene.')
   })
 
+  test('preformatted text is a pre in a monospace box', async ({ page }) => {
+    await openEditor(page, 'marks')
+    const pre = page.locator('.pt-editable pre')
+    await expect(pre).toContainText('1.  Første')
+    await expect(pre).toHaveCSS('font-family', /Courier/)
+  })
+
   test('a quote is a blockquote', async ({ page }) => {
     await openEditor(page, 'marks')
     await expect(page.locator('.pt-editable blockquote')).toHaveText('Et sitat.')
