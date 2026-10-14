@@ -26,6 +26,7 @@
 import { stableJson } from './sanity-sha.ts'
 import { API, sha, type Doc } from './person-sync.ts'
 import { linkArchiveBlocks } from '../../src/utils/archiveRefs.ts'
+import { preformattedFromSanity } from './preformatted-blocks.ts'
 
 export interface DescriptionKind {
   /** Used in ids, provenance and the SyncState row. */
@@ -48,9 +49,9 @@ export function hasText(blocks: unknown): boolean {
   return blocks.some(b => ((b as { children?: { text?: string }[] }).children ?? []).some(c => (c.text ?? '').trim()))
 }
 
-/** The blocks the graph should hold for `d`: Sanity's, with AIR 27 references linked. Null when there is no text. */
+/** The blocks the graph should hold for `d`: Sanity's, with AIR 27 references linked and the tables marked (#260). Null when there is no text. */
 export function importedBlocks(d: Doc): unknown[] | null {
-  return hasText(d.description) ? linkArchiveBlocks(d.description as unknown[]) : null
+  return hasText(d.description) ? preformattedFromSanity(linkArchiveBlocks(d.description as unknown[])) : null
 }
 
 /** What is compared and stamped: the imported blocks as stable JSON, or '' for no text. */

@@ -366,6 +366,15 @@ bundles.
   the graph's edits count again. `--keep-graph-edits` switches it off for one run.
 - Refuses to write unless calibration is 100%; backs up touched events first.
 
+### Tables in descriptions (#260)
+
+The editor's `preformatted` style does not exist in Sanity. Every place that takes a description in runs the
+blocks through `preformattedFromSanity` (`scripts/lib/preformatted-blocks.ts`), which sets it on the blocks
+the renderer once drew as tables. That keeps the graph and the import the same text, so a migrated
+description is not an edit to rewrite (the event `reset` rule above) or a conflict. A person stamped before
+the migration carries `description_sha` of Sanity's text and no `description_graphSha`, so a later change in
+Sanity to one of their descriptions shows as a `conflict` to look at, not as `clean`.
+
 ### Descriptions of transports, stations and locations
 
 Their descriptions were never imported (#99); the pages showed none. One sync

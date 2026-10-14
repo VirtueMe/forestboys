@@ -133,3 +133,19 @@ describe('stamps and ids', () => {
     expect(descriptionId(transport, 'nona-rhea')).toBe('desc:transport:nona-rhea:1')
   })
 })
+
+describe('the tables are marked on the way in (#260)', () => {
+  const table = { _key: 't', _type: 'block', style: 'normal', markDefs: [], children: [{ _key: 's', _type: 'span', marks: [], text: '1.\tOne' }] }
+
+  it('marks a tab block in what a sync takes in, and leaves the rest', () => {
+    const got = importedBlocks(doc([block('Prose.'), table])) as { style?: string }[]
+    expect(got.map(b => b.style)).toEqual([undefined, 'preformatted'])
+  })
+
+  it('reads a graph already migrated as the import, not as an edit', () => {
+    const d = doc([table])
+    const migrated = JSON.stringify([{ ...table, style: 'preformatted' }])
+    expect(graphValue(migrated)).toBe(sanityValue(d))
+    expect(classifyDescription({ sanityId: 'x', slug: 's', stamp: stampOf(doc([block('old')])), content: migrated }, d)).toBe('already')
+  })
+})

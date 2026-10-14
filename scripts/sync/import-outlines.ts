@@ -23,6 +23,7 @@ import { readFileSync, writeFileSync, mkdirSync } from 'node:fs'
 import { resolve } from 'node:path'
 import neo4j from 'neo4j-driver'
 import { loadEnv } from '../lib/env.ts'
+import { preformattedFromSanity } from '../lib/preformatted-blocks.ts'
 loadEnv()
 
 const DATA_DIR = resolve(process.cwd(), 'data')
@@ -73,7 +74,7 @@ for (const o of outlines) {
   // bodies still get a Description so the entity-context endpoint
   // returns a deterministic shape.
   const descId  = `desc:Outline:${slug}:1`
-  const blocks  = Array.isArray(o.description) ? o.description : []
+  const blocks  = Array.isArray(o.description) ? preformattedFromSanity(o.description) : []
   const content = JSON.stringify(blocks)
   lines.push(
     `MATCH (o:Outline {slug: ${cy(slug)}})`,

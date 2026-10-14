@@ -18,6 +18,7 @@
 import { createHash } from 'node:crypto'
 import neo4j from 'neo4j-driver'
 import { stableJson } from './sanity-sha.ts'
+import { preformattedFromSanity } from './preformatted-blocks.ts'
 import { loadBaselineFile } from './baseline.ts'
 import { importableLinks, parsePerson, rankEdge, urlToId, imageSources } from './person-rule.ts'
 
@@ -101,6 +102,8 @@ export const FIELDS: Field[] = [
     fromGraph:  g => sortedJoin(g.images) },
   { name: 'description',
     fromSanity: d => stableJson(d.description ?? null),
+    // The tables are marked on the way in (#260): the graph is compared with that, the stamp follows Sanity's own text.
+    ruleOf:     d => stableJson(preformattedFromSanity(d.description ?? null)),
     // Sections concatenate back into one block list; a single imported section is unchanged by this.
     fromGraph:  g => stableJson(g.content.flatMap(c => { try { return JSON.parse(c) as unknown[] } catch { return [] } })),
     imported:   g => g.content.length > 0 },

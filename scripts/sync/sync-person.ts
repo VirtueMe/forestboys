@@ -51,6 +51,7 @@ import { writeFileSync, mkdirSync } from 'node:fs'
 import { resolve } from 'node:path'
 import neo4j, { type ManagedTransaction } from 'neo4j-driver'
 import { loadEnv } from '../lib/env.ts'
+import { preformattedFromSanity } from '../lib/preformatted-blocks.ts'
 import {
   FIELDS, calibrate, classify, fetchGraphPeople, fetchSanityPeople, loadApril, neo4jDriver, stampsFromBaseline, verifyStamps,
   sanityLinks, stampFor, str, type Doc, type GraphPerson,
@@ -188,7 +189,7 @@ function descriptionStmt(id: string, slug: string, d: Doc): Stmt {
            CREATE (p)-[:HAS_CONTENT]->(:Description {id: $descId, order: 1, content: $content})
            SET p.description_sourceRef = $ref, p.description_state = 'candidate',
                p.description_sanityUpdatedAt = $updatedAt`,
-    params: { id, descId: `desc:person:${slug}:1`, content: JSON.stringify(d.description),
+    params: { id, descId: `desc:person:${slug}:1`, content: JSON.stringify(preformattedFromSanity(d.description)),
               ref: sanMigRef('person', id, 'description'), updatedAt: d._updatedAt },
   }
 }

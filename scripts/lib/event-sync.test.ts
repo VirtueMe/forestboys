@@ -187,3 +187,21 @@ describe('a description edited in the graph while Sanity is unchanged (#119)', (
     expect(calibration(graphEvent({ name: 'Landing (edited)', stamps })).title.agree).toBe(0)
   })
 })
+
+describe('classifyEvent with a table block in the description (#260)', () => {
+  const l = lookups()
+  const table = { _key: 't', _type: 'block', style: 'normal', markDefs: [], children: [{ _key: 's', _type: 'span', marks: [], text: '1.\tOne' }] }
+  const marked = [{ ...table, style: 'preformatted' }]
+
+  it('takes a migrated description as the import: it is not an edit to rewrite from Sanity', () => {
+    const stamps = stampsFor(doc({ description: [table] }), l)
+    const g = graphEvent({ description: JSON.stringify(marked), stamps })
+    expect(classifyEvent(g, doc({ description: [table] }), undefined, l)).toEqual([])
+  })
+
+  it('still rewrites a description someone changed', () => {
+    const stamps = stampsFor(doc({ description: [table] }), l)
+    const g = graphEvent({ description: JSON.stringify([{ ...marked[0], children: [{ ...table.children[0], text: 'edited' }] }]), stamps })
+    expect(verdictOf(classifyEvent(g, doc({ description: [table] }), undefined, l), 'description')).toBe('reset')
+  })
+})
