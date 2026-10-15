@@ -76,7 +76,7 @@ jobs:
         env:
           SITE_URL:          ${{ secrets.SITE_URL }}
           BOT_INGEST_SECRET: ${{ secrets.BOT_INGEST_SECRET }}
-        run: npx tsx scripts/sync/rebuild-sitemap.ts ${{ (github.event_name == 'schedule' || inputs.write) && '--write' || '' }}
+        run: npx tsx scripts/sync/rebuild-sitemap.ts --production ${{ (github.event_name == 'schedule' || inputs.write) && '--write' || '' }}
 
       - name: Heartbeat
         if: ${{ !cancelled() }}
