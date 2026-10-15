@@ -17,6 +17,7 @@ import { authFetch } from './useAuth.ts'
 import type { BundleStatus } from '@/utils/bundleStatus.ts'
 import type { BundleEvent } from '@/utils/bundleEvents.ts'
 import type { CommentCounts } from '@/utils/bundleComments.ts'
+import type { RelatedBundle } from '@/utils/entityRecord.ts'
 
 export type EntityStatus = 'pending' | 'accepted' | 'denied' | 'drifted'
 
@@ -92,6 +93,7 @@ interface BundleResponse {
   payloads: EntityPayload[]
   events:   BundleEvent[]
   commentCounts: CommentCounts
+  related?: Record<string, RelatedBundle[]>
 }
 
 interface AcceptResponse {
@@ -123,6 +125,8 @@ export function useProposalBundle(bundleId: string) {
   const payloads = ref<EntityPayload[]>([])
   const events   = ref<BundleEvent[]>([])
   const commentCounts = ref<CommentCounts>({ bundle: 0, entities: {} })
+  /** Other bundles that touch each entity of this one, in any state (#273). */
+  const related  = ref<Record<string, RelatedBundle[]>>({})
   const loading  = ref(false)
   const error    = ref<string | null>(null)
   const notFound = ref(false)
@@ -157,12 +161,14 @@ export function useProposalBundle(bundleId: string) {
       payloads.value = body.payloads
       events.value   = body.events ?? []
       commentCounts.value = body.commentCounts ?? { bundle: 0, entities: {} }
+      related.value  = body.related ?? {}
     } catch (e) {
       error.value = (e as Error).message
       manifest.value = null
       payloads.value = []
       events.value   = []
       commentCounts.value = { bundle: 0, entities: {} }
+      related.value  = {}
     } finally {
       loading.value = false
     }
@@ -261,6 +267,7 @@ export function useProposalBundle(bundleId: string) {
     payloads,
     events,
     commentCounts,
+    related,
     loading,
     error,
     notFound,

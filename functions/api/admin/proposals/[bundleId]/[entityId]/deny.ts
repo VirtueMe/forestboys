@@ -12,7 +12,7 @@
  *   4. Append to `denied-corpus/<kind>.json`.
  *   5. Append history-log entry. (No Neo4j writes.)
  *   6. Patch manifest entity status to `denied`.
- *   7. Patch by-entity (and the source index if bundle now closed) indices.
+ *   7. Set the entity record's status (and patch the source index if bundle now closed).
  *   8. If `reason.length >= 40`, fire-and-forget create a
  *      `bot-deny-analysis` GitHub issue. (DEFERRED — needs
  *      bot-deny-analysis workflow to land first.)
@@ -27,6 +27,7 @@ import { sourceIndexKey } from '~/_lib/bundle-origin.ts'
 import { bundleCounts } from '../../../../../../src/utils/bundleStatus.ts'
 import { actorOf, recordEvent } from '~/_lib/bundle-events.ts'
 import { refreshRow } from '~/_lib/bundle-index.ts'
+import { setRecordStatusSafe } from '~/_lib/entity-records.ts'
 import {
   ENTITY_ID_RE,
   indexRemove,
@@ -110,8 +111,8 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env, params }
   // 6. Manifest patch.
   const updatedManifest = await manifestSetStatus(env, bundleId, entityId, 'denied')
 
-  // 7. Index pruning.
-  await indexRemove(env, `proposals/by-entity/${entityId}/index.json`, bundleId)
+  // 7. Entity record, and the source index when the bundle is closed.
+  await setRecordStatusSafe(env.PROPOSALS, entityId, bundleId, 'denied')
   await recordEvent(env.PROPOSALS, bundleId, actor, { kind: 'denied', entityId, reason })
   await refreshRow(env.PROPOSALS, bundleId)
 

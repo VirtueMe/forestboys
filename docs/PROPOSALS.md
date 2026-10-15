@@ -169,7 +169,7 @@ proposals/bundles/<bundleId>/
   accepted/<entityId>-<ts>.json            ← archive + optional accept message
   denied/<entityId>-<ts>.json              ← archive + mandatory deny reason
 
-proposals/by-entity/<entityId>/index.json  ← which open bundles touch this entity (drives marker badge)
+proposals/by-entity/<entityId>/<bundleId>.json ← one record per entity and bundle, in any state (drives marker badge and the bundle page; see «Entity records»)
 proposals/by-outline/<outlineId>/index.json ← which open bundles derive from this outline
 proposals/by-source/sanity-<type>/index.json ← which open sync bundles come from this Sanity type
 
@@ -184,19 +184,15 @@ outline id, or `sanity-<type>` for sync bundles (see "Bundle origin") — so
 it's deterministic and human-readable in URLs. `<entityId>` keeps the `<Kind>:<slug>`
 shape used elsewhere.
 
-The **marker badge** for an entity reads
-`proposals/by-entity/<entityId>/index.json` and counts open bundles —
-not ops. One bundle touching an entity = one badge, regardless of how
-many ops within the bundle target it.
+The **marker badge** for an entity lists
+`proposals/by-entity/<entityId>/` with the custom metadata and counts the
+records whose `status` is `pending` — bundles, not ops. One bundle touching
+an entity = one badge, regardless of how many ops within the bundle target it.
 
 **`<blockPath>.json`** — one file per PT block proposal, addressed by
 stable block path (`section.<slug>.block.<blockKey>` or similar). Drift
 checked individually so a one-character edit in section A doesn't dismiss
 proposed changes in unrelated blocks.
-
-**`index.json`** — small manifest enumerating what files exist for this
-entity. One fetch tells the UI whether to render a marker badge at all,
-without doing an `R2.list()` on every page load.
 
 ## Review records: events, comments, archive and the list's index
 
@@ -236,6 +232,7 @@ proposals/bundles/<bundleId>/
   events/<ts>-<kind>-<rand>.json           built     one object per event                 (#190)
 
 proposals/index/<bundleId>.json            built     one row per bundle for the list, in the metadata (#184)
+proposals/by-entity/<entityId>/<bundleId>.json  built     one record per entity and bundle, in the metadata (#273)
 proposals/archive/<bundleId>.json          built     an archived bundle, whole, one object          (#188)
 proposals/purged/<bundleId>.json           built     who purged an archived bundle for good, when, why (#188)
 ```
@@ -243,6 +240,64 @@ proposals/purged/<bundleId>.json           built     who purged an archived bund
 `history/<entityId>/<ts>-<kind>.json` stays where it is: it is the log of what changed *an entity* and outlives the bundle. The
 new `events/` is the log of what happened *to the bundle*. They answer different questions, and an event for an accepted entity
 may point at the history object.
+
+### Entity records (built, #273)
+
+A change to an entity can be in several bundles at once (the bot, a sync, a package, an outline re-run). The old
+`proposals/by-entity/<entityId>/index.json` listed only the **open** bundles, held no changes, and was a shared file with
+`If-Match` retries, which the rule above forbids for anything several writers touch. It is replaced by **one object per entity
+and bundle**: `proposals/by-entity/<entityId>/<bundleId>.json`.
+
+- **Body:** a pointer, `{ "bundleId", "entityId", "payload": "proposals/bundles/<bundleId>/entity/<entityId>.json" }`, never a copy
+  of the ops: a copy would drift.
+- **Custom metadata** (strings, 2 KB in all, so the lists are capped and the cap is marked with `…`):
+
+  | key | value |
+  | --- | --- |
+  | `status` | `pending`, `accepted`, `denied`, `drifted` or `archived` |
+  | `props` | the properties the `set-props` ops change, comma-separated |
+  | `blocks` | the descriptions the ops touch: `description:<order>` for `set-description`, the `blockPath` for `modify-block` |
+  | `edges` | the edges the ops add or remove, as `<type>:<to>`, comma-separated |
+  | `ops` | the op kinds, comma-separated (`set-props,add-edge`, `create-entity`, `delete-entity`, `set-kind`, …) |
+
+  The date is in `<bundleId>` (`bundle:<channel>:<isoTimestamp>`) and is not repeated. `props`, `blocks` and `edges` are what lets the
+  page say that two pending bundles change the same field, without reading a payload.
+- **One listing answers both questions.** `list({ prefix: 'proposals/by-entity/<entityId>/', include: ['customMetadata'] })`
+  gives the marker badge (count `pending`) and the bundle page's «other bundles that touch this entity», in any state, with no
+  body read. Continue with the cursor past 1,000 keys.
+- **Writers:** ingest writes the record as `pending`; accept, deny, «Godkjenn alle» and `setAside` set `accepted`, `denied`
+  and `drifted`; archive sets `archived` on the entities that were pending, and restore sets them back to `pending`. Each
+  entity-in-bundle pair has one writer at a time (the manifest patch already serialises it), so there is no
+  read-modify-write: a status change is a `put` of the same small object with new metadata. Like the list's row, a record is
+  derived from the manifest, so a write that fails after the action it follows is logged and corrected by the backfill, never
+  allowed to fail the action.
+- **The pointer after an archive.** Archiving deletes everything under `bundles/<bundleId>/`, so `payload` then points at nothing,
+  for the decided records as well as the `archived` ones (only the pending ones change status; an accepted or denied entity keeps
+  what it was). The body is not rewritten, because that would be one write per entity of a bundle that can have hundreds. The rule
+  is in the reader: it reads `payload`, and when that is not there reads `proposals/archive/<bundleId>.json` and takes
+  `objects["entity/<entityId>.json"].value`. A purge removes that too; the record then says what it was (status, props, blocks,
+  edges) and the page shows that the bundle is gone (`proposals/purged/<bundleId>.json` says who and why).
+- **A record is not deleted when the entity is decided**, which is the point: «everything proposed for this entity» now exists.
+  It goes with its bundle only on a purge.
+- **Same-field flag:** two `pending` records of one entity that share a `props`, `blocks` or `edges` entry, or where one holds a `delete-entity` or `set-kind` op, are shown as a conflict on both
+  bundle pages. Today the reviewer learns of it from the 409 `drift` on the second accept.
+- **A re-run from the same channel links, it does not supersede** (decided for now: reversible, and a supersede rule can be
+  added later without a change of layout). The older pending bundle stays reviewable and is shown beside the new one.
+- **`by-outline` and `by-source` stay as they are** for now: they list open bundles by origin, not entities, and are a rare
+  collision. Whether they get the same treatment is left until this has been used.
+- **On the bundle page.** `GET /api/admin/proposals/<bundleId>` returns `related`: for each entity of the bundle, the other bundles
+  that touch it, in any state, newest first (status, date, props, blocks and edges, and `shared`, what both change while both
+  still wait). Under each entity row the page shows them in «Andre forslag for denne enheten»; a row that shares something with
+  a pending bundle is marked and the block is open, and a notice under the summary counts the entities that overlap. Up to 30
+  entities are listed one by one; a bigger bundle reads every record once (`listRecordsFor`), since a Worker has 1,000
+  subrequests. The list is derived, so a failure to read it is logged and the page loads without it.
+- **Migration:** `backfillEntityRecords` (`functions/_lib/entity-records.ts`) writes the records from the manifests and payloads,
+  live and archived bundles alike: the status is the manifest's, a pending entity of an archived bundle is `archived`. It is
+  derived, so it can be run again and puts a wrong record right. Locally: `scripts/tools/backfill-entity-records.ts` (dry run
+  unless `--write`). In production: `POST /api/admin/proposals/entity-records` with `{ "write": true, "cursor": … }`; a Worker
+  has a subrequest limit, so each call spends a budget of 900 operations and answers with `next`, and the caller repeats until
+  it is null. The old `index.json` files are deleted with `--drop-indexes` / `{ "dropIndexes": true }` once the new code is
+  deployed; until then the readers skip the key `index.json`. **Order in production:** deploy, backfill, check, drop.
 
 ### Comments (decided and built, #186)
 
@@ -324,7 +379,7 @@ never become a second source of truth that can disagree with the manifest.
 
 ### Archive (decided and built, #188)
 
-«Slett» became **«Arkiver»**: the bundle leaves the lists and the by-entity / by-source indexes as before, but is kept, with who,
+«Slett» became **«Arkiver»**: the bundle leaves the lists and the by-outline / by-source indexes as before (its entity records get `status: archived`, #273), but is kept, with who,
 when and why. R2 cannot move objects, and a bundle can have hundreds (the biggest of #158 has 287 payloads), so the archive is
 **one object**, `proposals/archive/<bundleId>.json`: the summary below and `objects`, every object that was under the bundle's
 prefix (manifest, payloads, `accepted/` and `denied/` records, comments with their metadata, the log) by its path below the prefix.
@@ -703,7 +758,7 @@ R2 implements S3-style conditional headers. We use them on every mutation
 of shared files to defeat two-tab races:
 
 - `If-Match: <etag>` on PUT → only writes if current etag matches; 412
-  otherwise. Used on `index.json`.
+  otherwise. Used on the `by-outline` / `by-source` `index.json` files (the entity records are one object each, #273).
 - `If-None-Match: *` on PUT → create-only. Used when writing to
   `accepted/<ts>-…json`, `denied/<ts>-…json`, `drifted/<ts>-…json`, and
   history-log entries.
@@ -712,7 +767,7 @@ Records that several editors can write (comments, events, the list's row) do not
 file with `If-Match` at all: they are one object per record, see «Review records».
 
 Per-block proposal files are single-writer per accept (gated by
-`index.json`'s etag), so no conditional header on the block file itself.
+the manifest's etag), so no conditional header on the block file itself.
 Etag is the MD5 of the object content for normal (non-multipart) PUTs, so
 it naturally functions as a content-hash check.
 
@@ -816,8 +871,8 @@ R2 mutations bracket the Neo4j transaction:
    - For `obsolete-outline`: set `archivedAt` + `archivedReason` properties
 3. **Cleanup** — patch `bundles/<bundleId>/manifest.json` with
    `If-Match` to flip the entity's status to `accepted`. Append to
-   `history/<entityId>/<ts>-apply.json`. Update
-   `by-entity/<entityId>/index.json` and `by-outline/<outlineId>/index.json`.
+   `history/<entityId>/<ts>-apply.json`. Set `status` on
+   `by-entity/<entityId>/<bundleId>.json` and update `by-outline/<outlineId>/index.json`.
 4. **Auto-archive check** — if every entity in the bundle that
    derives from the bundle's outline is now non-pending, and the
    bundle includes an `obsolete-outline` op (or all derived entities
@@ -842,10 +897,11 @@ GET /api/admin/<kind>/<slug>/proposals             — full pending bundles for 
 GET /api/admin/<kind>/<slug>/proposals?count=true  — just the marker-badge count
 ```
 
-Reads `proposals/by-entity/<entityId>/index.json`, fetches each
-referenced bundle's manifest + this entity's payload, returns the
-list. `?count=true` returns just `{ pendingCount: <n> }` (number of
-open bundles touching the entity).
+Lists `proposals/by-entity/<entityId>/` with the custom metadata (see «Entity
+records»). `?count=true` returns just `{ pendingCount: <n> }` from the
+`pending` records, with no body read. The full form fetches each pending
+bundle's manifest + this entity's payload, and also returns `otherBundles`:
+the records in any other state, with status, date and what they change.
 
 ### List a bundle
 
@@ -888,10 +944,9 @@ with 409.
 5. Append `history/<entityId>/<ts>-apply.json` with the transaction summary.
 6. Patch `bundles/<bundleId>/manifest.json` with `If-Match` to flip
    the entity's status to `accepted`. Retry on 412 (max 3).
-7. Patch `proposals/by-entity/<entityId>/index.json` and
-   `proposals/by-outline/<outlineId>/index.json` to remove the bundle
-   reference if no other entities in this bundle still touch this
-   entity / are pending.
+7. Set `status: accepted` on `proposals/by-entity/<entityId>/<bundleId>.json`,
+   and patch `proposals/by-outline/<outlineId>/index.json` to remove the
+   bundle reference if no entities in this bundle are still pending.
 8. **Auto-archive check** — if every other entity in the bundle is
    non-pending and the bundle includes an `obsolete-outline` op (or
    all derived entities are accepted), apply the outline archival as
@@ -942,8 +997,7 @@ denial-analysis pipeline.
 5. Append `history/<entityId>/<ts>-deny.json`. No Neo4j writes.
 6. Patch `bundles/<bundleId>/manifest.json` with `If-Match` to flip
    the entity's status to `denied`.
-7. Patch `proposals/by-entity/<entityId>/index.json` (remove this
-   bundle if no other pending entities here).
+7. Set `status: denied` on `proposals/by-entity/<entityId>/<bundleId>.json`.
 8. **If `reason.length >= 40`**, fire-and-forget create a
    `bot-deny-analysis` GitHub issue. Failures here do not fail the
    request.
@@ -1017,8 +1071,8 @@ admin-session-gated.
    bundleId is timestamped so collisions don't happen except on
    intentional re-runs (fresh bot output for the same outline →
    different timestamp → different bundleId).
-5. Update `proposals/by-entity/<entityId>/index.json` for each entity
-   in the bundle, with `If-Match` retry.
+5. Write `proposals/by-entity/<entityId>/<bundleId>.json` for each entity
+   in the bundle, as `pending`, with the summary of its ops in the metadata.
 6. Update `proposals/by-outline/<outlineId>/index.json`.
 7. Comment on issue with bundle URL + admin review URL via GitHub REST.
 8. Close issue.
@@ -1474,7 +1528,7 @@ A `scripts/proposals/sweep.ts` that:
   → retry the apply transaction (idempotent — most ops are MERGE-safe).
 - Finds bundles in R2 with no remaining pending entities → close them
   + auto-archive outlines if applicable + remove from
-  `by-entity` / `by-outline` indices.
+  the `by-outline` index.
 - Probably runs on a Cloudflare cron.
 
 ## Build phases

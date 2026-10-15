@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { memoryR2 } from '~/_lib/memory-r2.ts'
+import { recordKey, recordOf, toMetadata } from '../../../../src/utils/entityRecord.ts'
 
 const ROLF = { id: 'u-rolf', email: 'rolf@example.org', name: 'Rolf', role: 'admin' }
 vi.mock('~/_lib/require-admin.ts', () => ({ requireAdmin: vi.fn(() => Promise.resolve(ROLF)) }))
@@ -23,11 +24,11 @@ function setup(entities: [string, Status][] = [['Unit:a', 'pending'], ['Unit:b',
     [`proposals/bundles/${id}/manifest.json`]: { bundleId: id, summary: 'Test', createdAt: '2026-10-08T07:00:00.000Z', model: 'none', promptHash: 'none', origin: { type: 'package', site: 'https://archive.example', madeAt: 'x' }, entities: entities.map(([entityId, status]) => ({ entityId, status, opSummary: ['create'] })) },
     [SRC]: { bundleIds: [id] },
   }
-  for (const [entityId, status] of entities) {
+  for (const [entityId] of entities) {
     files[`proposals/bundles/${id}/entity/${entityId}.json`] = { entityId, ops: [{ op: 'create-entity' }] }
-    if (status === 'pending') files[`proposals/by-entity/${entityId}/index.json`] = { bundleIds: [id] }
   }
   const bucket = memoryR2(files)
+  for (const [entityId, status] of entities) void bucket.put(recordKey(entityId, id), '{}', { customMetadata: toMetadata(recordOf(id, entityId, status, [{ op: 'create-entity' }])) })
   return { bucket, env: { PROPOSALS: bucket, SESSION_SECRET: 's' } }
 }
 
@@ -35,6 +36,7 @@ const req = (method: string, body?: unknown) => new Request('https://site.exampl
 const call = (fn: unknown, env: unknown, request: Request, id = B) => (fn as (c: never) => Promise<Response>)({ request, env, params: { bundleId: id } } as never)
 const archive = (env: unknown, reason: unknown = 'Testbundle, ikke i bruk', id = B) => call(bundleApi.onRequestDelete, env, req('DELETE', { reason }), id)
 const restore = (env: unknown, reason?: unknown, id = B) => call(restoreApi.onRequestPost, env, req('POST', reason === undefined ? undefined : { reason }), id)
+const recordStatus = (b: ReturnType<typeof memoryR2>, entityId: string, id = B) => b.meta(recordKey(entityId, id))?.status
 const indexOf = (b: ReturnType<typeof memoryR2>, k: string) => (b.json(k) as { bundleIds: string[] }).bundleIds
 
 // Things done one after the other happen at different times; the order of the log is the order of the clock.
@@ -56,7 +58,8 @@ describe('«Slett» archives (#188)', () => {
 
     expect(bucket.keys(key(''))).toEqual([])                                   // nothing is left under the bundle
     expect(indexOf(bucket, SRC)).toEqual([])                                   // off the lists of open bundles
-    expect(indexOf(bucket, 'proposals/by-entity/Unit:a/index.json')).toEqual([])
+    expect(recordStatus(bucket, 'Unit:a')).toBe('archived')                    // its record says so; the decided entity keeps its own
+    expect(recordStatus(bucket, 'Unit:b')).toBe('denied')
 
     const kept = bucket.json(`proposals/archive/${B}.json`) as { archivedBy: string; reason: string; archivedAt: string; restorable: boolean; objects: Record<string, { value: unknown }> }
     expect(kept).toMatchObject({ archivedBy: 'Rolf', reason: 'Testbundle, ikke i bruk', restorable: true })
@@ -137,7 +140,7 @@ describe('restore', () => {
 
     for (const [k, v] of Object.entries(before)) expect(bucket.json(k)).toEqual(v)
     expect(indexOf(bucket, SRC)).toEqual([B])
-    expect(indexOf(bucket, 'proposals/by-entity/Unit:a/index.json')).toEqual([B])
+    expect(recordStatus(bucket, 'Unit:a')).toBe('pending')
     expect(bucket.keys('proposals/archive/')).toEqual([])
 
     const comment = bucket.keys(key('comments/'))[0]
@@ -233,7 +236,7 @@ describe('a bundle with many entities: the number of operations is bounded', () 
     expect((await restore(env)).status).toBe(200)
     expect(counter.n).toBeLessThan(950)
     expect(bucket.keys(key('entity/'))).toHaveLength(287)
-    expect(indexOf(bucket, 'proposals/by-entity/Article:a286/index.json')).toEqual([B])
+    expect(recordStatus(bucket, 'Article:a286')).toBe('pending')
   })
 
   it('refuses a bundle that would not fit, before it changes anything', async () => {

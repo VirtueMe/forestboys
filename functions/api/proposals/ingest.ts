@@ -9,7 +9,7 @@
  *   3. Compute current Neo4j SHA for every modify-block op (NOT YET — see v1
  *      limitation below).
  *   4. Write the manifest + every per-entity payload to R2.
- *   5. Patch by-entity and source (by-outline / by-source) indices with If-Match retry.
+ *   5. Write the entity records, and patch the source (by-outline / by-source) index with If-Match retry.
  *   6. Comment on the source GitHub issue + close it (outline bundles).
  *
  * Origin: an outline (Claude, `outlineId` + `outlineRev`) or the Sanity sync
@@ -33,6 +33,7 @@ import {
 import { keyProp, parseNodeRef } from '~/_lib/entity-ref.ts'
 import { channelOf, recordEvent } from '~/_lib/bundle-events.ts'
 import { refreshRow } from '~/_lib/bundle-index.ts'
+import { writeRecordFor } from '~/_lib/entity-records.ts'
 import { bundleCounts } from '../../../src/utils/bundleStatus.ts'
 import { runCypher } from '~/_lib/neo4j.ts'
 import { verifyHmac } from '~/_lib/hmac.ts'
@@ -163,9 +164,9 @@ async function writeBundle(env: Env, v: ValidatedBundle): Promise<void> {
     )
   }
 
-  // 3. by-entity indices (one bundleId added per affected entity)
-  for (const entityId of v.payloads.keys()) {
-    await appendToIndex(env, `proposals/by-entity/${entityId}/index.json`, bundleId)
+  // 3. Entity records: one object per entity and bundle, what the bundle changes in the entity in the metadata (#273)
+  for (const [entityId, payload] of v.payloads) {
+    await writeRecordFor(env.PROPOSALS, bundleId, entityId, 'pending', payload.ops)
   }
 
   // 4. Source index (by-outline / by-source)

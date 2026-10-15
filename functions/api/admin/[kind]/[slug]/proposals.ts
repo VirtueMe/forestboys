@@ -2,18 +2,20 @@
  * GET /api/admin/<kind>/<slug>/proposals             — open bundles touching this entity
  * GET /api/admin/<kind>/<slug>/proposals?count=true  — just the marker-badge count
  *
- * Reads `proposals/by-entity/<entityId>/index.json`, fetches each
- * referenced bundle's manifest + this entity's payload, returns the list.
+ * Lists `proposals/by-entity/<entityId>/` with the custom metadata (#273): one record per bundle that touches this entity,
+ * in any state. The count is the `pending` records, no body read. The list loads the manifest of each pending bundle, and
+ * returns the other records as `otherBundles` (status, date, what they change); two pending bundles that change the same
+ * thing are marked on both with `conflictsWith`.
  *
- * Bundle status filter: only bundles where this entity's status is
- * `pending` are returned. Once Jan accepts/denies the entity, it falls
- * out of the list (the manifest patch flips the per-entity status).
+ * `openBundles` holds only bundles where this entity is `pending`. Once Jan accepts/denies the entity, it moves to `otherBundles`.
  *
  * Admin-session-gated.
  */
 
 import { requireAdmin } from '~/_lib/require-admin.ts'
 import { originLabel, type BundleOriginFields } from '~/_lib/bundle-origin.ts'
+import { listRecords } from '~/_lib/entity-records.ts'
+import { conflicts, createdAtOf, sharedChanges, type EntityRecord } from '../../../../../src/utils/entityRecord.ts'
 
 interface Env {
   SESSION_SECRET: string
@@ -41,10 +43,6 @@ interface BundleManifest extends BundleOriginFields {
   entities:   BundleEntityRef[]
 }
 
-interface IndexFile {
-  bundleIds: string[]
-}
-
 interface OpenBundleEntry {
   bundleId:   string
   /** "outline <slug>" / "Sanity <type>" */
@@ -55,6 +53,19 @@ interface OpenBundleEntry {
   status:     'pending'
   opSummary:  string[]
   payloadKey: string  // R2 key of this entity's payload, for lazy fetch by the diff panel
+  /** Other pending bundles that change the same thing in this entity, and what they share. */
+  conflictsWith: { bundleId: string; shared: string[] }[]
+}
+
+/** A bundle that touches this entity and is not waiting on it: decided, set aside or archived. */
+interface OtherBundleEntry {
+  bundleId:  string
+  createdAt: string
+  status:    EntityRecord['status']
+  props:     string[]
+  blocks:    string[]
+  edges:     string[]
+  ops:       string[]
 }
 
 export const onRequestGet: PagesFunction<Env> = async ({ request, env, params }) => {
@@ -77,26 +88,20 @@ export const onRequestGet: PagesFunction<Env> = async ({ request, env, params })
       ? await checkGenerationPending(env, slug)
       : false
 
-    const indexObj = await env.PROPOSALS.get(`proposals/by-entity/${entityId}/index.json`)
-    if (!indexObj) {
-      return countOnly
-        ? json({ pendingCount: 0, generationPending })
-        : json({ entityId, openBundles: [], generationPending })
-    }
+    const records = await listRecords(env.PROPOSALS, entityId)
+    const pending = records.filter((r) => r.status === 'pending')
 
-    const index = await indexObj.json<IndexFile>()
+    if (countOnly) return json({ pendingCount: pending.length, generationPending })
 
-    // For each referenced bundle, load its manifest and check whether this
-    // entity's status is still pending. Drop drifted/accepted/denied —
-    // those have either already happened or are recoverable elsewhere.
+    // The manifest has the last word on whether this entity still waits in the bundle.
     const bundleEntries = await Promise.all(
-      index.bundleIds.map((bundleId) => loadOpenEntry(env, bundleId, entityId)),
+      pending.map((r) => loadOpenEntry(env, r.bundleId, entityId, pending)),
     )
     const open = bundleEntries.filter((b): b is OpenBundleEntry => b !== null)
+    const openIds = new Set(open.map((b) => b.bundleId))
+    const otherBundles = records.filter((r) => !openIds.has(r.bundleId)).map(otherEntry)
 
-    if (countOnly) return json({ pendingCount: open.length, generationPending })
-
-    return json({ entityId, openBundles: open, generationPending })
+    return json({ entityId, openBundles: open, otherBundles, generationPending })
   } catch (e) {
     return json({ error: (e as Error).message }, 502)
   }
@@ -117,13 +122,18 @@ async function checkGenerationPending(env: Env, outlineSlug: string): Promise<bo
   }
 }
 
-async function loadOpenEntry(env: Env, bundleId: string, entityId: string): Promise<OpenBundleEntry | null> {
+function otherEntry(r: EntityRecord): OtherBundleEntry {
+  return { bundleId: r.bundleId, createdAt: createdAtOf(r.bundleId), status: r.status, props: r.props, blocks: r.blocks, edges: r.edges, ops: r.ops }
+}
+
+async function loadOpenEntry(env: Env, bundleId: string, entityId: string, pending: EntityRecord[]): Promise<OpenBundleEntry | null> {
   const manifestObj = await env.PROPOSALS.get(`proposals/bundles/${bundleId}/manifest.json`)
   if (!manifestObj) return null
 
   const manifest = await manifestObj.json<BundleManifest>()
   const ref = manifest.entities.find((e) => e.entityId === entityId)
   if (!ref || ref.status !== 'pending') return null
+  const mine = pending.find((r) => r.bundleId === bundleId)!
 
   return {
     bundleId,
@@ -134,6 +144,9 @@ async function loadOpenEntry(env: Env, bundleId: string, entityId: string): Prom
     status:     'pending',
     opSummary:  ref.opSummary,
     payloadKey: `proposals/bundles/${bundleId}/entity/${entityId}.json`,
+    conflictsWith: pending
+      .filter((other) => conflicts(mine, other))
+      .map((other) => ({ bundleId: other.bundleId, shared: sharedChanges(mine, other) })),
   }
 }
 

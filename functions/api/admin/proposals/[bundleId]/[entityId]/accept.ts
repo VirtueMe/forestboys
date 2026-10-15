@@ -14,7 +14,7 @@
  *      runs separately — see `_apply.ts` v1 limitation note).
  *   5. Append history log entry.
  *   6. Patch manifest entity status to `accepted`.
- *   7. Patch by-entity / source (by-outline, by-source) indices.
+ *   7. Set the entity record's status; patch the source (by-outline, by-source) index.
  *   8. Auto-archive outline if every other entity in the bundle is
  *      non-pending and the bundle includes an `obsolete-outline` op.
  *
@@ -49,6 +49,7 @@ import { bundleCounts } from '../../../../../../src/utils/bundleStatus.ts'
 import { refusalsText } from '../../../../../../src/utils/refusalText.ts'
 import { actorOf, recordEvent } from '~/_lib/bundle-events.ts'
 import { refreshRow } from '~/_lib/bundle-index.ts'
+import { setRecordStatusSafe } from '~/_lib/entity-records.ts'
 
 interface Env extends Neo4jEnv, SitemapBinding {
   SESSION_SECRET: string
@@ -160,8 +161,8 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env, params, 
   // 6. Manifest patch.
   const updatedManifest = await manifestSetStatus(env, bundleId, entityId, 'accepted')
 
-  // 7. Index pruning.
-  await indexRemove(env, `proposals/by-entity/${entityId}/index.json`, bundleId)
+  // 7. Entity record, and the source index when the bundle is closed.
+  await setRecordStatusSafe(env.PROPOSALS, entityId, bundleId, 'accepted')
   await recordEvent(env.PROPOSALS, bundleId, actor, { kind: 'accepted', entityId, message, summary: entityRef.opSummary })
   await refreshRow(env.PROPOSALS, bundleId)
 
@@ -193,7 +194,7 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env, params, 
         })
         await runCypher(env, archive.statement, archive.parameters)
         await manifestSetStatus(env, bundleId, outlineEntityId, 'accepted')
-        await indexRemove(env, `proposals/by-entity/${outlineEntityId}/index.json`, bundleId)
+        await setRecordStatusSafe(env.PROPOSALS, outlineEntityId, bundleId, 'accepted')
         outlineArchived = true
       }
     }

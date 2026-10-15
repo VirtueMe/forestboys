@@ -12,6 +12,7 @@ import { sourceIndexKey } from './bundle-origin.ts'
 import { recordEvent } from './bundle-events.ts'
 import { writeComment } from './bundle-comments.ts'
 import { refreshRow, removeRow } from './bundle-index.ts'
+import { setRecordStatusSafe } from './entity-records.ts'
 import type { BundleManifest } from './bundle-validate.ts'
 import {
   ARCHIVE_PREFIX, OPERATION_LIMIT, archiveKey, fromMetadata, operationsNeeded, purgedKey, summaryOf, toMetadata,
@@ -80,8 +81,9 @@ export async function archiveBundle(bucket: R2Bucket, bundleId: string, actor: E
     customMetadata: toMetadata(summary),
   })
 
-  // Off the lists of open bundles, as «Slett» always did. Entities that were decided left their index when they were decided.
-  for (const entityId of pending) await indexRemove({ PROPOSALS: bucket }, `proposals/by-entity/${entityId}/index.json`, bundleId)
+  // Off the lists of open bundles, as «Slett» always did. The entity records of the pending entities say so (#273); a decided
+  // entity keeps its status, and its payload is read from the archive.
+  for (const entityId of pending) await setRecordStatusSafe(bucket, entityId, bundleId, 'archived')
   await indexRemove({ PROPOSALS: bucket }, sourceIndexKey(manifest), bundleId)
 
   for (let i = 0; i < listed.length; i += 1000) await bucket.delete(listed.slice(i, i + 1000).map(o => o.key))
@@ -121,7 +123,7 @@ export async function restoreBundle(bucket: R2Bucket, bundleId: string, actor: E
   await inChunks(entries.filter(([rel]) => rel !== 'manifest.json'), ([rel, o]) => put(rel, o))
   await put('manifest.json', record.objects['manifest.json'])
 
-  for (const entityId of pending) await indexAdd({ PROPOSALS: bucket }, `proposals/by-entity/${entityId}/index.json`, bundleId)
+  for (const entityId of pending) await setRecordStatusSafe(bucket, entityId, bundleId, 'pending')
   await indexAdd({ PROPOSALS: bucket }, sourceIndexKey(manifest), bundleId)
 
   // The optional reason is a comment on the bundle, like the one that archived it; the log says that it was restored, then points at it.

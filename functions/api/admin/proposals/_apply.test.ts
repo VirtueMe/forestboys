@@ -8,6 +8,7 @@ vi.mock('~/_lib/link-guard.ts', () => ({ judgeStored: vi.fn(() => Promise.resolv
 const { runCypher, runCypherTx } = await import('~/_lib/neo4j.ts')
 const { applyEntityOps, checkDescriptionDrift, checkEntityExists, checkOpLinks, manifestSetStatus, setAside } = await import('./_apply.ts')
 const { judgeStored } = await import('~/_lib/link-guard.ts')
+const { recordOf, recordKey, toMetadata } = await import('../../../../src/utils/entityRecord.ts')
 
 type Row = Record<string, unknown>
 const cypher = vi.mocked(runCypher)
@@ -229,7 +230,7 @@ describe('setting an entity aside when accept refuses it (#185)', () => {
 
   /** A bucket in memory: objects by key, an etag that changes with every write. */
   function bucket(objects: Record<string, unknown>) {
-    const store = new Map(Object.entries(objects).map(([k, v]) => [k, { body: JSON.stringify(v), etag: 1 }]))
+    const store = new Map<string, { body: string; etag: number; meta?: Record<string, string> }>(Object.entries(objects).map(([k, v]) => [k, { body: JSON.stringify(v), etag: 1 }]))
     return {
       store,
       PROPOSALS: {
@@ -237,9 +238,13 @@ describe('setting an entity aside when accept refuses it (#185)', () => {
           const o = store.get(key)
           return Promise.resolve(o ? { httpEtag: `"${o.etag}"`, json: () => Promise.resolve(JSON.parse(o.body)) } : null)
         },
-        put: (key: string, body: string) => {
+        head: (key: string) => {
           const o = store.get(key)
-          store.set(key, { body, etag: (o?.etag ?? 0) + 1 })
+          return Promise.resolve(o ? { key, customMetadata: o.meta } : null)
+        },
+        put: (key: string, body: string, opts?: { customMetadata?: Record<string, string> }) => {
+          const o = store.get(key)
+          store.set(key, { body, etag: (o?.etag ?? 0) + 1, meta: opts?.customMetadata })
           return Promise.resolve({})
         },
       },
@@ -250,16 +255,19 @@ describe('setting an entity aside when accept refuses it (#185)', () => {
     bundleId: BUNDLE, outlineId: 'linge', entities: statuses.map((status, i) => ({ entityId: `Article:a${i}`, status, opSummary: ['create'] })),
   })
   const idx = (ids: string[]) => ({ bundleIds: ids })
+  /** The entity's record, as ingest writes it: pending, with what the bundle changes in the metadata. */
+  const seedRecord = (b: ReturnType<typeof bucket>, entityId: string) =>
+    b.PROPOSALS.put(recordKey(entityId, BUNDLE), '{}', { customMetadata: toMetadata(recordOf(BUNDLE, entityId, 'pending', [{ op: 'set-props', props: { title: {} } }])) })
 
-  it('marks it drifted with the reason, and takes it out of the open-bundle list for the entity', async () => {
+  it('marks it drifted with the reason, and its record drifted with what the bundle changes kept', async () => {
     const b = bucket({
       [`proposals/bundles/${BUNDLE}/manifest.json`]: manifest(['pending', 'pending']),
-      'proposals/by-entity/Article:a0/index.json': idx([BUNDLE]),
       'proposals/by-outline/linge/index.json': idx([BUNDLE]),
     })
+    await seedRecord(b, 'Article:a0')
     const after = await setAside(b as never, BUNDLE, 'Article:a0', [{ prop: 'entity', expected: null, actual: 'exists' }])
     expect(after.entities[0]).toMatchObject({ status: 'drifted', refusal: [{ prop: 'entity', actual: 'exists' }] })
-    expect(JSON.parse(b.store.get('proposals/by-entity/Article:a0/index.json')!.body).bundleIds).toEqual([])
+    expect(b.store.get(recordKey('Article:a0', BUNDLE))!.meta).toMatchObject({ status: 'drifted', props: 'title' })
     // Another entity still waits: the bundle stays in its source index.
     expect(JSON.parse(b.store.get('proposals/by-outline/linge/index.json')!.body).bundleIds).toEqual([BUNDLE])
   })
@@ -267,7 +275,6 @@ describe('setting an entity aside when accept refuses it (#185)', () => {
   it('takes the bundle out of its source index when that was the last thing waiting', async () => {
     const b = bucket({
       [`proposals/bundles/${BUNDLE}/manifest.json`]: manifest(['pending']),
-      'proposals/by-entity/Article:a0/index.json': idx([BUNDLE]),
       'proposals/by-outline/linge/index.json': idx([BUNDLE]),
     })
     await setAside(b as never, BUNDLE, 'Article:a0', [{ prop: 'entity', expected: null, actual: 'exists' }])

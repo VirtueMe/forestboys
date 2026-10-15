@@ -12,14 +12,16 @@ const SECRET = 'test-secret'
 /** An R2 bucket in memory: enough of get / put (with the conditional the indexes use) / delete for ingest. */
 function fakeBucket() {
   const store = new Map<string, string>()
+  const meta = new Map<string, Record<string, string> | undefined>()
   return {
-    store,
+    store, meta,
     get: (key: string) => Promise.resolve(store.has(key)
       ? { httpEtag: `"${store.get(key)!.length}"`, json: () => Promise.resolve(JSON.parse(store.get(key)!)) }
       : null),
-    put: (key: string, value: string, opts?: { onlyIf?: { etagDoesNotMatch?: string; etagMatches?: string } }) => {
+    put: (key: string, value: string, opts?: { onlyIf?: { etagDoesNotMatch?: string; etagMatches?: string }; customMetadata?: Record<string, string> }) => {
       if (opts?.onlyIf?.etagDoesNotMatch === '*' && store.has(key)) return Promise.resolve(null)
       store.set(key, value)
+      meta.set(key, opts?.customMetadata)
       return Promise.resolve({})
     },
     delete: (key: string) => { store.delete(key); return Promise.resolve() },
@@ -122,5 +124,24 @@ describe('ingest: the bundle\'s event log (#190)', () => {
     await send(bundle(['Organization:soe']), first.bucket)
     expect(eventsOf(first.bucket).map(e => e.kind)).toEqual(['received', 'resent'])
     expect(eventsOf(first.bucket)[1]).toMatchObject({ replaced: { accepted: 1, pending: 0 }, actor: { channel: 'bot' } })
+  })
+})
+
+describe('ingest: entity records (#273)', () => {
+  it('writes one record per entity and bundle, pending, with a pointer and what the ops change', async () => {
+    cypher.mockResolvedValue([{ key: 'soe' }] as never)
+    const { bucket } = await send(bundle(['Organization:soe']))
+    const key = `proposals/by-entity/Unit:some-unit/bundle:some-outline:${NOW}.json`
+    expect(JSON.parse(bucket.store.get(key)!)).toEqual({ bundleId: `bundle:some-outline:${NOW}`, entityId: 'Unit:some-unit', payload: `proposals/bundles/bundle:some-outline:${NOW}/entity/Unit:some-unit.json` })
+    expect(bucket.meta.get(key)).toMatchObject({ status: 'pending', edges: 'REFERENCED_IN:Organization:soe', ops: 'create-entity' })
+    expect(bucket.store.has('proposals/by-entity/Unit:some-unit/index.json')).toBe(false)
+  })
+
+  it('keeps the record of the first bundle when a second one for the same entity arrives', async () => {
+    cypher.mockResolvedValue([{ key: 'soe' }] as never)
+    const first = await send(bundle(['Organization:soe']))
+    const later = { ...bundle(['Organization:soe']), bundleId: 'bundle:some-outline:2026-10-09T05:00:00.000Z', createdAt: '2026-10-09T05:00:00.000Z' }
+    await send(later, first.bucket)
+    expect([...first.bucket.store.keys()].filter(k => k.startsWith('proposals/by-entity/Unit:some-unit/'))).toHaveLength(2)
   })
 })
