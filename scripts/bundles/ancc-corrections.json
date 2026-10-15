@@ -46,5 +46,29 @@
     "from": "\n(a) (b) (c) and (d) appear separately on the Agenda.",
     "to": "\n1.(a) (b) (c) and (d) appear separately on the Agenda.",
     "why": "the sub-point number 1. was lost (PDF p.88, folio 85); the list's own heading there is I., not 1. (left as it is: it needs an anchor to correct)"
+  },
+  {
+    "key": "ancc-15",
+    "from": "3 Recruitment of Additional Crews for N.N.I.U.",
+    "to": "3. Recruitment of Additional Crews for N.N.I.U.",
+    "why": "the full stop after the item number was lost, so the item is not counted as numbered (PDF p.142, folio 138); the text of item 3 is all there"
+  },
+  {
+    "key": "ancc-20",
+    "from": "2\tN.I.C.1.",
+    "to": "2.\tN.I.C.1.",
+    "why": "the full stop after the item number was lost in the SN/1279 memo (PDF p.108, folio 105)"
+  },
+  {
+    "key": "ancc-20",
+    "from": "c) Transport Craft for next Operational Season.",
+    "to": "(c) Transport Craft for next Operational Season.",
+    "why": "the opening bracket of (c) was lost in the minutes (PDF p.106, folio 103)"
+  },
+  {
+    "key": "ancc-25",
+    "from": "3\tN.N.I.U.",
+    "to": "3.\tN.N.I.U.",
+    "why": "the full stop after the item number was lost in the minutes (PDF p.79, folio 76)"
   }
 ]
