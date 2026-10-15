@@ -209,6 +209,16 @@ npx tsx scripts/migrations/outlines-to-bundles.ts --remove [--write]            
 
 ---
 
+## One entity in several bundles
+
+A package, an outline re-run, the bot and a sync can each give a bundle that changes the same entity, and nothing in the
+format forbids it: a bundle is a set of ops per entity, and two bundles never know of each other. What relates them is the
+**entity record**, `proposals/by-entity/<entityId>/<bundleId>.json`, written when the bundle is ingested and kept in any state
+(`PROPOSALS.md`, «Entity records», #273). Its metadata carries the properties, description blocks and edges the ops touch, so
+the review can show the other bundles that touch an entity and flag two pending ones that change the same field. A bundle needs
+nothing added for this: the record is derived from its ops, and `scripts/proposals/backfill-entity-records.ts` derives it for
+bundles from before.
+
 ## What this is used for
 
 | Use | Package from | Compared with |

@@ -17,6 +17,8 @@ import { ArchiveError, archiveBundle } from '~/_lib/bundle-archive.ts'
 import { validateReason } from '../../../../src/utils/bundleArchive.ts'
 import { listCommentRefs } from '~/_lib/bundle-comments.ts'
 import { countComments } from '../../../../src/utils/bundleComments.ts'
+import { listRecordsFor } from '~/_lib/entity-records.ts'
+import { relatedFor, type RelatedBundle } from '../../../../src/utils/entityRecord.ts'
 
 interface Env {
   SESSION_SECRET: string
@@ -76,9 +78,29 @@ export const onRequestGet: PagesFunction<Env> = async ({ request, env, params })
       events:   await withCurrentNames(env.milorg_users, await listEvents(env.PROPOSALS, bundleId)),
       // One listing with the metadata: how many comments each thread has, with no comment read.
       commentCounts: countComments(await listCommentRefs(env.PROPOSALS, bundleId)),
+      related:       await relatedBundles(env.PROPOSALS, bundleId, manifest.entities.map(e => e.entityId)),
     })
   } catch (e) {
     return json({ error: (e as Error).message }, 502)
+  }
+}
+
+/**
+ * For each entity of the bundle, the other bundles that touch it in any state (#273), from the entity records: status, date, what
+ * they change, and what they share with this bundle while both still wait. The page works without it, so a failure is logged and
+ * the page gets none.
+ */
+async function relatedBundles(bucket: R2Bucket, bundleId: string, entityIds: string[]): Promise<Record<string, RelatedBundle[]>> {
+  try {
+    const out: Record<string, RelatedBundle[]> = {}
+    for (const [entityId, records] of await listRecordsFor(bucket, entityIds)) {
+      const others = relatedFor(bundleId, records)
+      if (others.length) out[entityId] = others
+    }
+    return out
+  } catch (e) {
+    console.error(`related bundles of ${bundleId} not read:`, (e as Error).message)
+    return {}
   }
 }
 

@@ -36,6 +36,7 @@ import { bundleCounts } from '../../../../../src/utils/bundleStatus.ts'
 import { refusalsText } from '../../../../../src/utils/refusalText.ts'
 import { actorOf, recordEvent } from '~/_lib/bundle-events.ts'
 import { refreshRow } from '~/_lib/bundle-index.ts'
+import { setRecordStatusSafe } from '~/_lib/entity-records.ts'
 
 interface Env extends Neo4jEnv, SitemapBinding {
   SESSION_SECRET: string
@@ -123,7 +124,7 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env, params, 
         { httpMetadata: { contentType: 'application/json' } },
       )
       await manifestSetStatus(env, bundleId, entityId, 'accepted')
-      await indexRemove(env, `proposals/by-entity/${entityId}/index.json`, bundleId)
+      await setRecordStatusSafe(env.PROPOSALS, entityId, bundleId, 'accepted')
 
       // If this is the outline and it has obsolete-outline, archive it.
       const m = entityId.match(ENTITY_ID_RE)

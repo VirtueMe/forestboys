@@ -33,6 +33,7 @@ import { bundleCounts } from '../../../../src/utils/bundleStatus.ts'
 import { ENTITY_ID_RE, keyProp, nodePattern, parseNodeRef } from '~/_lib/entity-ref.ts'
 import { DEMOTE_TO_INCIDENT, PROMOTE_TO_OPERATION } from '~/_lib/event-kind.ts'
 import { judgeStored, storedContents, type LinkProblem } from '~/_lib/link-guard.ts'
+import { setRecordStatusSafe } from '~/_lib/entity-records.ts'
 
 export { ENTITY_ID_RE }
 export const BLOCK_PATH_RE = /^section\.([a-z0-9-]+)\.block\.([A-Za-z0-9_-]+)$/
@@ -699,11 +700,11 @@ export async function manifestSetStatus(
 /**
  * Accept refused an entity for a reason that will not go away (it exists, a property changed): set it aside, with the
  * reason, so the bundle does not count it as waiting and the reviewer can see why. It leaves the open-bundle lists like a
- * decided entity does (#185). The reviewer can still deny it.
+ * decided entity does (#185): its record becomes `drifted` (#273). The reviewer can still deny it.
  */
 export async function setAside(env: R2Like, bundleId: string, entityId: string, refusal: DriftedProp[]): Promise<BundleManifest> {
   const manifest = await manifestSetStatus(env, bundleId, entityId, 'drifted', refusal)
-  await indexRemove(env, `proposals/by-entity/${entityId}/index.json`, bundleId)
+  await setRecordStatusSafe(env.PROPOSALS, entityId, bundleId, 'drifted')
   if (bundleCounts(manifest.entities).pending === 0) await indexRemove(env, sourceIndexKey(manifest), bundleId)
   return manifest
 }

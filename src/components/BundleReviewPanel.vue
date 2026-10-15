@@ -40,6 +40,10 @@
         </button>
       </header>
       <p class="summary">{{ manifest.summary }}</p>
+      <p v-if="overlapping.length" class="bundle-overlap">
+        <strong>Overlapper.</strong>
+        {{ overlapping.length }} {{ overlapping.length === 1 ? 'enhet har' : 'enheter har' }} ventende endringer i andre bundler som rører de samme feltene.
+      </p>
 
       <details class="bundle-comments" :open="bundle.commentCounts.value.bundle > 0">
         <summary>Kommentarer til bundlen ({{ bundle.commentCounts.value.bundle }})</summary>
@@ -152,6 +156,19 @@
         <p v-if="pendingDeps(entry.entityId).length" class="entity-deps">
           Venter på: <code v-for="d in pendingDeps(entry.entityId)" :key="d" class="dep-chip">{{ d }}</code>
         </p>
+        <details v-if="relatedOf(entry.entityId).length" class="entity-related" :open="conflictsOf(entry.entityId).length > 0">
+          <summary>
+            Andre forslag for denne enheten ({{ relatedOf(entry.entityId).length }})<template v-if="conflictsOf(entry.entityId).length"> · <span class="related-conflict-flag">overlapper</span></template>
+          </summary>
+          <ul class="related-list">
+            <li v-for="r in relatedOf(entry.entityId)" :key="r.bundleId" class="related" :class="{ 'related--conflict': r.shared.length > 0 && entry.status === 'pending' }">
+              <RouterLink :to="relatedLink(r)"><time :datetime="r.createdAt">{{ r.createdAt.slice(0, 16).replace('T', ' ') }}</time></RouterLink>
+              <span class="status-badge" :class="`status-badge--${r.status}`">{{ recordStatusLabel[r.status] }}</span>
+              <span class="related-what">{{ relatedWhat(r) }}</span>
+              <span v-if="r.shared.length && entry.status === 'pending'" class="related-shared">Endrer også: {{ sharedText(r.shared) }}</span>
+            </li>
+          </ul>
+        </details>
         <details class="entity-comments" :open="(bundle.commentCounts.value.entities[entry.entityId] ?? 0) > 0">
           <summary>Kommentarer ({{ bundle.commentCounts.value.entities[entry.entityId] ?? 0 }})</summary>
           <BundleComments :bundle-id="bundleId" type="entity" :entity-id="entry.entityId" @changed="void bundle.load()" />
@@ -210,6 +227,7 @@ import AppModal from '@/components/AppModal.vue'
 import BundleComments from '@/components/BundleComments.vue'
 import EntityPreviewPanel from '@/components/EntityPreviewPanel.vue'
 import { PREVIEW_KINDS } from '@/utils/previewKinds.ts'
+import { recordStatusLabel, type RelatedBundle } from '@/utils/entityRecord.ts'
 
 const props = defineProps<{
   bundleId:     string
@@ -263,6 +281,21 @@ const entityTabs: { value: EntityStatusFilter; label: string }[] = [
 function setEntityFilter(patch: Partial<EntityFilter>, resetPage = true): void {
   entityFilter.value = { ...entityFilter.value, ...patch, ...(resetPage && !('offset' in patch) ? { offset: 0 } : {}) }
 }
+
+// The other bundles that touch each entity (#273), in any state. Two that still wait and change the same thing are flagged.
+const relatedOf   = (entityId: string): RelatedBundle[] => bundle.related.value[entityId] ?? []
+const conflictsOf = (entityId: string) => relatedOf(entityId).filter((r) => r.shared.length > 0)
+const overlapping = computed(() => (manifest.value?.entities ?? []).filter((e) => e.status === 'pending' && conflictsOf(e.entityId).length > 0))
+const relatedLink = (r: RelatedBundle) => r.status === 'archived' ? `/admin/proposals/archive/${encodeURIComponent(r.bundleId)}` : `/admin/proposals/${encodeURIComponent(r.bundleId)}`
+function relatedWhat(r: RelatedBundle): string {
+  const parts = [
+    r.props.length  ? `felt: ${r.props.join(', ')}` : '',
+    r.blocks.length ? `tekst: ${r.blocks.length}` : '',
+    r.edges.length  ? `relasjoner: ${r.edges.length}` : '',
+  ].filter(Boolean)
+  return parts.length ? parts.join(' · ') : r.ops.join(', ')
+}
+const sharedText = (shared: string[]) => shared.map((s) => (s === 'entity' ? 'hele enheten' : s === '?' ? 'kan overlappe (lang liste)' : s)).join(', ')
 
 const hasPending = computed(() => (manifest.value?.entities ?? []).some((e) => e.status === 'pending'))
 const entityEvents = (entityId: string) => bundle.events.value.filter((e) => eventEntity(e) === entityId)
@@ -646,4 +679,35 @@ async function onDeny(entityId: string) {
   font-family: var(--font-mono);
   font-size: 11px;
 }
+
+.bundle-overlap {
+  margin: var(--space-sm) 0;
+  padding: var(--space-sm) var(--space-md);
+  border: 1px solid var(--danger);
+  border-radius: var(--radius-md);
+  background: var(--paper-sunken);
+  font-family: var(--font-sans);
+  font-size: var(--size-body-ui);
+  color: var(--ink);
+}
+
+.entity-related {
+  margin: var(--space-sm) 0 0;
+  font-family: var(--font-sans);
+  font-size: var(--size-label);
+}
+.entity-related summary { cursor: pointer; color: var(--ink-soft); }
+.related-conflict-flag { color: var(--danger); font-weight: 600; }
+.related-list { list-style: none; margin: var(--space-xs) 0 0; padding: 0; }
+.related {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-xs) var(--space-sm);
+  padding: var(--space-xs) 0;
+  border-top: 1px solid var(--rule);
+}
+.related--conflict { border-left: 3px solid var(--danger); padding-left: var(--space-sm); }
+.related-what { color: var(--ink-soft); }
+.related-shared { color: var(--danger); }
 </style>

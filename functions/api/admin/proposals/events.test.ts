@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { memoryR2 } from '~/_lib/memory-r2.ts'
+import { recordKey, recordOf, toMetadata } from '../../../../src/utils/entityRecord.ts'
 
 // The user who acts, the graph and the apply are replaced; R2 is real (in memory), because the log is what is checked (#190).
 const ROLF = { id: 'u-rolf', email: 'rolf@example.org', name: 'Rolf', role: 'admin' }
@@ -115,5 +116,54 @@ describe('what an action leaves in the log (#190)', () => {
     vi.mocked(requireAdmin).mockResolvedValueOnce(new Response('no', { status: 403 }))
     expect((await deny(ctx(env, 'Unit:a', post({ reason: 'feil enhet helt' })))).status).toBe(403)
     expect(bucket.keys(key('events/'))).toEqual([])
+  })
+})
+
+describe('the entity records follow the decisions (#273)', () => {
+  const seeded = (ids = ['Unit:a', 'Unit:b', 'Unit:c']) => {
+    const s = setup(ids)
+    for (const i of ids) void s.bucket.put(recordKey(i, B), '{}', { customMetadata: toMetadata(recordOf(B, i, 'pending', payload(i).ops)) })
+    return s
+  }
+  const status = (b: ReturnType<typeof memoryR2>, id: string) => b.meta(recordKey(id, B))?.status
+
+  it('accept and deny set the record of that entity only, and keep what the bundle changes', async () => {
+    const { bucket, env } = seeded()
+    await accept(ctx(env, 'Unit:a'))
+    await deny(ctx(env, 'Unit:b', post({ reason: 'feil enhet helt' })))
+    expect([status(bucket, 'Unit:a'), status(bucket, 'Unit:b'), status(bucket, 'Unit:c')]).toEqual(['accepted', 'denied', 'pending'])
+    expect(bucket.meta(recordKey('Unit:a', B))).toMatchObject({ ops: 'create-entity' })
+  })
+
+  it('a refusal sets the record aside', async () => {
+    const { checkEntityExists } = await import('./_apply.ts')   // an earlier test replaced the mock's answer
+    vi.mocked(checkEntityExists).mockResolvedValue([{ prop: 'entity', expected: null, actual: 'exists' }])
+    const { bucket, env } = seeded()
+    await accept(ctx(env, 'Unit:a'))
+    expect(status(bucket, 'Unit:a')).toBe('drifted')
+  })
+
+  it('accept-all sets what it accepted and what it refused', async () => {
+    const { bucket, env } = seeded()
+    const { checkEntityExists } = await import('./_apply.ts')
+    vi.mocked(checkEntityExists).mockImplementation((_e, id) => Promise.resolve(id === 'Unit:b' ? [{ prop: 'entity', expected: null, actual: 'exists' }] : []))
+    await acceptAll(ctx(env))
+    expect([status(bucket, 'Unit:a'), status(bucket, 'Unit:b'), status(bucket, 'Unit:c')]).toEqual(['accepted', 'drifted', 'accepted'])
+  })
+
+  it('the bundle page gets the other bundles that touch each entity, and flags what both still change', async () => {
+    const { bucket, env } = seeded(['Unit:a', 'Unit:b'])
+    const OTHER = 'bundle:sanity-unit:2026-10-09T07:00:00.000Z'
+    void bucket.put(recordKey('Unit:a', OTHER), '{}', { customMetadata: toMetadata(recordOf(OTHER, 'Unit:a', 'pending', payload('Unit:a').ops)) })
+    const res = await bundleApi.onRequestGet({ request: new Request('https://site.example/x'), env, params: { bundleId: B } } as never)
+    const body = await res.json<{ related: Record<string, { bundleId: string; status: string; shared: string[] }[]> }>()
+    expect(body.related['Unit:a']).toMatchObject([{ bundleId: OTHER, status: 'pending', shared: ['entity'] }])
+    expect(body.related['Unit:b']).toBeUndefined()
+  })
+
+  it('a bundle without records (from before #273) is decided as before, and no record appears', async () => {
+    const { bucket, env } = setup()
+    expect((await accept(ctx(env, 'Unit:a'))).status).toBe(200)
+    expect(bucket.keys('proposals/by-entity/')).toEqual([])
   })
 })
