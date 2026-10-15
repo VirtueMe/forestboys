@@ -5,7 +5,7 @@
  *   SITE_URL            the site's address, e.g. https://forestboys.pages.dev
  *   BOT_INGEST_SECRET   the same secret the Pages project has
  *
- * Usage: npx tsx scripts/sync/rebuild-sitemap.ts --write
+ * Usage: npx tsx scripts/sync/rebuild-sitemap.ts --production --write
  */
 
 import { createHmac } from 'node:crypto'
