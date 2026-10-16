@@ -293,11 +293,13 @@ and bundle**: `proposals/by-entity/<entityId>/<bundleId>.json`.
   subrequests. The list is derived, so a failure to read it is logged and the page loads without it.
 - **Migration:** `backfillEntityRecords` (`functions/_lib/entity-records.ts`) writes the records from the manifests and payloads,
   live and archived bundles alike: the status is the manifest's, a pending entity of an archived bundle is `archived`. It is
-  derived, so it can be run again and puts a wrong record right. Locally: `scripts/tools/backfill-entity-records.ts` (dry run
-  unless `--write`). In production: `POST /api/admin/proposals/entity-records` with `{ "write": true, "cursor": … }`; a Worker
-  has a subrequest limit, so each call spends a budget of 900 operations and answers with `next`, and the caller repeats until
-  it is null. The old `index.json` files are deleted with `--drop-indexes` / `{ "dropIndexes": true }` once the new code is
-  deployed; until then the readers skip the key `index.json`. **Order in production:** deploy, backfill, check, drop.
+  derived, so it can be run again and puts a wrong record right. `scripts/tools/backfill-entity-records.ts` (dry run unless
+  `--write`) does it locally, or with `--production` through `POST /api/admin/proposals/entity-records` with
+  `{ "write": true, "cursor": … }`; a Worker has a subrequest limit, so each call spends a budget of 900 operations and answers
+  with `next`, and the script repeats until it is null. After writing it runs a dry run and reports what is left. The old
+  `index.json` files are deleted with `--drop-indexes` / `{ "dropIndexes": true }` once the new code is deployed, and the script
+  drops them only when that dry run found nothing left; until then the readers skip the key `index.json`. **Order in
+  production:** deploy, `--production --write`, check the badges, `--production --write --drop-indexes`.
 
 ### Comments (decided and built, #186)
 
