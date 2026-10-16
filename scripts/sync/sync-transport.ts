@@ -23,7 +23,7 @@ import { writeFileSync, mkdirSync } from 'node:fs'
 import { resolve } from 'node:path'
 import neo4j from 'neo4j-driver'
 import { loadEnv } from '../lib/env.ts'
-import { neo4jDriver, type Doc } from '../lib/person-sync.ts'
+import { connectNeo4j, type Doc } from '../lib/person-sync.ts'
 import {
   APPLY_QUERY, CREATE_QUERY, GRAPH_QUERY, classifyTransport, fetchSanityTransports, needsTidy, newTransportProps,
   propsFor, sanityField, stampsFor, type FieldVerdict, type GraphTransport, type TransportFieldName,
@@ -72,7 +72,7 @@ function planTransport(g: GraphTransport, s: Doc, verdicts: FieldVerdict[], held
 }
 
 async function main() {
-  const driver = neo4jDriver()
+  const driver = await connectNeo4j()
   const read = driver.session({ defaultAccessMode: neo4j.session.READ })
   const errors: string[] = []
   try {

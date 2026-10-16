@@ -29,7 +29,7 @@ import { createHash } from 'node:crypto'
 import { stableJson } from './sanity-sha.ts'
 import { eventDescription, type Lookups } from './event-rule.ts'
 import { importableLinks } from './person-rule.ts'
-import { API, neo4jDriver, type Doc } from './person-sync.ts'
+import { API, connectNeo4j, type Doc } from './person-sync.ts'
 import { loadBaselineFile } from './baseline.ts'
 
 /** The Sanity events the graph last took in whole: the re-import of 2026-10-02
@@ -245,7 +245,7 @@ export async function fetchSanityEvents(): Promise<Doc[]> {
 }
 
 export async function fetchGraphEvents(): Promise<Map<string, GraphEvent>> {
-  const driver = neo4jDriver()
+  const driver = await connectNeo4j()
   const session = driver.session()
   try {
     const r = await session.run(`

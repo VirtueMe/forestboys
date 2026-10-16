@@ -16,7 +16,7 @@
  */
 
 import { createHash } from 'node:crypto'
-import neo4j from 'neo4j-driver'
+import neo4j, { Neo4jError, type Driver } from 'neo4j-driver'
 import { stableJson } from './sanity-sha.ts'
 import { preformattedFromSanity } from './preformatted-blocks.ts'
 import { loadBaselineFile } from './baseline.ts'
@@ -283,8 +283,38 @@ export function neo4jDriver() {
   )
 }
 
+/** The waits between tries, about a minute in all. */
+const CONNECT_WAITS_MS = [2_000, 5_000, 10_000, 20_000, 30_000]
+
+interface ConnectOptions {
+  open?:  () => Driver
+  waits?: readonly number[]
+  sleep?: (ms: number) => Promise<void>
+}
+
+/**
+ * A driver that has reached the database. Aura sometimes drops a new connection during the TLS handshake ("Client network
+ * socket disconnected before secure TLS connection was established", #282), which the driver calls retriable: wait and try
+ * again with a fresh driver. Anything else, a wrong password say, is thrown at once.
+ */
+export async function connectNeo4j({ open = neo4jDriver, waits = CONNECT_WAITS_MS, sleep = ms => new Promise(r => setTimeout(r, ms)) }: ConnectOptions = {}): Promise<Driver> {
+  for (let attempt = 0; ; attempt++) {
+    const driver = open()
+    try {
+      await driver.verifyConnectivity()
+      return driver
+    } catch (e) {
+      await driver.close()
+      const wait = waits[attempt]
+      if (wait === undefined || !(e instanceof Neo4jError && e.retriable)) throw e
+      console.error(`Neo4j not reachable (${(e as Error).message.split('.')[0]}); trying again in ${wait / 1000} s`)
+      await sleep(wait)
+    }
+  }
+}
+
 export async function fetchGraphPeople(): Promise<Map<string, GraphPerson>> {
-  const driver = neo4jDriver()
+  const driver = await connectNeo4j()
   const session = driver.session({ defaultAccessMode: neo4j.session.READ })
   try {
     const r = await session.run(`
