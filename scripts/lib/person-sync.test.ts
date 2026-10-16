@@ -1,5 +1,6 @@
-import { describe, expect, it } from 'vitest'
-import { FIELDS, classify, stampFor, stampsFromBaseline, verifyStamps, type Doc, type GraphPerson } from './person-sync.ts'
+import { describe, expect, it, vi } from 'vitest'
+import { Neo4jError, type Driver } from 'neo4j-driver'
+import { FIELDS, classify, connectNeo4j, stampFor, stampsFromBaseline, verifyStamps, type Doc, type GraphPerson } from './person-sync.ts'
 
 const person = (over: Partial<GraphPerson> = {}): GraphPerson => ({
   sanityId: 'p1', sanityUpdatedAt: '2026-04-01', slug: 'ola-nordmann', canonicalName: 'Ola Nordmann',
@@ -124,5 +125,49 @@ describe('a description with a table block (#260)', () => {
   it('stamps Sanity\'s own text and, because the rule marks the table, what the rule made of it', () => {
     const stamps = stampFor(descField, sanityDoc({ description: [table] }))
     expect(Object.keys(stamps).sort()).toEqual(['description_graphSha', 'description_sha'])
+  })
+})
+
+describe('connectNeo4j', () => {
+  // What Aura answered on 2026-10-14 and -16 (#282): retriable. A wrong password is not.
+  const dropped = () => new Neo4jError('Could not perform discovery. No routing servers available.', 'ServiceUnavailable', '50N42', 'error')
+  const denied  = () => new Neo4jError('The client is unauthorized due to authentication failure.', 'Neo.ClientError.Security.Unauthorized', '42NFF', 'error')
+  const drivers = (...outcomes: (Error | null)[]) => {
+    const made: { closed: boolean }[] = []
+    const open = () => {
+      const outcome = outcomes[made.length]
+      const d = { closed: false, verifyConnectivity: () => outcome ? Promise.reject(outcome) : Promise.resolve({}), close: () => { d.closed = true; return Promise.resolve() } }
+      made.push(d)
+      return d as unknown as Driver
+    }
+    return { open, made }
+  }
+  const quiet = () => vi.spyOn(console, 'error').mockImplementation(() => {})
+
+  it('tries again after a dropped connection, with a fresh driver, and closes the ones that failed', async () => {
+    const log = quiet()
+    const { open, made } = drivers(dropped(), dropped(), null)
+    const sleep = vi.fn(async () => {})
+    const driver = await connectNeo4j({ open, waits: [1, 2, 3], sleep })
+    expect(driver).toBe(made[2])
+    expect(made.map(d => d.closed)).toEqual([true, true, false])
+    expect(sleep.mock.calls).toEqual([[1], [2]])
+    log.mockRestore()
+  })
+
+  it('gives up when the waits are spent', async () => {
+    const log = quiet()
+    const { open, made } = drivers(dropped(), dropped())
+    await expect(connectNeo4j({ open, waits: [1], sleep: async () => {} })).rejects.toThrow('Could not perform discovery')
+    expect(made).toHaveLength(2)
+    log.mockRestore()
+  })
+
+  it('throws a failure that waiting will not cure at once', async () => {
+    const { open, made } = drivers(denied())
+    const sleep = vi.fn(async () => {})
+    await expect(connectNeo4j({ open, waits: [1, 2], sleep })).rejects.toThrow('unauthorized')
+    expect(made).toHaveLength(1)
+    expect(sleep).not.toHaveBeenCalled()
   })
 })

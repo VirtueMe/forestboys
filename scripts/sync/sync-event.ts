@@ -34,7 +34,7 @@ import { writeStampUndo } from '../lib/stamp-undo.ts'
 import { resolve } from 'node:path'
 import neo4j, { type ManagedTransaction } from 'neo4j-driver'
 import { loadEnv } from '../lib/env.ts'
-import { neo4jDriver, type Doc } from '../lib/person-sync.ts'
+import { connectNeo4j, type Doc } from '../lib/person-sync.ts'
 import {
   EVENT_FIELDS, RESET_FROM_SANITY, calibrateEvents, classifyEvent, fetchGraphEvents, fetchSanityEvents,
   eventsToStamp, loadAprilEvents, stampsFor, verifyEventStamps, type EventVerdict, type GraphEvent,
@@ -159,7 +159,7 @@ async function main() {
   const base = loadAprilEvents()
   const [sanityDocs, graph] = await Promise.all([fetchSanityEvents(), fetchGraphEvents()])
   const sanity = new Map(sanityDocs.map(d => [d._id, d]))
-  const driver = neo4jDriver()
+  const driver = await connectNeo4j()
   const read = driver.session({ defaultAccessMode: neo4j.session.READ })
   const errors: string[] = []
   try {

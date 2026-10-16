@@ -9,7 +9,7 @@
  */
 
 import { loadEnv } from '../lib/env.ts'
-import { neo4jDriver } from '../lib/person-sync.ts'
+import { connectNeo4j } from '../lib/person-sync.ts'
 loadEnv()
 
 if (!process.argv.includes('--write')) {
@@ -17,7 +17,7 @@ if (!process.argv.includes('--write')) {
   process.exit(0)
 }
 
-const driver = neo4jDriver()
+const driver = await connectNeo4j()
 const session = driver.session()
 try {
   const r = await session.run(`

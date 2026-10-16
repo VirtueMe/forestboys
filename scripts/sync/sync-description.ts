@@ -23,7 +23,7 @@ import { writeFileSync, mkdirSync } from 'node:fs'
 import { resolve } from 'node:path'
 import neo4j from 'neo4j-driver'
 import { loadEnv } from '../lib/env.ts'
-import { neo4jDriver, sha } from '../lib/person-sync.ts'
+import { connectNeo4j, neo4jDriver, sha } from '../lib/person-sync.ts'
 import {
   GRAPH_QUERY, KINDS, REMOVE_QUERY, STAMP_QUERY, UPSERT_QUERY, classifyDescription, descriptionId, fetchSanityDescriptions, graphValue,
   importedBlocks, stampsFor, type DescriptionKind, type DescriptionVerdict, type GraphDescription,
@@ -124,7 +124,7 @@ async function syncKind(kind: DescriptionKind, driver: ReturnType<typeof neo4jDr
 }
 
 async function main() {
-  const driver = neo4jDriver()
+  const driver = await connectNeo4j()
   try {
     for (const kind of kinds) if (!(await syncKind(kind, driver))) return
     if (!write) console.log('\n(dry run — pass --write to apply)')

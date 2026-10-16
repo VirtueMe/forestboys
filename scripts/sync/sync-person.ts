@@ -53,7 +53,7 @@ import neo4j, { type ManagedTransaction } from 'neo4j-driver'
 import { loadEnv } from '../lib/env.ts'
 import { preformattedFromSanity } from '../lib/preformatted-blocks.ts'
 import {
-  FIELDS, calibrate, classify, fetchGraphPeople, fetchSanityPeople, loadApril, neo4jDriver, stampsFromBaseline, verifyStamps,
+  FIELDS, calibrate, classify, fetchGraphPeople, fetchSanityPeople, loadApril, connectNeo4j, stampsFromBaseline, verifyStamps,
   sanityLinks, stampFor, str, type Doc, type GraphPerson,
 } from '../lib/person-sync.ts'
 import { imageSources, importableLinks, linkSource, parsePerson, personClaims, rankEdge, sanMigRef } from '../lib/person-rule.ts'
@@ -332,7 +332,7 @@ async function stampPeople(graph: Map<string, GraphPerson>, sanity: Map<string, 
   }
   // The keys this run adds, per person — some already carry stamps from earlier applies, so the undo cannot be "remove every _sha".
   console.log(`Undo file: ${writeStampUndo('person', rows)}`)
-  const driver = neo4jDriver()
+  const driver = await connectNeo4j()
   const ws = driver.session()
   try {
     for (let i = 0; i < rows.length; i += 200) {
@@ -361,7 +361,7 @@ async function main() {
   const off = calib ? Object.entries(calib).filter(([, c]) => c.agree !== c.total) : []
   console.log(`Calibration: ${!calib ? 'skipped — no baseline file (the stamps on the nodes are the baseline)' : off.length ? off.map(([n, c]) => `${n} ${c.total - c.agree} differ`).join(', ') : 'rule reproduces the graph (100%)'}`)
 
-  const driver = neo4jDriver()
+  const driver = await connectNeo4j()
   const errors: string[] = []
   try {
     // Accepted review people: every slug must have review fields; detectable graph edits block their field.
