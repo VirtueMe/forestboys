@@ -19,6 +19,7 @@ import { ref } from 'vue'
 import { neo4jQuery } from './useNeo4j.ts'
 import type { SlideImage } from '@/components/ImageSlider.vue'
 import type { Section } from '@/components/SectionsEditor.vue'
+import type { EventListItem } from '@/utils/eventList.ts'
 
 export interface UnitNode {
   name:          string
@@ -69,7 +70,7 @@ export interface UnitCourse {
   targetGroup:  string | null
 }
 
-export interface UnitEvent { slug: string; title: string; date: string | null }
+export type UnitEvent = EventListItem
 export interface UnitSubUnit { name: string; slug: string }
 export interface UnitExternalRef {
   id: string; title: string | null; url: string;
@@ -248,16 +249,17 @@ export function useUnitData() {
                     name`,
           { slug },
         ),
-        // Incidents — filtered by unit lifetime.
+        // The members' incidents and operations within the unit's lifetime: an operation counts when its period
+        // overlaps it. An incident has a date, an operation startDate / endDate (#284).
         neo4jQuery<UnitEvent>(
           `MATCH (u:Unit {slug: $slug})<-[:MEMBER_OF]-(p:Person)-[:INVOLVED_IN|PARTICIPATED_IN]->(i:Incident|Operation)
-           WHERE i.date IS NULL
+           WITH DISTINCT u, i, coalesce(i.date, i.startDate) AS startDate, i.endDate AS endDate
+           WHERE startDate IS NULL
               OR (
-                (u.foundedDate   IS NULL OR i.date >= u.foundedDate) AND
-                (u.dissolvedDate IS NULL OR i.date <= u.dissolvedDate)
+                (u.foundedDate   IS NULL OR coalesce(endDate, startDate) >= u.foundedDate) AND
+                (u.dissolvedDate IS NULL OR startDate <= u.dissolvedDate)
               )
-           RETURN DISTINCT i.slug AS slug, coalesce(i.title, i.codeName) AS title, i.date AS date
-           ORDER BY date`,
+           RETURN i.slug AS slug, coalesce(i.title, i.codeName) AS title, startDate, endDate`,
           { slug },
         ),
         // Training courses — Unit{type:"course"} children.

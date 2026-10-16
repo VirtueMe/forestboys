@@ -155,7 +155,7 @@ import SectionsEditor, { type Section } from '@/components/SectionsEditor.vue'
 import SourceRefsEditor from '@/components/SourceRefsEditor.vue'
 import type { RelationEntry, RelationStrategy, RelationTarget } from './RelationStrategy.ts'
 import { useRoles, useRoleOptions } from '@/composables/useRoles.ts'
-import { formatPeriod } from '@/utils/period.ts'
+import { formatEventPeriod, formatPeriod } from '@/utils/period.ts'
 import { aliasHint, matchingName } from '@/utils/stationNames.ts'
 
 const props = withDefaults(defineProps<{
@@ -193,9 +193,12 @@ const props = withDefaults(defineProps<{
   signatureExtra?:  ((e: RelationEntry) => string) | null
   /** Optional summary contribution shown in the row header. */
   summaryExtra?:    ((e: RelationEntry) => string) | null
+  /** The dates are when an event happened: «12.–15. april 1945», no open dash (#284). */
+  eventDates?:      boolean
 }>(), {
   showRole:        false,
   showDates:       true,
+  eventDates:      false,
   showPassed:      false,
   showDescription: true,
   showSources:     false,
@@ -330,7 +333,7 @@ function removeEntry(i: number) {
 function summaryOf(e: RelationEntry): string {
   const bits: string[] = []
   if (props.showRole && e.role) bits.push(roles.value.get(e.role)?.name ?? e.role)
-  const period = formatPeriod(e.startDate, e.endDate)
+  const period = props.eventDates ? formatEventPeriod(e.startDate, e.endDate) : formatPeriod(e.startDate, e.endDate)
   if (period) bits.push(period)
   if (props.showPassed && e.passed === true)  bits.push('Bestått')
   if (props.showPassed && e.passed === false) bits.push('Ikke bestått')

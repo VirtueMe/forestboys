@@ -283,7 +283,7 @@ export const IncidentStrategy: RelationStrategy = {
              i.date AS startDate,
              NULL AS endDate,
              [x IN rawSections WHERE x IS NOT NULL] AS sections
-      ORDER BY coalesce(i.date, ''), targetName
+      ORDER BY startDate IS NULL, startDate, targetName
     `, { slug: personSlug })
     return rows.map(r => rowToEntry(r, { includeRole: false, includePassed: false }))
   },
@@ -354,10 +354,10 @@ export const OperationStrategy: RelationStrategy = {
       WITH op, collect(section) AS rawSections
       RETURN op.slug AS targetSlug,
              op.codeName AS targetName,
-             NULL AS startDate,
-             NULL AS endDate,
+             coalesce(op.date, op.startDate) AS startDate,
+             op.endDate AS endDate,
              [x IN rawSections WHERE x IS NOT NULL] AS sections
-      ORDER BY targetName
+      ORDER BY coalesce(startDate, endDate) IS NULL, coalesce(startDate, endDate), targetName
     `, { slug: personSlug })
     return rows.map(r => rowToEntry(r, { includeRole: false, includePassed: false }))
   },
@@ -1228,16 +1228,16 @@ export const OrgOperationsStrategy: RelationStrategy = {
     return rows
   },
   async fetchEntries(orgSlug) {
-    const rows = await neo4jQuery<{ targetSlug: string; targetName: string; date: string | null }>(`
+    const rows = await neo4jQuery<{ targetSlug: string; targetName: string; startDate: string | null; endDate: string | null }>(`
       MATCH (op:Operation)-[:ORCHESTRATED_BY]->(o:Organization {slug: $slug})
-      RETURN op.slug AS targetSlug, op.codeName AS targetName, op.date AS date
-      ORDER BY op.codeName
+      RETURN op.slug AS targetSlug, op.codeName AS targetName, coalesce(op.date, op.startDate) AS startDate, op.endDate AS endDate
+      ORDER BY coalesce(startDate, endDate) IS NULL, coalesce(startDate, endDate), targetName
     `, { slug: orgSlug })
     return rows.map(r => ({
       targetSlug:     r.targetSlug,
       targetName:     r.targetName,
-      startDate:      r.date,
-      endDate:        null,
+      startDate:      r.startDate,
+      endDate:        r.endDate,
       sections:       [],
       hasDescription: false,
     }))
@@ -1273,7 +1273,7 @@ export const OrgIncidentsStrategy: RelationStrategy = {
     const rows = await neo4jQuery<{ targetSlug: string; targetName: string; date: string | null }>(`
       MATCH (i:Incident)-[:ORCHESTRATED_BY]->(o:Organization {slug: $slug})
       RETURN i.slug AS targetSlug, i.title AS targetName, i.date AS date
-      ORDER BY i.date, i.title
+      ORDER BY date IS NULL, date, targetName
     `, { slug: orgSlug })
     return rows.map(r => ({
       targetSlug:     r.targetSlug,
