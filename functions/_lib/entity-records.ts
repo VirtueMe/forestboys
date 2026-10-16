@@ -192,8 +192,12 @@ export async function backfillEntityRecords(bucket: R2Bucket, opts: BackfillOpti
   return result
 }
 
-/** Delete the old shared `proposals/by-entity/<entityId>/index.json` files, once nothing reads them (the readers have switched). */
-export async function dropOldIndexes(bucket: R2Bucket, opts: { write: boolean }): Promise<{ found: number; deleted: number }> {
+/**
+ * Delete the old shared `proposals/by-entity/<entityId>/index.json` files, once nothing reads them (the readers have switched).
+ * Deleting them all in one Worker call exceeds its limits, so `limit` caps the deletes of one call and the caller calls again
+ * until `found` is no more than `deleted`. A script has no limit.
+ */
+export async function dropOldIndexes(bucket: R2Bucket, opts: { write: boolean; limit?: number }): Promise<{ found: number; deleted: number }> {
   const keys: string[] = []
   let cursor: string | undefined
   do {
@@ -201,6 +205,7 @@ export async function dropOldIndexes(bucket: R2Bucket, opts: { write: boolean })
     for (const o of page.objects) if (o.key.endsWith('/index.json')) keys.push(o.key)
     cursor = page.truncated ? page.cursor : undefined
   } while (cursor)
-  if (opts.write) for (let i = 0; i < keys.length; i += 1000) await bucket.delete(keys.slice(i, i + 1000))
-  return { found: keys.length, deleted: opts.write ? keys.length : 0 }
+  const doomed = opts.write ? keys.slice(0, opts.limit ?? keys.length) : []
+  for (let i = 0; i < doomed.length; i += 1000) await bucket.delete(doomed.slice(i, i + 1000))
+  return { found: keys.length, deleted: doomed.length }
 }

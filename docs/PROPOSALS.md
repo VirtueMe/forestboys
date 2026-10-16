@@ -298,7 +298,8 @@ and bundle**: `proposals/by-entity/<entityId>/<bundleId>.json`.
   `{ "write": true, "cursor": … }`; a Worker has a subrequest limit, so each call spends a budget of 900 operations and answers
   with `next`, and the script repeats until it is null. After writing it runs a dry run and reports what is left. The old
   `index.json` files are deleted with `--drop-indexes` / `{ "dropIndexes": true }` once the new code is deployed, and the script
-  drops them only when that dry run found nothing left; until then the readers skip the key `index.json`. **Order in
+  drops them only when that dry run found nothing left. The endpoint deletes up to 100 a call (all 363 at once exceeded the
+  Worker's resource limits) and the script repeats until none is left; until then the readers skip the key `index.json`. **Order in
   production:** deploy, `--production --write`, check the badges, `--production --write --drop-indexes`.
 
 ### Comments (decided and built, #186)

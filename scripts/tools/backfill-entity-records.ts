@@ -83,7 +83,17 @@ function productionTarget(): Target {
       } while (cursor)
       return sum
     },
-    drop:    write => call<DropResult>({ dropIndexes: true, write }),
+    async drop(write) {
+      // The endpoint deletes a limited number a call; go on until a call deletes the last of them.
+      let found = 0, deleted = 0
+      for (;;) {
+        const r = await call<DropResult>({ dropIndexes: true, write })
+        found ||= r.found
+        deleted += r.deleted
+        if (!write || r.deleted === 0 || r.found <= r.deleted) return { found, deleted }
+        console.error(`  … ${deleted} of ${found} deleted`)
+      }
+    },
     dispose: async () => {},
   }
 }

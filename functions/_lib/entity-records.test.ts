@@ -124,6 +124,14 @@ describe('backfill', () => {
     expect(b.keys('proposals/by-entity/Person:ola/')).not.toContain('proposals/by-entity/Person:ola/index.json')
     expect(meta(b, 'Person:ola', B1)).toBeDefined()
   })
+
+  it('deletes no more than the limit a call, so a Worker can take them in steps', async () => {
+    const b = memoryR2()
+    for (const e of ['Person:a', 'Person:b', 'Person:c']) await b.put(`proposals/by-entity/${e}/index.json`, '[]')
+    expect(await dropOldIndexes(asBucket(b), { write: true, limit: 2 })).toEqual({ found: 3, deleted: 2 })
+    expect(await dropOldIndexes(asBucket(b), { write: true, limit: 2 })).toEqual({ found: 1, deleted: 1 })
+    expect(await dropOldIndexes(asBucket(b), { write: true, limit: 2 })).toEqual({ found: 0, deleted: 0 })
+  })
 })
 
 describe('listRecordsFor', () => {

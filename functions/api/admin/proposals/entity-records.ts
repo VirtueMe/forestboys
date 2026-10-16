@@ -3,7 +3,8 @@
  * manifests and payloads. A dry run unless the body says `"write": true`. A Worker has a limit on subrequests, so it works
  * through the bundles up to a budget and answers with `next`: send it again with `"cursor": <next>` until `next` is null.
  * `"dropIndexes": true` instead deletes the old `proposals/by-entity/<entityId>/index.json` files, once the readers have
- * switched. Admin-session-gated. docs/PROPOSALS.md, «Entity records».
+ * switched, up to DROP_LIMIT a call: send it again until `found` is no more than `deleted`. Admin-session-gated.
+ * docs/PROPOSALS.md, «Entity records».
  */
 
 import { requireAdmin } from '~/_lib/require-admin.ts'
@@ -16,6 +17,8 @@ interface Env {
 
 /** Under the limit of 1,000 subrequests of one invocation, with room for the guard. */
 const BUDGET = 900
+/** Deletes of one call: all 363 of production's in one call exceeded the Worker's resource limits. */
+const DROP_LIMIT = 100
 
 export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
   const guard = await requireAdmin(request, env)
@@ -25,7 +28,7 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
   const body: { write?: unknown; cursor?: unknown; dropIndexes?: unknown } = await request.json<Record<string, unknown>>().catch(() => ({}))
   const write = body.write === true
   try {
-    if (body.dropIndexes === true) return json({ ok: true, write, ...await dropOldIndexes(env.PROPOSALS, { write }) })
+    if (body.dropIndexes === true) return json({ ok: true, write, ...await dropOldIndexes(env.PROPOSALS, { write, limit: DROP_LIMIT }) })
     const cursor = typeof body.cursor === 'string' ? body.cursor : null
     return json({ ok: true, write, ...await backfillEntityRecords(env.PROPOSALS, { write, budget: BUDGET, cursor }) })
   } catch (e) {
