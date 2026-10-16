@@ -93,20 +93,7 @@
     <details v-if="events.length" class="section" open>
       <summary class="section-summary"><h2 class="section-heading">Hendelser ({{ events.length }})</h2></summary>
       <div class="section-body">
-        <div class="section-tools">
-          <button class="sort-btn" @click="eventSortAsc = !eventSortAsc">Dato {{ eventSortAsc ? '↑' : '↓' }}</button>
-        </div>
-        <div class="link-list">
-          <RouterLink
-            v-for="event in sortedEvents"
-            :key="event.slug"
-            :to="`/events/${event.slug}`"
-            class="event-item"
-          >
-            <span class="event-date">{{ formatDate(event.date) }}</span>
-            <span class="event-title">{{ event.title }}</span>
-          </RouterLink>
-        </div>
+        <EventList :items="events" />
       </div>
     </details>
 
@@ -189,6 +176,7 @@
  * modes.
  */
 import { ref, computed } from 'vue'
+import EventList from '@/components/EventList.vue'
 import RoleLabel from '@/components/role/RoleLabel.vue'
 import { RouterLink } from 'vue-router'
 import ImageSlider, { type SlideImage } from '@/components/ImageSlider.vue'
@@ -224,14 +212,6 @@ function memberPeriod(m: UnitMember): string | null {
   if (!m.startDate && !m.endDate) return null
   return `${m.startDate ?? '?'}${m.endDate ? ` – ${m.endDate}` : ''}`
 }
-
-const eventSortAsc = ref(true)
-const sortedEvents = computed(() => {
-  const evts = [...props.events]
-  return eventSortAsc.value
-    ? evts.sort((a, b) => (a.date ?? '').localeCompare(b.date ?? ''))
-    : evts.sort((a, b) => (b.date ?? '').localeCompare(a.date ?? ''))
-})
 
 const courseTotals = computed(() => ({
   students: props.courses.reduce((sum, c) => sum + (c.studentCount ?? 0), 0),
@@ -271,12 +251,6 @@ function showDescriptionAttribution(d: RenderedDescription): boolean {
   return false
 }
 
-const MONTHS = ['januar','februar','mars','april','mai','juni','juli','august','september','oktober','november','desember']
-function formatDate(iso?: string | null): string {
-  if (!iso) return '–'
-  const [y, m, d] = iso.split('-').map(Number)
-  return `${d}. ${MONTHS[m - 1]} ${y}`
-}
 </script>
 
 <style scoped>
@@ -320,11 +294,6 @@ function formatDate(iso?: string | null): string {
   color: var(--muted);
   font-style: italic;
 }
-.section-tools {
-  display: flex;
-  justify-content: flex-end;
-  margin-bottom: 8px;
-}
 .section-heading {
   font-size: 10px;
   font-weight: 700;
@@ -333,19 +302,6 @@ function formatDate(iso?: string | null): string {
   color: var(--muted);
   margin: 0;
 }
-.sort-btn {
-  background: none;
-  border: 1px solid var(--rule);
-  border-radius: 4px;
-  font-size: 11px;
-  font-weight: 600;
-  color: var(--muted);
-  padding: 6px 10px;
-  cursor: pointer;
-  white-space: nowrap;
-  touch-action: manipulation;
-}
-.sort-btn:hover { border-color: var(--focus); color: var(--focus); }
 
 .link-list { display: flex; flex-direction: column; gap: 2px; }
 
@@ -360,30 +316,6 @@ function formatDate(iso?: string | null): string {
 }
 .section-link:hover { background: var(--paper); text-decoration: underline; }
 
-.event-item {
-  display: flex;
-  align-items: baseline;
-  gap: 10px;
-  padding: 6px 8px;
-  margin: 0 -8px;
-  text-decoration: none;
-  color: var(--ink);
-  border-bottom: 1px solid var(--rule);
-  border-radius: 4px;
-  transition: background 0.1s;
-}
-.event-item:last-child { border-bottom: none; }
-.event-item:hover { background: var(--paper); }
-.event-item:hover .event-title { text-decoration: underline; }
-.event-date {
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--ink);
-  font-variant-numeric: tabular-nums;
-  white-space: nowrap;
-  flex-shrink: 0;
-}
-.event-title { font-size: 13px; color: var(--focus); flex: 1; min-width: 0; }
 
 .relation-list { display: flex; flex-direction: column; gap: 2px; }
 .relation-row {

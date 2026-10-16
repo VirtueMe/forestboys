@@ -23,6 +23,7 @@ import type { RelationEntry } from '@/components/relation/RelationStrategy.ts'
 import { StationStaysStrategy } from '@/components/relation/stayStrategies.ts'
 import type { NameType } from '@/utils/stationNames.ts'
 import type { StationCategory } from '@/utils/stationCategory.ts'
+import type { EventListItem } from '@/utils/eventList.ts'
 
 export interface StationNode {
   name:        string
@@ -56,7 +57,7 @@ export interface StationName {
   sourceRefs: string[]
 }
 
-export interface StationEvent { slug: string; title: string; date: string | null; direction: 'departed' | 'arrived' }
+export interface StationEvent extends EventListItem { direction: 'departed' | 'arrived' }
 export interface StationExternalRef {
   id: string; title: string | null; url: string;
   type: string; domain: string | null; nbBacked: boolean
@@ -195,9 +196,8 @@ export function useStationData() {
            WHERE e.slug IS NOT NULL
            RETURN DISTINCT e.slug AS slug,
                   coalesce(e.title, e.codeName, e.canonicalName) AS title,
-                  e.date AS date,
-                  CASE type(r) WHEN 'FROM_STATION' THEN 'departed' ELSE 'arrived' END AS direction
-           ORDER BY date`,
+                  coalesce(e.date, e.startDate) AS startDate, e.endDate AS endDate,
+                  CASE type(r) WHEN 'FROM_STATION' THEN 'departed' ELSE 'arrived' END AS direction`,
           { slug },
         ),
         neo4jQuery<StationExternalRef>(

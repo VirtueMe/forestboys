@@ -43,6 +43,7 @@
       picker-chip-aria="Bytt operasjon"
       validation-empty="Velg operasjon for alle oppføringer før du lagrer."
       :show-dates="false"
+      event-dates
       create-label="+ Opprett ny operasjon"
       :create-href="createEventHref?.('operation')"
       :expand-slug="pendingExpandEvent"
@@ -60,6 +61,7 @@
       picker-chip-aria="Bytt hendelse"
       validation-empty="Velg hendelse for alle oppføringer før du lagrer."
       :show-dates="false"
+      event-dates
       create-label="+ Opprett ny hendelse"
       :create-href="createEventHref?.('incident')"
       :expand-slug="pendingExpandEvent"
@@ -106,12 +108,14 @@
       :entries="data.operation.entries"
       :strategy="OperationStrategy"
       label="Operasjoner"
+      event-dates
       @open="openOperation"
     />
     <RelationListView
       :entries="data.incident.entries"
       :strategy="IncidentStrategy"
       label="Hendelser"
+      event-dates
       @open="openIncident"
     />
     <RelationListView
@@ -125,6 +129,7 @@
       :entry="activeEntry"
       :show-role="activeShowsRole"
       :show-passed="activeShowsPassed"
+      :event-dates="activeIsEvent"
       @close="activeEntry = null"
     />
   </template>
@@ -199,24 +204,29 @@ const attendedStrategy: RelationStrategy = {
 const activeEntry        = ref<RelationEntry | null>(null)
 const activeShowsRole    = ref(false)
 const activeShowsPassed  = ref(false)
+const activeIsEvent      = ref(false)
 
 function openMembership(e: RelationEntry) {
   activeEntry.value       = e
+  activeIsEvent.value     = false
   activeShowsRole.value   = true
   activeShowsPassed.value = false
 }
 function openAttended(e: RelationEntry) {
   activeEntry.value       = e
+  activeIsEvent.value     = false
   activeShowsRole.value   = !isCourse(e)
   activeShowsPassed.value = isCourse(e)
 }
 function openOperation(e: RelationEntry) {
   activeEntry.value       = e
+  activeIsEvent.value     = true
   activeShowsRole.value   = false
   activeShowsPassed.value = false
 }
 function openIncident(e: RelationEntry) {
   activeEntry.value       = e
+  activeIsEvent.value     = true
   activeShowsRole.value   = false
   activeShowsPassed.value = false
 }

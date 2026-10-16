@@ -19,6 +19,7 @@ import type { SlideImage } from '@/components/ImageSlider.vue'
 import type { Section } from '@/components/SectionsEditor.vue'
 import type { RelationEntry } from '@/components/relation/RelationStrategy.ts'
 import { LocationStaysStrategy } from '@/components/relation/stayStrategies.ts'
+import type { EventListItem } from '@/utils/eventList.ts'
 
 export interface LocationNode {
   slug:          string
@@ -27,11 +28,8 @@ export interface LocationNode {
   lng:           number | null
 }
 
-export interface LocationEvent {
-  slug:  string
-  title: string
-  date:  string | null
-  role:  'at' | 'from' | 'to'
+export interface LocationEvent extends EventListItem {
+  role: 'at' | 'from' | 'to'
 }
 export interface LocationExternalRef {
   id: string; title: string | null; url: string;
@@ -142,9 +140,8 @@ export function useLocationData() {
            WHERE (e:Incident OR e:Operation) AND e.slug IS NOT NULL
            RETURN DISTINCT e.slug AS slug,
                   coalesce(e.title, e.codeName, e.canonicalName) AS title,
-                  coalesce(e.date, e.startDate) AS date,
-                  toLower(type(r)) AS role
-           ORDER BY date`,
+                  coalesce(e.date, e.startDate) AS startDate, e.endDate AS endDate,
+                  toLower(type(r)) AS role`,
           { slug },
         ),
         neo4jQuery<LocationExternalRef>(

@@ -76,7 +76,7 @@ import { computed, onBeforeUnmount, onMounted } from 'vue'
 import RoleLabel from '@/components/role/RoleLabel.vue'
 import { blocksToHtml } from '@/utils/portableText.ts'
 import type { Section, Citation } from '@/components/SectionsEditor.vue'
-import { formatPeriod } from '@/utils/period.ts'
+import { formatEventPeriod, formatPeriod } from '@/utils/period.ts'
 import SourceRef from '@/components/SourceRef.vue'
 import type { RelationEntry } from './RelationStrategy.ts'
 
@@ -84,9 +84,12 @@ const props = withDefaults(defineProps<{
   entry:        RelationEntry | null
   showRole?:    boolean
   showPassed?:  boolean
+  /** The dates are when an event happened, not a period of membership: «12.–15. april 1945», no open dash (#284). */
+  eventDates?:  boolean
 }>(), {
   showRole:    false,
   showPassed:  false,
+  eventDates:  false,
 })
 
 const emit = defineEmits<{ close: [] }>()
@@ -113,7 +116,7 @@ const footnotes = computed<(Citation & { footnoteNumber: number })[]>(() => {
 })
 
 function periodOf(e: RelationEntry): string {
-  return formatPeriod(e.startDate, e.endDate)
+  return props.eventDates ? formatEventPeriod(e.startDate, e.endDate) : formatPeriod(e.startDate, e.endDate)
 }
 
 function onKey(e: KeyboardEvent) {

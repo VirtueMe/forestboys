@@ -1,7 +1,7 @@
 <template>
   <component :is="headless ? 'div' : 'section'" v-if="entries.length" :class="{ section: !headless }">
     <h2 v-if="!headless" class="section-heading">{{ label }} ({{ entries.length }})</h2>
-    <div class="relation-list">
+    <div class="relation-list" :class="{ 'relation-list--events': eventDates }">
       <div
         v-for="(e, i) in entries"
         :key="e.edgeId ?? `${e.targetSlug}:${i}`"
@@ -11,26 +11,30 @@
           'relation-row--removed': !!e.pendingRemoval,
         }"
       >
-        <RouterLink :to="strategy.targetRoute(e)" class="relation-link">{{ e.targetName }}</RouterLink>
-        <span v-if="e.pendingFromBundle" class="pending-chip pending-chip--add">Foreslått</span>
-        <span v-if="e.pendingRemoval" class="pending-chip pending-chip--del">Vil fjernes</span>
-        <span v-if="kindLabel?.(e)" class="relation-kind">{{ kindLabel(e) }}</span>
-        <span v-if="showRole && e.role" class="relation-role">
-          <RoleLabel :role-key="e.role" />
+        <!-- An event's date is its first column, as in EventList (#284). -->
+        <span v-if="eventDates" class="event-date" :class="{ undated: !periodOf(e) }">{{ periodOf(e) || '–' }}</span>
+        <span class="relation-main">
+          <RouterLink :to="strategy.targetRoute(e)" class="relation-link">{{ e.targetName }}</RouterLink>
+          <span v-if="e.pendingFromBundle" class="pending-chip pending-chip--add">Foreslått</span>
+          <span v-if="e.pendingRemoval" class="pending-chip pending-chip--del">Vil fjernes</span>
+          <span v-if="kindLabel?.(e)" class="relation-kind">{{ kindLabel(e) }}</span>
+          <span v-if="showRole && e.role" class="relation-role">
+            <RoleLabel :role-key="e.role" />
+          </span>
+          <span v-if="!eventDates && periodOf(e)" class="member-period">{{ periodOf(e) }}</span>
+          <span v-if="showPassed && e.passed === true" class="passed-chip passed-chip--ok">Bestått</span>
+          <span v-if="showPassed && e.passed === false" class="passed-chip passed-chip--no">Ikke bestått</span>
+          <SourceRef v-if="e.sourceRefs?.length" :refs="e.sourceRefs" />
+          <button
+            v-if="e.hasDescription"
+            class="info-marker"
+            type="button"
+            aria-label="Vis forklaring"
+            @click="emit('open', e)"
+          >
+            i
+          </button>
         </span>
-        <span v-if="periodOf(e)" class="member-period">{{ periodOf(e) }}</span>
-        <span v-if="showPassed && e.passed === true" class="passed-chip passed-chip--ok">Bestått</span>
-        <span v-if="showPassed && e.passed === false" class="passed-chip passed-chip--no">Ikke bestått</span>
-        <SourceRef v-if="e.sourceRefs?.length" :refs="e.sourceRefs" />
-        <button
-          v-if="e.hasDescription"
-          class="info-marker"
-          type="button"
-          aria-label="Vis forklaring"
-          @click="emit('open', e)"
-        >
-          i
-        </button>
       </div>
     </div>
   </component>
@@ -40,10 +44,10 @@
 import { RouterLink } from 'vue-router'
 import RoleLabel from '@/components/role/RoleLabel.vue'
 import SourceRef from '@/components/SourceRef.vue'
-import { formatPeriod } from '@/utils/period.ts'
+import { formatEventPeriod, formatPeriod } from '@/utils/period.ts'
 import type { RelationEntry, RelationStrategy } from './RelationStrategy.ts'
 
-withDefaults(defineProps<{
+const props = withDefaults(defineProps<{
   entries:      RelationEntry[]
   strategy:     RelationStrategy
   label:        string
@@ -53,17 +57,20 @@ withDefaults(defineProps<{
   headless?:    boolean
   /** A short tag before the role, for a list that mixes kinds of rows (e.g. «Kurs»). */
   kindLabel?:   (e: RelationEntry) => string | null
+  /** The dates are when an event happened, not a period of membership: «12.–15. april 1945», no open dash (#284). */
+  eventDates?:  boolean
 }>(), {
   showRole:    false,
   showPassed:  false,
   headless:    false,
   kindLabel:   undefined,
+  eventDates:  false,
 })
 
 const emit = defineEmits<{ open: [entry: RelationEntry] }>()
 
 function periodOf(e: RelationEntry): string {
-  return formatPeriod(e.startDate, e.endDate)
+  return props.eventDates ? formatEventPeriod(e.startDate, e.endDate) : formatPeriod(e.startDate, e.endDate)
 }
 </script>
 
@@ -115,6 +122,36 @@ function periodOf(e: RelationEntry): string {
   padding: var(--space-xs) var(--space-sm);
   border: 1px solid var(--rule);
   border-radius: var(--radius-pill);
+}
+
+/* With eventDates: the date in a first column at least 9rem wide, the same as EventList. */
+.relation-list--events {
+  display: grid;
+  grid-template-columns: minmax(9rem, max-content) minmax(0, 1fr);
+  gap: var(--space-xs) 0;
+}
+.relation-list--events .relation-row {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: subgrid;
+  align-items: baseline;
+  column-gap: var(--space-md);
+}
+.event-date {
+  font-family: var(--font-sans);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.event-date.undated { color: var(--muted); font-weight: 400; }
+.relation-main { display: contents; }
+.relation-list--events .relation-main { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-sm); min-width: 0; }
+@media (max-width: 520px) {
+  .relation-list--events { grid-template-columns: fit-content(8.5rem) minmax(0, 1fr); }
+  .relation-list--events .relation-row { column-gap: var(--space-sm); }
+  .event-date { white-space: normal; }
 }
 
 .member-period {

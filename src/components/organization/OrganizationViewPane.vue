@@ -44,12 +44,7 @@
         <h2 class="section-heading">Operasjoner ({{ operationEntries.length }})</h2>
       </summary>
       <div class="section-body">
-        <div class="relation-list">
-          <div v-for="op in operationEntries" :key="op.targetSlug" class="relation-row">
-            <RouterLink :to="`/events/${op.targetSlug}`" class="relation-link">{{ op.targetName }}</RouterLink>
-            <span v-if="op.startDate" class="relation-date">{{ op.startDate }}</span>
-          </div>
-        </div>
+        <EventList :items="asEvents(operationEntries)" />
       </div>
     </details>
 
@@ -58,12 +53,7 @@
         <h2 class="section-heading">Hendelser ({{ incidentEntries.length }})</h2>
       </summary>
       <div class="section-body">
-        <div class="relation-list">
-          <div v-for="ev in incidentEntries" :key="ev.targetSlug" class="relation-row">
-            <RouterLink :to="`/events/${ev.targetSlug}`" class="relation-link">{{ ev.targetName }}</RouterLink>
-            <span v-if="ev.startDate" class="relation-date">{{ ev.startDate }}</span>
-          </div>
-        </div>
+        <EventList :items="asEvents(incidentEntries)" />
       </div>
     </details>
 
@@ -134,6 +124,8 @@
  */
 import { ref } from 'vue'
 import RoleLabel from '@/components/role/RoleLabel.vue'
+import EventList from '@/components/EventList.vue'
+import type { EventListItem } from '@/utils/eventList.ts'
 import { RouterLink } from 'vue-router'
 import ImageSlider, { type SlideImage } from '@/components/ImageSlider.vue'
 import DescriptionPreview from '@/components/DescriptionPreview.vue'
@@ -161,6 +153,9 @@ withDefaults(defineProps<{
 })
 
 const activeUnit = ref<RelationEntry | null>(null)
+
+const asEvents = (entries: RelationEntry[]): EventListItem[] =>
+  entries.map(e => ({ slug: e.targetSlug, title: e.targetName, startDate: e.startDate, endDate: e.endDate }))
 </script>
 
 <style scoped>
@@ -251,13 +246,6 @@ const activeUnit = ref<RelationEntry | null>(null)
   padding: var(--space-xs) var(--space-sm);
   background: var(--paper-sunken);
   border-radius: var(--radius-pill);
-}
-
-.relation-date {
-  font-family: var(--font-mono);
-  font-size: var(--size-mono);
-  color: var(--muted);
-  font-variant-numeric: tabular-nums;
 }
 
 .info-marker {

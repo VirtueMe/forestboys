@@ -18,6 +18,7 @@ import { neo4jQuery } from './useNeo4j.ts'
 import type { SlideImage } from '@/components/ImageSlider.vue'
 import type { Section } from '@/components/SectionsEditor.vue'
 import { tidyText } from '@/utils/tidyText'
+import type { EventListItem } from '@/utils/eventList.ts'
 
 export interface TransportNode {
   name:        string
@@ -36,7 +37,7 @@ export interface TransportCrewMember {
   name: string
   role: string | null
 }
-export interface TransportEvent { slug: string; title: string; date: string | null }
+export type TransportEvent = EventListItem
 export interface TransportExternalRef {
   id: string; title: string | null; url: string;
   type: string; domain: string | null; nbBacked: boolean
@@ -163,8 +164,7 @@ export function useTransportData() {
            WHERE e.slug IS NOT NULL
            RETURN DISTINCT e.slug AS slug,
                   coalesce(e.title, e.codeName, e.canonicalName) AS title,
-                  e.date AS date
-           ORDER BY date`,
+                  coalesce(e.date, e.startDate) AS startDate, e.endDate AS endDate`,
           { slug },
         ),
         neo4jQuery<TransportExternalRef>(

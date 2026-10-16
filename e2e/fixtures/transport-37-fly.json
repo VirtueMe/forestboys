@@ -2,7 +2,7 @@
  "path": "/transport/37-fly",
  "queries": [
   {
-   "query": "MATCH (e:Operation|Incident)-[:USED]->(:Transport {slug: $slug})\n           WHERE e.slug IS NOT NULL\n           RETURN DISTINCT e.slug AS slug,\n                  coalesce(e.title, e.codeName, e.canonicalName) AS title,\n                  e.date AS date\n           ORDER BY date",
+   "query": "MATCH (e:Operation|Incident)-[:USED]->(:Transport {slug: $slug})\n           WHERE e.slug IS NOT NULL\n           RETURN DISTINCT e.slug AS slug,\n                  coalesce(e.title, e.codeName, e.canonicalName) AS title,\n                  coalesce(e.date, e.startDate) AS startDate, e.endDate AS endDate",
    "params": {
     "slug": "37-fly"
    },
@@ -10,7 +10,8 @@
     {
      "slug": "cohq-archery",
      "title": "COHQ Operation ARCHERY (Måløy-raidet) (SOE Operation Knottgrass Salt)",
-     "date": "1941-12-26"
+     "startDate": "1941-12-26",
+     "endDate": null
     }
    ]
   },

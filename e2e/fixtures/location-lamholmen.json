@@ -2,7 +2,7 @@
  "path": "/location/lamholmen",
  "queries": [
   {
-   "query": "MATCH (e)-[r:AT|FROM|TO]->(:Location {slug: $slug})\n           WHERE (e:Incident OR e:Operation) AND e.slug IS NOT NULL\n           RETURN DISTINCT e.slug AS slug,\n                  coalesce(e.title, e.codeName, e.canonicalName) AS title,\n                  coalesce(e.date, e.startDate) AS date,\n                  toLower(type(r)) AS role\n           ORDER BY date",
+   "query": "MATCH (e)-[r:AT|FROM|TO]->(:Location {slug: $slug})\n           WHERE (e:Incident OR e:Operation) AND e.slug IS NOT NULL\n           RETURN DISTINCT e.slug AS slug,\n                  coalesce(e.title, e.codeName, e.canonicalName) AS title,\n                  coalesce(e.date, e.startDate) AS startDate, e.endDate AS endDate,\n                  toLower(type(r)) AS role",
    "params": {
     "slug": "lamholmen"
    },
@@ -10,7 +10,8 @@
     {
      "slug": "nniu-076",
      "title": "NNIU 076 R. HARRAR SOE Operation Chough",
-     "date": "1942-12-12",
+     "startDate": "1942-12-12",
+     "endDate": null,
      "role": "to"
     }
    ]
@@ -162,7 +163,7 @@
      "name": "2 britiske offiserer"
     }
    ],
-   "truncatedFrom": 3957
+   "truncatedFrom": 3960
   },
   {
    "query": "\n    MATCH (p:Person)-[r:STATIONED_AT]->(t:Location {slug: $slug})\n    OPTIONAL MATCH (p)-[:HAS_STATIONED_NOTE]->(d:Description {stayId: r.id})\n    OPTIONAL MATCH (d)-[:SOURCED_FROM]->(from:Source)\n    WITH p, r, t, d, from\n    OPTIONAL MATCH (d)-[cites:CITES]->(src:Source)\n    WITH p, r, t, d, from,\n         collect(CASE WHEN src IS NULL THEN NULL ELSE {\n           inline:       coalesce(cites.inline, false),\n           sourceId:     src.id,\n           sourceTitle:  src.title,\n           sourceUrl:    src.url,\n           sourceAuthor: src.authorFreeText\n         } END) AS rawCites\n    WITH p, r, t,\n         CASE WHEN d IS NULL THEN NULL ELSE {\n           order:     coalesce(d.order, 1),\n           content:   d.content,\n           citations: [x IN rawCites WHERE x IS NOT NULL],\n           sourcedFrom: CASE WHEN from IS NULL THEN NULL ELSE {\n             id:             from.id,\n             title:          from.title,\n             url:            from.url,\n             authorFreeText: from.authorFreeText,\n             license:        from.license,\n             attribution:    from.attribution\n           } END\n         } END AS section\n    WITH p, r, t, collect(section) AS rawSections\n    RETURN r.id AS edgeId, r.state AS state, coalesce(r.sourceRefs, []) AS sourceRefs, p.slug AS targetSlug, p.canonicalName AS targetName, r.role AS role, r.startDate AS startDate, r.endDate AS endDate,\n           [x IN rawSections WHERE x IS NOT NULL] AS sections\n    ORDER BY startDate, targetName\n  ",

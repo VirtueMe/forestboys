@@ -125,7 +125,7 @@
     {
      "_id": "01806005-c420-4655-9927-77311c23d8d1",
      "slug": "wt-station-corsham",
-     "title": "WT Station CORSHAM",
+     "title": "WT Station CORSHAM KLADD",
      "date": "1945-01-28",
      "organization": "SOE",
      "district": "Milorg D22"
@@ -211,7 +211,7 @@
      "district": "Milorg D13"
     }
    ],
-   "truncatedFrom": 2284
+   "truncatedFrom": 2307
   },
   {
    "query": "MATCH (i:Incident|Operation)-[:IN_DISTRICT]->(d:Unit)\n       MATCH (i)-[:ORCHESTRATED_BY]->(o:Organization)\n       WHERE d.canonicalName IS NOT NULL AND o.color IS NOT NULL\n       WITH d.canonicalName AS district, o.color AS color, count(*) AS n\n       ORDER BY district, n DESC\n       RETURN district, head(collect(color)) AS color",
@@ -391,18 +391,18 @@
      "lng": 11.53194444444444,
      "events": [
       {
-       "date": "1945-04-22",
-       "_id": "c7b365aa-a0be-47ba-81c5-c1b1290bfd55",
-       "title": "AM 399 SOE Operation CROP XXi 4 Chiffchaff Red",
-       "slug": "am-399-4",
-       "organization": "SOE",
-       "district": "Milorg D12"
-      },
-      {
        "date": "1945-02-20",
        "_id": "fa08b094-5bdd-4d56-bf7f-be048089d4b0",
        "title": "AM 399 SOE Operation CROP XXi 1 Chiffchaff Red",
        "slug": "am-399-1",
+       "organization": "SOE",
+       "district": "Milorg D12"
+      },
+      {
+       "date": "1945-04-22",
+       "_id": "c7b365aa-a0be-47ba-81c5-c1b1290bfd55",
+       "title": "AM 399 SOE Operation CROP XXi 4 Chiffchaff Red",
+       "slug": "am-399-4",
        "organization": "SOE",
        "district": "Milorg D12"
       },
@@ -440,18 +440,18 @@
        "district": "02-SOE"
       },
       {
-       "date": "1943-11-25",
-       "_id": "adea3153-1d36-4320-be71-e45fad1c9fc3",
-       "title": "MTB 075 Patrol VP 30a,101a SOE Operation Barbara I PU 1st",
-       "slug": "mtb-075",
-       "organization": "MTB flåten",
-       "district": "02-SOE"
-      },
-      {
        "date": "1943-11-29",
        "_id": "1c87d312-0b4a-4323-bcbe-ab892ae9b9dc",
        "title": "MTB 076 Patrol VP 30a,101a SOE Operation Barbara I PU 2nd",
        "slug": "mtb-076",
+       "organization": "MTB flåten",
+       "district": "02-SOE"
+      },
+      {
+       "date": "1943-11-25",
+       "_id": "adea3153-1d36-4320-be71-e45fad1c9fc3",
+       "title": "MTB 075 Patrol VP 30a,101a SOE Operation Barbara I PU 1st",
+       "slug": "mtb-075",
        "organization": "MTB flåten",
        "district": "02-SOE"
       }
@@ -516,34 +516,10 @@
      "lng": 7.806944444,
      "events": [
       {
-       "date": "1945-02-01",
-       "_id": "2a77b7ea-9939-441c-b1e4-a18e7900633b",
-       "title": "AM 354 SOE Operation VET III 1 Varg",
-       "slug": "am-354-1",
-       "organization": "SOE",
-       "district": "Milorg D18"
-      },
-      {
-       "date": "1945-04-02",
-       "_id": "29fa14d2-6f96-4b3b-8ee5-2870f04635e5",
-       "title": "AM 354 SOE Operation VET III 3 Varg",
-       "slug": "am-354-3",
-       "organization": "SOE",
-       "district": "Milorg D18"
-      },
-      {
-       "date": "1945-04-17",
-       "_id": "19168f51-5a45-41f0-98e9-10dd286c6bea",
-       "title": "AM 354 SOE Operation VET III 4 Varg",
-       "slug": "am-354-4",
-       "organization": "SOE",
-       "district": "Milorg D18"
-      },
-      {
-       "date": "1945-02-26",
-       "_id": "4b8553b8-421b-4a83-9cfc-98ee14447f34",
-       "title": "AM 354 SOE Operation VET III 2 Varg",
-       "slug": "am-354-2",
+       "date": "1945-02-20",
+       "_id": "3073b8a3-b396-417b-8950-4309628ab44c",
+       "title": "AM 345 SOE Operation STIRRUP VIII 1 Swallow",
+       "slug": "am-345-1",
        "organization": "SOE",
        "district": "Milorg D18"
       },
@@ -556,10 +532,18 @@
        "district": "Milorg D18"
       },
       {
-       "date": "1945-02-23",
-       "_id": "6c22451a-eab2-4987-ac54-f46d3d3de500",
-       "title": "AM 441 SOE Operation STIRRUP XIV I Swallow Yellow",
-       "slug": "am-441-1",
+       "date": "1945-02-26",
+       "_id": "4b8553b8-421b-4a83-9cfc-98ee14447f34",
+       "title": "AM 354 SOE Operation VET III 2 Varg",
+       "slug": "am-354-2",
+       "organization": "SOE",
+       "district": "Milorg D18"
+      },
+      {
+       "date": "1945-02-01",
+       "_id": "2a77b7ea-9939-441c-b1e4-a18e7900633b",
+       "title": "AM 354 SOE Operation VET III 1 Varg",
+       "slug": "am-354-1",
        "organization": "SOE",
        "district": "Milorg D18"
       },
@@ -572,10 +556,26 @@
        "district": "Milorg D17"
       },
       {
-       "date": "1945-02-20",
-       "_id": "3073b8a3-b396-417b-8950-4309628ab44c",
-       "title": "AM 345 SOE Operation STIRRUP VIII 1 Swallow",
-       "slug": "am-345-1",
+       "date": "1945-04-02",
+       "_id": "29fa14d2-6f96-4b3b-8ee5-2870f04635e5",
+       "title": "AM 354 SOE Operation VET III 3 Varg",
+       "slug": "am-354-3",
+       "organization": "SOE",
+       "district": "Milorg D18"
+      },
+      {
+       "date": "1945-02-23",
+       "_id": "6c22451a-eab2-4987-ac54-f46d3d3de500",
+       "title": "AM 441 SOE Operation STIRRUP XIV I Swallow Yellow",
+       "slug": "am-441-1",
+       "organization": "SOE",
+       "district": "Milorg D18"
+      },
+      {
+       "date": "1945-04-17",
+       "_id": "19168f51-5a45-41f0-98e9-10dd286c6bea",
+       "title": "AM 354 SOE Operation VET III 4 Varg",
+       "slug": "am-354-4",
        "organization": "SOE",
        "district": "Milorg D18"
       }
@@ -664,6 +664,22 @@
      "lng": 4.959594996583165,
      "events": [
       {
+       "date": "1940-05-09",
+       "_id": "53a4bdb7-62a3-4e70-bda9-6ed3b411a533",
+       "title": "MK X39 MK PORAT H-21-S",
+       "slug": "mk-x39",
+       "organization": "MK Skøyter",
+       "district": "06 Skøyter ikke organisert"
+      },
+      {
+       "date": "1942-02-21",
+       "_id": "675d6a24-486d-4606-a1b2-c2286a96bb96",
+       "title": "NNIU 041 R.HABIT SOE Operation ANCHOR",
+       "slug": "nniu-041",
+       "organization": "NNIU - Norwegian Naval Independent Unit",
+       "district": "02-SOE"
+      },
+      {
        "date": "1942-04-26",
        "_id": "1200003a-f0d1-4438-8cdf-da5974864719",
        "title": "Telavåg tragedien",
@@ -678,22 +694,6 @@
        "slug": "nniu-052",
        "organization": "NNIU - Norwegian Naval Independent Unit",
        "district": "02-SOE"
-      },
-      {
-       "date": "1942-02-21",
-       "_id": "675d6a24-486d-4606-a1b2-c2286a96bb96",
-       "title": "NNIU 041 R.HABIT SOE Operation ANCHOR",
-       "slug": "nniu-041",
-       "organization": "NNIU - Norwegian Naval Independent Unit",
-       "district": "02-SOE"
-      },
-      {
-       "date": "1940-05-09",
-       "_id": "53a4bdb7-62a3-4e70-bda9-6ed3b411a533",
-       "title": "MK X39 MK PORAT H-21-S",
-       "slug": "mk-x39",
-       "organization": "MK Skøyter",
-       "district": "06 Skøyter ikke organisert"
       }
      ]
     },
@@ -1102,7 +1102,7 @@
      "name": "AM 050 SOE Operation CARHAMPTON 1"
     }
    ],
-   "truncatedFrom": 2284
+   "truncatedFrom": 2307
   },
   {
    "query": "MATCH (p:Person {slug: $slug})\n           RETURN p.slug AS slug, p.canonicalName AS name,\n                  p.secretName AS secretName, p.home AS home,\n                  p.birthYear AS birthYear, p.status AS status,\n                  p.serviceClass AS serviceClass,\n                  coalesce(p.type, 'civilian') AS type",
@@ -1137,14 +1137,14 @@
    ]
   },
   {
-   "query": "\n      MATCH (p:Person {slug: $slug})-[:INVOLVED_IN]->(i:Incident)\n      OPTIONAL MATCH (p)-[:HAS_INCIDENT_NOTE]->(d:Description)-[:ABOUT_INCIDENT]->(i)\n      OPTIONAL MATCH (d)-[:SOURCED_FROM]->(from:Source)\n      WITH p, i, d, from\n      OPTIONAL MATCH (d)-[cites:CITES]->(src:Source)\n      WITH p, i, d, from,\n           collect(CASE WHEN src IS NULL THEN NULL ELSE {\n             inline:       coalesce(cites.inline, false),\n             sourceId:     src.id,\n             sourceTitle:  src.title,\n             sourceUrl:    src.url,\n             sourceAuthor: src.authorFreeText\n           } END) AS rawCites\n      WITH i, d, from,\n           CASE WHEN d IS NULL THEN NULL ELSE {\n             order:     coalesce(d.order, 1),\n             content:   d.content,\n             citations: [x IN rawCites WHERE x IS NOT NULL],\n             sourcedFrom: CASE WHEN from IS NULL THEN NULL ELSE {\n               id:             from.id,\n               title:          from.title,\n               url:             from.url,\n               authorFreeText: from.authorFreeText,\n               license:        from.license,\n               attribution:    from.attribution\n             } END\n           } END AS section\n      WITH i, collect(section) AS rawSections\n      RETURN i.slug AS targetSlug,\n             i.title AS targetName,\n             i.date AS startDate,\n             NULL AS endDate,\n             [x IN rawSections WHERE x IS NOT NULL] AS sections\n      ORDER BY coalesce(i.date, ''), targetName\n    ",
+   "query": "\n      MATCH (p:Person {slug: $slug})-[:INVOLVED_IN]->(i:Incident)\n      OPTIONAL MATCH (p)-[:HAS_INCIDENT_NOTE]->(d:Description)-[:ABOUT_INCIDENT]->(i)\n      OPTIONAL MATCH (d)-[:SOURCED_FROM]->(from:Source)\n      WITH p, i, d, from\n      OPTIONAL MATCH (d)-[cites:CITES]->(src:Source)\n      WITH p, i, d, from,\n           collect(CASE WHEN src IS NULL THEN NULL ELSE {\n             inline:       coalesce(cites.inline, false),\n             sourceId:     src.id,\n             sourceTitle:  src.title,\n             sourceUrl:    src.url,\n             sourceAuthor: src.authorFreeText\n           } END) AS rawCites\n      WITH i, d, from,\n           CASE WHEN d IS NULL THEN NULL ELSE {\n             order:     coalesce(d.order, 1),\n             content:   d.content,\n             citations: [x IN rawCites WHERE x IS NOT NULL],\n             sourcedFrom: CASE WHEN from IS NULL THEN NULL ELSE {\n               id:             from.id,\n               title:          from.title,\n               url:             from.url,\n               authorFreeText: from.authorFreeText,\n               license:        from.license,\n               attribution:    from.attribution\n             } END\n           } END AS section\n      WITH i, collect(section) AS rawSections\n      RETURN i.slug AS targetSlug,\n             i.title AS targetName,\n             i.date AS startDate,\n             NULL AS endDate,\n             [x IN rawSections WHERE x IS NOT NULL] AS sections\n      ORDER BY startDate IS NULL, startDate, targetName\n    ",
    "params": {
     "slug": "bernt-balchen"
    },
    "rows": []
   },
   {
-   "query": "\n      MATCH (p:Person {slug: $slug})-[:PARTICIPATED_IN]->(op:Operation)\n      OPTIONAL MATCH (p)-[:HAS_OPERATION_NOTE]->(d:Description)-[:ABOUT_OPERATION]->(op)\n      OPTIONAL MATCH (d)-[:SOURCED_FROM]->(from:Source)\n      WITH p, op, d, from\n      OPTIONAL MATCH (d)-[cites:CITES]->(src:Source)\n      WITH p, op, d, from,\n           collect(CASE WHEN src IS NULL THEN NULL ELSE {\n             inline:       coalesce(cites.inline, false),\n             sourceId:     src.id,\n             sourceTitle:  src.title,\n             sourceUrl:    src.url,\n             sourceAuthor: src.authorFreeText\n           } END) AS rawCites\n      WITH op, d, from,\n           CASE WHEN d IS NULL THEN NULL ELSE {\n             order:     coalesce(d.order, 1),\n             content:   d.content,\n             citations: [x IN rawCites WHERE x IS NOT NULL],\n             sourcedFrom: CASE WHEN from IS NULL THEN NULL ELSE {\n               id:             from.id,\n               title:          from.title,\n               url:             from.url,\n               authorFreeText: from.authorFreeText,\n               license:        from.license,\n               attribution:    from.attribution\n             } END\n           } END AS section\n      WITH op, collect(section) AS rawSections\n      RETURN op.slug AS targetSlug,\n             op.codeName AS targetName,\n             NULL AS startDate,\n             NULL AS endDate,\n             [x IN rawSections WHERE x IS NOT NULL] AS sections\n      ORDER BY targetName\n    ",
+   "query": "\n      MATCH (p:Person {slug: $slug})-[:PARTICIPATED_IN]->(op:Operation)\n      OPTIONAL MATCH (p)-[:HAS_OPERATION_NOTE]->(d:Description)-[:ABOUT_OPERATION]->(op)\n      OPTIONAL MATCH (d)-[:SOURCED_FROM]->(from:Source)\n      WITH p, op, d, from\n      OPTIONAL MATCH (d)-[cites:CITES]->(src:Source)\n      WITH p, op, d, from,\n           collect(CASE WHEN src IS NULL THEN NULL ELSE {\n             inline:       coalesce(cites.inline, false),\n             sourceId:     src.id,\n             sourceTitle:  src.title,\n             sourceUrl:    src.url,\n             sourceAuthor: src.authorFreeText\n           } END) AS rawCites\n      WITH op, d, from,\n           CASE WHEN d IS NULL THEN NULL ELSE {\n             order:     coalesce(d.order, 1),\n             content:   d.content,\n             citations: [x IN rawCites WHERE x IS NOT NULL],\n             sourcedFrom: CASE WHEN from IS NULL THEN NULL ELSE {\n               id:             from.id,\n               title:          from.title,\n               url:             from.url,\n               authorFreeText: from.authorFreeText,\n               license:        from.license,\n               attribution:    from.attribution\n             } END\n           } END AS section\n      WITH op, collect(section) AS rawSections\n      RETURN op.slug AS targetSlug,\n             op.codeName AS targetName,\n             coalesce(op.date, op.startDate) AS startDate,\n             op.endDate AS endDate,\n             [x IN rawSections WHERE x IS NOT NULL] AS sections\n      ORDER BY coalesce(startDate, endDate) IS NULL, coalesce(startDate, endDate), targetName\n    ",
    "params": {
     "slug": "bernt-balchen"
    },
@@ -1152,14 +1152,14 @@
     {
      "targetSlug": "am-144",
      "targetName": "AM 144 SOE Operation FETLOCK 1",
-     "startDate": null,
+     "startDate": "1944-07-16",
      "endDate": null,
      "sections": []
     },
     {
      "targetSlug": "am-145",
      "targetName": "AM 145 SOE Operation GROIN I Grebe Blue",
-     "startDate": null,
+     "startDate": "1944-07-18",
      "endDate": null,
      "sections": []
     }
@@ -1357,18 +1357,18 @@
      "birthYear": 1921,
      "events": [
       {
+       "date": "1943-04-12",
+       "_id": "8a68f79d-d037-4dc1-bac0-c17f13f29e3b",
+       "title": "MSP 34 SIS Operation POLLUX II",
+       "slug": "msp-34",
+       "organization": "MSP Marinens skøyteavdeling Petershead",
+       "district": "01- SIS-XU"
+      },
+      {
        "date": "1943-04-27",
        "_id": "ef01a071-e366-4514-8690-2d1785fad79f",
        "title": "SIS Station POLLUX  II  S: 27/4-43 til  25/5-43",
        "slug": "sis-station-pollux-ii",
-       "organization": "SIS",
-       "district": "01- SIS-XU"
-      },
-      {
-       "date": "1943-02-09",
-       "_id": "d04a85cd-78b6-4c31-83d5-41f7f993b7fd",
-       "title": "SIS Station POLLUX I   S: 9/2-43 til  5/3-43",
-       "slug": "sis-station-pollux-i",
        "organization": "SIS",
        "district": "01- SIS-XU"
       },
@@ -1378,6 +1378,14 @@
        "title": "MTB 015 Patrulje K  SIS operation POLLUX I   ",
        "slug": "mtb-015",
        "organization": "MTB flåten",
+       "district": "01- SIS-XU"
+      },
+      {
+       "date": "1943-02-09",
+       "_id": "d04a85cd-78b6-4c31-83d5-41f7f993b7fd",
+       "title": "SIS Station POLLUX I   S: 9/2-43 til  5/3-43",
+       "slug": "sis-station-pollux-i",
+       "organization": "SIS",
        "district": "01- SIS-XU"
       },
       {
@@ -1707,20 +1715,20 @@
      "birthYear": null,
      "events": [
       {
-       "date": "1945-04-17",
-       "_id": "rN5k0G3PFxDN75grCwtIaT",
-       "title": "Am 165 SOE Operation BIT VIII 6 Goldcrest",
-       "slug": "am-165-6",
-       "organization": "SOE",
-       "district": "Milorg D14.1"
-      },
-      {
        "date": "1945-04-18",
        "_id": "ed6a2b20-35ca-4355-83bc-fff6fdc8c4ba",
        "title": "AM 571 SOE Operation SADDLE XXI 2 Sanderling",
        "slug": "am-571-2",
        "organization": "SOE",
        "district": "Milorg D18"
+      },
+      {
+       "date": "1945-04-17",
+       "_id": "rN5k0G3PFxDN75grCwtIaT",
+       "title": "Am 165 SOE Operation BIT VIII 6 Goldcrest",
+       "slug": "am-165-6",
+       "organization": "SOE",
+       "district": "Milorg D14.1"
       },
       {
        "date": "1945-04-19",
@@ -1783,14 +1791,6 @@
        "district": "Milorg D14.3"
       },
       {
-       "date": "1945-02-01",
-       "_id": "c7dcbc61-0800-4540-bc30-cf3b4d46e932",
-       "title": "AM 393 SOE Operation VET VI 1 Swallow Yellow",
-       "slug": "am-393-1",
-       "organization": "SOE",
-       "district": "Milorg D18"
-      },
-      {
        "date": "1945-02-26",
        "_id": "ad6cec14-402b-4cc5-bc54-9c945eaf4291",
        "title": "AM 444 SOE Operation TAIL XVII 3 Tern Blue",
@@ -1799,12 +1799,12 @@
        "district": "Milorg D11"
       },
       {
-       "date": "1945-02-23",
-       "_id": "a342ee89-296e-4b0f-b715-5188fc680006",
-       "title": "AM 227  SOE Operation CROP IX 2  Chiffchaff red",
-       "slug": "am-227-2",
+       "date": "1945-02-01",
+       "_id": "c7dcbc61-0800-4540-bc30-cf3b4d46e932",
+       "title": "AM 393 SOE Operation VET VI 1 Swallow Yellow",
+       "slug": "am-393-1",
        "organization": "SOE",
-       "district": "Milorg D12"
+       "district": "Milorg D18"
       },
       {
        "date": "1945-04-22",
@@ -1815,12 +1815,12 @@
        "district": "Milorg D18"
       },
       {
-       "date": "1945-04-25",
-       "_id": "8eb759fd-f634-4647-bbe1-a0f2aea179f4",
-       "title": "AM 567 SOE Operation BLINKERS XII Bjørn Red",
-       "slug": "am-567",
+       "date": "1945-02-23",
+       "_id": "a342ee89-296e-4b0f-b715-5188fc680006",
+       "title": "AM 227  SOE Operation CROP IX 2  Chiffchaff red",
+       "slug": "am-227-2",
        "organization": "SOE",
-       "district": "Milorg D20.2"
+       "district": "Milorg D12"
       },
       {
        "date": "1945-03-02",
@@ -1829,6 +1829,14 @@
        "slug": "am-259-3",
        "organization": "SOE",
        "district": "Milorg D11"
+      },
+      {
+       "date": "1945-04-25",
+       "_id": "8eb759fd-f634-4647-bbe1-a0f2aea179f4",
+       "title": "AM 567 SOE Operation BLINKERS XII Bjørn Red",
+       "slug": "am-567",
+       "organization": "SOE",
+       "district": "Milorg D20.2"
       },
       {
        "date": "1944-11-01",
@@ -2003,7 +2011,7 @@
      ]
     }
    ],
-   "truncatedFrom": 3957
+   "truncatedFrom": 3960
   },
   {
    "query": "MATCH (person:Person {slug: $slug})\n           CALL {\n             WITH person\n             MATCH (person)-[h:HAS_IMAGE]->(s:Source)\n             RETURN s.url AS url, h.caption AS caption,\n                    person.canonicalName AS subjectName, person.slug AS subjectSlug,\n                    'person' AS subjectType, 0 AS sortKey\n             UNION\n             WITH person\n             MATCH (person)-[:INVOLVED_IN|PARTICIPATED_IN]->(:Incident|Operation)<-[:RELATED_TO {kind:'contains'}]-(op:Operation)-[h:HAS_IMAGE]->(s:Source)\n             WHERE coalesce(h.scope, 'propagate') <> 'entity'\n             RETURN s.url AS url, h.caption AS caption,\n                    op.codeName AS subjectName, op.slug AS subjectSlug,\n                    'operation' AS subjectType, 1 AS sortKey\n             UNION\n             WITH person\n             MATCH (person)-[:INVOLVED_IN|PARTICIPATED_IN]->(i:Incident|Operation)-[h:HAS_IMAGE]->(s:Source)\n             WHERE coalesce(h.scope, 'propagate') <> 'entity'\n             RETURN s.url AS url, h.caption AS caption,\n                    coalesce(i.title, i.codeName) AS subjectName, i.slug AS subjectSlug,\n                    CASE WHEN i:Operation THEN 'operation' ELSE 'incident' END AS subjectType, 2 AS sortKey\n             UNION\n             WITH person\n             MATCH (person)-[:MEMBER_OF]->(u:Unit)-[h:HAS_IMAGE]->(s:Source)\n             WHERE coalesce(h.scope, 'propagate') <> 'entity'\n             RETURN s.url AS url, h.caption AS caption,\n                    u.canonicalName AS subjectName, u.slug AS subjectSlug,\n                    'unit' AS subjectType, 3 AS sortKey\n             UNION\n             WITH person\n             MATCH (person)-[:MEMBER_OF]-(x)-[:PART_OF*0..]->(o:Organization)-[h:HAS_IMAGE]->(s:Source)\n             WHERE coalesce(h.scope, 'propagate') <> 'entity'\n             RETURN s.url AS url, h.caption AS caption,\n                    o.canonicalName AS subjectName, o.slug AS subjectSlug,\n                    'organization' AS subjectType, 4 AS sortKey\n           }\n           RETURN url, caption, subjectName, subjectSlug, subjectType, sortKey\n           ORDER BY sortKey, subjectName\n           LIMIT 200",
@@ -2012,7 +2020,7 @@
    },
    "rows": [
     {
-     "url": "https://cdn.sanity.io/images/7r6kqtqy/production/0e5e9a8d9a91dbc71fa1b8fa70574fa6e467cd20-495x619.png",
+     "url": "https://cdn.sanity.io/images/7r6kqtqy/production/02a3ebb6919b87c7039b80525f8cb17c2474e7e4-2048x1536.png",
      "caption": null,
      "subjectName": "Bernt Balchen USAAF",
      "subjectSlug": "bernt-balchen",
@@ -2036,7 +2044,7 @@
      "sortKey": 0
     },
     {
-     "url": "https://cdn.sanity.io/images/7r6kqtqy/production/02a3ebb6919b87c7039b80525f8cb17c2474e7e4-2048x1536.png",
+     "url": "https://cdn.sanity.io/images/7r6kqtqy/production/0e5e9a8d9a91dbc71fa1b8fa70574fa6e467cd20-495x619.png",
      "caption": null,
      "subjectName": "Bernt Balchen USAAF",
      "subjectSlug": "bernt-balchen",
@@ -2494,10 +2502,10 @@
      "names": [],
      "events": [
       {
-       "date": "1942-09-12",
-       "_id": "ef156730-30a2-4083-83da-11b7edc6ef99",
-       "title": "AM 033 SOE Operation GROUSE II  1",
-       "slug": "am-033-1",
+       "date": "1942-10-18",
+       "_id": "3c92e74a-1485-49bc-a24f-2c1a7dd78948",
+       "title": "AM 033 SOE Operation GROUSE II 2",
+       "slug": "am-033-2",
        "organization": "SOE",
        "district": "Milorg D17"
       },
@@ -2510,26 +2518,26 @@
        "district": "Milorg D19"
       },
       {
-       "date": "1942-10-18",
-       "_id": "3c92e74a-1485-49bc-a24f-2c1a7dd78948",
-       "title": "AM 033 SOE Operation GROUSE II 2",
-       "slug": "am-033-2",
+       "date": "1942-09-12",
+       "_id": "ef156730-30a2-4083-83da-11b7edc6ef99",
+       "title": "AM 033 SOE Operation GROUSE II  1",
+       "slug": "am-033-1",
        "organization": "SOE",
        "district": "Milorg D17"
-      },
-      {
-       "date": "1945-03-24",
-       "_id": "949a9559-273e-474a-9e66-2cad30a692e4",
-       "title": "AM 358 SOE Operation WITHERS V 3 Woodpecker",
-       "slug": "am-358-3",
-       "organization": "SOE",
-       "district": "Milorg D22"
       },
       {
        "date": "1945-03-24",
        "_id": "5da8c1a8-7c5f-4cad-ac54-1d600fa2c513",
        "title": "AM 484 SOE Operation BRIDLE XVIII Cramlington",
        "slug": "am-484",
+       "organization": "SOE",
+       "district": "Milorg D22"
+      },
+      {
+       "date": "1945-03-24",
+       "_id": "949a9559-273e-474a-9e66-2cad30a692e4",
+       "title": "AM 358 SOE Operation WITHERS V 3 Woodpecker",
+       "slug": "am-358-3",
        "organization": "SOE",
        "district": "Milorg D22"
       }
@@ -2577,18 +2585,18 @@
        "district": "Grupper"
       },
       {
-       "date": "1940-05-17",
-       "_id": "2e0eea65-2da6-4462-8076-976e004cb148",
-       "title": "MSP-NID01 SIS Operation HARDWARE ( gitt navn senere)",
-       "slug": "msp-nid01",
-       "organization": "MSP Marinens skøyteavdeling Petershead",
-       "district": "01- SIS-XU"
-      },
-      {
        "date": "1940-06-04",
        "_id": "04c31903-1621-4661-ace0-b1350bb59514",
        "title": "MSP-NID02 SIS Operation HARDWARE",
        "slug": "msp-nid02",
+       "organization": "MSP Marinens skøyteavdeling Petershead",
+       "district": "01- SIS-XU"
+      },
+      {
+       "date": "1940-05-17",
+       "_id": "2e0eea65-2da6-4462-8076-976e004cb148",
+       "title": "MSP-NID01 SIS Operation HARDWARE ( gitt navn senere)",
+       "slug": "msp-nid01",
        "organization": "MSP Marinens skøyteavdeling Petershead",
        "district": "01- SIS-XU"
       }
@@ -2670,12 +2678,12 @@
      "names": [],
      "events": [
       {
-       "date": "1944-11-01",
-       "_id": "5a8ab88c-db62-449b-b1c7-296ce6301b87",
-       "title": "AM 265 SOE Operation BIT XVII 1 Chaffinch Blue",
-       "slug": "am-265-1",
+       "date": "1942-11-25",
+       "_id": "0fc9c30b-1039-43cf-8b66-bf78c73d89a9",
+       "title": "AX 45 SOE Operation THRUSH 2",
+       "slug": "ax-45-2",
        "organization": "SOE",
-       "district": "Milorg D17"
+       "district": "02-SOE"
       },
       {
        "date": "1944-11-01",
@@ -2686,20 +2694,20 @@
        "district": "Milorg D18"
       },
       {
+       "date": "1944-11-01",
+       "_id": "5a8ab88c-db62-449b-b1c7-296ce6301b87",
+       "title": "AM 265 SOE Operation BIT XVII 1 Chaffinch Blue",
+       "slug": "am-265-1",
+       "organization": "SOE",
+       "district": "Milorg D17"
+      },
+      {
        "date": "1942-11-25",
        "_id": "8e2d0487-48a3-4233-9f94-f715fb468502",
        "title": "AX 04 SIS Operation Orion I 3",
        "slug": "ax-04-3",
        "organization": "SIS",
        "district": "01- SIS-XU"
-      },
-      {
-       "date": "1942-11-25",
-       "_id": "0fc9c30b-1039-43cf-8b66-bf78c73d89a9",
-       "title": "AX 45 SOE Operation THRUSH 2",
-       "slug": "ax-45-2",
-       "organization": "SOE",
-       "district": "02-SOE"
       },
       {
        "date": "1944-12-30",
@@ -2729,59 +2737,11 @@
        "district": "01- SIS-XU"
       },
       {
-       "date": "1942-04-10",
-       "_id": "6189cd70-54ca-42d8-a2af-7a1d7f439070",
-       "title": "SOE Operation MALLARD",
-       "slug": "soe-operation-mallard",
+       "date": "1942-04-18",
+       "_id": "cfabaf27-3f76-48af-a28c-3753a8aa79a4",
+       "title": "NNIU 054 R. KOHIE SOE Operation LARK",
+       "slug": "nniu-054",
        "organization": "SOE",
-       "district": "Norge"
-      },
-      {
-       "date": "1942-03-26",
-       "_id": "5af592e6-3d66-44c8-a7ff-dd8fa254a593",
-       "title": "NNIU 045 SIS Operation LERKEN NC",
-       "slug": "nniu-045",
-       "organization": "NNIU - Norwegian Naval Independent Unit",
-       "district": "01- SIS-XU"
-      },
-      {
-       "date": "1942-04-07",
-       "_id": "80eab400-5bab-4a00-accb-4091b2e368cf",
-       "title": "NNIU 047 R. OCEAN SOE Operation MALLARD",
-       "slug": "nniu-047",
-       "organization": "NNIU - Norwegian Naval Independent Unit",
-       "district": "02-SOE"
-      },
-      {
-       "date": "1942-02-08",
-       "_id": "6b9d04bb-70a6-4c2b-8da4-6ce2478f4d45",
-       "title": "NNIU 039 R.-- SIS/SOE Lerken  / LARK",
-       "slug": "nniu-039",
-       "organization": "NNIU - Norwegian Naval Independent Unit",
-       "district": "02-SOE"
-      },
-      {
-       "date": "1942-10-18",
-       "_id": "7a0e8ad8-682c-435a-ab5d-36b38afe4fb4",
-       "title": "NNIU 061 SOE Operation MARSHFIELD",
-       "slug": "nniu-061",
-       "organization": "SOE",
-       "district": "02-SOE"
-      },
-      {
-       "date": "1942-02-21",
-       "_id": "675d6a24-486d-4606-a1b2-c2286a96bb96",
-       "title": "NNIU 041 R.HABIT SOE Operation ANCHOR",
-       "slug": "nniu-041",
-       "organization": "NNIU - Norwegian Naval Independent Unit",
-       "district": "02-SOE"
-      },
-      {
-       "date": "1942-04-17",
-       "_id": "79520960-d097-4ce4-bb09-5e218a200eec",
-       "title": "NNIU 052 R. KANKIN   SOE Operation  PENGUIN / ARCHER",
-       "slug": "nniu-052",
-       "organization": "NNIU - Norwegian Naval Independent Unit",
        "district": "02-SOE"
       },
       {
@@ -2793,19 +2753,27 @@
        "district": "02-SOE"
       },
       {
-       "date": "1942-08-22",
-       "_id": "5e583b94-5a83-4e87-bbee-7571da468f40",
-       "title": "NNIU 057 R.XX  SOE Operation CYGNET ",
-       "slug": "nniu-057",
-       "organization": "SOE",
-       "district": "02-SOE"
+       "date": "1942-03-26",
+       "_id": "5af592e6-3d66-44c8-a7ff-dd8fa254a593",
+       "title": "NNIU 045 SIS Operation LERKEN NC",
+       "slug": "nniu-045",
+       "organization": "NNIU - Norwegian Naval Independent Unit",
+       "district": "01- SIS-XU"
       },
       {
-       "date": "1941-08-30",
-       "_id": "3ca5e96d-dba7-44eb-952c-f5dbfbe90bce",
-       "title": "NNIU 015 Land Messenger Ospa",
-       "slug": "nniu-015",
+       "date": "1941-11-09",
+       "_id": "f75bcde2-8ddf-482b-905f-b34f56add7b1",
+       "title": "NNIU 030 R.-- SIS / SOE Operation GAMMA / ARQUEBUS",
+       "slug": "nniu-030",
        "organization": "NNIU - Norwegian Naval Independent Unit",
+       "district": "01- SIS-XU"
+      },
+      {
+       "date": "1942-10-18",
+       "_id": "7a0e8ad8-682c-435a-ab5d-36b38afe4fb4",
+       "title": "NNIU 061 SOE Operation MARSHFIELD",
+       "slug": "nniu-061",
+       "organization": "SOE",
        "district": "02-SOE"
       },
       {
@@ -2817,18 +2785,10 @@
        "district": "02-SOE"
       },
       {
-       "date": "1942-03-05",
-       "_id": "2e18a472-d8a3-40ed-a386-b83f9b87cd42",
-       "title": "NNIU 042  R. GIBRALTAR SOE Operation HERON I",
-       "slug": "nniu-042",
-       "organization": "NNIU - Norwegian Naval Independent Unit",
-       "district": "02-SOE"
-      },
-      {
-       "date": "1942-04-09",
-       "_id": "be70c36d-8e18-409b-afca-043682d2f4c9",
-       "title": "NNIU 050 SIS Operation LERKEN",
-       "slug": "nniu-050",
+       "date": "1942-04-07",
+       "_id": "80eab400-5bab-4a00-accb-4091b2e368cf",
+       "title": "NNIU 047 R. OCEAN SOE Operation MALLARD",
+       "slug": "nniu-047",
        "organization": "NNIU - Norwegian Naval Independent Unit",
        "district": "02-SOE"
       },
@@ -2841,106 +2801,10 @@
        "district": "02-SOE"
       },
       {
-       "date": "1941-05-14",
-       "_id": "04ad5c97-6e96-428d-9805-7d90d0a4d5e4",
-       "title": "MSP-SOK09 SIS Operation OLDELL (resume)",
-       "slug": "msp-sok09",
-       "organization": "MSP Marinens skøyteavdeling Petershead",
-       "district": "01- SIS-XU"
-      },
-      {
-       "date": "1941-10-14",
-       "_id": "c02d6d7e-f61d-4179-a29d-bc195a88902d",
-       "title": "NNIU 026 Land SOE ARQUEBUS party",
-       "slug": "nniu-026",
-       "organization": "NNIU - Norwegian Naval Independent Unit",
-       "district": "02-SOE"
-      },
-      {
-       "date": "1941-09-18",
-       "_id": "fc5bf23c-5212-4247-a2bd-e875a75645ec",
-       "title": "NNIU 021  Land SIS party  GAMMA ",
-       "slug": "nniu-021",
-       "organization": "NNIU - Norwegian Naval Independent Unit",
-       "district": "01- SIS-XU"
-      },
-      {
-       "date": "1942-03-07",
-       "_id": "2dc49310-eef8-4da7-9dfe-bb8a014c5a7f",
-       "title": "ANCC meeting nr 03.2 Inspection Shetland Base 7-12/3-1941",
-       "slug": "ancc-03-2",
-       "organization": "SOE",
-       "district": "ANGLO-NORWEGIAN COLLABORATION COMMITTEE"
-      },
-      {
-       "date": "1942-02-25",
-       "_id": "e4bf5c32-0159-4784-bb30-b5d8b56cf934",
-       "title": "MK X16  MK HELAND flyktninger til Shetland",
-       "slug": "mk-x16",
-       "organization": "NNIU - Norwegian Naval Independent Unit",
-       "district": "02-SOE"
-      },
-      {
-       "date": "1942-03-12",
-       "_id": "d17ece62-8783-47d4-a929-ea2c4d1ade37",
-       "title": "NNIU 044 R. KOBIE SOE Operation LARK NC",
-       "slug": "nniu-044",
-       "organization": "NNIU - Norwegian Naval Independent Unit",
-       "district": "02-SOE"
-      },
-      {
-       "date": "1942-01-23",
-       "_id": "c6a03805-a5e8-4cf6-b487-fcbe0d915968",
-       "title": "NNIU 035 R.-- SIS Operation LERKEN",
-       "slug": "nniu-035",
-       "organization": "SIS",
-       "district": "01- SIS-XU"
-      },
-      {
-       "date": "1941-09-22",
-       "_id": "1d0cea26-c357-4f11-9a74-76dbfed15a62",
-       "title": "NNIU 022  Pick up Trondheim party (Sørli gang)",
-       "slug": "nniu-022",
-       "organization": "NNIU - Norwegian Naval Independent Unit",
-       "district": "02-SOE"
-      },
-      {
-       "date": "1942-04-18",
-       "_id": "cfabaf27-3f76-48af-a28c-3753a8aa79a4",
-       "title": "NNIU 054 R. KOHIE SOE Operation LARK",
-       "slug": "nniu-054",
-       "organization": "SOE",
-       "district": "02-SOE"
-      },
-      {
-       "date": "1941-09-22",
-       "_id": "fbf749e5-a3bc-40fc-b681-94064869712b",
-       "title": "NNIU 020  SIS Operation SKYLARK B / Trondheim party",
-       "slug": "nniu-020",
-       "organization": "NNIU - Norwegian Naval Independent Unit",
-       "district": "01- SIS-XU"
-      },
-      {
-       "date": "1941-11-04",
-       "_id": "0c62324c-6888-4e89-878a-746ba2a3333d",
-       "title": "MK X15  MK HELAND Roald til Shetland og tilbake",
-       "slug": "mk-x15",
-       "organization": "NNIU - Norwegian Naval Independent Unit",
-       "district": "02-SOE"
-      },
-      {
-       "date": "1942-02-05",
-       "_id": "0a44d716-9953-43e7-aa3f-9061d714cbea",
-       "title": "NNIU 040 R. ECHELON SOE Operation CROW",
-       "slug": "nniu-040",
-       "organization": "NNIU - Norwegian Naval Independent Unit",
-       "district": "02-SOE"
-      },
-      {
-       "date": "1942-04-08",
-       "_id": "1d873d25-e6dc-45cd-8052-5f465bb28921",
-       "title": "NNIU 049 SOE R. LIMBERED SOE Operation HERON",
-       "slug": "nniu-049",
+       "date": "1942-04-17",
+       "_id": "79520960-d097-4ce4-bb09-5e218a200eec",
+       "title": "NNIU 052 R. KANKIN   SOE Operation  PENGUIN / ARCHER",
+       "slug": "nniu-052",
        "organization": "NNIU - Norwegian Naval Independent Unit",
        "district": "02-SOE"
       },
@@ -2953,18 +2817,122 @@
        "district": "02-SOE"
       },
       {
-       "date": "1941-11-09",
-       "_id": "f75bcde2-8ddf-482b-905f-b34f56add7b1",
-       "title": "NNIU 030 R.-- SIS / SOE Operation GAMMA / ARQUEBUS",
-       "slug": "nniu-030",
+       "date": "1942-04-10",
+       "_id": "6189cd70-54ca-42d8-a2af-7a1d7f439070",
+       "title": "SOE Operation MALLARD",
+       "slug": "soe-operation-mallard",
+       "organization": "SOE",
+       "district": "Norge"
+      },
+      {
+       "date": "1942-03-05",
+       "_id": "2e18a472-d8a3-40ed-a386-b83f9b87cd42",
+       "title": "NNIU 042  R. GIBRALTAR SOE Operation HERON I",
+       "slug": "nniu-042",
+       "organization": "NNIU - Norwegian Naval Independent Unit",
+       "district": "02-SOE"
+      },
+      {
+       "date": "1942-02-08",
+       "_id": "6b9d04bb-70a6-4c2b-8da4-6ce2478f4d45",
+       "title": "NNIU 039 R.-- SIS/SOE Lerken  / LARK",
+       "slug": "nniu-039",
+       "organization": "NNIU - Norwegian Naval Independent Unit",
+       "district": "02-SOE"
+      },
+      {
+       "date": "1941-09-22",
+       "_id": "fbf749e5-a3bc-40fc-b681-94064869712b",
+       "title": "NNIU 020  SIS Operation SKYLARK B / Trondheim party",
+       "slug": "nniu-020",
        "organization": "NNIU - Norwegian Naval Independent Unit",
        "district": "01- SIS-XU"
+      },
+      {
+       "date": "1941-09-18",
+       "_id": "fc5bf23c-5212-4247-a2bd-e875a75645ec",
+       "title": "NNIU 021  Land SIS party  GAMMA ",
+       "slug": "nniu-021",
+       "organization": "NNIU - Norwegian Naval Independent Unit",
+       "district": "01- SIS-XU"
+      },
+      {
+       "date": "1942-04-09",
+       "_id": "be70c36d-8e18-409b-afca-043682d2f4c9",
+       "title": "NNIU 050 SIS Operation LERKEN",
+       "slug": "nniu-050",
+       "organization": "NNIU - Norwegian Naval Independent Unit",
+       "district": "02-SOE"
+      },
+      {
+       "date": "1942-01-23",
+       "_id": "c6a03805-a5e8-4cf6-b487-fcbe0d915968",
+       "title": "NNIU 035 R.-- SIS Operation LERKEN",
+       "slug": "nniu-035",
+       "organization": "SIS",
+       "district": "01- SIS-XU"
+      },
+      {
+       "date": "1942-02-21",
+       "_id": "675d6a24-486d-4606-a1b2-c2286a96bb96",
+       "title": "NNIU 041 R.HABIT SOE Operation ANCHOR",
+       "slug": "nniu-041",
+       "organization": "NNIU - Norwegian Naval Independent Unit",
+       "district": "02-SOE"
+      },
+      {
+       "date": "1942-03-07",
+       "_id": "2dc49310-eef8-4da7-9dfe-bb8a014c5a7f",
+       "title": "ANCC meeting nr 03.2 Inspection Shetland Base 7-12/3-1941",
+       "slug": "ancc-03-2",
+       "organization": "SOE",
+       "district": "ANGLO-NORWEGIAN COLLABORATION COMMITTEE"
+      },
+      {
+       "date": "1941-11-04",
+       "_id": "0c62324c-6888-4e89-878a-746ba2a3333d",
+       "title": "MK X15  MK HELAND Roald til Shetland og tilbake",
+       "slug": "mk-x15",
+       "organization": "NNIU - Norwegian Naval Independent Unit",
+       "district": "02-SOE"
+      },
+      {
+       "date": "1942-04-17",
+       "_id": "e182f71c-56d5-4094-bde5-e9d0ac31a05d",
+       "title": "NNIU 053 R.--SOE Operation REDSHANK",
+       "slug": "nniu-053",
+       "organization": "SOE",
+       "district": "02-SOE"
+      },
+      {
+       "date": "1942-02-05",
+       "_id": "0a44d716-9953-43e7-aa3f-9061d714cbea",
+       "title": "NNIU 040 R. ECHELON SOE Operation CROW",
+       "slug": "nniu-040",
+       "organization": "NNIU - Norwegian Naval Independent Unit",
+       "district": "02-SOE"
+      },
+      {
+       "date": "1942-02-25",
+       "_id": "e4bf5c32-0159-4784-bb30-b5d8b56cf934",
+       "title": "MK X16  MK HELAND flyktninger til Shetland",
+       "slug": "mk-x16",
+       "organization": "NNIU - Norwegian Naval Independent Unit",
+       "district": "02-SOE"
       },
       {
        "date": "1942-04-16",
        "_id": "3a6a87cc-00d1-495a-b0b4-1918d7318474",
        "title": "NNIU 051 R. SHEIK SOE Operation ARCHER / HERON ",
        "slug": "nniu-051",
+       "organization": "NNIU - Norwegian Naval Independent Unit",
+       "district": "02-SOE"
+      },
+      {
+       "date": "1942-02-05",
+       "_id": "36a9820d-b65a-44ea-8e10-934ee151031a",
+       "title": "NNIU 038 R. FEDERAL SOE Operation ANVIL",
+       "slug": "nniu-038",
        "organization": "NNIU - Norwegian Naval Independent Unit",
        "district": "02-SOE"
       },
@@ -2977,12 +2945,12 @@
        "district": "02-SOE"
       },
       {
-       "date": "1942-02-05",
-       "_id": "36a9820d-b65a-44ea-8e10-934ee151031a",
-       "title": "NNIU 038 R. FEDERAL SOE Operation ANVIL",
-       "slug": "nniu-038",
-       "organization": "NNIU - Norwegian Naval Independent Unit",
-       "district": "02-SOE"
+       "date": "1941-05-14",
+       "_id": "04ad5c97-6e96-428d-9805-7d90d0a4d5e4",
+       "title": "MSP-SOK09 SIS Operation OLDELL (resume)",
+       "slug": "msp-sok09",
+       "organization": "MSP Marinens skøyteavdeling Petershead",
+       "district": "01- SIS-XU"
       },
       {
        "date": "1942-03-27",
@@ -2993,11 +2961,51 @@
        "district": "02-SOE"
       },
       {
-       "date": "1942-04-17",
-       "_id": "e182f71c-56d5-4094-bde5-e9d0ac31a05d",
-       "title": "NNIU 053 R.--SOE Operation REDSHANK",
-       "slug": "nniu-053",
+       "date": "1942-08-22",
+       "_id": "5e583b94-5a83-4e87-bbee-7571da468f40",
+       "title": "NNIU 057 R.XX  SOE Operation CYGNET ",
+       "slug": "nniu-057",
        "organization": "SOE",
+       "district": "02-SOE"
+      },
+      {
+       "date": "1942-04-08",
+       "_id": "1d873d25-e6dc-45cd-8052-5f465bb28921",
+       "title": "NNIU 049 SOE R. LIMBERED SOE Operation HERON",
+       "slug": "nniu-049",
+       "organization": "NNIU - Norwegian Naval Independent Unit",
+       "district": "02-SOE"
+      },
+      {
+       "date": "1941-09-22",
+       "_id": "1d0cea26-c357-4f11-9a74-76dbfed15a62",
+       "title": "NNIU 022  Pick up Trondheim party (Sørli gang)",
+       "slug": "nniu-022",
+       "organization": "NNIU - Norwegian Naval Independent Unit",
+       "district": "02-SOE"
+      },
+      {
+       "date": "1941-08-30",
+       "_id": "3ca5e96d-dba7-44eb-952c-f5dbfbe90bce",
+       "title": "NNIU 015 Land Messenger Ospa",
+       "slug": "nniu-015",
+       "organization": "NNIU - Norwegian Naval Independent Unit",
+       "district": "02-SOE"
+      },
+      {
+       "date": "1942-03-12",
+       "_id": "d17ece62-8783-47d4-a929-ea2c4d1ade37",
+       "title": "NNIU 044 R. KOBIE SOE Operation LARK NC",
+       "slug": "nniu-044",
+       "organization": "NNIU - Norwegian Naval Independent Unit",
+       "district": "02-SOE"
+      },
+      {
+       "date": "1941-10-14",
+       "_id": "c02d6d7e-f61d-4179-a29d-bc195a88902d",
+       "title": "NNIU 026 Land SOE ARQUEBUS party",
+       "slug": "nniu-026",
+       "organization": "NNIU - Norwegian Naval Independent Unit",
        "district": "02-SOE"
       }
      ]
@@ -3060,18 +3068,18 @@
      "names": [],
      "events": [
       {
-       "date": "1944-09-19",
-       "_id": "35155b8f-e234-4412-8e94-87288aed7c33",
-       "title": "AM 185 SOE Operation CRUPPER 9 Golden Eagle 1",
-       "slug": "am-185-1",
-       "organization": "SOE",
-       "district": "Milorg D14.2"
-      },
-      {
        "date": "1945-04-22",
        "_id": "8f197190-75dc-420e-b360-b9b2a7e02733",
        "title": "AM 364  Soe Operation CRUPPER XXXX 3 Greenfinch",
        "slug": "am-364-3",
+       "organization": "SOE",
+       "district": "Milorg D14.2"
+      },
+      {
+       "date": "1944-09-19",
+       "_id": "35155b8f-e234-4412-8e94-87288aed7c33",
+       "title": "AM 185 SOE Operation CRUPPER 9 Golden Eagle 1",
+       "slug": "am-185-1",
        "organization": "SOE",
        "district": "Milorg D14.2"
       }
@@ -3249,11 +3257,59 @@
      "events": [
       {
        "date": "1945-02-22",
+       "_id": "3c40732a-817d-4be2-8f83-81a6680b5e4a",
+       "title": "AM 410 SOE Operation CROP XXIII Chiffchaff Red",
+       "slug": "am-410",
+       "organization": "SOE",
+       "district": "Milorg D12"
+      },
+      {
+       "date": "1945-04-23",
+       "_id": "8732077a-47d3-483a-b58c-05323702d018",
+       "title": "AM 391 SOE Operation CROP XX Chiffchaff Red",
+       "slug": "am-391",
+       "organization": "SOE",
+       "district": "Milorg D12"
+      },
+      {
+       "date": "1945-02-22",
        "_id": "72502647-73c5-4224-8cb1-645ee4c0265b",
        "title": "AM 190 SOE Operation CURB I 4 Cormorant",
        "slug": "am-190-4",
        "organization": "SOE",
        "district": "Milorg D14.3"
+      },
+      {
+       "date": "1945-02-22",
+       "_id": "6db2f20f-69ad-4b3f-8208-8fb1a00d524d",
+       "title": "AM 220 SOE Operation CURB III 3 Cormorant",
+       "slug": "am-220-3",
+       "organization": "SOE",
+       "district": "Milorg D14.3"
+      },
+      {
+       "date": "1945-02-22",
+       "_id": "9898ed0b-2381-4026-8b8b-4a1275067f25",
+       "title": "AM 400 SOE Operation CROP XXII Chiffchaff Red",
+       "slug": "am-400",
+       "organization": "SOE",
+       "district": "Milorg D12"
+      },
+      {
+       "date": "1945-02-22",
+       "_id": "0661247f-cbe5-473d-a236-c0c73346e35d",
+       "title": "AM 301 SOE Operation CROP XIII 2 Chiffchaff Red ",
+       "slug": "am-301-2",
+       "organization": "SOE",
+       "district": "Milorg D12"
+      },
+      {
+       "date": "1945-02-22",
+       "_id": "2b7a1106-cbc2-42c0-9569-9bd3090d0180",
+       "title": "AM 328 SOE Operation CROP XVII 2 Chiffchaff Red",
+       "slug": "am-328-2",
+       "organization": "SOE",
+       "district": "Milorg D12"
       },
       {
        "date": "1945-02-22",
@@ -3268,54 +3324,6 @@
        "_id": "2cead893-b320-4c0f-8753-59f1ba4eae07",
        "title": "AM 366 SOE Operation CROP XIX 2 Chiffchaff Red",
        "slug": "am-366-2",
-       "organization": "SOE",
-       "district": "Milorg D12"
-      },
-      {
-       "date": "1945-04-23",
-       "_id": "8732077a-47d3-483a-b58c-05323702d018",
-       "title": "AM 391 SOE Operation CROP XX Chiffchaff Red",
-       "slug": "am-391",
-       "organization": "SOE",
-       "district": "Milorg D12"
-      },
-      {
-       "date": "1945-02-22",
-       "_id": "0661247f-cbe5-473d-a236-c0c73346e35d",
-       "title": "AM 301 SOE Operation CROP XIII 2 Chiffchaff Red ",
-       "slug": "am-301-2",
-       "organization": "SOE",
-       "district": "Milorg D12"
-      },
-      {
-       "date": "1945-02-22",
-       "_id": "6db2f20f-69ad-4b3f-8208-8fb1a00d524d",
-       "title": "AM 220 SOE Operation CURB III 3 Cormorant",
-       "slug": "am-220-3",
-       "organization": "SOE",
-       "district": "Milorg D14.3"
-      },
-      {
-       "date": "1945-02-22",
-       "_id": "2b7a1106-cbc2-42c0-9569-9bd3090d0180",
-       "title": "AM 328 SOE Operation CROP XVII 2 Chiffchaff Red",
-       "slug": "am-328-2",
-       "organization": "SOE",
-       "district": "Milorg D12"
-      },
-      {
-       "date": "1945-02-22",
-       "_id": "9898ed0b-2381-4026-8b8b-4a1275067f25",
-       "title": "AM 400 SOE Operation CROP XXII Chiffchaff Red",
-       "slug": "am-400",
-       "organization": "SOE",
-       "district": "Milorg D12"
-      },
-      {
-       "date": "1945-02-22",
-       "_id": "3c40732a-817d-4be2-8f83-81a6680b5e4a",
-       "title": "AM 410 SOE Operation CROP XXIII Chiffchaff Red",
-       "slug": "am-410",
        "organization": "SOE",
        "district": "Milorg D12"
       }
@@ -3376,30 +3384,6 @@
      "reserve": null,
      "events": [
       {
-       "date": "1945-05-09",
-       "_id": "e4863234-7053-469f-83d8-c81641960dad",
-       "title": "Catalina 041  Special duty Woodhaven - Lofoten - Woodhaven",
-       "slug": "catalina-041",
-       "organization": "Catalina trafikken",
-       "district": "Den norske regjering"
-      },
-      {
-       "date": "1945-04-26",
-       "_id": "c1e04bb5-a70a-45af-8fe5-2eb25cd08ed6",
-       "title": "Catalina 036 Sørøya/Kirkenes  SIS Operation BEDSPREAD",
-       "slug": "catalina-036",
-       "organization": "Catalina trafikken",
-       "district": "01- SIS-XU"
-      },
-      {
-       "date": "1945-05-09",
-       "_id": "e8d052cb-08bc-4010-a717-d55fa038b9cb",
-       "title": "Catalina 039  Special duty Oslo - Stavanger",
-       "slug": "catalina-039",
-       "organization": "Catalina trafikken",
-       "district": "Den norske regjering"
-      },
-      {
        "date": "1945-05-08",
        "_id": "f82d8fd7-ed4d-493a-b013-6702cdb25ea0",
        "title": "Catalina 038  Special duty Woodhaven - Oslo",
@@ -3416,10 +3400,18 @@
        "district": "Den norske regjering"
       },
       {
-       "date": "1945-05-16",
-       "_id": "7c50e462-ccbf-43ec-b373-253238c7c9ca",
-       "title": "Catalina 048  Special duty Kirkenes Tromsø ",
-       "slug": "catalina-048",
+       "date": "1945-05-09",
+       "_id": "e4863234-7053-469f-83d8-c81641960dad",
+       "title": "Catalina 041  Special duty Woodhaven - Lofoten - Woodhaven",
+       "slug": "catalina-041",
+       "organization": "Catalina trafikken",
+       "district": "Den norske regjering"
+      },
+      {
+       "date": "1945-05-09",
+       "_id": "e8d052cb-08bc-4010-a717-d55fa038b9cb",
+       "title": "Catalina 039  Special duty Oslo - Stavanger",
+       "slug": "catalina-039",
        "organization": "Catalina trafikken",
        "district": "Den norske regjering"
       },
@@ -3438,6 +3430,14 @@
        "slug": "catalina-033",
        "organization": "Catalina trafikken",
        "district": "02-SOE"
+      },
+      {
+       "date": "1945-05-16",
+       "_id": "7c50e462-ccbf-43ec-b373-253238c7c9ca",
+       "title": "Catalina 048  Special duty Kirkenes Tromsø ",
+       "slug": "catalina-048",
+       "organization": "Catalina trafikken",
+       "district": "Den norske regjering"
       },
       {
        "date": "1945-05-08",
@@ -3464,12 +3464,12 @@
        "district": "Den norske regjering"
       },
       {
-       "date": "1945-05-10",
-       "_id": "6cf2cd7a-4137-4f8a-81aa-2e4be48e1d1a",
-       "title": "Catalina 040  Special duty   Stavanger - Woodhaven",
-       "slug": "catalina-040",
+       "date": "1945-04-26",
+       "_id": "c1e04bb5-a70a-45af-8fe5-2eb25cd08ed6",
+       "title": "Catalina 036 Sørøya/Kirkenes  SIS Operation BEDSPREAD",
+       "slug": "catalina-036",
        "organization": "Catalina trafikken",
-       "district": "Den norske regjering"
+       "district": "01- SIS-XU"
       },
       {
        "date": "1944-12-06",
@@ -3478,6 +3478,14 @@
        "slug": "catalina-032",
        "organization": "Catalina trafikken",
        "district": "02-SOE"
+      },
+      {
+       "date": "1945-05-10",
+       "_id": "6cf2cd7a-4137-4f8a-81aa-2e4be48e1d1a",
+       "title": "Catalina 040  Special duty   Stavanger - Woodhaven",
+       "slug": "catalina-040",
+       "organization": "Catalina trafikken",
+       "district": "Den norske regjering"
       },
       {
        "date": "1945-03-20",
@@ -3507,6 +3515,14 @@
        "district": "Milorg D18"
       },
       {
+       "date": "1945-03-02",
+       "_id": "3e5ce071-e4ec-4cbb-a0cd-df3e0b317c2d",
+       "title": "AM 350 SOE Operation CROP XVIII Chiffchaff Red",
+       "slug": "am-350",
+       "organization": "SOE",
+       "district": "Milorg D12"
+      },
+      {
        "date": "1945-02-22",
        "_id": "72502647-73c5-4224-8cb1-645ee4c0265b",
        "title": "AM 190 SOE Operation CURB I 4 Cormorant",
@@ -3521,14 +3537,6 @@
        "slug": "am-319-2",
        "organization": "SOE",
        "district": "Milorg D14.3"
-      },
-      {
-       "date": "1945-03-02",
-       "_id": "3e5ce071-e4ec-4cbb-a0cd-df3e0b317c2d",
-       "title": "AM 350 SOE Operation CROP XVIII Chiffchaff Red",
-       "slug": "am-350",
-       "organization": "SOE",
-       "district": "Milorg D12"
       }
      ]
     },
@@ -3596,18 +3604,18 @@
        "district": "Milorg D14.2"
       },
       {
-       "date": "1944-11-27",
-       "_id": "2b7c4a53-f1ef-41b9-9db7-e520c36be553",
-       "title": "AM 258 SOE Operation CRUPPER XXV 2 Golden Eagle",
-       "slug": "am-258-2",
-       "organization": "SOE",
-       "district": "Milorg D14.2"
-      },
-      {
        "date": "1945-04-02",
        "_id": "18cb51a1-0f73-4e22-b47a-9aea1bc298be",
        "title": "AM 332 SOE Operation CRUPPER XXXIII 5 Firecrest - Golden Eagle",
        "slug": "am-332-5",
+       "organization": "SOE",
+       "district": "Milorg D14.2"
+      },
+      {
+       "date": "1944-11-27",
+       "_id": "2b7c4a53-f1ef-41b9-9db7-e520c36be553",
+       "title": "AM 258 SOE Operation CRUPPER XXV 2 Golden Eagle",
+       "slug": "am-258-2",
        "organization": "SOE",
        "district": "Milorg D14.2"
       }
@@ -3650,12 +3658,12 @@
        "district": "Milorg D14.1"
       },
       {
-       "date": "1945-02-01",
-       "_id": "ce08180d-f67d-4b6e-8b53-3ad951ca7085",
-       "title": "AM 377 SOE Operation SPUR II Siskin",
-       "slug": "am-377",
+       "date": "1944-08-30",
+       "_id": "ada7281b-a246-44a2-8ccc-c797d83ade09",
+       "title": "AM 155 SOE Operation SADDLE V 3",
+       "slug": "am-155-3",
        "organization": "SOE",
-       "district": "Milorg D20.3"
+       "district": "Milorg D18"
       },
       {
        "date": "1944-11-08",
@@ -3666,20 +3674,20 @@
        "district": "Milorg D13"
       },
       {
+       "date": "1944-12-30",
+       "_id": "576e0309-e22b-4768-b17c-8f7de4242dc3",
+       "title": "AM 256 SOE Operation CRUPPER XXIV 3 Greenfinch",
+       "slug": "am-256-3",
+       "organization": "SOE",
+       "district": "Milorg D14.2"
+      },
+      {
        "date": "1944-12-31",
        "_id": "5d9458dd-6e23-408b-b08b-2eb63c76869c",
        "title": "AM 235 SOE Operation SNAFFLE IV 1 Starlight",
        "slug": "am-235-1",
        "organization": "SOE",
        "district": "Milorg D16.1"
-      },
-      {
-       "date": "1944-08-30",
-       "_id": "ada7281b-a246-44a2-8ccc-c797d83ade09",
-       "title": "AM 155 SOE Operation SADDLE V 3",
-       "slug": "am-155-3",
-       "organization": "SOE",
-       "district": "Milorg D18"
       },
       {
        "date": "1944-10-04",
@@ -3690,20 +3698,20 @@
        "district": "Milorg D22"
       },
       {
+       "date": "1945-02-01",
+       "_id": "ce08180d-f67d-4b6e-8b53-3ad951ca7085",
+       "title": "AM 377 SOE Operation SPUR II Siskin",
+       "slug": "am-377",
+       "organization": "SOE",
+       "district": "Milorg D20.3"
+      },
+      {
        "date": "1944-10-04",
        "_id": "3d4109d4-cdc6-4021-82c4-7a0e8710f36d",
        "title": "AM 064 SOE Operation WITHERS I - WOODPECKER (Ex LINNET)",
        "slug": "am-064",
        "organization": "SOE",
        "district": "Milorg D22"
-      },
-      {
-       "date": "1944-12-30",
-       "_id": "576e0309-e22b-4768-b17c-8f7de4242dc3",
-       "title": "AM 256 SOE Operation CRUPPER XXIV 3 Greenfinch",
-       "slug": "am-256-3",
-       "organization": "SOE",
-       "district": "Milorg D14.2"
       }
      ]
     },
@@ -3736,20 +3744,20 @@
      "reserve": null,
      "events": [
       {
-       "date": "1945-03-30",
-       "_id": "cc10ad2f-6795-40bb-9efb-fcae2027fec6",
-       "title": "AM 254 SOE Operation CRUPPER XXIII 5",
-       "slug": "am-254-5",
-       "organization": "SOE",
-       "district": "Milorg D14.2"
-      },
-      {
        "date": "1945-04-14",
        "_id": "febe8060-9ed6-4183-a88c-ac4dcf5c0e22",
        "title": "AM 239 SOE Operation Blinkers II 4 Bjørn BA III \"HLD\"",
        "slug": "am-239-4",
        "organization": "SOE",
        "district": "Milorg D20.2"
+      },
+      {
+       "date": "1945-03-30",
+       "_id": "cc10ad2f-6795-40bb-9efb-fcae2027fec6",
+       "title": "AM 254 SOE Operation CRUPPER XXIII 5",
+       "slug": "am-254-5",
+       "organization": "SOE",
+       "district": "Milorg D14.2"
       },
       {
        "date": "1944-12-31",
@@ -3852,6 +3860,14 @@
      "reserve": null,
      "events": [
       {
+       "date": "1945-04-17",
+       "_id": "96fa2d19-679f-48af-a0b2-6f5eea9d0720",
+       "title": "AM 355 SOE Operation CRUPPER XXXVII 4 Elg",
+       "slug": "am-355-4",
+       "organization": "SOE",
+       "district": "Milorg D14.2"
+      },
+      {
        "date": "1945-04-02",
        "_id": "b3b6ac3e-0e8c-4ffe-ae87-dd1866db55ba",
        "title": "AM 532 SOE Operation STIRRUP XVI 1 Swallow Grey",
@@ -3864,14 +3880,6 @@
        "_id": "8ed5c7ed-dbca-4758-a796-9c93c62428e2",
        "title": "AM 412 SOE Operation CRUPPER XXXXIV 1 Golden eagle",
        "slug": "am-412-1",
-       "organization": "SOE",
-       "district": "Milorg D14.2"
-      },
-      {
-       "date": "1945-04-17",
-       "_id": "96fa2d19-679f-48af-a0b2-6f5eea9d0720",
-       "title": "AM 355 SOE Operation CRUPPER XXXVII 4 Elg",
-       "slug": "am-355-4",
        "organization": "SOE",
        "district": "Milorg D14.2"
       }
@@ -3887,18 +3895,18 @@
      "reserve": null,
      "events": [
       {
-       "date": "1944-11-12",
-       "_id": "aaa59027-192d-455a-8d0c-91f6263dcfd4",
-       "title": "Tirpitz 16 SOE Operation Catechism",
-       "slug": "tirpitz-16",
-       "organization": "SOE",
-       "district": "02-SOE"
-      },
-      {
        "date": "1944-10-29",
        "_id": "49ef4f3f-dbf2-4aab-bd4b-0f8eb724ffeb",
        "title": "Tirpitz 15 SOE Operation OBVIATE",
        "slug": "tirpitz-15",
+       "organization": "SOE",
+       "district": "02-SOE"
+      },
+      {
+       "date": "1944-11-12",
+       "_id": "aaa59027-192d-455a-8d0c-91f6263dcfd4",
+       "title": "Tirpitz 16 SOE Operation Catechism",
+       "slug": "tirpitz-16",
        "organization": "SOE",
        "district": "02-SOE"
       }
@@ -3933,26 +3941,10 @@
      "reserve": null,
      "events": [
       {
-       "date": "1945-03-03",
-       "_id": "fc983b4e-bec8-4c8a-9b59-a2029b089589",
-       "title": "AM 435 SOE Operation GROIN VIII/IX 3 Grebe Red",
-       "slug": "am-435-3",
-       "organization": "SOE",
-       "district": "Milorg D26"
-      },
-      {
        "date": "1944-10-04",
        "_id": "e8b5b5c8-d058-4519-83cb-9bbfbdee8c1b",
        "title": "AM 178 SOE operation SADDLE VII",
        "slug": "am-178",
-       "organization": "SOE",
-       "district": "Milorg D18"
-      },
-      {
-       "date": "1945-02-01",
-       "_id": "c7dcbc61-0800-4540-bc30-cf3b4d46e932",
-       "title": "AM 393 SOE Operation VET VI 1 Swallow Yellow",
-       "slug": "am-393-1",
        "organization": "SOE",
        "district": "Milorg D18"
       },
@@ -3965,20 +3957,28 @@
        "district": "Milorg D14.3"
       },
       {
+       "date": "1945-03-03",
+       "_id": "fc983b4e-bec8-4c8a-9b59-a2029b089589",
+       "title": "AM 435 SOE Operation GROIN VIII/IX 3 Grebe Red",
+       "slug": "am-435-3",
+       "organization": "SOE",
+       "district": "Milorg D26"
+      },
+      {
+       "date": "1945-02-01",
+       "_id": "c7dcbc61-0800-4540-bc30-cf3b4d46e932",
+       "title": "AM 393 SOE Operation VET VI 1 Swallow Yellow",
+       "slug": "am-393-1",
+       "organization": "SOE",
+       "district": "Milorg D18"
+      },
+      {
        "date": "1945-02-23",
        "_id": "a342ee89-296e-4b0f-b715-5188fc680006",
        "title": "AM 227  SOE Operation CROP IX 2  Chiffchaff red",
        "slug": "am-227-2",
        "organization": "SOE",
        "district": "Milorg D12"
-      },
-      {
-       "date": "1945-02-25",
-       "_id": "888b9793-69ad-4e24-ae65-d3232817f874",
-       "title": "AM 198 SOE Operation CRUPPER X 4 Golden Eagle",
-       "slug": "am-198-4",
-       "organization": "SOE",
-       "district": "Milorg D14.2"
       },
       {
        "date": "1945-03-02",
@@ -3989,10 +3989,10 @@
        "district": "Milorg D11"
       },
       {
-       "date": "1944-12-30",
-       "_id": "225ce3df-118b-478c-9410-b2692ec9fc8d",
-       "title": "AM 303 SOE Operation Crupper XXX 2 Golden Eagle",
-       "slug": "am-303-2",
+       "date": "1945-02-25",
+       "_id": "888b9793-69ad-4e24-ae65-d3232817f874",
+       "title": "AM 198 SOE Operation CRUPPER X 4 Golden Eagle",
+       "slug": "am-198-4",
        "organization": "SOE",
        "district": "Milorg D14.2"
       },
@@ -4011,6 +4011,14 @@
        "slug": "am-261",
        "organization": "SOE",
        "district": "Milorg D17"
+      },
+      {
+       "date": "1944-12-30",
+       "_id": "225ce3df-118b-478c-9410-b2692ec9fc8d",
+       "title": "AM 303 SOE Operation Crupper XXX 2 Golden Eagle",
+       "slug": "am-303-2",
+       "organization": "SOE",
+       "district": "Milorg D14.2"
       }
      ]
     },
@@ -4024,26 +4032,10 @@
      "reserve": " ",
      "events": [
       {
-       "date": "1942-04-17",
-       "_id": "b87c9fb9-c59d-40ce-913e-10692276e3da",
-       "title": "BOAC-092",
-       "slug": "boac-092",
-       "organization": "BOAC/BALDER",
-       "district": "Sverige-Air"
-      },
-      {
-       "date": "1943-07-15",
-       "_id": "c38feff1-4841-4c94-aef4-5be86711f6f9",
-       "title": "BOAC-426",
-       "slug": "boac-426",
-       "organization": "BOAC/BALDER",
-       "district": "Sverige-Air"
-      },
-      {
-       "date": "1943-02-21",
-       "_id": "d5f6a00b-d93b-454a-b7ef-d16f04ad03de",
-       "title": "BOAC-263",
-       "slug": "boac-263",
+       "date": "1942-03-23",
+       "_id": "4a7c8046-38d2-46b7-83b2-9dfc7d962ad0",
+       "title": "BOAC-073",
+       "slug": "boac-073",
        "organization": "BOAC/BALDER",
        "district": "Sverige-Air"
       },
@@ -4064,10 +4056,18 @@
        "district": "Norge"
       },
       {
-       "date": "1942-03-22",
-       "_id": "63dc23ea-3ac4-400d-9a58-42e7fb519202",
-       "title": "BOAC-072",
-       "slug": "boac-072",
+       "date": "1943-07-15",
+       "_id": "c38feff1-4841-4c94-aef4-5be86711f6f9",
+       "title": "BOAC-426",
+       "slug": "boac-426",
+       "organization": "BOAC/BALDER",
+       "district": "Sverige-Air"
+      },
+      {
+       "date": "1942-05-08",
+       "_id": "3cb13aeb-f471-4348-a35e-2591eaca9915",
+       "title": "BOAC-111",
+       "slug": "boac-111",
        "organization": "BOAC/BALDER",
        "district": "Sverige-Air"
       },
@@ -4080,18 +4080,50 @@
        "district": "Norge"
       },
       {
-       "date": "1942-01-31",
-       "_id": "21d41aae-e592-4f87-aeb3-a229c8564613",
-       "title": "BOAC-059",
-       "slug": "boac-059",
+       "date": "1942-03-22",
+       "_id": "63dc23ea-3ac4-400d-9a58-42e7fb519202",
+       "title": "BOAC-072",
+       "slug": "boac-072",
        "organization": "BOAC/BALDER",
        "district": "Sverige-Air"
       },
       {
-       "date": "1942-03-23",
-       "_id": "4a7c8046-38d2-46b7-83b2-9dfc7d962ad0",
-       "title": "BOAC-073",
-       "slug": "boac-073",
+       "date": "1942-04-17",
+       "_id": "b87c9fb9-c59d-40ce-913e-10692276e3da",
+       "title": "BOAC-092",
+       "slug": "boac-092",
+       "organization": "BOAC/BALDER",
+       "district": "Sverige-Air"
+      },
+      {
+       "date": "1941-08-19",
+       "_id": "51c6caca-155a-4866-a7e3-ea1cb3f1f7eb",
+       "title": "BOAC-012",
+       "slug": "boac-012",
+       "organization": "BOAC/BALDER",
+       "district": "Sverige-Air"
+      },
+      {
+       "date": "1943-02-21",
+       "_id": "d5f6a00b-d93b-454a-b7ef-d16f04ad03de",
+       "title": "BOAC-263",
+       "slug": "boac-263",
+       "organization": "BOAC/BALDER",
+       "district": "Sverige-Air"
+      },
+      {
+       "date": "1942-04-23",
+       "_id": "495baddf-f820-4665-af83-ce4f761c429a",
+       "title": "BOAC-097",
+       "slug": "boac-097",
+       "organization": "BOAC/BALDER",
+       "district": "Sverige-Air"
+      },
+      {
+       "date": "1942-01-31",
+       "_id": "21d41aae-e592-4f87-aeb3-a229c8564613",
+       "title": "BOAC-059",
+       "slug": "boac-059",
        "organization": "BOAC/BALDER",
        "district": "Sverige-Air"
       },
@@ -4108,30 +4140,6 @@
        "_id": "28facf37-280a-493d-873d-8c283a98cb57",
        "title": "BOAC 141",
        "slug": "boac-141",
-       "organization": "BOAC/BALDER",
-       "district": "Sverige-Air"
-      },
-      {
-       "date": "1942-04-23",
-       "_id": "495baddf-f820-4665-af83-ce4f761c429a",
-       "title": "BOAC-097",
-       "slug": "boac-097",
-       "organization": "BOAC/BALDER",
-       "district": "Sverige-Air"
-      },
-      {
-       "date": "1942-05-08",
-       "_id": "3cb13aeb-f471-4348-a35e-2591eaca9915",
-       "title": "BOAC-111",
-       "slug": "boac-111",
-       "organization": "BOAC/BALDER",
-       "district": "Sverige-Air"
-      },
-      {
-       "date": "1941-08-19",
-       "_id": "51c6caca-155a-4866-a7e3-ea1cb3f1f7eb",
-       "title": "BOAC-012",
-       "slug": "boac-012",
        "organization": "BOAC/BALDER",
        "district": "Sverige-Air"
       }
@@ -4260,7 +4268,7 @@
      ]
     }
    ],
-   "truncatedFrom": 1059
+   "truncatedFrom": 1082
   },
   {
    "query": "\n      MATCH (u:Unit {type: 'course'})\n      RETURN u.slug AS slug, u.canonicalName AS name\n      ORDER BY u.canonicalName\n    ",
@@ -4394,36 +4402,8 @@
      "name": "ANGLO-NORWEGIAN COLLABORATION COMMITTEE"
     },
     {
-     "slug": "cossac",
-     "name": "COSSAC"
-    },
-    {
      "slug": "den-norske-regjering",
      "name": "Den norske regjering"
-    },
-    {
-     "slug": "eksportgruppene",
-     "name": "EXPORT grupper "
-    },
-    {
-     "slug": "eksportgruppe-torsvik",
-     "name": "Eksportgruppe  Torsvik"
-    },
-    {
-     "slug": "eksportgruppe-kvalen",
-     "name": "Eksportgruppe Kvalen"
-    },
-    {
-     "slug": "eksportgruppe-nielsen",
-     "name": "Eksportgruppe Nielsen"
-    },
-    {
-     "slug": "eksportgruppe-skytterholm",
-     "name": "Eksportgruppe Skytterholm"
-    },
-    {
-     "slug": "eksportgruppe-walle",
-     "name": "Eksportgruppe Walle"
     },
     {
      "slug": "flukt",
@@ -4440,10 +4420,6 @@
     {
      "slug": "hurtigruten",
      "name": "Hurtigruten"
-    },
-    {
-     "slug": "kompani-linge",
-     "name": "Kompani Linge"
     },
     {
      "slug": "milorg-d11",
@@ -4472,9 +4448,41 @@
     {
      "slug": "milorg-d15",
      "name": "Milorg D15"
+    },
+    {
+     "slug": "milorg-d16-1",
+     "name": "Milorg D16.1"
+    },
+    {
+     "slug": "milorg-d16-2",
+     "name": "Milorg D16.2"
+    },
+    {
+     "slug": "milorg-d16-3",
+     "name": "Milorg D16.3"
+    },
+    {
+     "slug": "milorg-d17",
+     "name": "Milorg D17"
+    },
+    {
+     "slug": "milorg-d18",
+     "name": "Milorg D18"
+    },
+    {
+     "slug": "milorg-d19",
+     "name": "Milorg D19"
+    },
+    {
+     "slug": "milorg-d20-1",
+     "name": "Milorg D20.1"
+    },
+    {
+     "slug": "milorg-d20-2",
+     "name": "Milorg D20.2"
     }
    ],
-   "truncatedFrom": 54
+   "truncatedFrom": 42
   }
  ],
  "gets": []

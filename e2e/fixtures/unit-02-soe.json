@@ -127,7 +127,7 @@
      "name": "2 britiske offiserer"
     }
    ],
-   "truncatedFrom": 3957
+   "truncatedFrom": 3960
   },
   {
    "query": "MATCH (p:Person)-[m:MEMBER_OF]->(:Unit)-[:PART_OF*0..]->(u:Unit {slug: $slug})\n           OPTIONAL MATCH (p)-[:RANK]->(r:Rank)\n           WHERE r.canonicalName <> 'Menig'\n           WITH p, r, collect(m) AS edges\n           WITH p, r,\n                head([e IN edges WHERE e.description IS NOT NULL] + edges) AS m\n           RETURN p.slug AS slug, p.canonicalName AS name,\n                  r.abbreviation AS rank, p.status AS status,\n                  m.role AS role, m.description AS description,\n                  m.sourceRefs AS sourceRefs,\n                  m.startDate AS startDate, m.endDate AS endDate\n           ORDER BY CASE WHEN m.description IS NOT NULL THEN 1 ELSE 0 END,\n                    name",
@@ -348,7 +348,7 @@
    "rows": []
   },
   {
-   "query": "MATCH (u:Unit {slug: $slug})<-[:MEMBER_OF]-(p:Person)-[:INVOLVED_IN|PARTICIPATED_IN]->(i:Incident|Operation)\n           WHERE i.date IS NULL\n              OR (\n                (u.foundedDate   IS NULL OR i.date >= u.foundedDate) AND\n                (u.dissolvedDate IS NULL OR i.date <= u.dissolvedDate)\n              )\n           RETURN DISTINCT i.slug AS slug, coalesce(i.title, i.codeName) AS title, i.date AS date\n           ORDER BY date",
+   "query": "MATCH (u:Unit {slug: $slug})<-[:MEMBER_OF]-(p:Person)-[:INVOLVED_IN|PARTICIPATED_IN]->(i:Incident|Operation)\n           WITH DISTINCT u, i, coalesce(i.date, i.startDate) AS startDate, i.endDate AS endDate\n           WHERE startDate IS NULL\n              OR (\n                (u.foundedDate   IS NULL OR coalesce(endDate, startDate) >= u.foundedDate) AND\n                (u.dissolvedDate IS NULL OR startDate <= u.dissolvedDate)\n              )\n           RETURN i.slug AS slug, coalesce(i.title, i.codeName) AS title, startDate, endDate",
    "params": {
     "slug": "02-soe"
    },
