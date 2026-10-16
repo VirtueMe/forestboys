@@ -1,5 +1,27 @@
 # Changelog
 
+## [0.13.0](https://github.com/VirtueMe/forestboys/compare/v0.12.1...v0.13.0) (2026-10-16)
+
+
+### Features
+
+* **editor:** a table is a block style the editor sets ([370fb3e](https://github.com/VirtueMe/forestboys/commit/370fb3e24c8d873935ad02540aa4dfb4008ed5f0))
+* **proposals:** one record per entity and bundle, so every bundle that touches an entity is visible ([8d056da](https://github.com/VirtueMe/forestboys/commit/8d056dad1d891a79bf5021ff002015a757dd504a)), closes [#273](https://github.com/VirtueMe/forestboys/issues/273)
+* **scripts:** cut the ANCC minutes into sections, one per numbered item ([a1c13db](https://github.com/VirtueMe/forestboys/commit/a1c13db1f58fd6b225151fa2bdce1a6ee3315977))
+* **scripts:** migrate tab-guessed tables to preformatted, and keep them through the sync ([287f188](https://github.com/VirtueMe/forestboys/commit/287f1881edfc1aa8085b64844c8a4530cfeef100))
+
+
+### Bug fixes
+
+* **proposals:** drop the old entity indexes in steps a Worker can take ([26a48bd](https://github.com/VirtueMe/forestboys/commit/26a48bdeb41f996af48b8684b573d102077dd77f))
+* **sync:** leave a description alone once it is split into sections ([51776af](https://github.com/VirtueMe/forestboys/commit/51776af2704a2526f471e4272f17818cc6a42970))
+* **sync:** try the Aura connection again when it is dropped ([db0e00b](https://github.com/VirtueMe/forestboys/commit/db0e00bd2a7995a3ccc36b0cbc855ee3cb7273a6)), closes [#282](https://github.com/VirtueMe/forestboys/issues/282)
+
+
+### Refactoring
+
+* **renderer:** a tab in a paragraph is just a tab ([9cdaebc](https://github.com/VirtueMe/forestboys/commit/9cdaebced573e0f88d17a91245ee2697235dc78b))
+
 ## [0.12.1](https://github.com/VirtueMe/forestboys/compare/v0.12.0...v0.12.1) (2026-10-13)
 
 
