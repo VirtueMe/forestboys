@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.14.0](https://github.com/VirtueMe/forestboys/compare/v0.13.0...v0.14.0) (2026-10-16)
+
+
+### Features
+
+* **events:** show each event's date and sort the lists on entity pages by date ([6b4fde3](https://github.com/VirtueMe/forestboys/commit/6b4fde3c706bdb6b1a5be4940b3e5c226901ae40)), closes [#284](https://github.com/VirtueMe/forestboys/issues/284)
+
 ## [0.13.0](https://github.com/VirtueMe/forestboys/compare/v0.12.1...v0.13.0) (2026-10-16)
 
 
