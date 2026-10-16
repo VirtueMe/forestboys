@@ -15,25 +15,28 @@
         <span v-if="eventDates" class="event-date" :class="{ undated: !periodOf(e) }">{{ periodOf(e) || '–' }}</span>
         <span class="relation-main">
           <RouterLink :to="strategy.targetRoute(e)" class="relation-link">{{ e.targetName }}</RouterLink>
-          <span v-if="e.pendingFromBundle" class="pending-chip pending-chip--add">Foreslått</span>
-          <span v-if="e.pendingRemoval" class="pending-chip pending-chip--del">Vil fjernes</span>
-          <span v-if="kindLabel?.(e)" class="relation-kind">{{ kindLabel(e) }}</span>
-          <span v-if="showRole && e.role" class="relation-role">
-            <RoleLabel :role-key="e.role" />
+          <!-- Everything after the name: a column of its own, so the chips line up (#291). -->
+          <span class="relation-extras">
+            <span v-if="e.pendingFromBundle" class="pending-chip pending-chip--add">Foreslått</span>
+            <span v-if="e.pendingRemoval" class="pending-chip pending-chip--del">Vil fjernes</span>
+            <span v-if="kindLabel?.(e)" class="relation-kind">{{ kindLabel(e) }}</span>
+            <span v-if="showRole && e.role" class="relation-role">
+              <RoleLabel :role-key="e.role" />
+            </span>
+            <span v-if="!eventDates && periodOf(e)" class="member-period">{{ periodOf(e) }}</span>
+            <span v-if="showPassed && e.passed === true" class="passed-chip passed-chip--ok">Bestått</span>
+            <span v-if="showPassed && e.passed === false" class="passed-chip passed-chip--no">Ikke bestått</span>
+            <SourceRef v-if="e.sourceRefs?.length" :refs="e.sourceRefs" />
+            <button
+              v-if="e.hasDescription"
+              class="info-marker"
+              type="button"
+              aria-label="Vis forklaring"
+              @click="emit('open', e)"
+            >
+              i
+            </button>
           </span>
-          <span v-if="!eventDates && periodOf(e)" class="member-period">{{ periodOf(e) }}</span>
-          <span v-if="showPassed && e.passed === true" class="passed-chip passed-chip--ok">Bestått</span>
-          <span v-if="showPassed && e.passed === false" class="passed-chip passed-chip--no">Ikke bestått</span>
-          <SourceRef v-if="e.sourceRefs?.length" :refs="e.sourceRefs" />
-          <button
-            v-if="e.hasDescription"
-            class="info-marker"
-            type="button"
-            aria-label="Vis forklaring"
-            @click="emit('open', e)"
-          >
-            i
-          </button>
         </span>
       </div>
     </div>
@@ -75,18 +78,22 @@ function periodOf(e: RelationEntry): string {
 </script>
 
 <style scoped>
+/* Name | the rest: the name column is as wide as the longest name (at most 65%, then a name wraps), so the chips after
+   it line up in a column of their own (#291). */
 .relation-list {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-xs);
+  display: grid;
+  grid-template-columns: fit-content(65%) minmax(0, 1fr);
+  gap: var(--space-xs) 0;
 }
 .relation-row {
-  display: flex;
-  flex-wrap: wrap;
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: subgrid;
   align-items: center;
-  gap: var(--space-sm);
+  column-gap: var(--space-md);
   padding: var(--space-xs) 0;
 }
+.relation-extras { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-sm); min-width: 0; }
 .relation-link {
   font-family: var(--font-sans);
   font-size: var(--size-body-ui);
@@ -148,6 +155,8 @@ function periodOf(e: RelationEntry): string {
 .event-date.undated { color: var(--muted); font-weight: 400; }
 .relation-main { display: contents; }
 .relation-list--events .relation-main { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-sm); min-width: 0; }
+/* In an event list the chips follow the name, after the date column. */
+.relation-list--events .relation-extras { display: contents; }
 @media (max-width: 520px) {
   .relation-list--events { grid-template-columns: fit-content(8.5rem) minmax(0, 1fr); }
   .relation-list--events .relation-row { column-gap: var(--space-sm); }
