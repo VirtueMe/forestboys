@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.16.0](https://github.com/VirtueMe/forestboys/compare/v0.15.0...v0.16.0) (2026-10-16)
+
+
+### Features
+
+* **lists:** show a long list in a scrolling box, with a toggle for all of it ([c89114c](https://github.com/VirtueMe/forestboys/commit/c89114cf651086be8d3a1d5606d44ff02acff3b3)), closes [#292](https://github.com/VirtueMe/forestboys/issues/292)
+* **relations:** line the chips of a relation list up in a column after the names ([5979e66](https://github.com/VirtueMe/forestboys/commit/5979e660049951a23c4a7c8309d7f23a63a98960)), closes [#291](https://github.com/VirtueMe/forestboys/issues/291)
+
 ## [0.15.0](https://github.com/VirtueMe/forestboys/compare/v0.14.0...v0.15.0) (2026-10-16)
 
 
