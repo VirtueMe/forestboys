@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.15.0](https://github.com/VirtueMe/forestboys/compare/v0.14.0...v0.15.0) (2026-10-16)
+
+
+### Features
+
+* **map:** start the location map as wide as the text, with cinema mode and full screen ([22aaea9](https://github.com/VirtueMe/forestboys/commit/22aaea95565fe60c5fbf5cfa502f95af93bc2a51)), closes [#288](https://github.com/VirtueMe/forestboys/issues/288)
+
 ## [0.14.0](https://github.com/VirtueMe/forestboys/compare/v0.13.0...v0.14.0) (2026-10-16)
 
 
