@@ -2,15 +2,17 @@
   <div class="event-list-tools">
     <button class="sort-btn" type="button" @click="ascending = !ascending">Dato {{ ascending ? '↑' : '↓' }}</button>
   </div>
-  <div class="event-list">
-    <RouterLink v-for="item in sorted" :key="keyOf(item)" :to="`/events/${item.slug}`" class="event-item">
-      <span class="event-date" :class="{ undated: !period(item) }">{{ period(item) || '–' }}</span>
-      <span class="event-main">
-        <span class="event-title">{{ item.title }}</span>
-        <slot name="extra" :item="item"></slot>
-      </span>
-    </RouterLink>
-  </div>
+  <CollapsibleList :count="items.length" :label="label">
+    <div class="event-list">
+      <RouterLink v-for="item in sorted" :key="keyOf(item)" :to="`/events/${item.slug}`" class="event-item">
+        <span class="event-date" :class="{ undated: !period(item) }">{{ period(item) || '–' }}</span>
+        <span class="event-main">
+          <span class="event-title">{{ item.title }}</span>
+          <slot name="extra" :item="item"></slot>
+        </span>
+      </RouterLink>
+    </div>
+  </CollapsibleList>
 </template>
 
 <script setup lang="ts" generic="T extends EventListItem">
@@ -21,10 +23,14 @@
  */
 import { computed, ref } from 'vue'
 import { RouterLink } from 'vue-router'
+import CollapsibleList from '@/components/CollapsibleList.vue'
 import { sortEvents, type EventListItem } from '@/utils/eventList.ts'
 import { formatEventPeriod } from '@/utils/period.ts'
 
-const props = withDefaults(defineProps<{ items: readonly T[]; keyOf?: (item: T) => string }>(), { keyOf: (item: EventListItem) => item.slug })
+const props = withDefaults(defineProps<{ items: readonly T[]; keyOf?: (item: T) => string; label?: string }>(), {
+  keyOf: (item: EventListItem) => item.slug,
+  label: 'Hendelser',
+})
 defineSlots<{ extra?(props: { item: T }): unknown }>()
 
 const ascending = ref(true)

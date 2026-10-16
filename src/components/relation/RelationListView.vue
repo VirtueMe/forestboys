@@ -1,51 +1,54 @@
 <template>
   <component :is="headless ? 'div' : 'section'" v-if="entries.length" :class="{ section: !headless }">
     <h2 v-if="!headless" class="section-heading">{{ label }} ({{ entries.length }})</h2>
-    <div class="relation-list" :class="{ 'relation-list--events': eventDates }">
-      <div
-        v-for="(e, i) in entries"
-        :key="e.edgeId ?? `${e.targetSlug}:${i}`"
-        class="relation-row"
-        :class="{
-          'relation-row--ghost': !!e.pendingFromBundle,
-          'relation-row--removed': !!e.pendingRemoval,
-        }"
-      >
-        <!-- An event's date is its first column, as in EventList (#284). -->
-        <span v-if="eventDates" class="event-date" :class="{ undated: !periodOf(e) }">{{ periodOf(e) || '–' }}</span>
-        <span class="relation-main">
-          <RouterLink :to="strategy.targetRoute(e)" class="relation-link">{{ e.targetName }}</RouterLink>
-          <!-- Everything after the name: a column of its own, so the chips line up (#291). -->
-          <span class="relation-extras">
-            <span v-if="e.pendingFromBundle" class="pending-chip pending-chip--add">Foreslått</span>
-            <span v-if="e.pendingRemoval" class="pending-chip pending-chip--del">Vil fjernes</span>
-            <span v-if="kindLabel?.(e)" class="relation-kind">{{ kindLabel(e) }}</span>
-            <span v-if="showRole && e.role" class="relation-role">
-              <RoleLabel :role-key="e.role" />
+    <CollapsibleList :count="entries.length" :label="label">
+      <div class="relation-list" :class="{ 'relation-list--events': eventDates }">
+        <div
+          v-for="(e, i) in entries"
+          :key="e.edgeId ?? `${e.targetSlug}:${i}`"
+          class="relation-row"
+          :class="{
+            'relation-row--ghost': !!e.pendingFromBundle,
+            'relation-row--removed': !!e.pendingRemoval,
+          }"
+        >
+          <!-- An event's date is its first column, as in EventList (#284). -->
+          <span v-if="eventDates" class="event-date" :class="{ undated: !periodOf(e) }">{{ periodOf(e) || '–' }}</span>
+          <span class="relation-main">
+            <RouterLink :to="strategy.targetRoute(e)" class="relation-link">{{ e.targetName }}</RouterLink>
+            <!-- Everything after the name: a column of its own, so the chips line up (#291). -->
+            <span class="relation-extras">
+              <span v-if="e.pendingFromBundle" class="pending-chip pending-chip--add">Foreslått</span>
+              <span v-if="e.pendingRemoval" class="pending-chip pending-chip--del">Vil fjernes</span>
+              <span v-if="kindLabel?.(e)" class="relation-kind">{{ kindLabel(e) }}</span>
+              <span v-if="showRole && e.role" class="relation-role">
+                <RoleLabel :role-key="e.role" />
+              </span>
+              <span v-if="!eventDates && periodOf(e)" class="member-period">{{ periodOf(e) }}</span>
+              <span v-if="showPassed && e.passed === true" class="passed-chip passed-chip--ok">Bestått</span>
+              <span v-if="showPassed && e.passed === false" class="passed-chip passed-chip--no">Ikke bestått</span>
+              <SourceRef v-if="e.sourceRefs?.length" :refs="e.sourceRefs" />
+              <button
+                v-if="e.hasDescription"
+                class="info-marker"
+                type="button"
+                aria-label="Vis forklaring"
+                @click="emit('open', e)"
+              >
+                i
+              </button>
             </span>
-            <span v-if="!eventDates && periodOf(e)" class="member-period">{{ periodOf(e) }}</span>
-            <span v-if="showPassed && e.passed === true" class="passed-chip passed-chip--ok">Bestått</span>
-            <span v-if="showPassed && e.passed === false" class="passed-chip passed-chip--no">Ikke bestått</span>
-            <SourceRef v-if="e.sourceRefs?.length" :refs="e.sourceRefs" />
-            <button
-              v-if="e.hasDescription"
-              class="info-marker"
-              type="button"
-              aria-label="Vis forklaring"
-              @click="emit('open', e)"
-            >
-              i
-            </button>
           </span>
-        </span>
+        </div>
       </div>
-    </div>
+    </CollapsibleList>
   </component>
 </template>
 
 <script setup lang="ts">
 import { RouterLink } from 'vue-router'
 import RoleLabel from '@/components/role/RoleLabel.vue'
+import CollapsibleList from '@/components/CollapsibleList.vue'
 import SourceRef from '@/components/SourceRef.vue'
 import { formatEventPeriod, formatPeriod } from '@/utils/period.ts'
 import type { RelationEntry, RelationStrategy } from './RelationStrategy.ts'

@@ -44,7 +44,7 @@
         <h2 class="section-heading">Operasjoner ({{ operationEntries.length }})</h2>
       </summary>
       <div class="section-body">
-        <EventList :items="asEvents(operationEntries)" />
+        <EventList :items="asEvents(operationEntries)" label="Operasjoner" />
       </div>
     </details>
 
