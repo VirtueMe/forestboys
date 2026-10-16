@@ -67,5 +67,9 @@
     "vue-tsc": "^3.2.6",
     "wrangler": "^4.83.0",
     "yargs": "^18.0.0"
+  },
+  "allowScripts": {
+    "esbuild": true,
+    "workerd": true
   }
 }
