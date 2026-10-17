@@ -1,10 +1,10 @@
 /**
- * A Station's category: `training` (skole), `base` or `other` (docs/SCHEMA.md).
+ * A Station's category: `training` (skole), `base`, `airfield` (flyplass) or `other` (docs/SCHEMA.md).
  * Mirrored client-side in src/utils/stationCategory.ts, which also has the
  * labels and the suggestion from the free-text type.
  */
 
-export const STATION_CATEGORIES = ['training', 'base', 'other'] as const
+export const STATION_CATEGORIES = ['training', 'base', 'airfield', 'other'] as const
 export type StationCategory = typeof STATION_CATEGORIES[number]
 
 export function isStationCategory(v: unknown): v is StationCategory {

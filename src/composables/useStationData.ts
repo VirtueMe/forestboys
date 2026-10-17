@@ -29,7 +29,7 @@ export interface StationNode {
   name:        string
   /** Free-text function from Sanity ("SOE Training School", "MTB base") — shown as Funksjon. */
   type:        string | null
-  /** The controlled value — Skole / Base / Annet; null until someone sets it. */
+  /** The controlled value — Skole / Base / Flyplass / Annet; null until someone sets it. */
   category:    StationCategory | null
   /** What backs the station's facts — a document, a page (`<source-id>#page:A163`). */
   sourceRefs:  string[]
