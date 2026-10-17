@@ -490,25 +490,28 @@ Until #155 only their descriptions were synced: a place new in Sanity got no nod
 and one edited in Sanity kept its April values. One script per kind carries them,
 on shared rules (`scripts/lib/place-sync.ts`, the run in `place-sync-run.ts`):
 `npx tsx scripts/sync/sync-location.ts [--production] [--write]
-[--accept-review=<slug>,…]` (#296). A dry run unless `--write`; the daily job runs it
-before the event sync, so a new location has its node when an event links it.
+[--accept-review=<slug>,…]` (#296) and `scripts/sync/sync-station.ts` with the same
+flags (#297). A dry run unless `--write`; the daily job runs both before the event
+sync, so a new place has its node when an event links it.
 
 | Sanity | Graph |
 |---|---|
 | `title` | `canonicalName` |
 | `coordinates` | `lat`, `lng` (+ `_state`, `_sourceRef`); compared as `lat,lng` to 6 decimals, `alt` not kept |
 | `gallery` | `HAS_IMAGE {order}` to the Sanity-CDN `Source` images, in Sanity's order |
-| `slug` | `slug`; a rename keeps the old slug as a `SlugAlias` on `/map/` (#96) and the description id follows |
+| `type` (stations) | `type` (+ `type_state`, `type_sourceRef`), tidied: the import kept `"Airfield "` |
+| `slug` | `slug`; a rename keeps the old slug as a `SlugAlias` on `/map/` or `/station/` (#96) and the description id follows |
 
-Not synced: `links` (#118), `people` → `STATIONED_AT` (a mapping, see below),
-`movie` (17 locations; it stays in Sanity), and the description (its own sync above).
+Not synced: `links` (#118), a station's `people` → `STATIONED_AT` (a mapping, see
+below), a location's `movie` (17 of them; it stays in Sanity), and the description
+(its own sync above).
 
 Stamps and verdicts are the transports' (`name_sha`, `coordinates_sha`,
-`gallery_sha`, `slug_sha`; clean / already / conflict / kept / review). Two
+`type_sha`, `gallery_sha`, `slug_sha`; clean / already / conflict / kept / review). Two
 differences:
 
 - **A baseline for the first run.** Without a stamp, the April export
-  (`data/sanity-baseline-2026-04/sanity-location.json`, local) is the baseline
+  (`data/sanity-baseline-2026-04/sanity-<kind>.json`, local) is the baseline
   where it is the version the graph was imported from (same `_updatedAt`): a graph
   still holding its value was not edited, so Sanity's change is `clean`; a graph
   holding something else was edited too, so it is a `conflict`. Without the file
@@ -523,8 +526,8 @@ never holds a slug twice; a slug that would be used twice after the run, or is
 malformed, is an error and nothing is written. New locations get the import's
 properties, stamps and gallery. Nodes with no Sanity document are listed, never
 deleted. Before writing, the nodes it will change are saved to
-`data/sanity-delta/location-before-<time>.json`; `SyncState {type: 'location'}`
-records the run.
+`data/sanity-delta/<kind>-before-<time>.json`; `SyncState {type: 'location'}` or
+`{type: 'station'}` records the run.
 
 First dry run (2026-10-16, local copy of production, with the export): 1,161 in
 Sanity, 1,156 in the graph; 5 new (Krokskogen, Dover, Barentsburg, Loch Ewe Base,
@@ -532,6 +535,16 @@ Bardufoss); Jan's edits since April clean: 9 coordinates (Lamholmen among them),
 4 names, 4 galleries and 3 renames (`lotenmarka` → `budor`, `spydeberg` →
 `spydeberg-jernbanebro`, `samsjoen` → `samsjolien`); 74 names rewritten only to tidy
 them; nothing in conflict or review. A second run after the write finds nothing.
+
+Stations, the same day: 147 in Sanity, 145 in the graph; 2 new (Specialskole Odden,
+STS 04 Winterfold House); 9 names, 2 galleries and 8 slugs clean, all the STS
+numbering (`sts-22-b` → `sts-22b`, `sts-26` → `sts-26d` …); 8 types and the rest of
+the names rewritten only to tidy them. The name and slug of four (`sts-22`,
+`sts-23-a`, `sts-24-a`, `sts-26-a`) go to review: they were edited in Sanity between
+the import and the export, so the export is no baseline for them. The graph holds
+the export's values, so nobody edited them in the graph, and they are the same
+renumbering (`sts-22` → `sts-22a` …): the first write takes them with
+`--accept-review=sts-22,sts-23-a,sts-24-a,sts-26-a`.
 
 ### Reshaped documents — curated mappings
 
