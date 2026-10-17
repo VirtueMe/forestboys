@@ -484,6 +484,55 @@ the graph; 3 new; every stamp-less field is `already` except 5 fields on 4
 transports that go to review — the unit of the Nona Rhea
 (`ford-liberator-b-24h-1-fo-42-7612`) among them.
 
+### Locations and stations — their own fields
+
+Until #155 only their descriptions were synced: a place new in Sanity got no node,
+and one edited in Sanity kept its April values. One script per kind carries them,
+on shared rules (`scripts/lib/place-sync.ts`, the run in `place-sync-run.ts`):
+`npx tsx scripts/sync/sync-location.ts [--production] [--write]
+[--accept-review=<slug>,…]` (#296). A dry run unless `--write`; the daily job runs it
+before the event sync, so a new location has its node when an event links it.
+
+| Sanity | Graph |
+|---|---|
+| `title` | `canonicalName` |
+| `coordinates` | `lat`, `lng` (+ `_state`, `_sourceRef`); compared as `lat,lng` to 6 decimals, `alt` not kept |
+| `gallery` | `HAS_IMAGE {order}` to the Sanity-CDN `Source` images, in Sanity's order |
+| `slug` | `slug`; a rename keeps the old slug as a `SlugAlias` on `/map/` (#96) and the description id follows |
+
+Not synced: `links` (#118), `people` → `STATIONED_AT` (a mapping, see below),
+`movie` (17 locations; it stays in Sanity), and the description (its own sync above).
+
+Stamps and verdicts are the transports' (`name_sha`, `coordinates_sha`,
+`gallery_sha`, `slug_sha`; clean / already / conflict / kept / review). Two
+differences:
+
+- **A baseline for the first run.** Without a stamp, the April export
+  (`data/sanity-baseline-2026-04/sanity-location.json`, local) is the baseline
+  where it is the version the graph was imported from (same `_updatedAt`): a graph
+  still holding its value was not edited, so Sanity's change is `clean`; a graph
+  holding something else was edited too, so it is a `conflict`. Without the file
+  (CI) such a field is `review`. The first write in production is therefore run
+  from the dev machine; after it, the stamps are the baseline.
+- **A gallery leaves the editor alone.** Only Sanity images Sanity no longer has
+  are removed, and only `order` is set: an image an editor added from elsewhere,
+  and a hero mark, scope or caption on an edge, stay.
+
+A rename is written in two phases (to a placeholder, then the new slug), so a chain
+never holds a slug twice; a slug that would be used twice after the run, or is
+malformed, is an error and nothing is written. New locations get the import's
+properties, stamps and gallery. Nodes with no Sanity document are listed, never
+deleted. Before writing, the nodes it will change are saved to
+`data/sanity-delta/location-before-<time>.json`; `SyncState {type: 'location'}`
+records the run.
+
+First dry run (2026-10-16, local copy of production, with the export): 1,161 in
+Sanity, 1,156 in the graph; 5 new (Krokskogen, Dover, Barentsburg, Loch Ewe Base,
+Bardufoss); Jan's edits since April clean: 9 coordinates (Lamholmen among them),
+4 names, 4 galleries and 3 renames (`lotenmarka` → `budor`, `spydeberg` →
+`spydeberg-jernbanebro`, `samsjoen` → `samsjolien`); 74 names rewritten only to tidy
+them; nothing in conflict or review. A second run after the write finds nothing.
+
 ### Reshaped documents — curated mappings
 
 Where the import did more than copy fields, the three-way compare has

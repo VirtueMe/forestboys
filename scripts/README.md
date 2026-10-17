@@ -6,7 +6,7 @@ directory.
 
 | Folder | What it is |
 |---|---|
-| `sync/` | The live Sanity → graph bridge (`docs/SANITY-SYNC.md`). CI runs `sync-person`, `sync-event` and `heartbeat` daily (`.github/workflows/sanity-sync.yml`). Also `reimport-events`, `import-missing-refs`, `import-person-descriptions`, and `import-outlines` (the only importer of `:Outline` nodes). |
+| `sync/` | The live Sanity → graph bridge (`docs/SANITY-SYNC.md`). CI runs `sync-person`, `sync-transport`, `sync-location`, `sync-event`, `sync-description`, `rebuild-sitemap` and `heartbeat` daily (`.github/workflows/sanity-sync.yml`). Also `reimport-events`, `import-missing-refs`, `import-person-descriptions`, and `import-outlines` (the only importer of `:Outline` nodes). |
 | `sanity/` | Read-only looks at Sanity and at how far the graph has drifted: `sanity-sync`, `sanity-person-fields`, `sanity-event-fields`, and `sanity-export` (writes the `data/sanity-*.json` the others read). |
 | `migrations/` | One-shot graph migrations. One that has run in production leaves the tree — git is the archive — so what is here is either still waiting for production or recent. |
 | `seed/` | Reference data the app needs (`seed-roles`). |

@@ -13,16 +13,19 @@ export const dropShadowedAliases = (label: string, route: string) =>
 export const DROP_DANGLING_ALIASES = `MATCH (a:SlugAlias) WHERE NOT (a)-[:ALIAS_OF]->() DETACH DELETE a`
 
 /**
- * The Sanity person sync renames people (`$renames`: `[{id, from}]`, `$at`): each keeps its old slug as an alias. Run it after
- * the renames, then `dropShadowedAliases('Person', '/person/')`: a slug another person has taken over in the same run
- * (the freed slug of a split) is theirs, not an alias.
+ * A Sanity sync renames pages of one kind (`$renames`: `[{id, from}]`, `$at`): each keeps its old slug as an alias. Run it
+ * after the renames, then `dropShadowedAliases(label, route)`: a slug another page has taken over in the same run (the
+ * freed slug of a split) is theirs, not an alias.
  */
-export const PERSON_RENAME_ALIASES = `
+export const renameAliases = (label: string, route: string) => `
   UNWIND $renames AS r
-  MATCH (p:Person {sanityId: r.id})
-  MERGE (a:SlugAlias {route: '/person/', slug: r.from})
-  ON CREATE SET a.kind = 'Person', a.createdAt = $at
+  MATCH (p:\`${label}\` {sanityId: r.id})
+  MERGE (a:SlugAlias {route: '${route}', slug: r.from})
+  ON CREATE SET a.kind = '${label}', a.createdAt = $at
   WITH a, p
   OPTIONAL MATCH (a)-[old:ALIAS_OF]->()
   DELETE old
   MERGE (a)-[:ALIAS_OF]->(p)`
+
+/** The person sync's renames (`renameAliases` for Person). */
+export const PERSON_RENAME_ALIASES = renameAliases('Person', '/person/')
