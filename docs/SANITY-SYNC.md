@@ -388,9 +388,7 @@ Sanity to one of their descriptions shows as a `conflict` to look at, not as `cl
 
 Their descriptions were never imported (#99); the pages showed none. One sync
 carries them, and keeps carrying Jan's edits, for the types listed in `KINDS`
-(`scripts/lib/description-sync.ts`): **transports**, **stations** and **locations**. Only the description: their links are already `:Source` nodes
-(`(owner)-[:REFERENCED_IN]->(:Source)`, the same shape for every type) and the
-sync does not touch them.
+(`scripts/lib/description-sync.ts`): **transports**, **stations** and **locations**. Only the description: their links have a sync of their own (below).
 
 `npx tsx scripts/sync/sync-description.ts --type=transport|all [--write]` (a dry
 run unless `--write`; the daily job runs `--type=all`). Per node:
@@ -502,7 +500,7 @@ sync, so a new place has its node when an event links it.
 | `type` (stations) | `type` (+ `type_state`, `type_sourceRef`), tidied: the import kept `"Airfield "` |
 | `slug` | `slug`; a rename keeps the old slug as a `SlugAlias` on `/map/` or `/station/` (#96) and the description id follows |
 
-Not synced: `links` (#118), a station's `people` → `STATIONED_AT` (a mapping, see
+Not synced here: `links` (their own sync, below), a station's `people` → `STATIONED_AT` (a mapping, see
 below), a location's `movie` (17 of them; it stays in Sanity), and the description
 (its own sync above).
 
@@ -545,6 +543,46 @@ the import and the export, so the export is no baseline for them. The graph hold
 the export's values, so nobody edited them in the graph, and they are the same
 renumbering (`sts-22` → `sts-22a` …): the first write takes them with
 `--accept-review=sts-22,sts-23-a,sts-24-a,sts-26-a`.
+
+### Links of transports, locations and stations (#118)
+
+Events and people sync their `links`; these three types only got links when an
+import created the node, so a link Jan added or fixed in Sanity later never
+arrived. One sync carries them for all three, parameterised by kind like the
+descriptions: `npx tsx scripts/sync/sync-link.ts --type=transport|location|station|all
+[--production] [--write] [--accept-review=<slug>,…]` (rules in
+`scripts/lib/link-sync.ts`). A dry run unless `--write`; the daily job runs it after
+the station sync, before the events, so a node a sync just made gets its links in
+the same run.
+
+What a link is comes from `importableLinks()` / `linkSource()`
+(`scripts/lib/person-rule.ts`, #113): trimmed, http(s) only, one `:Source` per
+address, the same id as for events and people. The edge is
+`(n)-[:REFERENCED_IN]->(:Source)`. Only the import's edges are compared and
+replaced; an edge an editor made (`sourceRef: 'admin-edit'`) is never removed.
+
+The stamp is `links_sha` (the hash of the set of URLs last taken in) with
+`links_sanityUpdatedAt`. The node's own `sanityUpdatedAt` is not moved: the field
+syncs of the same node read it. Verdicts, against the stamp: `unchanged`; `clean`
+(Sanity changed, the graph holds the stamped set: apply, a link Sanity dropped goes);
+`already` (the graph holds the new set: the stamp moves); `conflict` (both changed:
+left alone, listed).
+
+Without a stamp (the first run): `already` if the graph has Sanity's set, `clean` if
+the graph has no import links, otherwise the April export
+(`data/sanity-baseline-2026-04/sanity-<type>.json`, local) tells who changed what:
+a graph that is the export's set takes Sanity's change (`clean`); Sanity's set equal
+to the export's and the graph different is a **`gap`**, a link the import missed
+(#113) or a node made without them, so Sanity's missing links are added and none is
+removed; anything else is a `conflict`. With no export (CI) a differing graph goes to
+`review` (`--accept-review` applies Sanity's set).
+
+Before a write the nodes it changes are saved to
+`data/sanity-delta/links-before-<type>-<time>.json`.
+
+First run, local copy of production (2026-10-17): transports 26 clean, 6 gap
+(`mtb-683`…`mtb-686`, the whitespace links), 1 049 already; locations 2 clean, 3 gap,
+1 156 already; stations 6 clean, 141 already; no conflict, no review.
 
 ### Reshaped documents — curated mappings
 
