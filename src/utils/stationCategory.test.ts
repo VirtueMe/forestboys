@@ -8,12 +8,16 @@ describe('suggestStationCategory', () => {
     ['Skole', 'training'],
     ['Commando Training School', 'training'],
     ['Military academy', 'training'],
-    ['Airfield', 'base'],
-    ['Airfiled', 'base'],
-    ['Airfiield', 'base'],
+    ['Airfield', 'airfield'],
+    ['Airfiel', 'airfield'],
+    ['Airfiled', 'airfield'],
+    ['Airfiield', 'airfield'],
+    ['Sea plane base', 'airfield'],
+    ['Sea plane station', 'airfield'],
+    ['Sjøflyhavn', 'airfield'],
+    ['Marine and Sea plane supply.', 'base'],
     ['MTB Station', 'base'],
     ['Fiskeskøytebase 41-42', 'base'],
-    ['Sjøflyhavn', 'base'],
     ['Port of incoming convoys', 'base'],
     ['Scrapped', 'other'],
     ['Inter-Services Research Bureau', 'other'],
@@ -30,9 +34,10 @@ describe('suggestStationCategory', () => {
 })
 
 describe('isStationCategory', () => {
-  it('accepts the three values only', () => {
+  it('accepts the four values only', () => {
     expect(isStationCategory('training')).toBe(true)
     expect(isStationCategory('base')).toBe(true)
+    expect(isStationCategory('airfield')).toBe(true)
     expect(isStationCategory('other')).toBe(true)
     expect(isStationCategory('school')).toBe(false)
     expect(isStationCategory(null)).toBe(false)
@@ -44,8 +49,9 @@ describe('defaultRoleForStation', () => {
     expect(defaultRoleForStation('training', null)).toBe('training')
   })
 
-  it('is stationed at a Base or Annet, by category', () => {
+  it('is stationed at a Base, Flyplass or Annet, by category', () => {
     expect(defaultRoleForStation('base', 'SOE Training School')).toBe('stationed')
+    expect(defaultRoleForStation('airfield', 'SOE Training School')).toBe('stationed')
     expect(defaultRoleForStation('other', 'SOE Training School')).toBe('stationed')
   })
 

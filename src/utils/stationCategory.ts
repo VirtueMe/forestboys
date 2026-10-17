@@ -1,17 +1,18 @@
 /**
- * A Station's category — the one controlled value (Skole / Base / Annet) next
+ * A Station's category — the one controlled value (Skole / Base / Flyplass / Annet) next
  * to the free-text function ("SOE Training School", "MTB base"). It only
  * suggests a default role for a person's link (#70); the link's own role
  * decides where the person appears. Mirrored server-side in
  * functions/_lib/station-category.ts.
  */
 
-export const STATION_CATEGORIES = ['training', 'base', 'other'] as const
+export const STATION_CATEGORIES = ['training', 'base', 'airfield', 'other'] as const
 export type StationCategory = typeof STATION_CATEGORIES[number]
 
 export const STATION_CATEGORY_LABEL: Record<StationCategory, string> = {
   training: 'Skole',
   base:     'Base',
+  airfield: 'Flyplass',
   other:    'Annet',
 }
 
@@ -44,6 +45,8 @@ export function suggestStationCategory(type: string | null | undefined): Station
 
   if (/school|skole|academy|training|opplæring|depot/.test(t)) return 'training'
   if (/research bureau|^scrapped|^soe$|^mak$|^[\d\s.,-]+$/.test(t)) return 'other'
-  if (/air\s?fi|airfield|base|station|port\b|havn|harbou?r|convoy|konvoi|shipwarf|camp|town|supply|flåte|sea\s?plane|sjøfly|ubåt/.test(t)) return 'base'
+  if (/marine|navy|naval/.test(t)) return 'base'
+  if (/air\s?fi|sea\s?plane|sjøfly/.test(t)) return 'airfield'
+  if (/base|station|port\b|havn|harbou?r|convoy|konvoi|shipwarf|camp|town|supply|flåte|ubåt/.test(t)) return 'base'
   return null
 }
