@@ -584,6 +584,43 @@ First run, local copy of production (2026-10-17): transports 26 clean, 6 gap
 (`mtb-683`…`mtb-686`, the whitespace links), 1 049 already; locations 2 clean, 3 gap,
 1 156 already; stations 6 clean, 141 already; no conflict, no review.
 
+### Organizations and districts (#300)
+
+Sanity holds 26 `organization` and 42 `district` documents (`name`, and a `color` for an
+organization). Both were imported once; the import reshaped them, so the sync compares
+against what the import rule made, not a raw copy:
+
+| Sanity | Graph |
+|---|---|
+| organization `name` (`NN-Name` or `Name`) | `canonicalName` (the name), `sortPrefix` (the number), `rawName` (as written) on an `Organization`; compared as `prefix\|name` |
+| organization `color.hex` | `color` |
+| district `name` | `canonicalName` of a `Unit {type: 'district'}` |
+
+`npx tsx scripts/sync/sync-org.ts --type=organization|district|all [--production] [--write]
+[--accept-review=<slug>,…]` (rules in `scripts/lib/org-sync.ts`). A dry run unless
+`--write`; the daily job runs it before the events, so an organization or district new in
+Sanity has its node when an event links it.
+
+Stamps and verdicts are the places' (`name_sha`, `color_sha`; clean / already / conflict /
+kept / review), the April export (`data/sanity-baseline-2026-04/sanity-<type>.json`, local)
+the first-run baseline. A document new in Sanity gets a node by the import's rule: an
+organization's slug is its canonical name (`slugify`: lower case, æ ø å → ae o aa, anything
+else a hyphen), a district's its trimmed name, and a district is a `Unit` of type district.
+
+- **The slug is made once.** A Sanity rename updates the display name (and an
+  organization's prefix and raw name) and leaves the address alone: events link by
+  `sanityId`, and a district `Unit` has no slug-alias route (`KIND_ROUTES`), so its old
+  address could not be kept.
+- **Kompani Linge** (`NOR.I.C.1 Kompani Linge`, an organization the import made a `Unit`)
+  is left alone and listed (`LEFT_TO_JAN`): the graph no longer pursues it, and Jan decides
+  from the outline proposals. No Sanity event names it as its organization.
+- The eight organizations the graph made without a Sanity document (`haeren`, `raf`,
+  `marinen`, …) are not touched: the sync only looks at nodes with a `sanityId`.
+
+First run, local copy of production (2026-10-17): all 22 organizations and 41 districts
+`already` (the rule reproduces the import for every one: no name or colour has changed),
+3 organizations (`avd-d-mi-iv`, `sas`, `cohq`) and 1 district (`d41-finnmark`) created.
+
 ### Reshaped documents — curated mappings
 
 Where the import did more than copy fields, the three-way compare has
@@ -602,7 +639,8 @@ record of what the import did and which Sanity fields it read.
 If an input field changes, the mapping goes `stale` and a review bundle
 proposes a new one; until then the old one stands. Known cases:
 
-- Kompani Linge — Sanity organization → `Unit`
+- Kompani Linge — was a Sanity organization → `Unit`; no longer pursued: the org sync leaves its document alone and
+  Jan decides from the outline proposals (#300)
 - Outlines absorbed into Operations / Persons: the nodes we made from outlines before the bundle pipeline are
   converted into bundles Jan accepts (#158, `BUNDLE-FORMAT.md`, *Earlier absorptions*); after that no node is a
   reshaping nobody reviewed, and what an absorption makes is a bundle (`PROPOSALS.md`)

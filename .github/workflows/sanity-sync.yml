@@ -76,6 +76,11 @@ jobs:
         if: ${{ !cancelled() }}
         run: npx tsx scripts/sync/sync-link.ts --type=all --production ${{ (github.event_name == 'schedule' || inputs.write) && '--write' || '' }}
 
+      # An organization or district new in Sanity must have its node when an event links it (#300).
+      - name: Organization and district sync
+        if: ${{ !cancelled() }}
+        run: npx tsx scripts/sync/sync-org.ts --type=all --production ${{ (github.event_name == 'schedule' || inputs.write) && '--write' || '' }}
+
       - name: Event sync
         if: ${{ !cancelled() }}
         run: npx tsx scripts/sync/sync-event.ts --production ${{ (github.event_name == 'schedule' || inputs.write) && '--write' || '' }}
