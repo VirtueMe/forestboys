@@ -1,5 +1,22 @@
 # Changelog
 
+## [0.17.0](https://github.com/VirtueMe/forestboys/compare/v0.16.0...v0.17.0) (2026-10-17)
+
+
+### Features
+
+* **stations:** airfield as a station category, and a script that fills it ([862fbfa](https://github.com/VirtueMe/forestboys/commit/862fbfa62ff645f4d98f8ef074b1980f876d846c)), closes [#303](https://github.com/VirtueMe/forestboys/issues/303)
+* **sync:** sync links of transports, locations and stations from Sanity ([b3ea886](https://github.com/VirtueMe/forestboys/commit/b3ea8868864b6704b3cf6c142e8f8a4036fa4731))
+* **sync:** sync locations from Sanity: new nodes, name, coordinates, gallery and slug ([8179e75](https://github.com/VirtueMe/forestboys/commit/8179e75ac000d0e1c7874e886a1999e71e8de6ec)), closes [#296](https://github.com/VirtueMe/forestboys/issues/296)
+* **sync:** sync organizations and districts from Sanity ([793e9bb](https://github.com/VirtueMe/forestboys/commit/793e9bb16dffbaf6c60fb3affde5024cdb498f75))
+* **sync:** sync outlines from Sanity ([ed8022b](https://github.com/VirtueMe/forestboys/commit/ed8022b1c6dea7768d0aef47d40ca48210499c8d))
+* **sync:** sync stations from Sanity: new nodes, name, coordinates, type, gallery and slug ([a796dc3](https://github.com/VirtueMe/forestboys/commit/a796dc349ffaca91ab2c53d30d436dd0cc639ca9)), closes [#297](https://github.com/VirtueMe/forestboys/issues/297)
+
+
+### Documentation
+
+* **sync:** record that home, about and partners are in the graph ([28f5014](https://github.com/VirtueMe/forestboys/commit/28f50144382fcfd43d3b55a8ff7ddbbefb9b04fb))
+
 ## [0.16.0](https://github.com/VirtueMe/forestboys/compare/v0.15.0...v0.16.0) (2026-10-16)
 
 
