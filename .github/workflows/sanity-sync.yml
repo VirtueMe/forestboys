@@ -66,6 +66,11 @@ jobs:
         if: ${{ !cancelled() }}
         run: npx tsx scripts/sync/sync-location.ts --production ${{ (github.event_name == 'schedule' || inputs.write) && '--write' || '' }}
 
+      # The same for stations, which events link with FROM_STATION / TO_STATION (#297).
+      - name: Station sync
+        if: ${{ !cancelled() }}
+        run: npx tsx scripts/sync/sync-station.ts --production ${{ (github.event_name == 'schedule' || inputs.write) && '--write' || '' }}
+
       - name: Event sync
         if: ${{ !cancelled() }}
         run: npx tsx scripts/sync/sync-event.ts --production ${{ (github.event_name == 'schedule' || inputs.write) && '--write' || '' }}
