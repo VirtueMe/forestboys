@@ -71,7 +71,13 @@ jobs:
         if: ${{ !cancelled() }}
         run: npx tsx scripts/sync/sync-station.ts --production ${{ (github.event_name == 'schedule' || inputs.write) && '--write' || '' }}
 
-      # Their links (#118), after the nodes exist and before the events.
+      # An outline's node, title, mentions and gallery (#301); before the link and description syncs, which need the node.
+      # It requests no bundle: a changed outline is `stale` and the admin's «request a bundle» makes the new one.
+      - name: Outline sync
+        if: ${{ !cancelled() }}
+        run: npx tsx scripts/sync/sync-outline.ts --production ${{ (github.event_name == 'schedule' || inputs.write) && '--write' || '' }}
+
+      # Their links (#118; an outline's too, #301), after the nodes exist and before the events.
       - name: Link sync
         if: ${{ !cancelled() }}
         run: npx tsx scripts/sync/sync-link.ts --type=all --production ${{ (github.event_name == 'schedule' || inputs.write) && '--write' || '' }}

@@ -35,12 +35,23 @@ export interface DescriptionKind {
   label:      string
   /** The Sanity document type. */
   sanityType: string
+  /** The kind in a Description id, when it is not `key` (outlines were imported as `desc:Outline:<slug>:1`). */
+  idKey?:     string
+  /** Take Sanity's blocks as they are, without making AIR 27 references links (outlines were imported so, and their text is hashed). */
+  plainBlocks?: true
+  /** A node with no stamp is compared with the April export (data/sanity-baseline-2026-04/sanity-<type>.json): a graph still holding the export's text was not edited. */
+  baseline?:  true
+  /** Sanity documents the sync leaves alone, by id, with the reason. */
+  skip?:      ReadonlyMap<string, string>
 }
 
 export const KINDS: Record<string, DescriptionKind> = {
   transport: { key: 'transport', label: 'Transport', sanityType: 'transport' },
   station:   { key: 'station',   label: 'Station',   sanityType: 'station' },
   location:  { key: 'location',  label: 'Location',  sanityType: 'location' },
+  // The bundles of the "N.O.R.I.C.(1) (LINGE) Medlemmer" outline were made by the earlier import: nothing to change there (#301).
+  outline:   { key: 'outline',   label: 'Outline',   sanityType: 'outline', idKey: 'Outline', plainBlocks: true, baseline: true,
+               skip: new Map([['917b8cb9-6a12-4a96-91eb-8444691d6797', 'Linge members: its bundles are made']]) },
 }
 
 /** Does any block hold text? */
@@ -50,12 +61,13 @@ export function hasText(blocks: unknown): boolean {
 }
 
 /** The blocks the graph should hold for `d`: Sanity's, with AIR 27 references linked and the tables marked (#260). Null when there is no text. */
-export function importedBlocks(d: Doc): unknown[] | null {
-  return hasText(d.description) ? preformattedFromSanity(linkArchiveBlocks(d.description as unknown[])) : null
+export function importedBlocks(d: Doc, kind?: DescriptionKind): unknown[] | null {
+  if (!hasText(d.description)) return null
+  return preformattedFromSanity(kind?.plainBlocks ? d.description as unknown[] : linkArchiveBlocks(d.description as unknown[]))
 }
 
 /** What is compared and stamped: the imported blocks as stable JSON, or '' for no text. */
-export const sanityValue = (d: Doc): string => { const b = importedBlocks(d); return b ? stableJson(b) : '' }
+export const sanityValue = (d: Doc, kind?: DescriptionKind): string => { const b = importedBlocks(d, kind); return b ? stableJson(b) : '' }
 
 /** The same for what the graph holds (the Description's `content` string). */
 export function graphValue(content: string | null | undefined): string {
@@ -77,11 +89,14 @@ export interface GraphDescription {
 
 export type DescriptionVerdict = 'unchanged' | 'new' | 'clean' | 'already' | 'conflict' | 'review'
 
-export function classifyDescription(g: GraphDescription, d: Doc): DescriptionVerdict {
-  const now = sanityValue(d), graph = graphValue(g.content)
+export function classifyDescription(g: GraphDescription, d: Doc, kind?: DescriptionKind, base?: Doc): DescriptionVerdict {
+  const now = sanityValue(d, kind), graph = graphValue(g.content)
   if (g.stamp === undefined) {
     if (graph === now) return now === '' ? 'unchanged' : 'already'
-    return graph === '' ? 'new' : 'review'
+    if (graph === '') return 'new'
+    // The April export is the baseline: a graph still holding its text was not edited, so Sanity's change is clean.
+    if (base) return graph === sanityValue(base, kind) ? 'clean' : 'conflict'
+    return 'review'
   }
   if (sha(now) === g.stamp) return 'unchanged'
   if (graph === now) return 'already'
@@ -90,14 +105,14 @@ export function classifyDescription(g: GraphDescription, d: Doc): DescriptionVer
 
 /** The properties that record what was taken in, following the person descriptions' pattern. */
 export const stampsFor = (kind: DescriptionKind, d: Doc) => ({
-  description_sha:             sha(sanityValue(d)),
+  description_sha:             sha(sanityValue(d, kind)),
   description_sourceRef:       `sanity-migration:${kind.key}:${d._id}:description`,
   description_state:           'candidate',
   description_sanityUpdatedAt: d._updatedAt,
 })
 
 /** The id of the order-1 Description the editor and this sync share. */
-export const descriptionId = (kind: DescriptionKind, slug: string) => `desc:${kind.key}:${slug}:1`
+export const descriptionId = (kind: DescriptionKind, slug: string) => `desc:${kind.idKey ?? kind.key}:${slug}:1`
 
 /** The Sanity documents of a type, with their description. Reads current Sanity, not an export. */
 export async function fetchSanityDescriptions(kind: DescriptionKind): Promise<Doc[]> {

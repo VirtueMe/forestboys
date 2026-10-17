@@ -1,6 +1,5 @@
 /**
- * Apply the Sanity → graph sync of descriptions for transports (and, as they are added to KINDS,
- * stations and locations) — #99. The rules, and the hash check that decides what is written,
+ * Apply the Sanity → graph sync of descriptions for transports, stations, locations and outlines — #99, #301. The rules, and the hash check that decides what is written,
  * are in scripts/lib/description-sync.ts and docs/SANITY-SYNC.md.
  *
  * Per node, against its `description_sha` stamp:
@@ -24,6 +23,7 @@ import { resolve } from 'node:path'
 import neo4j from 'neo4j-driver'
 import { loadEnv } from '../lib/env.ts'
 import { connectNeo4j, neo4jDriver, sha } from '../lib/person-sync.ts'
+import { loadBaselineFile } from '../lib/baseline.ts'
 import {
   GRAPH_QUERY, KINDS, REMOVE_QUERY, STAMP_QUERY, UPSERT_QUERY, classifyDescription, descriptionId, fetchSanityDescriptions, graphValue,
   importedBlocks, stampsFor, type DescriptionKind, type DescriptionVerdict, type GraphDescription,
@@ -49,20 +49,23 @@ async function syncKind(kind: DescriptionKind, driver: ReturnType<typeof neo4jDr
     { sanityId: r.get('sanityId'), slug: r.get('slug'), stamp: r.get('stamp') ?? undefined, content: r.get('content') ?? null },
   ]))
   await read.close()
+  const baseline = kind.baseline ? loadBaselineFile(resolve(process.cwd(), 'data', 'sanity-baseline-2026-04', `sanity-${kind.sanityType}.json`)) : new Map()
 
   const count: Record<DescriptionVerdict, number> = { unchanged: 0, new: 0, clean: 0, already: 0, conflict: 0, review: 0 }
   const upsert: Record<string, unknown>[] = [], remove: Record<string, unknown>[] = [], stampOnly: Record<string, unknown>[] = []
   const held: string[] = []
+  const skipped: string[] = []
   let noNode = 0, editedSinceImport = 0
   for (const d of docs) {
     const g = graph.get(d._id)
     if (!g) { noNode++; continue }
-    const v = classifyDescription(g, d)
+    if (kind.skip?.has(d._id)) { skipped.push(`${g.slug} (${kind.skip.get(d._id)})`); continue }
+    const v = classifyDescription(g, d, kind, baseline.get(d._id))
     count[v]++
     if (v === 'unchanged' && g.stamp !== undefined && sha(graphValue(g.content)) !== g.stamp) editedSinceImport++
     if (v === 'conflict' || v === 'review') { held.push(`${g.slug} (${v})`); continue }
     if (v === 'new' || v === 'clean') {
-      const blocks = importedBlocks(d)
+      const blocks = importedBlocks(d, kind)
       const row = { id: d._id, descId: descriptionId(kind, g.slug), content: blocks ? JSON.stringify(blocks) : null, stamps: stampsFor(kind, d) }
       ;(blocks ? upsert : remove).push(row)
     }
@@ -72,6 +75,7 @@ async function syncKind(kind: DescriptionKind, driver: ReturnType<typeof neo4jDr
   console.log(`\n${kind.label}: ${docs.length} in Sanity, ${graph.size} in the graph`)
   console.log(`  new ${count.new} · clean ${count.clean} · already ${count.already} · unchanged ${count.unchanged} · conflict ${count.conflict} · review ${count.review}`)
   console.log(`  no node for ${noNode} Sanity document(s) · graph text edited since the import (not a conflict until Sanity changes): ${editedSinceImport}`)
+  for (const k of skipped) console.log(`  skipped: ${k}`)
   for (const h of held.slice(0, 20)) console.log(`  left alone: ${h}`)
   if (held.length > 20) console.log(`  … and ${held.length - 20} more`)
 

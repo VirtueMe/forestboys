@@ -621,6 +621,39 @@ First run, local copy of production (2026-10-17): all 22 organizations and 41 di
 `already` (the rule reproduces the import for every one: no name or colour has changed),
 3 organizations (`avd-d-mi-iv`, `sas`, `cohq`) and 1 district (`d41-finnmark`) created.
 
+### Outlines (#301)
+
+An outline is Jan's text, and what is made of it is a **bundle** he reviews entity by
+entity (`PROPOSALS.md`, *Origin of what a bundle creates, and the version of an outline*).
+The sync keeps the outline's node true to Sanity and decides nothing about what goes into
+the graph. Three scripts carry it, in this order in the daily job:
+
+| Script | What |
+|---|---|
+| `sync-outline.ts` | a node (and its single Description) for an outline new in Sanity; `title` → `canonicalName`; `people` → `MENTIONS` to the people the graph has (added, none removed); `gallery` → `HAS_IMAGE` (the Sanity-CDN images, an editor's images and edge settings stay) |
+| `sync-link.ts --type=outline` | `links` → `REFERENCED_IN` (*Links of transports, locations and stations*) |
+| `sync-description.ts --type=outline` | the text: the order-1 Description, `description_sha`, with the April export as baseline (a graph still holding the export's text takes Sanity's change; a text that is neither is a conflict) |
+
+Stamps and verdicts are the places' (`title_sha`, `people_sha`, `gallery_sha`,
+`description_sha`, `links_sha`). The slug is made once and `sanityRev` is not moved: the
+version of an outline is the hash of its text (#157), Sanity's `_rev` goes at the cutover
+(#159). The text is taken as Sanity has it (no AIR 27 links), the way the import wrote it.
+
+**No bundle is requested by the sync.** When the text moves the outline's version moves
+with it: an outline nothing was absorbed from is `new`, an absorbed one is `stale`, and the
+admin's «request a bundle» (`POST /api/proposals/request`: a `bot-task` issue, Claude, ingest)
+makes the new bundle, which Jan reviews; the old one stays closed. An outline absorbed and
+changed in Sanity afterwards is therefore a new bundle, nothing special in the sync. None is
+absorbed yet.
+
+`N.O.R.I.C.(1) (LINGE) Medlemmer` is left alone by all three: its bundles were made by the
+earlier import, so there is nothing to change there. Gallery and links are in the graph but
+the outline page does not show them yet.
+
+First run, local copy of production (2026-10-17): text 4 clean, 26 already; title 2 clean;
+mentions added on 4 outlines; 14 galleries; links on 18 outlines (23 on
+`no-5-troop-10-i-a-commandos`); `brig-n-skotlandsbrigaden` made; no conflict, no review.
+
 ### Reshaped documents — curated mappings
 
 Where the import did more than copy fields, the three-way compare has
