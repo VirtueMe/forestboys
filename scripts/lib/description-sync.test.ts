@@ -149,3 +149,37 @@ describe('the tables are marked on the way in (#260)', () => {
     expect(classifyDescription({ sanityId: 'x', slug: 's', stamp: stampOf(doc([block('old')])), content: migrated }, d)).toBe('already')
   })
 })
+
+describe('outlines (#301)', () => {
+  const outline = KINDS.outline
+  const text = (t: string) => [block(t)]
+  const d = (t: string, at = '2026-10-05T10:00:00Z') => doc(text(t), { _id: 'o1', _updatedAt: at })
+  const g = (t: string, over: Partial<GraphDescription> = {}) => graph({ sanityId: 'o1', slug: 'olga', content: stored(text(t)), ...over })
+
+  it('keeps the id the import gave a Description, and takes the blocks as they are', () => {
+    expect(descriptionId(outline, 'olga')).toBe('desc:Outline:olga:1')
+    const ref = block('Se AIR-27-2159-22 p24')
+    expect(sanityValue(doc([ref]), outline)).toBe(stableJson(importedBlocks(doc([ref]), outline)))
+    expect(stableJson(importedBlocks(doc([ref]), outline))).not.toBe(stableJson(importedBlocks(doc([ref]))))
+  })
+
+  it('takes Sanity\'s change when the graph still holds the baseline\'s text', () => {
+    expect(classifyDescription(g('before'), d('after'), outline, d('before', '2026-04-01T00:00:00Z'))).toBe('clean')
+  })
+
+  it('holds a graph text that is neither the baseline\'s nor Sanity\'s', () => {
+    expect(classifyDescription(g('edited'), d('after'), outline, d('before', '2026-04-01T00:00:00Z'))).toBe('conflict')
+  })
+
+  it('sends a differing text to review when there is no baseline', () => {
+    expect(classifyDescription(g('before'), d('after'), outline)).toBe('review')
+  })
+
+  it('finds the graph already right without looking at the baseline', () => {
+    expect(classifyDescription(g('same'), d('same'), outline, d('older', '2026-04-01T00:00:00Z'))).toBe('already')
+  })
+
+  it('leaves the Linge members outline alone', () => {
+    expect(outline.skip?.has('917b8cb9-6a12-4a96-91eb-8444691d6797')).toBe(true)
+  })
+})

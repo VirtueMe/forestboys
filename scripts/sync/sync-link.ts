@@ -1,5 +1,5 @@
 /**
- * Apply the Sanity → graph sync of `links` for transports, locations and stations (#118). The rules, and the hash check
+ * Apply the Sanity → graph sync of `links` for transports, locations, stations and outlines (#118, #301). The rules, and the hash check
  * that decides what is written, are in scripts/lib/link-sync.ts and docs/SANITY-SYNC.md («Links»).
  *
  * Per node, against its `links_sha` stamp:
@@ -14,7 +14,7 @@
  *
  * Before writing, the nodes it will change (stamp and links) are saved to data/sanity-delta/links-before-<type>-<time>.json.
  *
- * Usage: npx tsx scripts/sync/sync-link.ts --type=transport|location|station|all [--production] [--write] [--accept-review=<slug>,…]
+ * Usage: npx tsx scripts/sync/sync-link.ts --type=transport|location|station|outline|all [--production] [--write] [--accept-review=<slug>,…]
  */
 
 import { writeFileSync, mkdirSync } from 'node:fs'
@@ -61,10 +61,12 @@ async function syncKind(kind: LinkKind, driver: ReturnType<typeof neo4jDriver>, 
   const rows: { id: string; links: unknown[]; prune: boolean; stamps: Record<string, string> }[] = []
   const held: string[] = [], changes: string[] = []
   const withReview = new Set<string>()
+  const skipped: string[] = []
   let noNode = 0
   for (const d of docs) {
     const g = graph.get(d._id)
     if (!g) { noNode++; continue }
+    if (kind.skip?.has(d._id)) { skipped.push(`${g.slug} (${kind.skip.get(d._id)})`); continue }
     let v = classifyLinks(g, d, baseline.get(d._id))
     count[v]++
     if (v === 'review') withReview.add(g.slug)
@@ -85,6 +87,7 @@ async function syncKind(kind: LinkKind, driver: ReturnType<typeof neo4jDriver>, 
   console.log(`\n${kind.label}: ${docs.length} in Sanity, ${graph.size} in the graph`)
   console.log(`  clean ${count.clean} · gap ${count.gap} · already ${count.already} · unchanged ${count.unchanged} · conflict ${count.conflict} · review ${count.review}`)
   console.log(`  no node for ${noNode} Sanity document(s)`)
+  for (const k of skipped) console.log(`  skipped: ${k}`)
   console.log(`  To write: ${changes.length} node(s) with link changes, ${rows.length - changes.length} stamp only`)
   for (const c of changes.slice(0, 40)) console.log(`    ${c}`)
   if (changes.length > 40) console.log(`    … and ${changes.length - 40} more`)

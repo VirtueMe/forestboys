@@ -1,5 +1,5 @@
 /**
- * Sanity → graph sync of the `links` of transports, locations and stations (#118). Events and people have it as a field
+ * Sanity → graph sync of the `links` of transports, locations, stations (#118) and outlines (#301). Events and people have it as a field
  * of their syncs; these three only got links when the import created the node. docs/SANITY-SYNC.md («Links»).
  *
  * What is a link is decided in one place, `importableLinks()` / `linkSource()` (scripts/lib/person-rule.ts, #113), so the
@@ -28,17 +28,22 @@ import { importableLinks, linkSource, type LinkSource } from './person-rule.ts'
 
 export interface LinkKind {
   /** Used in the file names and the SyncState row. */
-  key:        'transport' | 'location' | 'station'
+  key:        'transport' | 'location' | 'station' | 'outline'
   /** The graph label. */
-  label:      'Transport' | 'Location' | 'Station'
+  label:      'Transport' | 'Location' | 'Station' | 'Outline'
   /** The Sanity document type. */
   sanityType: string
+  /** Sanity documents the sync leaves alone, by id, with the reason. */
+  skip?:      ReadonlyMap<string, string>
 }
 
 export const LINK_KINDS: Record<string, LinkKind> = {
   transport: { key: 'transport', label: 'Transport', sanityType: 'transport' },
   location:  { key: 'location',  label: 'Location',  sanityType: 'location' },
   station:   { key: 'station',   label: 'Station',   sanityType: 'station' },
+  // The bundles of the "N.O.R.I.C.(1) (LINGE) Medlemmer" outline were made by the earlier import: nothing to change there (#301).
+  outline:   { key: 'outline',   label: 'Outline',   sanityType: 'outline',
+               skip: new Map([['917b8cb9-6a12-4a96-91eb-8444691d6797', 'Linge members: its bundles are made']]) },
 }
 
 export interface GraphLinks {

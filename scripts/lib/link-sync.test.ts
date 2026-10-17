@@ -74,6 +74,11 @@ describe('kinds', () => {
   it('has the graph label and Sanity type of each', () => {
     expect(Object.values(LINK_KINDS).map(k => [k.key, k.label, k.sanityType])).toEqual([
       ['transport', 'Transport', 'transport'], ['location', 'Location', 'location'], ['station', 'Station', 'station'],
+      ['outline', 'Outline', 'outline'],
     ])
+  })
+
+  it('leaves the Linge members outline alone', () => {
+    expect(LINK_KINDS.outline.skip?.has('917b8cb9-6a12-4a96-91eb-8444691d6797')).toBe(true)
   })
 })
