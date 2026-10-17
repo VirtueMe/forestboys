@@ -196,7 +196,7 @@ outline       Reference articles
 organization  Organisation definitions with colour
 district      District definitions
 partner       Project supporters/sponsors
-airfield      (legacy or subset of station?)
+airfield      (retired: one duplicate of a station; airfields are stations, #302, #303)
 ```
 
 ---

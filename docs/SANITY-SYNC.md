@@ -654,6 +654,28 @@ First run, local copy of production (2026-10-17): text 4 clean, 26 already; titl
 mentions added on 4 outlines; 14 galleries; links on 18 outlines (23 on
 `no-5-troop-10-i-a-commandos`); `brig-n-skotlandsbrigaden` made; no conflict, no review.
 
+### Site pages, partners and the airfield (#302)
+
+Four Sanity types have no sync, on purpose:
+
+| Sanity | In the graph | Decision |
+|---|---|---|
+| `home` (1: `description`, `topCards` 4, `bottomCards` 2) | `Page` `home` with 7 `Card`s (`middle` 1, `top` 4, `bottom` 2) | left: the graph is the authority |
+| `aboutUs` (1: `description`) | `Page` `about`, its `middle` card | left: the graph is the authority |
+| `partner` (3: `title`, `image`, `description`) | the `bottom` cards of `Page` `about`, each with its logo as `heroImageRef` | left: already imported |
+| `airfield` (1, «RAF Sullum Voe») | none | not imported: a duplicate of the station `raf-sullom-voe` (identical coordinates), a type `station` replaced; airfields as a kind of station is #303 |
+
+The pages were imported once with their cards (`SCHEMA.md`, *Page + Card*) and are edited in
+the admin (`AdminPagesView`), so a sync would overwrite Jan's edits. The partners are not
+`Partner` nodes but cards, which is why a search for the label finds nothing. As of 2026-10-17
+the graph's pages carry the April `updatedAt`, nobody has edited them there, and titles, text and
+images agree with Sanity's, except for three link addresses Jan changed in Sanity on 7 October
+(`about-us` → `../about` twice, `events/noric-1` → `../events/noric-1`). The graph keeps the old
+forms, and `/about-us` is not a route, so those two links on the home page lead nowhere until
+they are fixed in the admin.
+
+Still to ask Jan: does the Studio still offer an «airfield» type? Nothing here depends on it.
+
 ### Reshaped documents — curated mappings
 
 Where the import did more than copy fields, the three-way compare has
