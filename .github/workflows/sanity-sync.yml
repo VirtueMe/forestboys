@@ -71,6 +71,11 @@ jobs:
         if: ${{ !cancelled() }}
         run: npx tsx scripts/sync/sync-station.ts --production ${{ (github.event_name == 'schedule' || inputs.write) && '--write' || '' }}
 
+      # Their links (#118), after the nodes exist and before the events.
+      - name: Link sync
+        if: ${{ !cancelled() }}
+        run: npx tsx scripts/sync/sync-link.ts --type=all --production ${{ (github.event_name == 'schedule' || inputs.write) && '--write' || '' }}
+
       - name: Event sync
         if: ${{ !cancelled() }}
         run: npx tsx scripts/sync/sync-event.ts --production ${{ (github.event_name == 'schedule' || inputs.write) && '--write' || '' }}
