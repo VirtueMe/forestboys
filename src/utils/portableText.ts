@@ -1,4 +1,4 @@
-import { containedBy } from './blockTree.ts'
+import { containedBy, walkBlocks } from './blockTree.ts'
 
 export interface SanitySpan {
   _key: string
@@ -73,14 +73,15 @@ export function resolveLinkTarget(raw: string | undefined): LinkTarget | null {
   return { kind: 'internal', href: `/events/${encodeSlug(t)}` }
 }
 
-/** Does any span in `blocks` carry a link mark? A def that no span uses does not count. */
+/** Does any span in `blocks` carry a link mark? A def that no span uses does not count. Boxes and table cells are read too (#314). */
 export function hasLinkMark(blocks: unknown[]): boolean {
-  return blocks.some(b => {
-    const block = b as SanityBlock
-    if (block?._type !== 'block') return false
+  let found = false
+  walkBlocks(blocks, block => {
+    if (found) return
     const links = new Set((block.markDefs ?? []).filter(d => d._type === 'link').map(d => d._key))
-    return (block.children ?? []).some(c => (c.marks ?? []).some(m => links.has(m)))
+    found = (block.children ?? []).some(c => (c.marks ?? []).some(m => links.has(m)))
   })
+  return found
 }
 
 const attr = (v: string) => v.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;')

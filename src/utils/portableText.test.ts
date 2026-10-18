@@ -296,3 +296,21 @@ describe('hasLinkMark', () => {
     expect(hasLinkMark([{ _key: 'i', _type: 'image' }, null])).toBe(false)
   })
 })
+
+describe('hasLinkMark inside containers (#314)', () => {
+  const linked = block({ text: 'AIR-27-2165', marks: ['m1'], markDefs: [{ _key: 'm1', _type: 'link', href: '/events/x' }] })
+  const unused = block({ text: 'ingen lenke', markDefs: [{ _key: 'm1', _type: 'link', href: '/events/x' }] })
+  const box = (...content: unknown[]) => ({ _type: 'infoBox', _key: 'b', content })
+  const grid = (...content: unknown[]) => ({ _type: 'table', _key: 't', rows: [{ _type: 'row', _key: 'r', cells: [{ _type: 'cell', _key: 'c', content }] }] })
+
+  it('finds a link mark in a box and in a table cell', () => {
+    expect(hasLinkMark([block({ text: 'a' }), box(linked)])).toBe(true)
+    expect(hasLinkMark([block({ text: 'a' }), grid(linked)])).toBe(true)
+    expect(hasLinkMark([box(grid(linked))])).toBe(true)
+  })
+
+  it('does not count a definition in a container that no span uses', () => {
+    expect(hasLinkMark([box(unused), grid(unused)])).toBe(false)
+  })
+})
+

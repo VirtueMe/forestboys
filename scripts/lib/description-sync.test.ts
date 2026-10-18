@@ -183,3 +183,51 @@ describe('outlines (#301)', () => {
     expect(outline.skip?.has('917b8cb9-6a12-4a96-91eb-8444691d6797')).toBe(true)
   })
 })
+
+// Containers (#308, #314): a description an editor gave a box or a table is not empty, and a sync never takes it for empty.
+describe('a description with a container', () => {
+  const cell = (key: string, text: string) => ({ _type: 'cell', _key: key, content: [{ ...block(text), _key: `${key}b` }] })
+  const table = (text: string) => ({ _type: 'table', _key: 'tab', rows: [{ _type: 'row', _key: 'row', cells: [cell('c1', text), cell('c2', '')] }] })
+  const box = (text: string) => ({ _type: 'infoBox', _key: 'box', content: [{ ...block(text), _key: 'inbox' }] })
+  const onlyTable = stored([table('Mannskap')])
+
+  it('has text when a box or a table cell holds some, and none when they hold none', () => {
+    expect(hasText([table('Mannskap')])).toBe(true)
+    expect(hasText([box('Merk dette')])).toBe(true)
+    expect(hasText([table('  ')])).toBe(false)
+    expect(hasText([{ _type: 'infoBox', _key: 'x', content: [] }])).toBe(false)
+  })
+
+  it('is not empty for the graph side', () => {
+    expect(graphValue(onlyTable)).not.toBe('')
+    expect(graphValue(onlyTable)).toBe(stableJson([table('Mannskap')]))
+  })
+
+  it('is never imported over: with no stamp, Sanity\'s text sends it to review, not to «new»', () => {
+    const d = doc([block('Nona Rhea')])
+    expect(classifyDescription(graph({ content: onlyTable }), d, transport)).toBe('review')
+  })
+
+  it('is never imported over, with a stamp from a time Sanity had no text: a conflict, not «clean»', () => {
+    const before = doc(undefined)
+    const now = doc([block('Nona Rhea')])
+    expect(classifyDescription(graph({ stamp: stampOf(before), content: onlyTable }), now, transport)).toBe('conflict')
+  })
+
+  it('is a conflict when Sanity changed and the graph has a box or a table added to the text it was stamped with', () => {
+    const before = doc([block('Nona Rhea')])
+    const now = doc([block('Nona Rhea, changed')])
+    const edited = stored([...(importedBlocks(before) as unknown[]), box('Merk dette')])
+    expect(classifyDescription(graph({ stamp: stampOf(before), content: edited }), now, transport)).toBe('conflict')
+  })
+
+  it('is left alone while Sanity is unchanged since the stamp', () => {
+    const d = doc([block('Nona Rhea')])
+    expect(classifyDescription(graph({ stamp: stampOf(d), content: onlyTable }), d, transport)).toBe('unchanged')
+  })
+
+  it('does not lose a container-only description when Sanity empties its text', () => {
+    const before = doc([block('Nona Rhea')])
+    expect(classifyDescription(graph({ stamp: stampOf(before), content: onlyTable }), doc(undefined), transport)).not.toBe('clean')
+  })
+})
