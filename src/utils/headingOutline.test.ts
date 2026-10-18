@@ -205,3 +205,85 @@ describe('descriptions kept as several sections (JSON strings)', () => {
     expect(styles(setContentHeading(c, { content: 1, local: 1 }, null)[1])).toEqual(['h5', 'normal'])
   })
 })
+
+// Containers (#308, #314): a box and a table hold blocks of their own.
+describe('headings inside containers', () => {
+  const box = (...content: unknown[]) => ({ _type: 'infoBox', _key: `x${n++}`, content })
+  const cell = (...content: unknown[]) => ({ _type: 'cell', _key: `c${n++}`, content })
+  const grid = (...cells: unknown[]) => ({ _type: 'table', _key: `t${n++}`, rows: [{ _type: 'row', _key: `r${n++}`, cells }] })
+  const styles = (blocks: unknown): string[] => {
+    const out: string[] = []
+    ;(function walk(x: unknown) {
+      if (Array.isArray(x)) return x.forEach(walk)
+      if (!x || typeof x !== 'object') return
+      const o = x as Record<string, unknown>
+      if (o._type === 'block') out.push(String(o.style))
+      else Object.values(o).forEach(walk)
+    })(blocks)
+    return out
+  }
+
+  it('counts a heading in a box in the outline, in reading order', () => {
+    const blocks = [b('h3', 'A'), box(b('h4', 'B'), b('h6', 'C')), b('h4', 'D')]
+    const found = checkHeadings(blocks)
+    expect(found.map(p => `${p.reason}:${p.text}`)).toEqual(['too-deep:C'])
+    expect(found[0].index).toBe(2)   // third text block: A, B, C
+  })
+
+  it('does not let a box restart the outline', () => {
+    expect(checkHeadings([box(b('h3', 'A')), b('h5', 'B')]).map(p => p.text)).toEqual(['B'])
+  })
+
+  it('reports a heading in a cell and makes it a plain paragraph, outside the nesting', () => {
+    const blocks = [b('h3', 'A'), grid(cell(b('h4', 'Celle'), b('normal', 'tekst'))), b('h4', 'B')]
+    const found = checkHeadings(blocks)
+    expect(found).toHaveLength(1)
+    expect(found[0]).toMatchObject({ reason: 'in-cell', text: 'Celle', allowed: null, suggested: null })
+    expect(styles(fixHeadings(blocks))).toEqual(['h3', 'normal', 'normal', 'h4'])
+  })
+
+  it('does not count a cell heading when it measures the heading after it', () => {
+    const blocks = [grid(cell(b('h3', 'Celle'))), b('h3', 'A'), b('h4', 'B')]
+    expect(checkHeadings(blocks).map(p => p.reason)).toEqual(['in-cell'])
+  })
+
+  it('reports a heading in a cell inside a box as in a cell', () => {
+    expect(checkHeadings([box(grid(cell(b('h3', 'x'))))]).map(p => p.reason)).toEqual(['in-cell'])
+  })
+
+  it('repairs a heading in a box to the level it should have', () => {
+    expect(styles(fixHeadings([b('h3'), box(b('h6', 'B'))]))).toEqual(['h3', 'h4'])
+  })
+
+  it('hands back the same blocks when nothing needs fixing, containers included', () => {
+    const blocks = [b('h3', 'A'), box(b('h4', 'B'), b('normal', 'tekst'))]
+    expect(fixHeadings(blocks)).toBe(blocks)
+  })
+
+  it('says which content and which text block, counting through containers', () => {
+    const one = JSON.stringify([b('h3', 'A'), box(b('normal', 'x'), b('h6', 'B'))])
+    const two = JSON.stringify([grid(cell(b('h3', 'Celle')))])
+    const found = checkContents([one, two])
+    expect(found.map(p => `${p.content}:${p.local}:${p.reason}`)).toEqual(['0:2:too-deep', '1:0:in-cell'])
+  })
+
+  it('fixes the contents, and a content that did not change is the same string', () => {
+    const ok  = JSON.stringify([b('h3', 'A')])
+    const bad = JSON.stringify([box(b('h6', 'B'))])
+    const fixed = fixContents([ok, bad])
+    expect(fixed[0]).toBe(ok)
+    expect(styles(JSON.parse(fixed[1]))).toEqual(['h4'])
+  })
+
+  it('moves one heading in a box by its place, and leaves the rest', () => {
+    const one = JSON.stringify([b('h3', 'A'), box(b('h4', 'B'), b('h4', 'C'))])
+    const out = setContentHeading([one], { content: 0, local: 2 }, null)
+    expect(styles(JSON.parse(out[0]))).toEqual(['h3', 'h4', 'normal'])
+    expect(setContentHeading([one], { content: 0, local: 9 }, null)[0]).toBe(one)
+  })
+
+  it('writes the in-cell reason as a sentence', () => {
+    const [p] = checkHeadings([grid(cell(b('h3', 'Celle')))])
+    expect(headingMessage(p)).toBe('«Celle» (H3) står i en tabellcelle, og der er overskrifter ikke tillatt. Gjør den om til vanlig tekst.')
+  })
+})
