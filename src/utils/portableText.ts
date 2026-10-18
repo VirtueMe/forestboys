@@ -1,3 +1,5 @@
+import { containedBy } from './blockTree.ts'
+
 export interface SanitySpan {
   _key: string
   _type: string
@@ -125,10 +127,6 @@ function renderSpans(
 
 /** A block or a container: a typed object with, for a container, arrays of blocks and containers inside it. */
 type TextNode = { _type?: string; children?: SanitySpan[]; [field: string]: unknown }
-
-/** The typed objects inside a container, in the order its fields come: a box's `content`, a table's `rows`, a row's `cells`. */
-const containedBy = (node: TextNode): TextNode[] =>
-  Object.values(node).flatMap(v => Array.isArray(v) ? v.filter((x): x is TextNode => !!x && typeof x === 'object' && '_type' in x) : [])
 
 /** The HTML of a list of blocks and containers: the body of `blocksToHtml`, and of what a box and a cell hold. */
 function renderNodes(nodes: unknown[]): string {
