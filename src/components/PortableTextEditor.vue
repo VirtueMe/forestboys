@@ -268,7 +268,8 @@ onBeforeUnmount(() => {
   font-family: 'Courier New', Courier, monospace;
   font-size: 11px;
   tab-size: 4;
-  white-space: pre-wrap;
+  white-space: pre;
+  overflow-x: auto;
   background: color-mix(in srgb, var(--rule) 50%, var(--paper-raised));
   border-radius: 3px;
   padding: 8px 10px;
