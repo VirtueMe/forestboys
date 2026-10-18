@@ -142,3 +142,44 @@ describe('linkArchiveBlocks', () => {
     expect(JSON.stringify(input)).toBe(before)
   })
 })
+
+// Containers (#308, #314): a reference in a box or a table cell is linked like any other.
+describe('linkArchiveBlocks inside containers', () => {
+  const inBlock = (key: string, text: string): Block => ({ _key: key, _type: 'block', children: [span(`${key}s`, text)], markDefs: [] })
+  const box = (...content: unknown[]) => ({ _type: 'infoBox', _key: 'box', content })
+  const cell = (key: string, ...content: unknown[]) => ({ _type: 'cell', _key: key, content })
+  const grid = (...cells: unknown[]) => ({ _type: 'table', _key: 'tab', rows: [{ _type: 'row', _key: 'row', cells }] })
+  const tree = () => [inBlock('top', 'AIR-27-1068-2 p13'), box(inBlock('inbox', 'AIR-27-1649')), grid(cell('c1', inBlock('incell', 'AIR 27/1908-23+24')), cell('c2', inBlock('plain', 'ingen referanse')))]
+
+  /** The block under a path of container fields, for reading the result. */
+  const at = (out: unknown[], ...path: (number | string)[]) => path.reduce<unknown>((x, k) => (x as Record<string | number, unknown>)[k], out) as Block
+
+  it('links a reference in a box and in a cell', () => {
+    const out = linkArchiveBlocks(tree())
+    expect(links(out[0] as Block).map(l => l.q)).toEqual(['AIR 27/1068-2'])
+    expect(links(at(out, 1, 'content', 0)).map(l => l.q)).toEqual(['AIR 27/1649'])
+    expect(links(at(out, 2, 'rows', 0, 'cells', 0, 'content', 0)).map(l => l.q)).toEqual(['AIR 27/1908-23'])
+  })
+
+  it('leaves a block with no reference, and everything around it, as the same objects', () => {
+    const before = tree()
+    const out = linkArchiveBlocks(before) as unknown[]
+    expect(at(out, 2, 'rows', 0, 'cells', 1, 'content', 0)).toBe(at(before, 2, 'rows', 0, 'cells', 1, 'content', 0))
+  })
+
+  it('gives back the same list when nothing is to be linked, containers included', () => {
+    const before = [inBlock('a', 'ingenting'), box(inBlock('b', 'heller ikke'), grid(cell('c', inBlock('d', 'bare andre serier: AIR 28/5 og HS 2/127'))))]
+    expect(linkArchiveBlocks(before)).toBe(before)
+  })
+
+  it('does not change what it was given, and is the same on a second run', () => {
+    const before = tree()
+    const once = linkArchiveBlocks(before)
+    expect(before).toEqual(tree())
+    expect(linkArchiveBlocks(once)).toBe(once)
+  })
+
+  it('gives the same output for the same input, so the sync can hash it', () => {
+    expect(JSON.stringify(linkArchiveBlocks(tree()))).toBe(JSON.stringify(linkArchiveBlocks(tree())))
+  })
+})

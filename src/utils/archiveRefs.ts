@@ -6,6 +6,9 @@
 // ordinary link marks and the page needs nothing special. Only the AIR 27 series is linked
 // (Jan, #106): few HS files can be downloaded.
 
+import { mapBlocks } from './blockTree.ts'
+import type { SanityBlock } from './portableText.ts'
+
 const SEARCH = 'https://discovery.nationalarchives.gov.uk/results/r'
 
 /**
@@ -40,38 +43,37 @@ const isLinked = (span: Span, defs: MarkDef[]) =>
  * - The new keys come from the span's key (`<span>-<n>`, `tna-<span>-<n>`), so the same input
  *   always gives the same output — the sync hashes this.
  * - Nothing to link: the input itself is returned.
+ * - A reference in a box or a table cell is linked like any other (#314).
  */
 export function linkArchiveBlocks<T>(blocks: T): T {
-  if (!Array.isArray(blocks)) return blocks
-  let changed = false
-  const out = (blocks as Block[]).map(block => {
-    if (block?._type !== 'block' || !Array.isArray(block.children)) return block
-    const defs = block.markDefs ?? []
-    const added: MarkDef[] = []
-    const children = block.children.flatMap(span => {
-      const text = span.text ?? ''
-      if (isLinked(span, defs)) return [span]
-      const refs = [...text.matchAll(REF)]
-      if (!refs.length) return [span]
+  return mapBlocks(blocks, block => linkBlock(block as unknown as Block) as unknown as SanityBlock)
+}
 
-      const parts: Span[] = []
-      const push = (t: string, marks: string[]) => {
-        if (t) parts.push({ ...span, _key: parts.length ? `${span._key}-${parts.length}` : span._key, text: t, marks })
-      }
-      let at = 0
-      for (const m of refs) {
-        const key = `tna-${span._key}-${added.length}`
-        added.push({ _key: key, _type: 'link', href: tnaSearchUrl(m[1], m[2]) })
-        push(text.slice(at, m.index), span.marks ?? [])
-        push(m[0], [...(span.marks ?? []), key])
-        at = m.index + m[0].length
-      }
-      push(text.slice(at), span.marks ?? [])
-      return parts
-    })
-    if (!added.length) return block
-    changed = true
-    return { ...block, children, markDefs: [...defs, ...added] }
+/** One text block with its AIR 27 references linked; the same block when it has none. */
+function linkBlock(block: Block): Block {
+  if (block?._type !== 'block' || !Array.isArray(block.children)) return block
+  const defs = block.markDefs ?? []
+  const added: MarkDef[] = []
+  const children = block.children.flatMap(span => {
+    const text = span.text ?? ''
+    if (isLinked(span, defs)) return [span]
+    const refs = [...text.matchAll(REF)]
+    if (!refs.length) return [span]
+
+    const parts: Span[] = []
+    const push = (t: string, marks: string[]) => {
+      if (t) parts.push({ ...span, _key: parts.length ? `${span._key}-${parts.length}` : span._key, text: t, marks })
+    }
+    let at = 0
+    for (const m of refs) {
+      const key = `tna-${span._key}-${added.length}`
+      added.push({ _key: key, _type: 'link', href: tnaSearchUrl(m[1], m[2]) })
+      push(text.slice(at, m.index), span.marks ?? [])
+      push(m[0], [...(span.marks ?? []), key])
+      at = m.index + m[0].length
+    }
+    push(text.slice(at), span.marks ?? [])
+    return parts
   })
-  return (changed ? out : blocks) as T
+  return added.length ? { ...block, children, markDefs: [...defs, ...added] } : block
 }
