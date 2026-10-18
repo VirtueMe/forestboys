@@ -171,3 +171,67 @@ describe('checkSections: the sections of one entity', () => {
     expect(found.map(f => f.kind)).toEqual(['heading-outline'])
   })
 })
+
+// Containers (#308, #314): a box and a table hold lists of blocks of their own.
+describe('containers', () => {
+  const box = (key: string, ...content: unknown[]) => ({ _type: 'infoBox', _key: key, content })
+  const cell = (key: string, ...content: unknown[]) => ({ _type: 'cell', _key: key, content })
+  const grid = (key: string, ...cells: unknown[]) => ({ _type: 'table', _key: key, rows: [{ _type: 'row', _key: `${key}-r`, cells }] })
+  const found = (blocks: unknown[]) => checkBlocks(blocks).map(f => `${f.kind}@${f.blockKey}`)
+
+  it('finds in a box and in a cell what it finds at the top, naming the block', () => {
+    const typed = block('typed', [span('a<br>b')])
+    const dangling = block('dangling', [span('x', ['ghost'])])
+    const unused = block('unused', [span('y')], { markDefs: [{ _key: 'm1', _type: 'link', href: '/events/x' }] })
+    const stray = block('stray', [span('z')], { level: 2 })
+    expect(found([box('b1', typed), grid('t1', cell('c1', dangling, unused), cell('c2', stray))])).toEqual([
+      'typed-markup@typed', 'dangling-mark@dangling', 'unused-definition@unused', 'stray-list-level@stray',
+    ])
+  })
+
+  it('finds a list level jump inside a cell', () => {
+    expect(found([grid('t', cell('c', item('a', 1), item('b', 3)))])).toEqual(['list-level-jump@b'])
+  })
+
+  it('does not compare the first block of a box or a cell with what comes before it', () => {
+    expect(found([item('a', 1), box('b', item('c', 3))])).toEqual([])
+    expect(found([grid('t', cell('c1', item('a', 1)), cell('c2', item('b', 3)))])).toEqual([])
+    expect(found([box('b', item('a', 1)), item('c', 3)])).toEqual([])
+  })
+
+  it('finds the same things in a box inside nothing else as in a table inside a box', () => {
+    expect(found([box('b', grid('t', cell('c', block('typed', [span('<b>x</b>')]))))])).toEqual(['typed-markup@typed'])
+  })
+
+  it('reads a container it does not know the same way', () => {
+    expect(found([{ _type: 'columns', _key: 'k', left: [block('typed', [span('&nbsp;')])] }])).toEqual(['typed-markup@typed'])
+  })
+
+  describe('checkSections', () => {
+    const sections = (...blocks: unknown[][]) => blocks.map(b => JSON.stringify(b))
+
+    it('gives a finding in a container the section it is in', () => {
+      const out = checkSections(sections([para('a')], [box('b', block('typed', [span('<i>x</i>')]))]))
+      expect(out.map(f => `${f.content}:${f.kind}:${f.blockKey}`)).toEqual(['1:typed-markup:typed'])
+    })
+
+    it('shows a heading in a table cell as a heading-outline finding, with the sentence of the refused save', () => {
+      const out = checkSections(sections([heading('h', 'Overskrift'), grid('t', cell('c', heading('ch', 'Celle')))]))
+      expect(out).toHaveLength(1)
+      expect(out[0]).toMatchObject({ kind: 'heading-outline', content: 0, blockKey: 'ch', text: 'Celle' })
+      expect(out[0].detail).toContain('står i en tabellcelle')
+    })
+
+    it('shows a heading in a box that is too deep, and counts it in the outline', () => {
+      const out = checkSections(sections([heading('h', 'A'), box('b', heading('deep', 'B', 'h5'))]))
+      expect(out.map(f => `${f.kind}:${f.blockKey}`)).toEqual(['heading-outline:deep'])
+    })
+
+    it('says an unused definition once per section even when the blocks are in different cells', () => {
+      const unused = (key: string) => block(key, [span('y')], { markDefs: [{ _key: 'm1', _type: 'link', href: '/events/x' }] })
+      const out = checkSections(sections([grid('t', cell('c1', unused('a')), cell('c2', unused('b')), cell('c3', unused('c')))]))
+      expect(out).toHaveLength(1)
+      expect(out[0].detail).toContain('Det samme i 2 blokker til.')
+    })
+  })
+})
