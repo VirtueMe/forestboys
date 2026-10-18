@@ -158,6 +158,67 @@ describe('blocksToHtml', () => {
     expect(html).toBe('<pre class="pre-table">a</pre>\n<h3>H</h3>\n<pre class="pre-table">b</pre>')
   })
 
+  describe('containers (#313)', () => {
+    const cell = (...blocks: unknown[]) => ({ _type: 'cell', _key: 'c', content: blocks })
+    const row = (...cells: ReturnType<typeof cell>[]) => ({ _type: 'row', _key: 'r', cells })
+    const table = (rows: ReturnType<typeof row>[], over: Record<string, unknown> = {}) => ({ _type: 'table', _key: 't', rows, ...over })
+    const box = (...content: unknown[]) => ({ _type: 'infoBox', _key: 'b', content })
+    const p = (text: string, over: Partial<SanityBlock> = {}) => block({ text, ...over })
+
+    it('draws a box around its blocks', () => {
+      expect(blocksToHtml([box(p('Merk dette'))])).toBe('<div class="pt-box"><p>Merk dette</p></div>')
+    })
+
+    it('draws a table as rows of cells, each cell as the blocks it holds', () => {
+      const t = table([row(cell(p('CON')), cell(p('PAK'))), row(cell(p('16')), cell(p('a'), p('b')))])
+      expect(blocksToHtml([t])).toBe(
+        '<div class="pt-table-wrap"><table class="pt-table"><tbody>'
+        + '<tr><td><p>CON</p></td><td><p>PAK</p></td></tr>'
+        + '<tr><td><p>16</p></td><td><p>a</p>\n<p>b</p></td></tr>'
+        + '</tbody></table></div>')
+    })
+
+    it('pads a short row so the columns line up', () => {
+      const html = blocksToHtml([table([row(cell(p('a')), cell(p('b'))), row(cell(p('c')))])])
+      expect(html).toContain('<tr><td><p>c</p></td><td></td></tr>')
+    })
+
+    it('turns the options of a table into classes, and none into a plain table', () => {
+      const rows = [row(cell(p('a')))]
+      expect(blocksToHtml([table(rows, { frame: 'topBottom', rowLines: true, columnLines: true })]))
+        .toContain('<table class="pt-table pt-table--topbottom pt-table--rows pt-table--columns">')
+      expect(blocksToHtml([table(rows, { frame: 'around' })])).toContain('class="pt-table pt-table--around"')
+      expect(blocksToHtml([table(rows, { frame: 'none', rowLines: false })])).toContain('<table class="pt-table">')
+    })
+
+    it('draws a table inside a box, and a list, a link and a mark inside a cell', () => {
+      const linked = block({ text: 'AM 380', marks: ['m1'], markDefs: [{ _key: 'm1', _type: 'link', href: '/events/am-380' }] })
+      const t = table([row(cell(p('en', { listItem: 'bullet' }), p('to', { listItem: 'bullet' })), cell(linked))])
+      const html = blocksToHtml([box(p('Før'), t)])
+      expect(html).toContain('<td><ul>\n<li>en</li>\n<li>to</li>\n</ul></td>')
+      expect(html).toContain('<td><p><a href="/events/am-380" class="internal-link">AM 380</a></p></td>')
+      expect(html).toMatch(/^<div class="pt-box"><p>Før<\/p>\n<div class="pt-table-wrap">.*<\/div><\/div>$/s)
+    })
+
+    it('ends a list and a fixed-width run before a container, and starts new ones after it', () => {
+      const html = blocksToHtml([
+        p('a', { listItem: 'bullet' }), box(p('x')), p('b', { listItem: 'bullet' }),
+        p('pre1', { style: 'preformatted' }), box(p('y')), p('pre2', { style: 'preformatted' }),
+      ])
+      expect(html).toBe('<ul>\n<li>a</li>\n</ul>\n<div class="pt-box"><p>x</p></div>\n<ul>\n<li>b</li>\n</ul>\n'
+        + '<pre class="pre-table">pre1</pre>\n<div class="pt-box"><p>y</p></div>\n<pre class="pre-table">pre2</pre>')
+    })
+
+    it('draws a container it does not know, and a row or a cell on its own, as what they hold', () => {
+      expect(blocksToHtml([{ _type: 'columns', _key: 'k', left: [p('venstre')], right: [p('høyre')] }])).toBe('<p>venstre</p>\n<p>høyre</p>')
+      expect(blocksToHtml([row(cell(p('alene')))])).toBe('<p>alene</p>')
+    })
+
+    it('draws nothing for an empty box or table, and still skips an object with no content', () => {
+      expect(blocksToHtml([box(), table([]), table([row()]), { _type: 'image', _key: 'i' }, p('rest')])).toBe('<p>rest</p>')
+    })
+  })
+
   it('ignores non-block items', () => {
     expect(blocksToHtml([{ _key: 'i', _type: 'image' }])).toBe('')
   })
@@ -170,6 +231,35 @@ describe('blocksToText', () => {
 
   it('returns an empty string for missing input', () => {
     expect(blocksToText(null)).toBe('')
+  })
+
+  describe('containers (#313)', () => {
+    const cell = (...texts: string[]) => ({ _type: 'cell', _key: 'c', content: texts.map(text => block({ text })) })
+    const row = (...cells: ReturnType<typeof cell>[]) => ({ _type: 'row', _key: 'r', cells })
+    const table = (...rows: ReturnType<typeof row>[]) => ({ _type: 'table', _key: 't', rows })
+    const box = (...content: unknown[]) => ({ _type: 'infoBox', _key: 'b', content })
+
+    it('reads a table as rows on lines and cells separated by a tab', () => {
+      const t = table(row(cell('CON'), cell('PAK')), row(cell('16'), cell('3')))
+      expect(blocksToText([block({ text: 'before' }), t, block({ text: 'after' })])).toBe('before\nCON\tPAK\n16\t3\nafter')
+    })
+
+    it('puts the blocks of a cell on one line, and drops a trailing empty cell', () => {
+      expect(blocksToText([table(row(cell('a', 'b'), cell('c'), cell('')))])).toBe('a b\tc')
+    })
+
+    it('reads a box one block to a line, with a table inside it', () => {
+      expect(blocksToText([box(block({ text: 'Merk' }), table(row(cell('x'), cell('y'))), block({ text: 'slutt' }))])).toBe('Merk\nx\ty\nslutt')
+    })
+
+    it('reads a container it does not know as its contents, so no text is lost', () => {
+      const unknown = { _type: 'columns', _key: 'k', left: [block({ text: 'venstre' })], right: [block({ text: 'høyre' })] }
+      expect(blocksToText([unknown])).toBe('venstre\nhøyre')
+    })
+
+    it('skips an object with no text, as it always did', () => {
+      expect(blocksToText([block({ text: 'a' }), { _type: 'image', _key: 'i' }, block({ text: 'b' })])).toBe('a\n\nb')
+    })
   })
 })
 

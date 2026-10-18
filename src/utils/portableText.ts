@@ -123,9 +123,15 @@ function renderSpans(
   }).join('')
 }
 
-export function blocksToHtml(blocks?: SanityBlock[] | unknown | null): string {
-  if (!Array.isArray(blocks) || blocks.length === 0) return ''
+/** A block or a container: a typed object with, for a container, arrays of blocks and containers inside it. */
+type TextNode = { _type?: string; children?: SanitySpan[]; [field: string]: unknown }
 
+/** The typed objects inside a container, in the order its fields come: a box's `content`, a table's `rows`, a row's `cells`. */
+const containedBy = (node: TextNode): TextNode[] =>
+  Object.values(node).flatMap(v => Array.isArray(v) ? v.filter((x): x is TextNode => !!x && typeof x === 'object' && '_type' in x) : [])
+
+/** The HTML of a list of blocks and containers: the body of `blocksToHtml`, and of what a box and a cell hold. */
+function renderNodes(nodes: unknown[]): string {
   const parts: string[] = []
   const listStack: { tag: string; level: number }[] = []
   const preBuffer: string[] = []  // accumulate consecutive preformatted blocks
@@ -151,8 +157,15 @@ export function blocksToHtml(blocks?: SanityBlock[] | unknown | null): string {
     while (listStack.length > 0) closeTop()
   }
 
-  for (const block of blocks as SanityBlock[]) {
-    if (block._type !== 'block') continue
+  for (const node of nodes) {
+    if (!node || typeof node !== 'object') continue
+    const block = node as SanityBlock
+    if (block._type !== 'block') {
+      // A container (#313): box, table or one this reader does not know. Anything else (an image) is skipped, as it was.
+      const html = containerHtml(block as unknown as TextNode)
+      if (html) { closeLists(); flushPre(); parts.push(html) }
+      continue
+    }
 
     const linkMap:   Record<string, string> = {}
     const personMap: Record<string, { slug: string; name?: string }> = {}
@@ -205,10 +218,60 @@ export function blocksToHtml(blocks?: SanityBlock[] | unknown | null): string {
   return parts.join('\n')
 }
 
+const array = (v: unknown): TextNode[] => Array.isArray(v) ? v.filter((x): x is TextNode => !!x && typeof x === 'object') : []
+
+/**
+ * The HTML of a container (#313). A box draws its blocks and tables in a frame; a table is rows of cells, each cell
+ * drawn as the blocks it holds, and a short row is padded so the columns line up. Any other container, and a row or a
+ * cell on its own, is drawn as what it holds, so no text goes missing before a reader for its type exists. The options
+ * of a table are classes: `frame` (`topBottom` | `around`), `rowLines` and `columnLines`. Empty gives nothing.
+ */
+function containerHtml(node: TextNode): string {
+  switch (node._type) {
+    case 'infoBox': {
+      const inner = renderNodes(array(node.content))
+      return inner ? `<div class="pt-box">${inner}</div>` : ''
+    }
+    case 'table': {
+      const rows = array(node.rows).map(r => array(r.cells).map(c => renderNodes(array(c.content)))).filter(cells => cells.length)
+      if (!rows.length) return ''
+      const cols = Math.max(...rows.map(r => r.length))
+      const trs  = rows.map(r => `<tr>${[...r, ...Array<string>(cols - r.length).fill('')].map(c => `<td>${c}</td>`).join('')}</tr>`)
+      const classes = ['pt-table',
+        node.frame === 'topBottom' ? 'pt-table--topbottom' : node.frame === 'around' ? 'pt-table--around' : '',
+        node.rowLines === true ? 'pt-table--rows' : '', node.columnLines === true ? 'pt-table--columns' : '',
+      ].filter(Boolean).join(' ')
+      return `<div class="pt-table-wrap"><table class="${classes}"><tbody>${trs.join('')}</tbody></table></div>`
+    }
+    default:
+      return renderNodes(containedBy(node))
+  }
+}
+
+export function blocksToHtml(blocks?: SanityBlock[] | unknown | null): string {
+  if (!Array.isArray(blocks) || blocks.length === 0) return ''
+  return renderNodes(blocks)
+}
+
+/**
+ * The plain text of a block or a container (#313): a block's spans; a table's rows one to a line, a row's cells
+ * tab-separated and a cell's blocks on one line; a box, and any container this reader does not know, its
+ * contents one block to a line. So no text is lost for a container that arrives before a reader for it.
+ */
+function textOf(node: TextNode): string {
+  if (node._type === 'block' || Array.isArray(node.children)) return (node.children ?? []).map(c => c.text ?? '').join('')
+  const parts = containedBy(node).map(textOf)
+  switch (node._type) {
+    case 'row':  return parts.join('\t').replace(/\t+$/, '')
+    case 'cell': return parts.join(' ')
+    default:     return parts.join('\n')
+  }
+}
+
 export function blocksToText(blocks?: SanityBlock[] | unknown | null): string {
   if (!Array.isArray(blocks) || blocks.length === 0) return ''
-  return (blocks as SanityBlock[])
-    .map(block => block.children?.map(c => c.text ?? '').join('') ?? '')
+  return (blocks as TextNode[])
+    .map(textOf)
     .join('\n')
     .trim()
 }
