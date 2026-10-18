@@ -26,6 +26,7 @@
 import { stableJson } from './sanity-sha.ts'
 import { API, sha, type Doc } from './person-sync.ts'
 import { linkArchiveBlocks } from '../../src/utils/archiveRefs.ts'
+import { blocksToText } from '../../src/utils/portableText.ts'
 import { preformattedFromSanity } from './preformatted-blocks.ts'
 
 export interface DescriptionKind {
@@ -54,10 +55,12 @@ export const KINDS: Record<string, DescriptionKind> = {
                skip: new Map([['917b8cb9-6a12-4a96-91eb-8444691d6797', 'Linge members: its bundles are made']]) },
 }
 
-/** Does any block hold text? */
+/**
+ * Does any block hold text? Boxes and table cells are read too (#314): a description an editor gave a table has
+ * text, and a sync that took it for empty would write Sanity's text over it.
+ */
 export function hasText(blocks: unknown): boolean {
-  if (!Array.isArray(blocks)) return false
-  return blocks.some(b => ((b as { children?: { text?: string }[] }).children ?? []).some(c => (c.text ?? '').trim()))
+  return Array.isArray(blocks) && blocksToText(blocks).trim() !== ''
 }
 
 /** The blocks the graph should hold for `d`: Sanity's, with AIR 27 references linked and the tables marked (#260). Null when there is no text. */
