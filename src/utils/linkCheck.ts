@@ -17,6 +17,7 @@
  * External and mail links are not checked and do not appear.
  */
 
+import { mapBlocks, walkBlocks } from './blockTree.ts'
 import { resolveLinkTarget, type SanityBlock } from './portableText.ts'
 import { KIND_ROUTES, matchSlug, slugKey, type SlugHit, type SlugRow } from './slugResolver.ts'
 
@@ -96,10 +97,10 @@ interface Link {
   target:   { route: string; slug: string } | 'empty' | null
 }
 
-/** Every link mark in `content` that some text uses, with what it points at. */
+/** Every link mark in `content` that some text uses, with what it points at. The walk goes into boxes and tables (#314). */
 function* links(content: unknown): Generator<Link> {
-  for (const block of parse(content)) {
-    if (block?._type !== 'block') continue
+  const found: Link[] = []
+  walkBlocks(parse(content), block => {
     for (const def of block.markDefs ?? []) {
       const source = def._type === 'link' ? 'link' : def._type === 'person' ? 'person' : null
       if (!source) continue
@@ -109,14 +110,15 @@ function* links(content: unknown): Generator<Link> {
       const stored = source === 'link' ? (def.href ?? '') : (def.slug ?? '')
       const base: Omit<Link, 'target'> = { blockKey: block._key, markKey: def._key, source, text, stored }
       if (source === 'person') {
-        yield { ...base, target: stored.trim() ? { route: KIND_ROUTES.Person, slug: stored } : 'empty' }
+        found.push({ ...base, target: stored.trim() ? { route: KIND_ROUTES.Person, slug: stored } : 'empty' })
         continue
       }
       const resolved = resolveLinkTarget(stored)
-      if (!resolved) yield { ...base, target: 'empty' }
-      else yield { ...base, target: resolved.kind === 'internal' ? parsePath(resolved.href) : null }
+      if (!resolved) found.push({ ...base, target: 'empty' })
+      else found.push({ ...base, target: resolved.kind === 'internal' ? parsePath(resolved.href) : null })
     }
-  }
+  })
+  yield* found
 }
 
 /** The slugs a caller has to look up before `checkLinks` can judge `content`. */
@@ -150,21 +152,28 @@ export const problems = (findings: LinkFinding[]) => findings.filter(f => f.verd
  * `content` with the link that stored `from.stored` pointed at `to` instead.
  * A plain link gets the page's path as its target. A person mark whose page is
  * another kind of page becomes a plain link; one that is a person stays a
- * person mark with the right slug. Content that is not JSON is returned as it is.
+ * person mark with the right slug. A link in a box or a table cell is found too (#314). Content that is not JSON,
+ * or that holds no such link, is returned as it is.
  */
 export function rewriteLink(content: string, from: Pick<LinkIssue, 'source' | 'stored'>, to: SlugHit): string {
-  let blocks: SanityBlock[]
+  let blocks: unknown
   try { blocks = JSON.parse(content) } catch { return content }
   if (!Array.isArray(blocks)) return content
-  for (const block of blocks) {
-    block?.markDefs?.forEach((def, i) => {
+  // Every block, in a box or a cell too; a block with nothing to change stays the same object, so the whole content can too.
+  const rewritten = mapBlocks(blocks, block => {
+    let changed = false
+    const markDefs = (block.markDefs ?? []).map(def => {
       if (from.source === 'link' && def._type === 'link' && (def.href ?? '').trim() === from.stored.trim()) {
-        def.href = to.path
-      } else if (from.source === 'person' && def._type === 'person' && def.slug === from.stored) {
-        if (to.label === 'Person') def.slug = to.slug
-        else block.markDefs![i] = { _key: def._key, _type: 'link', href: to.path }
+        changed = true
+        return { ...def, href: to.path }
       }
+      if (from.source === 'person' && def._type === 'person' && def.slug === from.stored) {
+        changed = true
+        return to.label === 'Person' ? { ...def, slug: to.slug } : { _key: def._key, _type: 'link', href: to.path }
+      }
+      return def
     })
-  }
-  return JSON.stringify(blocks)
+    return changed ? { ...block, markDefs } : block
+  })
+  return rewritten === blocks ? content : JSON.stringify(rewritten)
 }

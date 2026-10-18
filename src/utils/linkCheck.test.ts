@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { buildIndex, checkLinks, linkSlugs, problems, rewriteLink } from './linkCheck.ts'
+import { buildIndex, checkLinks, linkSlugs, linkTargets, problems, rewriteLink } from './linkCheck.ts'
 
 const INDEX = buildIndex([
   { label: 'Operation', slug: 'sub004' },
@@ -164,5 +164,55 @@ describe('rewriteLink', () => {
 
   it('returns content that is not JSON as it is', () => {
     expect(rewriteLink('nope', { source: 'link', stored: 'x' }, to)).toBe('nope')
+  })
+})
+
+// Containers (#308, #314): a link in a box or a table cell is a link of the description.
+describe('links inside containers', () => {
+  const linked = (key: string, href: string, text = 'her') => ({
+    _key: key, _type: 'block',
+    markDefs: [{ _key: `m-${key}`, _type: 'link', href }],
+    children: [{ _key: `${key}s`, _type: 'span', text, marks: [`m-${key}`] }],
+  })
+  const box = (...content: unknown[]) => ({ _type: 'infoBox', _key: 'box', content })
+  const cell = (key: string, ...content: unknown[]) => ({ _type: 'cell', _key: key, content })
+  const grid = (...cells: unknown[]) => ({ _type: 'table', _key: 'tab', rows: [{ _type: 'row', _key: 'row', cells }] })
+  const nested = () => [linked('top', 'sub004'), box(linked('inbox', 'gone')), grid(cell('c1', linked('incell', 'SUB004')), cell('c2', linked('other', 'john-rognes')))]
+
+  it('judges a link in a box and in a cell, naming its block', () => {
+    const out = checkLinks(nested(), INDEX).map(f => `${f.blockKey}:${f.verdict}`)
+    expect(out).toEqual(['top:ok', 'inbox:broken', 'incell:fixable', 'other:fixable'])
+  })
+
+  it('lists the slugs to look up, including the ones inside containers', () => {
+    expect(linkSlugs(nested()).sort()).toEqual(['SUB004', 'gone', 'john-rognes', 'sub004'])
+  })
+
+  it('lists the pages a description links to, for a rename, including the ones inside containers', () => {
+    const t = linkTargets(JSON.stringify(nested())).map(x => x.slug).sort()
+    expect(t).toEqual(['SUB004', 'gone', 'john-rognes', 'sub004'])
+  })
+
+  it('rewrites a link in a cell and leaves every other link, and every other block, as it was', () => {
+    const to = { path: '/events/sub004', label: 'Operation', slug: 'sub004' }
+    const before = nested()
+    const out = JSON.parse(rewriteLink(JSON.stringify(before), { source: 'link', stored: 'SUB004' }, to))
+    expect(out[2].rows[0].cells[0].content[0].markDefs[0].href).toBe('/events/sub004')
+    expect(out[2].rows[0].cells[1].content[0].markDefs[0].href).toBe('john-rognes')
+    expect(out[1].content[0].markDefs[0].href).toBe('gone')
+    expect(before[2]).toEqual(nested()[2])   // the input is not changed
+  })
+
+  it('rewrites a person mark in a box, and a link in a box inside a table inside a box', () => {
+    const person = { _key: 'pb', _type: 'block', markDefs: [{ _key: 'p1', _type: 'person', slug: 'sub004', name: 'N' }], children: [{ _key: 'ps', _type: 'span', text: 'R', marks: ['p1'] }] }
+    const to = { path: '/events/sub004', label: 'Operation', slug: 'sub004' }
+    const out = JSON.parse(rewriteLink(JSON.stringify([box(grid(cell('c', person)))]), { source: 'person', stored: 'sub004' }, to))
+    expect(out[0].content[0].rows[0].cells[0].content[0].markDefs[0]).toEqual({ _key: 'p1', _type: 'link', href: '/events/sub004' })
+  })
+
+  it('returns the content as the same string when no link matches', () => {
+    const content = JSON.stringify(nested())
+    const to = { path: '/events/x', label: 'Operation', slug: 'x' }
+    expect(rewriteLink(content, { source: 'link', stored: 'nothing-like-this' }, to)).toBe(content)
   })
 })

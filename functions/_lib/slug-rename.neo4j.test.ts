@@ -154,6 +154,25 @@ describe.skipIf(!ENABLED)('slug rename, against the local Neo4j', () => {
     expect(stored).toContain(`/events/${P}newer\t/events/${P}old`)
   })
 
+  it('renames: a link inside a box and a table cell follows the new slug too (#314)', async () => {
+    const inBox = JSON.stringify([
+      { _type: 'infoBox', _key: 'bx', content: [{ _type: 'table', _key: 'tb', rows: [{ _type: 'row', _key: 'rw', cells: [{ _type: 'cell', _key: 'cl', content: [{
+        _type: 'block', _key: 'b1', markDefs: [{ _key: 'l1', _type: 'link', href: `/events/${P}box-old` }],
+        children: [{ _type: 'span', _key: 's1', text: 'se her', marks: ['l1'] }],
+      }] }] }] }] },
+    ])
+    await runCypher(env, `
+      CREATE (:Operation {slug: $o, canonicalName: 'Boks'})
+      CREATE (:Incident {slug: $h, canonicalName: 'Holder'})-[:HAS_CONTENT]->(:Description {id: $d, order: 1, content: $c})`,
+      { o: `${P}box-old`, h: `${P}box-holder`, d: `desc:Incident:${P}box-holder:1`, c: inBox })
+    const plan = await planRename(env, { label: 'Operation', from: `${P}box-old`, to: `${P}box-new` })
+    expect(plan).toMatchObject({ rewrites: [{ links: 1 }] })
+    expect(await renameSlug(env, { label: 'Operation', from: `${P}box-old`, to: `${P}box-new` }, AT)).toMatchObject({ ok: true, descriptions: 1, links: 1 })
+    const [row] = await runCypher<{ c: string }>(env, `MATCH (d:Description {id: $d}) RETURN d.content AS c`, { d: `desc:Incident:${P}box-holder:1` })
+    const href = (JSON.parse(row.c) as { content: { rows: { cells: { content: { markDefs: { href: string }[] }[] }[] }[] }[] }[])[0].content[0].rows[0].cells[0].content[0].markDefs[0].href
+    expect(href).toBe(`/events/${P}box-new`)
+  })
+
   it('refuses what cannot be renamed', async () => {
     expect(await renameSlug(env, { label: 'Operation', from: `${P}nothing`, to: `${P}x` })).toMatchObject({ status: 404 })
     expect(await renameSlug(env, { label: 'Operation', from: `${P}old`, to: 'Bad Slug' })).toMatchObject({ status: 400 })
