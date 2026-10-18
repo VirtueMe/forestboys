@@ -399,6 +399,8 @@ Long-form prose output from Sanity Portable Text → HTML. Use `body` type at
 - Paragraphs: `sm` (8px) below, preserving single line breaks as typed
 - Headings: serif `h3` size, weight 600, `md` above and `sm` below
 - `pre.pre-table` (a block with the `preformatted` style, chosen in the editor): mono, `paper-sunken` tint, scrolls sideways
+- `div.pt-box` (an `infoBox` container, #313): `paper-raised` with a `1px rule` border and 3px radius, `sm`/`md` padding; it holds blocks and tables. No accent colour: red is not a stripe
+- `table.pt-table` (a `table` container, #313): `body-ui` sans, no tint and no box by default; `md` between columns, `xs` above and below a row; scrolls sideways as one unit. Options on the table add hairlines in `rule`: top and bottom, around, between rows, between columns
 - Inline source reference (`SourceRef.vue`): pill-shaped, see "Filter chip"
 - Lists (`ul`, `ol`): markers sit inside the content column, so the list has
   `lg` (24px) left padding, room for a two-digit number. `xs` (4px) between

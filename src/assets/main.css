@@ -213,6 +213,41 @@ section.section:last-of-type { margin-bottom: var(--space-xl); }
   line-height: 1.65;
   margin: 0 0 var(--space-sm);
 }
+/* A box (#313): blocks, and tables, in a frame; a raised paper tone and a hairline, no accent colour. */
+.portable-text .pt-box {
+  background: var(--paper-raised);
+  border: 1px solid var(--rule);
+  border-radius: 3px;
+  padding: var(--space-sm) var(--space-md);
+  margin: 0 0 var(--space-sm);
+}
+.portable-text .pt-box > :last-child { margin-bottom: 0; }
+
+/* A table of cells (#313): scrolls sideways as one unit; the lines are options on the table, none by default. */
+.portable-text .pt-table-wrap {
+  overflow-x: auto;
+  margin: 0 0 var(--space-sm);
+}
+.portable-text table.pt-table {
+  border-collapse: collapse;
+  font-family: var(--font-sans);
+  font-size: var(--size-body-ui);
+  line-height: 1.45;
+}
+.portable-text .pt-table td {
+  padding: var(--space-xs) var(--space-md);
+  vertical-align: top;
+}
+.portable-text .pt-table td:first-child { padding-left: 0; }
+.portable-text .pt-table td:last-child  { padding-right: 0; }
+.portable-text .pt-table td > :first-child { margin-top: 0; }
+.portable-text .pt-table td > :last-child  { margin-bottom: 0; }
+.portable-text .pt-table--topbottom { border-top: 1px solid var(--rule); border-bottom: 1px solid var(--rule); }
+.portable-text .pt-table--around { border: 1px solid var(--rule); }
+.portable-text .pt-table--around td:first-child { padding-left: var(--space-sm); }
+.portable-text .pt-table--around td:last-child  { padding-right: var(--space-sm); }
+.portable-text .pt-table--rows tr + tr td { border-top: 1px solid var(--rule); }
+.portable-text .pt-table--columns td + td { border-left: 1px solid var(--rule); }
 .portable-text ul,
 .portable-text ol {
   margin: 0 0 var(--space-sm);
