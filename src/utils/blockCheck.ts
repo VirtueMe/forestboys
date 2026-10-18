@@ -10,6 +10,7 @@
  * sections together, in order, because the page shows them under one section heading.
  */
 
+import { isTextBlock, walkBlocks } from './blockTree.ts'
 import { checkContents, headingMessage, type OutlineOptions } from './headingOutline.ts'
 import type { SanityBlock } from './portableText.ts'
 
@@ -46,14 +47,16 @@ const snippet = (s: string) => { const t = s.replace(/\s+/g, ' ').trim(); return
 
 type Found = Omit<BlockFinding, 'content'>
 
-/** The findings that need one block, or the block before it. Headings are left to `checkSections`. */
+/**
+ * The findings that need one block, or the block before it. Headings are left to `checkSections`.
+ * The walk goes into boxes and tables (#314): each list of blocks is judged on its own, so the first block of a
+ * cell has no «block before», and a list in one cell is not compared with the list in the next.
+ */
 export function checkBlocks(blocks: unknown): Found[] {
-  if (!Array.isArray(blocks)) return []
   const out: Found[] = []
-  let before: SanityBlock | undefined      // the block just before, for the list levels
 
-  for (const b of blocks as SanityBlock[]) {
-    if (b?._type !== 'block') { before = undefined; continue }
+  walkBlocks(blocks, (b, { previous }) => {
+    const before = isTextBlock(previous) ? previous : undefined     // the block just before in its own list, for the list levels
     const base = { blockKey: b._key, text: snippet(textOf(b)) }
     const spans = b.children ?? []
 
@@ -86,9 +89,7 @@ export function checkBlocks(blocks: unknown): Found[] {
       const typed = TYPED_MARKUP.exec(s.text ?? '')
       if (typed) out.push({ ...base, kind: 'typed-markup', detail: `Teksten inneholder «${typed[0]}».` })
     }
-
-    before = b
-  }
+  })
   return out
 }
 
