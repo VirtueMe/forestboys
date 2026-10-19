@@ -1,5 +1,38 @@
 # Changelog
 
+## [0.18.0](https://github.com/VirtueMe/forestboys/compare/v0.17.0...v0.18.0) (2026-10-19)
+
+
+### Features
+
+* **descriptions:** archive references are linked inside boxes and tables ([005e769](https://github.com/VirtueMe/forestboys/commit/005e769f38f68541d923bcccb85d1ebfbc4dc18c))
+* **descriptions:** draw a box and a table container on the page and in text ([c294ee8](https://github.com/VirtueMe/forestboys/commit/c294ee8aee304457827724689f3e39fad2431b9c)), closes [#313](https://github.com/VirtueMe/forestboys/issues/313)
+* **descriptions:** lists in boxes and table cells are numbered on their own ([959397b](https://github.com/VirtueMe/forestboys/commit/959397b3940a68312f835f666a101e20c221076b))
+* **descriptions:** the block check reads inside boxes and tables ([5aa2e75](https://github.com/VirtueMe/forestboys/commit/5aa2e75c2ca7548fbcf043eb432d9a7c303e9204))
+* **descriptions:** the heading check reads inside boxes and flags headings in table cells ([5e7a550](https://github.com/VirtueMe/forestboys/commit/5e7a550f52d3273a52515d84748eb58f235533a8))
+* **descriptions:** the link check and slug rename reach links inside boxes and tables ([e631081](https://github.com/VirtueMe/forestboys/commit/e63108109869375672369759895e519d2a2b1a04))
+* **editor:** a panel for the options of a table: frame, and rules between rows and columns ([40fdc5a](https://github.com/VirtueMe/forestboys/commit/40fdc5a00aadbf5d3f540b881c1ed61a7056fc05))
+* **editor:** insert a box and a table, with cells that take no headings ([45dd3cb](https://github.com/VirtueMe/forestboys/commit/45dd3cb87fb3f0b50f79ee3d04c7f2bb384c505e))
+* **editor:** Tab, Shift+Tab and Enter move through a table, and Backspace stays inside a cell ([b6995f9](https://github.com/VirtueMe/forestboys/commit/b6995f99cd11740c2a5e702e2c2293a8117b452c))
+* **editor:** table tools for rows, columns and deleting, and wrapping blocks in a box or taking one apart ([a8ce821](https://github.com/VirtueMe/forestboys/commit/a8ce821bae3eb8d6fe5feba45bfb34a5da84a48b))
+* **proposals:** bundles treat a box or a table as one block ([45ec32d](https://github.com/VirtueMe/forestboys/commit/45ec32d8f0d2796a931cd03b024090b8ae3b3ecc)), closes [#315](https://github.com/VirtueMe/forestboys/issues/315)
+* **sync:** a description with a box or a table is not empty ([c04fbb4](https://github.com/VirtueMe/forestboys/commit/c04fbb4184bb4f886038696029814343221367d2)), closes [#314](https://github.com/VirtueMe/forestboys/issues/314)
+
+
+### Bug fixes
+
+* **descriptions:** tables scroll sideways instead of wrapping ([b2824db](https://github.com/VirtueMe/forestboys/commit/b2824dbafde219c0bee18f22b4011513ee63ea9c)), closes [#309](https://github.com/VirtueMe/forestboys/issues/309)
+
+
+### Refactoring
+
+* **descriptions:** one walk over the blocks of a description, containers included ([6d83f01](https://github.com/VirtueMe/forestboys/commit/6d83f01831034b07d3b62335d0d08b6360b6b959))
+
+
+### Documentation
+
+* **editor:** the box and the table in the editor, and a save check through DescriptionEditor ([4598cea](https://github.com/VirtueMe/forestboys/commit/4598cea3c612fc1dadadc06aa79a694e42ed5f18))
+
 ## [0.17.0](https://github.com/VirtueMe/forestboys/compare/v0.16.0...v0.17.0) (2026-10-17)
 
 
