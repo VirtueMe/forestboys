@@ -6,7 +6,7 @@
  * which mutates the Section[] array in place so Vue's reactivity flows
  * to bound components.
  */
-import type { EntityPayload, PtBlock } from './useProposalBundle.ts'
+import type { EntityPayload, PtNode } from './useProposalBundle.ts'
 import type { Section } from '@/components/SectionsEditor.vue'
 import type { RelationEntry, RelationTarget } from '@/components/relation/RelationStrategy.ts'
 
@@ -18,11 +18,11 @@ export function blockKeyFromPath(blockPath: string): string | null {
 }
 
 /** Locate a PT block by `_key` across every section. Returns null if none. */
-export function findBlockInSections(sections: Section[], key: string | null): PtBlock | null {
+export function findBlockInSections(sections: Section[], key: string | null): PtNode | null {
   if (!key) return null
   for (const s of sections) {
     try {
-      const blocks = JSON.parse(s.content) as PtBlock[]
+      const blocks = JSON.parse(s.content) as PtNode[]
       const found  = blocks.find((b) => b?._key === key)
       if (found) return found
     } catch { /* skip malformed */ }
@@ -53,7 +53,7 @@ export function synthesizeSectionsFromModifyOps(payload: EntityPayload): Section
       sourcedFrom: null,
     }))
   }
-  const bySection = new Map<string, PtBlock[]>()
+  const bySection = new Map<string, PtNode[]>()
   for (const op of payload.ops) {
     if (op.op !== 'modify-block') continue
     const m = op.blockPath.match(SECTION_PATH_RE)
@@ -91,7 +91,7 @@ export function applyModifyBlockOps(payload: EntityPayload, sections: Section[])
     if (!key) continue
     for (const section of sections) {
       try {
-        const blocks = JSON.parse(section.content) as PtBlock[]
+        const blocks = JSON.parse(section.content) as PtNode[]
         const idx    = blocks.findIndex((b) => b?._key === key)
         if (idx !== -1) {
           blocks[idx] = op.newValue

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type { Section } from '@/components/SectionsEditor.vue'
-import { applyModifyBlockOps } from './proposalMerge.ts'
-import type { BundleOp, EntityPayload } from './useProposalBundle.ts'
+import { applyModifyBlockOps, computeExpectedShas, stableShaBrowser } from './proposalMerge.ts'
+import type { BundleOp, EntityPayload, PtNode } from './useProposalBundle.ts'
 
 const blocks = (text: string, key = 'k1') => JSON.stringify([{ _type: 'block', _key: key, children: [{ _type: 'span', _key: 's', text }] }])
 const section = (order: number, content: string): Section => ({ order, content, citations: [], sourcedFrom: null })
@@ -36,5 +36,25 @@ describe('applyModifyBlockOps: the text ops of a payload, in the preview', () =>
     const sections = [section(1, blocks('Uendret.'))]
     expect(applyModifyBlockOps(payload({ op: 'set-props', props: { a: { from: 1, to: 2 } } }), sections)).toBe(0)
     expect(sections[0].content).toBe(blocks('Uendret.'))
+  })
+})
+
+describe('a container is one block in the preview (#315)', () => {
+  const text = (key: string, t: string) => ({ _type: 'block', _key: key, children: [{ _type: 'span', _key: `${key}s`, text: t }] })
+  const table = (cellText: string) => ({ _type: 'table' as const, _key: 'tab1', rows: [{ _type: 'row', _key: 'r1', cells: [{ _type: 'cell', _key: 'c1', content: [text('x', cellText)] }] }] })
+  const live = () => JSON.stringify([text('a', 'før'), table('Gammel'), text('z', 'etter')])
+  const op = (newValue: PtNode): BundleOp => ({ op: 'modify-block', blockPath: 'section.crew.block.tab1', expectedSha: '', newValue })
+
+  it('replaces the whole container by its key and leaves the blocks around it', () => {
+    const sections = [section(1, live())]
+    expect(applyModifyBlockOps(payload(op(table('Ny'))), sections)).toBe(1)
+    expect(JSON.parse(sections[0].content)).toEqual([text('a', 'før'), table('Ny'), text('z', 'etter')])
+  })
+
+  it('hashes the whole container for the drift check, so a change in a cell is a change', async () => {
+    const before = await computeExpectedShas(payload(op(table('Ny'))), [section(1, live())])
+    expect(before['section.crew.block.tab1']).toBe(await stableShaBrowser(table('Gammel')))
+    const after = await computeExpectedShas(payload(op(table('Ny'))), [section(1, JSON.stringify([table('Endret')]))])
+    expect(after['section.crew.block.tab1']).not.toBe(before['section.crew.block.tab1'])
   })
 })

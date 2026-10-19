@@ -23,7 +23,7 @@ export type EntityStatus = 'pending' | 'accepted' | 'denied' | 'drifted'
 
 export type BundleOp =
   | { op: 'create-entity'; kind: string; slug: string; props: Record<string, unknown>; edges?: { type: string; to: string; props?: Record<string, unknown> }[]; descriptions?: { order: number; content: string }[] }
-  | { op: 'modify-block'; blockPath: string; expectedSha: string; newValue: PtBlock }
+  | { op: 'modify-block'; blockPath: string; expectedSha: string; newValue: PtNode }
   | { op: 'add-edge';     type: string; from: string; to: string; props?: Record<string, unknown> }
   | { op: 'remove-edge';  type: string; from: string; to: string }
   | { op: 'set-description'; order: number; expectedSha: string; content: string }
@@ -41,6 +41,16 @@ export interface PtBlock {
   children: unknown[]
   [k: string]: unknown
 }
+
+/** A box or a table, which holds blocks of its own. For a bundle it is one block: replaced whole, hashed whole (#315). */
+export interface PtContainer {
+  _type: 'infoBox' | 'table'
+  _key:  string
+  [k: string]: unknown
+}
+
+/** What a `modify-block` replaces: a text block, or a container. */
+export type PtNode = PtBlock | PtContainer
 
 export interface BundleEntityRef {
   entityId:  string

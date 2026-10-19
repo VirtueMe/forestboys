@@ -133,6 +133,23 @@ had no op. The op, the package origin and the guard against bridge metadata
 are in ingest and apply (**#161**, `PROPOSALS.md`): a bundle the scripts write
 is ingested as it is.
 
+### Containers in a description (#308, #315)
+
+A description can hold a box (`infoBox`) or a table (`table › row › cell`), which hold blocks of their own
+(`docs/PORTABLETEXT.md`). For a bundle a top-level container is **one block**, so nothing about the ops changes shape:
+
+- `modify-block` replaces a container whole: `newValue` is the whole container, `blockPath` names it by its `_key` like any
+  top-level block, and `expectedSha` is the sha of all of it, so a change inside a cell is drift. There is no path to a block
+  inside a cell, and none is needed: the review shows the container before and after, and the page draws it
+  (`blocksToHtml`).
+- `set-description` and a `create-entity` description carry the JSON of the whole text as before; a package's descriptions
+  are compared as values, so a container is carried and compared like the rest.
+- Ingest refuses a malformed container (`functions/_lib/description-blocks.ts`): a box holds text blocks and tables; a table
+  has rows, a row has cells, a cell holds text blocks only and no heading; `frame` is `none`, `topBottom` or `around`;
+  `rowLines` and `columnLines` are booleans; every node has a `_key`. A top-level entry of any other type than a text block
+  or these two is refused in `modify-block`, and left as it is in a description's JSON.
+- The bot keeps or replaces a container whole and does not make new ones (`scripts/prompts/proposal-bundle.txt`).
+
 ### Matching
 
 Which graph entity a snapshot is compared with is decided by the caller, in

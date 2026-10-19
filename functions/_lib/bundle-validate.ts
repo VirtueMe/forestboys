@@ -11,6 +11,7 @@ import {
 } from './bundle-origin.ts'
 import { isBridgeProp } from './bundle-package.ts'
 import { ENTITY_ID_RE, isNodeRef } from './entity-ref.ts'
+import { checkContentContainers, checkTopLevelBlock } from './description-blocks.ts'
 
 export const ENTITY_KINDS = new Set([
   'Person', 'Unit', 'Station', 'Transport',
@@ -211,6 +212,8 @@ function validateOp(eid: string, op: Record<string, unknown>, origin: BundleOrig
           if (!Number.isInteger(dd.order) || (dd.order as number) < 1)      return `${eid} create-entity: description.order must be int >= 1`
           if (typeof dd.content !== 'string')                                return `${eid} create-entity: description.content must be string (JSON-encoded PT array)`
           try { JSON.parse(dd.content) } catch                                { return `${eid} create-entity: description.content must be JSON` }
+          const badContainer = checkContentContainers(dd.content, `${eid} create-entity: description.content`)
+          if (badContainer) return badContainer
         }
       }
       return null
@@ -219,9 +222,8 @@ function validateOp(eid: string, op: Record<string, unknown>, origin: BundleOrig
       if (typeof op.blockPath !== 'string' || !BLOCK_PATH_RE.test(op.blockPath)) return `${eid} modify-block: blockPath must match section.<slug>.block.<key>`
       if (typeof op.expectedSha !== 'string')                                    return `${eid} modify-block: expectedSha required (may be empty for v1)`
       if (!op.newValue || typeof op.newValue !== 'object')                       return `${eid} modify-block: newValue required`
-      const nv = op.newValue as Record<string, unknown>
-      if (nv._type !== 'block' || !Array.isArray(nv.children))                   return `${eid} modify-block: newValue must be PT block (_type "block", children[])`
-      return null
+      // A text block, or a whole container (a box, a table): a top-level container is one block for a bundle (#315).
+      return checkTopLevelBlock(op.newValue, `${eid} modify-block: newValue`)
     }
     case 'add-edge':
     case 'remove-edge': {
@@ -240,7 +242,7 @@ function validateOp(eid: string, op: Record<string, unknown>, origin: BundleOrig
       if (typeof op.content !== 'string')                            return `${eid} set-description: content must be a string (JSON-encoded PT array)`
       try { if (!Array.isArray(JSON.parse(op.content))) return `${eid} set-description: content must be a JSON array of blocks` }
       catch { return `${eid} set-description: content must be JSON` }
-      return null
+      return checkContentContainers(op.content, `${eid} set-description: content`)
     }
     case 'set-props': {
       const props = op.props as Record<string, unknown> | undefined
