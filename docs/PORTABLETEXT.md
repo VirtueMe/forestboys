@@ -321,7 +321,37 @@ hold blocks, and `blocksToHtml` and `blocksToText` read the tree:
   A heading in a box counts in the section's outline; a table cell holds none (reported as `in-cell`).
 - **Bundles** treat a top-level container as one block (#315): `modify-block` replaces it whole, hashed whole for `expectedSha`,
   and ingest checks the tree (`functions/_lib/description-blocks.ts`). `docs/BUNDLE-FORMAT.md`, *Containers*.
-- The editor (#312) learns to make them; until then a description with a container is only ever made by hand.
+- **The editor makes them** (#312), described below.
+
+#### Making them in the editor (#312)
+
+`src/components/PortableTextEditorReact.tsx` registers the containers (`defineContainer`: `infoBox`, `table`, `row`, `cell`), and the
+schema says what each may hold: a box holds text blocks and tables, a cell holds paragraphs and quotes (with the lists and marks of
+the root schema) and **no headings**, which the heading check and ingest refuse as well. The toolbar:
+
+- **Infoboks** inserts an empty box after the block with the caret. With the caret in a box it takes the box apart (what it held stays,
+  in order); with text blocks selected across several paragraphs it wraps them in a new box. It is off in a cell, and for a selection
+  that takes in a box or a table.
+- **Tabell med celler** inserts a 2 × 2 table, at the top or in a box, never in a cell. The older fixed-width *Tabell* button
+  (`preformatted`) is a different thing and is off in a cell.
+- **Tabellverktøy** (on only with the caret in a cell) opens a panel: a row above or below, a column before or after, delete the row, the
+  column or the table; the **frame** (none, top and bottom, around); and switches for the rules between rows and between columns.
+  A table keeps one row and one column.
+
+The keys in a cell: **Tab** goes to the next cell (in the last cell it adds a row), **Shift+Tab** goes back (from the first cell it
+leaves the editor, so the keyboard is never trapped), **Enter** adds a block in the cell, and **Backspace** at the very start of a
+cell and **Delete** at the very end do nothing: Backspace used to take the last character off the paragraph before the table.
+
+Things that are easy to get wrong:
+
+- A change to a table is one `block.set` of its fields (`rows`, or an option), so it is one undo step. The pure logic is in
+  `src/utils/tableNav.ts`, the walk over the tree in `src/utils/blockTree.ts`.
+- **A field the schema does not name is dropped by the editor.** A new table option needs the schema (`blockObjects` in the editor),
+  the validator (`functions/_lib/description-blocks.ts`), the page renderer (`containerHtml`) and the panel to agree.
+- A node with the default state carries no field (`frame: 'none'` and `rowLines: false` are never written).
+- Replacing a block with `set` cannot be undone and left a block twice: wrapping uses insert and delete, with fresh keys on the copies.
+- While editing, the cells have a dotted rule so there is somewhere to put the caret; the options are drawn as solid rules over it.
+  The page draws the final look (`.pt-box`, `.pt-table`).
 
 Sanity has no such style, so everything that takes a description in from Sanity runs it through
 `preformattedFromSanity` (the description sync, the event and person rules, the importers). The graph and
