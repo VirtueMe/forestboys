@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { containedBy, isContainer, mapBlocks, siblingLists, walkBlocks, type Place, type TreeNode } from './blockTree.ts'
+import { containedBy, findNode, isContainer, mapBlocks, siblingLists, walkBlocks, type Place, type TreeNode } from './blockTree.ts'
 import type { SanityBlock } from './portableText.ts'
 
 const p = (key: string, text = key, over: Partial<SanityBlock> = {}): SanityBlock =>
@@ -125,5 +125,32 @@ describe('mapBlocks', () => {
     const out = mapBlocks([c], upper) as { left: unknown[] }[]
     expect(out[0].left[1]).toBe('stray')
     expect(textsOf(out)).toEqual(['X'])
+  })
+})
+
+describe('findNode', () => {
+  it('finds a text block at the top, with the path of one step and no containers around it', () => {
+    const found = findNode(tree(), 'f')
+    expect(found?.path).toEqual([{ _key: 'f' }])
+    expect(found?.containers).toEqual([])
+  })
+
+  it('finds a block in a cell with the editor path to it and the containers around it, outermost first', () => {
+    const found = findNode(tree(), 'd')
+    expect(found?.path).toEqual([
+      { _key: 'box' }, 'content', { _key: 't' }, 'rows', { _key: 'r' }, 'cells', { _key: 'c1' }, 'content', { _key: 'd' },
+    ])
+    expect(found?.containers.map(c => c._type)).toEqual(['infoBox', 'table', 'row', 'cell'])
+  })
+
+  it('finds a container itself, and its path', () => {
+    const found = findNode(tree(), 't')
+    expect(found?.node._type).toBe('table')
+    expect(found?.path).toEqual([{ _key: 'box' }, 'content', { _key: 't' }])
+  })
+
+  it('answers null for a key that is not there, and for what is not a list', () => {
+    expect(findNode(tree(), 'nope')).toBeNull()
+    expect(findNode(null, 'a')).toBeNull()
   })
 })
