@@ -26,10 +26,13 @@ import {
 import React from 'react'
 import { neo4jQuery } from '@/composables/useNeo4j.ts'
 import { linkTextRange, selectionTextRange, splitMarks, type SpanPoint, type TextRange } from '@/utils/linkText.ts'
-import { walkBlocks, type PathSegment } from '@/utils/blockTree.ts'
+import { findNode, siblingLists, walkBlocks, type PathSegment } from '@/utils/blockTree.ts'
 import { listIndexes, type ListBlock } from '@/utils/listIndex.ts'
 import { hasLinkMark, resolveLinkTarget, type SanityBlock } from '@/utils/portableText.ts'
-import { cellAt, firstBlockOf, firstSpanKey, lastBlockOf, lastSpanOf, nextCell, previousCell, rowsWithBlockIn, rowsWithRowAfter, type CellAt } from '@/utils/tableNav.ts'
+import {
+  addColumn, addRow, cellAt, columnsOf, deleteColumn, deleteRow, emptyBlock, firstBlockOf, firstSpanKey, lastBlockOf, lastSpanOf, nextCell, previousCell,
+  rowsWithBlockIn, rowsWithRowAfter, type CellAt, type StructureEdit,
+} from '@/utils/tableNav.ts'
 
 const DECORATORS = ['strong', 'em', 'underline'] as const
 
@@ -652,6 +655,115 @@ const shiftTabInTable = defineBehavior({
   }],
 })
 
+/** A caret at the start of a top-level or box text block, for when a table is gone and the caret needs a home. */
+function blockStart(path: PathSegment[], block: { children?: { _key: string }[] }): NonNullable<EditorSelection> | null {
+  const span = block.children?.[0]?._key
+  if (!span) return null
+  const point = { path: [...path, 'children', { _key: span }], offset: 0 }
+  return { anchor: point, focus: point }
+}
+
+/** Remove the table the caret is in. A table in a box is taken out of the box's content (the box keeps one empty paragraph if it held nothing else). */
+function deleteTable(editor: ReturnType<typeof useEditor>): void {
+  const snap = editor.getSnapshot()
+  const at = caretCell(snap)
+  if (!at) return
+  const key = at.table._key as string
+  const found = findNode(snap.context.value, key)
+  const parent = found?.containers.at(-1)
+  const parentPath = found?.path.slice(0, -2)
+  const list = siblingLists(snap.context.value).find(l => l.list.some(n => n._key === key))?.list ?? []
+  const i = list.findIndex(n => n._key === key)
+  const near = [list[i - 1], list[i + 1]].find(n => n?._type === 'block') as { _key: string; children?: { _key: string }[] } | undefined
+  if (parent?._type === 'infoBox' && parentPath) {
+    const rest = list.filter(n => n._key !== key)
+    editor.send({ type: 'block.set', at: parentPath, props: { content: rest.length ? rest : [emptyBlock(keyGenerator)] } })
+    const first = (rest.length ? near : undefined) ?? undefined
+    const sel = first && blockStart([...parentPath, 'content', { _key: first._key }], first)
+    if (sel) editor.send({ type: 'select', at: sel })
+    return
+  }
+  editor.send({ type: 'unset', at: at.tablePath })
+  const sel = near && blockStart([{ _key: near._key }], near)
+  if (sel) editor.send({ type: 'select', at: sel })
+}
+
+/**
+ * The keys of the top-level blocks a selection spans, when there is more than the caret and a box could take them all:
+ * every one a text block, none a container (a table in the selection is left for the person to move). Null otherwise.
+ */
+function wrappableKeys(snapshot: Parameters<typeof getFocusTextBlock>[0]): string[] | null {
+  const sel = snapshot.context.selection
+  if (!sel || !isSelectionExpanded(snapshot)) return null
+  const top = (snapshot.context.value as { _key: string; _type: string }[])
+  const at = (p: unknown[]) => top.findIndex(n => n._key === (p[0] as { _key?: string } | undefined)?._key)
+  const a = at(sel.anchor.path), f = at(sel.focus.path)
+  if (a === -1 || f === -1) return null
+  const span = top.slice(Math.min(a, f), Math.max(a, f) + 1)
+  return span.every(n => n._type === 'block') ? span.map(n => n._key) : null
+}
+
+/** Do the anchor and the focus of the selection sit in different top-level nodes? */
+function spansTopLevel(snapshot: Parameters<typeof getFocusTextBlock>[0]): boolean {
+  const sel = snapshot.context.selection
+  const top = (p: unknown[]) => (p[0] as { _key?: string } | undefined)?._key
+  return !!sel && top(sel.anchor.path) !== top(sel.focus.path)
+}
+
+const WRAP_BLOCKS = 'custom.wrapBlocks'
+const UNWRAP_BOX  = 'custom.unwrapBox'
+
+/**
+ * Put the top-level text blocks `keys` (consecutive, in order) in one new box: a box with copies of them goes in before
+ * the first, and the originals go (#312). Only insert and delete, which the editor can undo: replacing the first block
+ * by the box with `set` could not be undone, and left the second block twice. The copies have keys of their own, so
+ * no step of an undo leaves two nodes with one key.
+ */
+const wrapBlocksBehavior = defineBehavior<{ keys: string[] }>({
+  on: WRAP_BLOCKS,
+  actions: [({ snapshot, event }) => {
+    type Text = { _key: string; _type?: string; children?: { _key: string }[] }
+    const top = snapshot.context.value as Text[]
+    const nodes = event.keys.map(k => top.find(n => n._key === k)).filter((n): n is Text => !!n)
+    if (!nodes.length || nodes.length !== event.keys.length || nodes.some(n => n._type !== 'block' || !n.children?.length)) return []
+    const copies = nodes.map(n => ({ ...n, _key: keyGenerator(), children: n.children!.map(c => ({ ...c, _key: keyGenerator() })) }))
+    const box = { _type: 'infoBox', _key: keyGenerator(), content: copies }
+    const point = { path: [{ _key: nodes[0]._key }, 'children', { _key: nodes[0].children![0]._key }], offset: 0 }
+    const sel = blockStart([{ _key: box._key }, 'content', { _key: copies[0]._key }], copies[0])
+    return [
+      execute({ type: 'insert.block', block: box, placement: 'before', at: { anchor: point, focus: point } } as never),
+      ...event.keys.map(k => execute({ type: 'delete.block', at: [{ _key: k }] })),
+      ...(sel ? [execute({ type: 'select', at: sel })] : []),
+    ]
+  }],
+})
+
+/** Take the box apart: what it held stays where the box was, in the same order, as one undo step. */
+const unwrapBoxBehavior = defineBehavior<{ boxKey: string }>({
+  on: UNWRAP_BOX,
+  actions: [({ snapshot, event }) => {
+    const box = findNode(snapshot.context.value, event.boxKey)?.node
+    if (box?._type !== 'infoBox') return []
+    const boxPath: PathSegment[] = [{ _key: event.boxKey }]
+    const children = (box.content as { _key: string }[] | undefined) ?? []
+    return [
+      ...children.map(c => execute({ type: 'move.block', at: [...boxPath, 'content', { _key: c._key }], to: boxPath })),
+      execute({ type: 'unset', at: boxPath }),
+    ]
+  }],
+})
+
+function wrapBlocks(editor: ReturnType<typeof useEditor>, keys: string[]): void {
+  editor.send({ type: WRAP_BLOCKS, keys } as never)
+}
+
+function unwrapBox(editor: ReturnType<typeof useEditor>): void {
+  const snap = editor.getSnapshot()
+  const key = getFocusTextBlock(snap)?.node._key
+  const box = (key ? findNode(snap.context.value, key) : null)?.containers[0]
+  if (box?._type === 'infoBox') editor.send({ type: UNWRAP_BOX, boxKey: box._key as string } as never)
+}
+
 /** What the link box was opened on — fixed then, so a click elsewhere in the editor can't change what Enter does. */
 interface LinkTarget {
   /** The selected words: the ones to link, or to take a link off. */
@@ -849,21 +961,107 @@ function ContainerButtons() {
   const editor    = useEditor()
   const ancestors = useEditorSelector(editor, focusAncestors)
   const noFocus   = useEditorSelector(editor, snapshot => !getFocusTextBlock(snapshot))
-  const boxOff    = noFocus || ancestors.length > 0
+  const wrapKeys  = useEditorSelector(editor, snapshot => (wrappableKeys(snapshot) ?? []).join(','))
+  const expanded  = useEditorSelector(editor, isSelectionExpanded)
+  const crossTop  = useEditorSelector(editor, spansTopLevel)
+  const inBox     = ancestors[0] === 'infoBox' && !ancestors.includes('cell') && !crossTop
+  const unfit     = expanded && !wrapKeys && !inBox      // more than the caret, and not something a box can take
+  const boxOff    = noFocus || ancestors.includes('cell') || unfit
   const tableOff  = noFocus || ancestors.includes('cell')
   const insert = (block: object) => editor.send({ type: 'insert.block', block, placement: 'after', select: 'start' } as never)
   return React.createElement(
     React.Fragment, null,
     React.createElement(ToolbarButton, {
-      label: boxIcon, active: false, disabled: boxOff, ariaLabel: 'Infoboks',
-      title: noFocus ? 'Sett markøren i teksten først' : boxOff ? 'En infoboks kan ikke ligge i en boks eller en tabell' : 'Infoboks',
-      onClick: () => insert(newBox()),
+      label: boxIcon, active: inBox, disabled: boxOff, ariaLabel: 'Infoboks',
+      title: noFocus ? 'Sett markøren i teksten først'
+        : ancestors.includes('cell') ? 'En infoboks kan ikke ligge i en tabellcelle'
+        : unfit ? 'Det merkede kan ikke settes i en infoboks'
+        : inBox ? 'Løs opp infoboksen: innholdet blir stående'
+        : wrapKeys ? 'Sett det merkede i en infoboks' : 'Infoboks',
+      onClick: () => (inBox ? unwrapBox(editor) : wrapKeys ? wrapBlocks(editor, wrapKeys.split(',')) : insert(newBox())),
     }),
     React.createElement(ToolbarButton, {
       label: cellsIcon, active: false, disabled: tableOff, ariaLabel: 'Tabell med celler',
       title: noFocus ? 'Sett markøren i teksten først' : tableOff ? 'En tabell kan ikke ligge i en tabellcelle' : 'Tabell med celler',
       onClick: () => insert(newTable()),
     }),
+  )
+}
+
+/**
+ * The tools of the table the caret is in: add a row above or below, a column before or after, delete the row, the
+ * column or the table (#312). Each is one change to the table's `rows`, so it is one undo step. A table keeps at least
+ * one row and one column: the delete buttons are off for the last of them, and «Slett tabell» is there for the rest.
+ */
+function TablePanel() {
+  const editor  = useEditor()
+  const inTable = useEditorSelector(editor, snapshot => caretCell(snapshot) !== null)
+  const rowCount = useEditorSelector(editor, snapshot => (caretCell(snapshot)?.table.rows as unknown[] | undefined)?.length ?? 0)
+  const colCount = useEditorSelector(editor, snapshot => { const t = caretCell(snapshot)?.table; return t ? columnsOf(t) : 0 })
+  const [open, setOpen] = React.useState(false)
+  React.useEffect(() => { if (!inTable) setOpen(false) }, [inTable])
+  const root = React.useRef<HTMLSpanElement>(null)
+
+  React.useEffect(() => {
+    if (!open) return
+    const onDown = (e: MouseEvent) => { if (!root.current?.contains(e.target as Node)) setOpen(false) }
+    const onKey  = (e: KeyboardEvent) => { if (e.key === 'Escape') { e.preventDefault(); setOpen(false) } }
+    document.addEventListener('mousedown', onDown)
+    document.addEventListener('keydown', onKey, true)
+    return () => {
+      document.removeEventListener('mousedown', onDown)
+      document.removeEventListener('keydown', onKey, true)
+    }
+  }, [open])
+
+  /** Apply one edit to the caret's table; the caret goes where the edit says, or stays. */
+  const run = (make: (at: CellAt) => StructureEdit | null) => {
+    const at = caretCell(editor.getSnapshot())
+    const edit = at && make(at)
+    if (!at || !edit) return
+    editor.send({ type: 'block.set', at: at.tablePath, props: { rows: edit.rows } })
+    const sel = edit.select && cellStart(at, edit.select.row, edit.select.col, edit.rows)
+    if (sel) editor.send({ type: 'select', at: sel })
+    setOpen(false)
+  }
+
+  const item = (label: string, aria: string, onClick: () => void, disabled = false) => React.createElement(
+    'button',
+    {
+      type: 'button', className: 'pt-menu-item', disabled, 'aria-label': aria,
+      onMouseDown: (e: React.MouseEvent) => e.preventDefault(),   // keep the selection
+      onClick,
+    },
+    label,
+  )
+  const group = (title: string, ...items: React.ReactElement[]) => React.createElement(
+    'div', { className: 'pt-panel-group', key: title },
+    React.createElement('span', { className: 'pt-panel-title' }, title),
+    React.createElement('div', { className: 'pt-panel-row' }, ...items),
+  )
+
+  return React.createElement(
+    'span',
+    { className: 'pt-tb-menu', ref: root },
+    React.createElement(ToolbarButton, {
+      label: React.createElement(React.Fragment, null, cellsIcon, React.createElement('span', { className: 'pt-tb-caret' }, '▾')),
+      active: open, disabled: !inTable, expanded: open, ariaLabel: 'Tabellverktøy',
+      title: inTable ? 'Rader, kolonner og sletting' : 'Sett markøren i en tabellcelle for å bruke tabellverktøyene',
+      onClick: () => setOpen(v => !v),
+    }),
+    open ? React.createElement(
+      'div',
+      { className: 'pt-menu pt-table-panel', role: 'group', 'aria-label': 'Tabellverktøy' },
+      group('Rad',
+        item('Over', 'Ny rad over', () => run(at => addRow(at.table, at.row, 'above', keyGenerator))),
+        item('Under', 'Ny rad under', () => run(at => addRow(at.table, at.row, 'below', keyGenerator))),
+        item('Slett', 'Slett rad', () => run(at => deleteRow(at.table, at.row, at.col)), rowCount < 2)),
+      group('Kolonne',
+        item('Før', 'Ny kolonne før', () => run(at => addColumn(at.table, at.col, 'before', keyGenerator))),
+        item('Etter', 'Ny kolonne etter', () => run(at => addColumn(at.table, at.col, 'after', keyGenerator))),
+        item('Slett', 'Slett kolonne', () => run(at => deleteColumn(at.table, at.col, at.row)), colCount < 2)),
+      group('Tabell', item('Slett tabell', 'Slett tabell', () => { deleteTable(editor); setOpen(false) })),
+    ) : null,
   )
 }
 
@@ -880,6 +1078,7 @@ function Toolbar({ expanded, onToggleExpand }: { expanded: boolean; onToggleExpa
     React.createElement(StyleButton,     { name: 'blockquote', label: '❝' }),
     React.createElement(StyleButton,     { name: 'preformatted', label: preformattedIcon, title: 'Tabell (fast bredde)', ariaLabel: 'Tabell', inListTitle: PREFORMATTED_IN_LIST_TITLE }),
     React.createElement(ContainerButtons),
+    React.createElement(TablePanel),
     React.createElement('span',          { className: 'pt-tb-sep' }),
     React.createElement(DecoratorButton, { name: 'strong',    label: 'B' }),
     React.createElement(DecoratorButton, { name: 'em',        label: 'I' }),
@@ -905,7 +1104,7 @@ export function PortableTextEditorReact({ value, label, generation, onChange, ex
     }),
     React.createElement(ValueReader, { registerReader }),
     React.createElement(NodePlugin, { nodes }),
-    React.createElement(BehaviorPlugin, { behaviors: [replaceWords, listItemIsNoHeading, tabInTable, shiftTabInTable, backspaceAtCellStart, deleteAtCellEnd] }),
+    React.createElement(BehaviorPlugin, { behaviors: [replaceWords, listItemIsNoHeading, tabInTable, shiftTabInTable, backspaceAtCellStart, deleteAtCellEnd, wrapBlocksBehavior, unwrapBoxBehavior] }),
     React.createElement(Toolbar, { expanded, onToggleExpand }),
     React.createElement(PortableTextEditable, {
       'aria-label': label,

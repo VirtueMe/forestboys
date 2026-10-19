@@ -96,3 +96,47 @@ export function lastBlockOf(table: TreeNode, row: number, col: number): TreeNode
 
 /** The key of the last span of a text block, for telling whether the caret is at its end. */
 export const lastSpanOf = (block: TreeNode): TreeNode | undefined => list(block.children).at(-1)
+
+/** What a structure edit makes of the table, and where the caret goes when its cell is gone (null: it stays where it is). */
+export interface StructureEdit {
+  rows:   TreeNode[]
+  select: { row: number; col: number } | null
+}
+
+/** A new empty row above or below `row`, as wide as the widest. The caret stays in its cell: the cells keep their keys. */
+export function addRow(table: TreeNode, row: number, where: 'above' | 'below', newKey: () => string): StructureEdit {
+  const rows = [...list(table.rows)]
+  rows.splice(where === 'above' ? row : row + 1, 0, emptyRow(newKey, columnsOf(table)))
+  return { rows, select: null }
+}
+
+/** The table without `row`; null for its only row (the table goes instead). The caret goes to the same column of the row that took its place. */
+export function deleteRow(table: TreeNode, row: number, col: number): StructureEdit | null {
+  const all = list(table.rows)
+  if (all.length < 2 || !all[row]) return null
+  const rows = all.filter((_, i) => i !== row)
+  const to = Math.min(row, rows.length - 1)
+  return { rows, select: { row: to, col: Math.min(col, Math.max(list(rows[to].cells).length - 1, 0)) } }
+}
+
+/** A new empty cell before or after column `col` in every row; a row too short to have that column gets it at its end. */
+export function addColumn(table: TreeNode, col: number, where: 'before' | 'after', newKey: () => string): StructureEdit {
+  const at = where === 'before' ? col : col + 1
+  const rows = list(table.rows).map(r => {
+    const cells = [...list(r.cells)]
+    cells.splice(Math.min(at, cells.length), 0, emptyCell(newKey))
+    return { ...r, cells }
+  })
+  return { rows, select: null }
+}
+
+/**
+ * The table without column `col`; null for its only column. The caret goes to the cell that took its place in the same
+ * row. A row of one cell keeps it: a row with no cells is not a row (ingest refuses it).
+ */
+export function deleteColumn(table: TreeNode, col: number, row: number): StructureEdit | null {
+  if (columnsOf(table) < 2) return null
+  const rows = list(table.rows).map(r => list(r.cells).length < 2 ? r : { ...r, cells: list(r.cells).filter((_, j) => j !== col) })
+  const cells = list(rows[row]?.cells)
+  return { rows, select: { row: Math.min(row, rows.length - 1), col: Math.min(col, Math.max(cells.length - 1, 0)) } }
+}

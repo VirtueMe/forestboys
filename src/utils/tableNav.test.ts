@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { TreeNode } from './blockTree.ts'
-import { cellAt, columnsOf, emptyRow, firstBlockOf, firstSpanKey, nextCell, previousCell, rowsWithBlockIn, rowsWithRowAfter } from './tableNav.ts'
+import { addColumn, addRow, cellAt, columnsOf, deleteColumn, deleteRow, emptyRow, firstBlockOf, firstSpanKey, nextCell, previousCell, rowsWithBlockIn, rowsWithRowAfter } from './tableNav.ts'
 
 const p = (key: string) => ({ _type: 'block', _key: key, style: 'normal', children: [{ _type: 'span', _key: `${key}s`, text: key }] })
 const cell = (key: string, ...content: unknown[]) => ({ _type: 'cell', _key: key, content })
@@ -121,5 +121,94 @@ describe('rowsWithBlockIn', () => {
     expect(firstBlockOf({ ...t, rows }, 0, 0)).toMatchObject({ _type: 'block', style: 'normal' })
     expect(rows[1]).toBe((t.rows as TreeNode[])[1])
     expect((t.rows as TreeNode[])[0].cells).toEqual([cell('c0')])    // the input is not changed
+  })
+})
+
+describe('structure edits', () => {
+  let n = 0
+  const key = () => `n${n++}`
+  const keys = (rows: TreeNode[]) => rows.map(r => r._key)
+  const widths = (rows: TreeNode[]) => rows.map(r => (r.cells as TreeNode[]).length)
+  const cellKeys = (rows: TreeNode[], i: number) => (rows[i].cells as TreeNode[]).map(c => c._key)
+
+  describe('addRow', () => {
+    it('puts a new row above or below, as wide as the widest, and keeps the other rows and the caret where they are', () => {
+      const t = tableOf()
+      const below = addRow(t, 1, 'below', key)
+      expect(keys(below.rows).filter(k => !String(k).startsWith('n'))).toEqual(['r0', 'r1', 'r2'])
+      expect(below.rows.map(r => r._key)[2]).toMatch(/^n/)
+      expect(widths(below.rows)).toEqual([2, 2, 2, 1])
+      expect(below.select).toBeNull()
+      const above = addRow(t, 0, 'above', key)
+      expect(above.rows[0]._key).toMatch(/^n/)
+      expect(above.rows[1]._key).toBe('r0')
+    })
+
+    it('does not change the table it was given', () => {
+      const t = tableOf(); const before = JSON.stringify(t)
+      addRow(t, 0, 'below', key)
+      expect(JSON.stringify(t)).toBe(before)
+    })
+  })
+
+  describe('deleteRow', () => {
+    it('takes the row out and puts the caret in the same column of the row that took its place', () => {
+      const out = deleteRow(tableOf(), 1, 1)!
+      expect(keys(out.rows)).toEqual(['r0', 'r2'])
+      expect(out.select).toEqual({ row: 1, col: 0 })    // r2 has one cell: the column is cut to fit
+    })
+
+    it('puts the caret in the row above when the last row went', () => {
+      expect(deleteRow(tableOf(), 2, 0)!.select).toEqual({ row: 1, col: 0 })
+    })
+
+    it('refuses the only row, and a row that is not there', () => {
+      expect(deleteRow(table('t', row('r', cell('c', p('x')))) as TreeNode, 0, 0)).toBeNull()
+      expect(deleteRow(tableOf(), 9, 0)).toBeNull()
+    })
+  })
+
+  describe('addColumn', () => {
+    it('puts a new cell before or after the column in every row, and a short row gets it at its end', () => {
+      const t = tableOf()
+      const after = addColumn(t, 0, 'after', key)
+      expect(widths(after.rows)).toEqual([3, 3, 2])
+      expect(cellKeys(after.rows, 0)[0]).toBe('c00')
+      expect(cellKeys(after.rows, 0)[1]).toMatch(/^n/)
+      expect(cellKeys(after.rows, 0)[2]).toBe('c01')
+      const before = addColumn(t, 0, 'before', key)
+      expect(cellKeys(before.rows, 1)[0]).toMatch(/^n/)
+      expect(cellKeys(before.rows, 1)[1]).toBe('c10')
+      expect(before.select).toBeNull()
+    })
+
+    it('does not change the table it was given', () => {
+      const t = tableOf(); const before = JSON.stringify(t)
+      addColumn(t, 1, 'after', key)
+      expect(JSON.stringify(t)).toBe(before)
+    })
+
+    it('makes every new cell hold one empty paragraph', () => {
+      const cellsOfNew = (addColumn(tableOf(), 1, 'after', key).rows[0].cells as TreeNode[])[2]
+      expect(cellsOfNew.content).toHaveLength(1)
+      expect((cellsOfNew.content as TreeNode[])[0]).toMatchObject({ _type: 'block', style: 'normal' })
+    })
+  })
+
+  describe('deleteColumn', () => {
+    it('takes the cell out of every row and puts the caret in the cell that took its place, in the same row', () => {
+      const out = deleteColumn(tableOf(), 0, 1)!
+      expect(widths(out.rows)).toEqual([1, 1, 1])      // the row of one cell keeps it: no row is left with none
+      expect(cellKeys(out.rows, 0)).toEqual(['c01'])
+      expect(out.select).toEqual({ row: 1, col: 0 })
+    })
+
+    it('puts the caret in the cell before when the last column went', () => {
+      expect(deleteColumn(tableOf(), 1, 0)!.select).toEqual({ row: 0, col: 0 })
+    })
+
+    it('refuses the only column', () => {
+      expect(deleteColumn(table('t', row('r', cell('c', p('x')))) as TreeNode, 0, 0)).toBeNull()
+    })
   })
 })

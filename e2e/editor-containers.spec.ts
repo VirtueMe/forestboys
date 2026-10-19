@@ -77,10 +77,11 @@ test.describe('the box and table buttons', () => {
     await expect(box(page)).toHaveAttribute('title', 'Sett markøren i teksten først')
   })
 
-  test('the box button is off in a box and in a cell; the table button only in a cell', async ({ page }) => {
+  test('in a box the box button takes the box apart and the table button still works; in a cell both are off', async ({ page }) => {
     await openEditor(page, 'containers')
     await page.locator('.pt-editable .pt-edit-box > div').first().click()
-    await expect(box(page)).toBeDisabled()
+    await expect(box(page)).toBeEnabled()
+    await expect(box(page)).toHaveAttribute('title', 'Løs opp infoboksen: innholdet blir stående')
     await expect(table(page)).toBeEnabled()
 
     await page.locator('.pt-editable .pt-edit-cell').nth(2).click()
@@ -220,5 +221,196 @@ test.describe('the keyboard in a table', () => {
     await settleSelection(page)
     await page.keyboard.press('ArrowLeft'); await settleSelection(page); await page.keyboard.press('Delete')
     await expect.poll(() => cells(page)).toEqual([['A', ''], ['', '']])
+  })
+})
+
+test.describe('the table tools', () => {
+  const tools = (page: Page) => page.getByRole('button', { name: 'Tabellverktøy' })
+  const use = async (page: Page, name: string) => {
+    await tools(page).click()
+    await page.getByRole('button', { name }).click()
+  }
+  const newTable = async (page: Page, fixture = 'paragraph') => {
+    await openEditor(page, fixture)
+    await caretAtEndOf(page, 'Første avsnitt.')
+    await table(page).click()
+    await settleSelection(page)
+  }
+  /** The text of each cell, row by row, of the first table at the top. */
+  const cells = async (page: Page) => {
+    const t = ((await blocksOf(page)).find(n => n._type === 'table') ?? {}) as { rows?: { cells: { content: Block[] }[] }[] }
+    return (t.rows ?? []).map(r => r.cells.map(c => c.content.map(b => (b.children ?? []).map(sp => sp.text).join('')).join('|')))
+  }
+  /** Put a letter in each cell of a new 2 × 2 table, so a change in its shape can be read. */
+  const filled = async (page: Page) => {
+    await newTable(page)
+    await page.keyboard.type('A')
+    await page.keyboard.press('Tab'); await page.keyboard.type('B')
+    await page.keyboard.press('Tab'); await page.keyboard.type('C')
+    await page.keyboard.press('Tab'); await page.keyboard.type('D')
+    await expect.poll(() => cells(page)).toEqual([['A', 'B'], ['C', 'D']])
+    await page.locator('.pt-editable .pt-edit-cell').nth(1).click()    // the caret in B
+    await settleSelection(page)
+  }
+
+  test('the button is off outside a table and on in a cell, and says what it is for', async ({ page }) => {
+    await openEditor(page, 'containers')
+    await expect(tools(page)).toBeDisabled()
+    await expect(tools(page)).toHaveAttribute('title', 'Sett markøren i en tabellcelle for å bruke tabellverktøyene')
+    await page.locator('.pt-editable .pt-edit-cell').nth(2).click()
+    await expect(tools(page)).toBeEnabled()
+  })
+
+  test('opens a panel with the row, column and table tools, and Esc closes it', async ({ page }) => {
+    await newTable(page)
+    await tools(page).click()
+    const panel = page.getByRole('group', { name: 'Tabellverktøy' })
+    await expect(panel).toBeVisible()
+    for (const name of ['Ny rad over', 'Ny rad under', 'Slett rad', 'Ny kolonne før', 'Ny kolonne etter', 'Slett kolonne', 'Slett tabell']) {
+      await expect(page.getByRole('button', { name })).toBeVisible()
+    }
+    await page.keyboard.press('Escape')
+    await expect(panel).toHaveCount(0)
+  })
+
+  test('adds a row below or above, and the caret stays in its cell', async ({ page }) => {
+    await filled(page)
+    await use(page, 'Ny rad under')
+    await expect.poll(() => cells(page)).toEqual([['A', 'B'], ['', ''], ['C', 'D']])
+    await page.keyboard.type('1')
+    await expect.poll(() => cells(page)).toEqual([['A', 'B1'], ['', ''], ['C', 'D']])
+    await use(page, 'Ny rad over')
+    await expect.poll(() => cells(page)).toEqual([['', ''], ['A', 'B1'], ['', ''], ['C', 'D']])
+  })
+
+  test('adds a column before or after, in every row, and the caret stays in its cell', async ({ page }) => {
+    await filled(page)
+    await use(page, 'Ny kolonne etter')
+    await expect.poll(() => cells(page)).toEqual([['A', 'B', ''], ['C', 'D', '']])
+    await page.keyboard.type('1')
+    await expect.poll(() => cells(page)).toEqual([['A', 'B1', ''], ['C', 'D', '']])
+    await use(page, 'Ny kolonne før')
+    await expect.poll(() => cells(page)).toEqual([['A', '', 'B1', ''], ['C', '', 'D', '']])
+  })
+
+  test('deletes the row the caret is in, and the caret goes to the row that took its place', async ({ page }) => {
+    await filled(page)
+    await use(page, 'Slett rad')
+    await expect.poll(() => cells(page)).toEqual([['C', 'D']])
+    await settleSelection(page)
+    await page.keyboard.type('!')
+    await expect.poll(() => cells(page)).toEqual([['C', '!D']])
+  })
+
+  test('deletes the column the caret is in, and the caret goes to the cell that took its place', async ({ page }) => {
+    await filled(page)
+    await use(page, 'Slett kolonne')
+    await expect.poll(() => cells(page)).toEqual([['A'], ['C']])
+    await settleSelection(page)
+    await page.keyboard.type('!')
+    await expect.poll(() => cells(page)).toEqual([['!A'], ['C']])
+  })
+
+  test('keeps one row and one column: the delete buttons are off for the last of them', async ({ page }) => {
+    await filled(page)
+    await use(page, 'Slett rad')      // the caret was in B, so it goes to D, the cell of its column in the row that took its place
+    await use(page, 'Slett kolonne')  // and D's column goes
+    await expect.poll(() => cells(page)).toEqual([['C']])
+    await tools(page).click()
+    await expect(page.getByRole('button', { name: 'Slett rad' })).toBeDisabled()
+    await expect(page.getByRole('button', { name: 'Slett kolonne' })).toBeDisabled()
+    await expect(page.getByRole('button', { name: 'Slett tabell' })).toBeEnabled()
+  })
+
+  test('is one undo step: a row added is gone with one Ctrl+Z', async ({ page }) => {
+    await filled(page)
+    await use(page, 'Ny rad under')
+    await expect.poll(() => cells(page)).toHaveLength(3)
+    await settleSelection(page)
+    await page.keyboard.press('Control+z')
+    await expect.poll(() => cells(page)).toEqual([['A', 'B'], ['C', 'D']])
+  })
+
+  test('deletes the table and puts the caret in the paragraph before it', async ({ page }) => {
+    await newTable(page)
+    await use(page, 'Slett tabell')
+    await expect.poll(() => tree(page)).toEqual(['Første avsnitt.'])
+    await settleSelection(page)
+    await page.keyboard.type('!')
+    await expect.poll(() => tree(page)).toEqual(['!Første avsnitt.'])
+  })
+
+  test('deletes a table in a box and leaves the box with what else it held', async ({ page }) => {
+    await openEditor(page, 'containers')
+    await page.locator('.pt-editable .pt-edit-box .pt-edit-cell').nth(0).click()
+    await settleSelection(page)
+    await use(page, 'Slett tabell')
+    await expect.poll(async () => (await tree(page)).slice(0, 4)).toEqual(['Før boksen.', '<infoBox>', '  I boksen.', '<table>'])
+  })
+
+  test('deletes the only thing in a box, and the box gets an empty paragraph so it can still be written in', async ({ page }) => {
+    await openEditor(page, 'paragraph')
+    await setFromOutside(page, [
+      { _key: 'p', _type: 'block', style: 'normal', markDefs: [], children: [{ _key: 'ps', _type: 'span', text: 'Før.', marks: [] }] },
+      { _key: 'b', _type: 'infoBox', content: [{ _key: 't', _type: 'table', rows: [{ _key: 'r', _type: 'row', cells: [{ _key: 'c', _type: 'cell', content: [{ _key: 'x', _type: 'block', style: 'normal', markDefs: [], children: [{ _key: 'xs', _type: 'span', text: 'cellen', marks: [] }] }] }] }] }] },
+    ])
+    await page.locator('.pt-editable .pt-edit-cell').first().click()
+    await settleSelection(page)
+    await use(page, 'Slett tabell')
+    await expect.poll(() => tree(page)).toEqual(['Før.', '<infoBox>', '  '])
+  })
+})
+
+test.describe('wrapping in a box and taking a box apart', () => {
+  const para = (key: string, text: string) => ({ _key: key, _type: 'block', style: 'normal', markDefs: [], children: [{ _key: `${key}s`, _type: 'span', text, marks: [] }] })
+  const three = [para('p1', 'Første.'), para('p2', 'Andre.'), para('p3', 'Tredje.')]
+
+  test('takes the box the caret is in apart: what it held stays where the box was, in order, a table included', async ({ page }) => {
+    await openEditor(page, 'containers')
+    const before = await tree(page)
+    expect(before.slice(0, 4)).toEqual(['Før boksen.', '<infoBox>', '  I boksen.', '  <table>'])
+    await page.locator('.pt-editable .pt-edit-box > div').first().click()
+    await settleSelection(page)
+    await box(page).click()
+    await expect.poll(async () => (await tree(page)).slice(0, 4)).toEqual(['Før boksen.', 'I boksen.', '<table>', '  <row>'])
+    expect(await tree(page)).not.toContain('<infoBox>')
+    await expect(page.locator('.pt-editable .pt-edit-box')).toHaveCount(0)
+    expect((await tree(page)).at(-1)).toBe('Etter tabellen.')
+  })
+
+  test('puts the blocks a selection spans in one box, and the rest stays outside', async ({ page }) => {
+    await openEditor(page, 'paragraph')
+    await setFromOutside(page, three)
+    await page.locator('.pt-editable p').nth(0).click()
+    await settleSelection(page)
+    await page.keyboard.press('Shift+ArrowDown')
+    await settleSelection(page)
+    await expect(box(page)).toHaveAttribute('title', 'Sett det merkede i en infoboks')
+    await box(page).click()
+    await expect.poll(() => tree(page)).toEqual(['<infoBox>', '  Første.', '  Andre.', 'Tredje.'])
+  })
+
+  test('is off for a selection that takes in a box, and says why', async ({ page }) => {
+    await openEditor(page, 'containers')
+    await caretAtEndOf(page, 'Før boksen.')
+    await settleSelection(page)
+    await page.keyboard.press('Shift+ArrowDown')
+    await settleSelection(page)
+    await expect(box(page)).toBeDisabled()
+    await expect(box(page)).toHaveAttribute('title', 'Det merkede kan ikke settes i en infoboks')
+  })
+
+  test('wrap and unwrap are each one undo step', async ({ page }) => {
+    await openEditor(page, 'paragraph')
+    await setFromOutside(page, three)
+    await page.locator('.pt-editable p').nth(0).click()
+    await settleSelection(page)
+    await page.keyboard.press('Shift+ArrowDown')
+    await settleSelection(page)
+    await box(page).click()
+    await expect.poll(() => tree(page)).toEqual(['<infoBox>', '  Første.', '  Andre.', 'Tredje.'])
+    await settleSelection(page)
+    await page.keyboard.press('Control+z')
+    await expect.poll(() => tree(page)).toEqual(['Første.', 'Andre.', 'Tredje.'])
   })
 })
