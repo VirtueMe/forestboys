@@ -401,6 +401,7 @@ Long-form prose output from Sanity Portable Text → HTML. Use `body` type at
 - `pre.pre-table` (a block with the `preformatted` style, chosen in the editor): mono, `paper-sunken` tint, scrolls sideways
 - `div.pt-box` (an `infoBox` container, #313): `paper-raised` with a `1px rule` border and 3px radius, `sm`/`md` padding; it holds blocks and tables. No accent colour: red is not a stripe
 - `table.pt-table` (a `table` container, #313): `body-ui` sans, no tint and no box by default; `md` between columns, `xs` above and below a row; scrolls sideways as one unit. Options on the table add hairlines in `rule`: top and bottom, around, between rows, between columns
+- The box and the table **while editing** (`.pt-edit-box`, `.pt-edit-grid`, #312, in `PortableTextEditor.vue`): the box is tinted (`rule` over `paper-raised`) with a `1px rule` border; the cells have a dotted `rule` so there is somewhere to put the caret; the options of a table are drawn as solid `ink-soft` rules over the dotted ones. The table tools open in a `pt-menu` panel anchored to the right of its button so it stays on a phone screen. No accent colour
 - Inline source reference (`SourceRef.vue`): pill-shaped, see "Filter chip"
 - Lists (`ul`, `ol`): markers sit inside the content column, so the list has
   `lg` (24px) left padding, room for a two-digit number. `xs` (4px) between

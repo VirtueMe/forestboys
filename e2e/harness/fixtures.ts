@@ -88,6 +88,15 @@ export const fixtures: Record<string, Block[]> = {
     block('c9', 'Etter tabellen.'),
   ],
 
+  // A table with a heading in a cell: data that came from elsewhere, since the editor offers no heading there (#314).
+  cellHeading: [
+    block('h0', 'Bakgrunn', { style: 'h3' }),
+    { _key: 'tab', _type: 'table', rows: [{ _key: 'r', _type: 'row', cells: [
+      { _key: 'c1', _type: 'cell', content: [block('x1', 'Celle med overskrift', { style: 'h3' })] },
+      { _key: 'c2', _type: 'cell', content: [block('x2', 'Vanlig celle')] },
+    ] }] },
+  ],
+
   // Enough text that the editor's box scrolls inside itself (#123).
   long: Array.from({ length: 40 }, (_, i) => block(`p${i}`, `Avsnitt nummer ${i + 1}. `.repeat(6))),
 }
