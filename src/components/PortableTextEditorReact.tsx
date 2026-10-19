@@ -30,8 +30,8 @@ import { findNode, siblingLists, walkBlocks, type PathSegment } from '@/utils/bl
 import { listIndexes, type ListBlock } from '@/utils/listIndex.ts'
 import { hasLinkMark, resolveLinkTarget, type SanityBlock } from '@/utils/portableText.ts'
 import {
-  addColumn, addRow, cellAt, columnsOf, deleteColumn, deleteRow, emptyBlock, firstBlockOf, firstSpanKey, lastBlockOf, lastSpanOf, nextCell, previousCell,
-  rowsWithBlockIn, rowsWithRowAfter, type CellAt, type StructureEdit,
+  addColumn, addRow, cellAt, columnsOf, deleteColumn, deleteRow, emptyBlock, firstBlockOf, firstSpanKey, frameOf, lastBlockOf, lastSpanOf, nextCell, optionEdit,
+  previousCell, rowsWithBlockIn, rowsWithRowAfter, type CellAt, type StructureEdit, type TableOption,
 } from '@/utils/tableNav.ts'
 
 const DECORATORS = ['strong', 'em', 'underline'] as const
@@ -80,7 +80,11 @@ const schemaDefinition = defineSchema({
   // in a cell as a fault (src/utils/headingOutline.ts) and ingest refuses it (functions/_lib/description-blocks.ts).
   blockObjects: [
     { name: 'infoBox', fields: [{ name: 'content', type: 'array', of: [{ type: 'block' }, { type: 'table' }] }] },
-    { name: 'table',   fields: [{ name: 'rows',    type: 'array', of: [{ type: 'row' }] }] },
+    // The options of a table are fields of its own, so the editor keeps them: a field the schema does not name is dropped.
+    { name: 'table',   fields: [
+      { name: 'rows', type: 'array', of: [{ type: 'row' }] },
+      { name: 'frame', type: 'string' }, { name: 'rowLines', type: 'boolean' }, { name: 'columnLines', type: 'boolean' },
+    ] },
     { name: 'row',     fields: [{ name: 'cells',   type: 'array', of: [{ type: 'cell' }] }] },
     { name: 'cell',    fields: [{ name: 'content', type: 'array', of: [{ type: 'block', styles: [{ name: 'normal' }, { name: 'blockquote' }] }] }] },
   ],
@@ -123,8 +127,14 @@ const rowContainer = defineContainer({
 })
 const tableContainer = defineContainer({
   type: 'table', arrayField: 'rows',
-  render: ({ attributes, children }) => React.createElement('div', { ...attributes, className: 'pt-edit-grid-wrap' },
-    React.createElement('table', { className: 'pt-edit-grid' }, React.createElement('tbody', null, children))),
+  // The options of the table are drawn as classes, as the page does (src/utils/portableText.ts): the frame, and the rules between rows and columns.
+  render: ({ attributes, children, node }) => {
+    const frame = frameOf(node)
+    const classes = ['pt-edit-grid', frame === 'topBottom' && 'pt-edit-grid--topbottom', frame === 'around' && 'pt-edit-grid--around',
+      node.rowLines === true && 'pt-edit-grid--rows', node.columnLines === true && 'pt-edit-grid--columns'].filter(Boolean).join(' ')
+    return React.createElement('div', { ...attributes, className: 'pt-edit-grid-wrap' },
+      React.createElement('table', { className: classes }, React.createElement('tbody', null, children)))
+  },
   of: [rowContainer],
 })
 const boxContainer = defineContainer({
@@ -998,6 +1008,9 @@ function TablePanel() {
   const inTable = useEditorSelector(editor, snapshot => caretCell(snapshot) !== null)
   const rowCount = useEditorSelector(editor, snapshot => (caretCell(snapshot)?.table.rows as unknown[] | undefined)?.length ?? 0)
   const colCount = useEditorSelector(editor, snapshot => { const t = caretCell(snapshot)?.table; return t ? columnsOf(t) : 0 })
+  const frame       = useEditorSelector(editor, snapshot => { const t = caretCell(snapshot)?.table; return t ? frameOf(t) : 'none' })
+  const rowLines    = useEditorSelector(editor, snapshot => caretCell(snapshot)?.table.rowLines === true)
+  const columnLines = useEditorSelector(editor, snapshot => caretCell(snapshot)?.table.columnLines === true)
   const [open, setOpen] = React.useState(false)
   React.useEffect(() => { if (!inTable) setOpen(false) }, [inTable])
   const root = React.useRef<HTMLSpanElement>(null)
@@ -1025,10 +1038,19 @@ function TablePanel() {
     setOpen(false)
   }
 
-  const item = (label: string, aria: string, onClick: () => void, disabled = false) => React.createElement(
+  /** Change one option of the caret's table: one change to its fields, so one undo step. The panel stays open for the next. */
+  const setOption = (change: TableOption) => {
+    const at = caretCell(editor.getSnapshot())
+    if (!at) return
+    const { set, unset } = optionEdit(change)
+    if (Object.keys(set).length) editor.send({ type: 'block.set', at: at.tablePath, props: set })
+    if (unset.length) editor.send({ type: 'block.unset', at: at.tablePath, props: unset })
+  }
+
+  const item = (label: string, aria: string, onClick: () => void, disabled = false, pressed?: boolean) => React.createElement(
     'button',
     {
-      type: 'button', className: 'pt-menu-item', disabled, 'aria-label': aria,
+      type: 'button', className: `pt-menu-item${pressed ? ' active' : ''}`, disabled, 'aria-label': aria, 'aria-pressed': pressed,
       onMouseDown: (e: React.MouseEvent) => e.preventDefault(),   // keep the selection
       onClick,
     },
@@ -1060,6 +1082,13 @@ function TablePanel() {
         item('Før', 'Ny kolonne før', () => run(at => addColumn(at.table, at.col, 'before', keyGenerator))),
         item('Etter', 'Ny kolonne etter', () => run(at => addColumn(at.table, at.col, 'after', keyGenerator))),
         item('Slett', 'Slett kolonne', () => run(at => deleteColumn(at.table, at.col, at.row)), colCount < 2)),
+      group('Ramme',
+        item('Ingen', 'Ingen ramme', () => setOption({ frame: 'none' }), false, frame === 'none'),
+        item('Topp og bunn', 'Ramme topp og bunn', () => setOption({ frame: 'topBottom' }), false, frame === 'topBottom'),
+        item('Rundt', 'Ramme rundt', () => setOption({ frame: 'around' }), false, frame === 'around')),
+      group('Linjer',
+        item('Mellom rader', 'Linjer mellom rader', () => setOption({ rowLines: !rowLines }), false, rowLines),
+        item('Mellom kolonner', 'Linjer mellom kolonner', () => setOption({ columnLines: !columnLines }), false, columnLines)),
       group('Tabell', item('Slett tabell', 'Slett tabell', () => { deleteTable(editor); setOpen(false) })),
     ) : null,
   )

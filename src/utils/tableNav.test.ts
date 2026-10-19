@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { TreeNode } from './blockTree.ts'
-import { addColumn, addRow, cellAt, columnsOf, deleteColumn, deleteRow, emptyRow, firstBlockOf, firstSpanKey, nextCell, previousCell, rowsWithBlockIn, rowsWithRowAfter } from './tableNav.ts'
+import { addColumn, addRow, cellAt, columnsOf, deleteColumn, deleteRow, emptyRow, firstBlockOf, firstSpanKey, frameOf, nextCell, optionEdit, previousCell, rowsWithBlockIn, rowsWithRowAfter } from './tableNav.ts'
 
 const p = (key: string) => ({ _type: 'block', _key: key, style: 'normal', children: [{ _type: 'span', _key: `${key}s`, text: key }] })
 const cell = (key: string, ...content: unknown[]) => ({ _type: 'cell', _key: key, content })
@@ -210,5 +210,28 @@ describe('structure edits', () => {
     it('refuses the only column', () => {
       expect(deleteColumn(table('t', row('r', cell('c', p('x')))) as TreeNode, 0, 0)).toBeNull()
     })
+  })
+})
+
+describe('optionEdit and frameOf', () => {
+  it('writes an option that is not the default', () => {
+    expect(optionEdit({ frame: 'around' })).toEqual({ set: { frame: 'around' }, unset: [] })
+    expect(optionEdit({ frame: 'topBottom' })).toEqual({ set: { frame: 'topBottom' }, unset: [] })
+    expect(optionEdit({ rowLines: true })).toEqual({ set: { rowLines: true }, unset: [] })
+    expect(optionEdit({ columnLines: true })).toEqual({ set: { columnLines: true }, unset: [] })
+  })
+
+  it('takes the field away for the default, so a plain table has no option fields at all', () => {
+    expect(optionEdit({ frame: 'none' })).toEqual({ set: {}, unset: ['frame'] })
+    expect(optionEdit({ rowLines: false })).toEqual({ set: {}, unset: ['rowLines'] })
+    expect(optionEdit({ columnLines: false })).toEqual({ set: {}, unset: ['columnLines'] })
+  })
+
+  it('reads the frame, and a missing or unknown one as none', () => {
+    expect(frameOf({ _type: 'table', frame: 'around' })).toBe('around')
+    expect(frameOf({ _type: 'table', frame: 'topBottom' })).toBe('topBottom')
+    expect(frameOf({ _type: 'table' })).toBe('none')
+    expect(frameOf({ _type: 'table', frame: 'dotted' })).toBe('none')
+    expect(frameOf({ _type: 'table', frame: 'none' })).toBe('none')
   })
 })
