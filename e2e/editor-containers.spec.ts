@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test'
-import { blocksOf, caretAtEndOf, openEditor, setFromOutside } from './helpers/editor.ts'
+import { blocksOf, caretAtEndOf, openEditor, setFromOutside, settleSelection } from './helpers/editor.ts'
 import type { Block } from './harness/types.ts'
 
 // A box and a table in the editor (#312): the containers of a description, which hold blocks of their own.
@@ -101,5 +101,124 @@ test.describe('the box and table buttons', () => {
     await caretAtEndOf(page, 'Etter tabellen.')
     await expect(h3).toBeEnabled()
     await expect(fixed).toBeEnabled()
+  })
+})
+
+test.describe('the keyboard in a table', () => {
+  /** A new 2 × 2 table with the caret in its first cell. */
+  const newTable = async (page: Page) => {
+    await openEditor(page, 'paragraph')
+    await caretAtEndOf(page, 'Første avsnitt.')
+    await table(page).click()
+  }
+  /** The text of each cell, row by row: `[['A', 'B'], ['C', '']]`. */
+  const cells = async (page: Page) => {
+    const t = ((await blocksOf(page)).find(n => n._type === 'table') ?? {}) as { rows?: { cells: { content: Block[] }[] }[] }
+    return (t.rows ?? []).map(r => r.cells.map(c => c.content.map(b => (b.children ?? []).map(s => s.text).join('')).join('|')))
+  }
+
+  test('Tab goes to the next cell, along the row and then to the first cell of the next', async ({ page }) => {
+    await newTable(page)
+    await page.keyboard.type('A')
+    await page.keyboard.press('Tab'); await page.keyboard.type('B')
+    await page.keyboard.press('Tab'); await page.keyboard.type('C')
+    await page.keyboard.press('Tab'); await page.keyboard.type('D')
+    await expect.poll(() => cells(page)).toEqual([['A', 'B'], ['C', 'D']])
+  })
+
+  test('Tab in the last cell adds a row as wide as the table and goes to its first cell', async ({ page }) => {
+    await newTable(page)
+    await page.locator('.pt-editable .pt-edit-cell').nth(3).click()
+    await settleSelection(page)
+    await page.keyboard.type('D')
+    await settleSelection(page)
+    await page.keyboard.press('Tab')
+    await page.keyboard.type('E')
+    await expect.poll(() => cells(page)).toEqual([['', ''], ['', 'D'], ['E', '']])
+    await expect(page.locator('.pt-editable .pt-edit-cell')).toHaveCount(6)
+  })
+
+  test('Shift+Tab goes back along the row and to the last cell of the row before', async ({ page }) => {
+    await newTable(page)
+    await page.locator('.pt-editable .pt-edit-cell').nth(2).click()
+    await settleSelection(page)
+    await page.keyboard.press('Shift+Tab'); await page.keyboard.type('X')
+    await page.keyboard.press('Shift+Tab'); await page.keyboard.type('Y')
+    await expect.poll(() => cells(page)).toEqual([['Y', 'X'], ['', '']])
+  })
+
+  test('Shift+Tab in the first cell leaves the editor, so the keyboard is not trapped, and writes nothing', async ({ page }) => {
+    await newTable(page)
+    await page.keyboard.press('Shift+Tab')
+    const inside = await page.evaluate(() => !!(document.activeElement as { closest(s: string): unknown } | null)?.closest('.pt-editable'))
+    expect(inside).toBe(false)
+    await page.keyboard.type('x')
+    await expect.poll(() => cells(page)).toEqual([['', ''], ['', '']])
+  })
+
+  test('Tab outside a table is the browser\'s: it writes nothing in the text', async ({ page }) => {
+    await openEditor(page, 'containers')
+    await caretAtEndOf(page, 'Før boksen.')
+    await page.keyboard.press('Tab')
+    await page.keyboard.type('x')
+    await expect.poll(() => tree(page).then(t => t[0])).toBe('Før boksen.')
+  })
+
+  test('Tab works in a table inside a box', async ({ page }) => {
+    await openEditor(page, 'containers')
+    await page.locator('.pt-editable .pt-edit-box .pt-edit-cell').nth(0).click()
+    await settleSelection(page)
+    await page.keyboard.press('Tab'); await page.keyboard.type('!')
+    // Tab puts the caret at the start of the cell, so what is typed goes before the text that is there.
+    await expect.poll(async () => (await tree(page)).filter(l => l.includes('B1'))).toEqual(['        !B1'])
+  })
+
+  test('Enter in a cell adds a block in that cell, and Backspace at the start of it joins them again', async ({ page }) => {
+    await newTable(page)
+    await page.keyboard.type('X')
+    await page.keyboard.press('Enter'); await page.keyboard.type('Y')
+    await expect.poll(() => cells(page)).toEqual([['X|Y', ''], ['', '']])
+    await settleSelection(page)
+    await page.keyboard.press('ArrowLeft'); await settleSelection(page); await page.keyboard.press('Backspace')   // the caret is before «Y», at the start of its block
+    await expect.poll(() => cells(page)).toEqual([['XY', ''], ['', '']])
+  })
+
+  test('Backspace at the start of the first cell leaves the paragraph before the table whole', async ({ page }) => {
+    await newTable(page)
+    await settleSelection(page)
+    await page.keyboard.press('Backspace')
+    await page.waitForTimeout(800)
+    expect((await tree(page))[0]).toBe('Første avsnitt.')
+    await expect.poll(() => cells(page)).toEqual([['', ''], ['', '']])
+  })
+
+  test('Backspace at the start of a cell does not take text from the cell before', async ({ page }) => {
+    await newTable(page)
+    await page.keyboard.type('A')
+    await page.keyboard.press('Tab'); await page.keyboard.type('B')
+    await settleSelection(page)
+    await page.keyboard.press('ArrowLeft'); await settleSelection(page); await page.keyboard.press('Backspace')
+    await page.waitForTimeout(800)
+    await expect.poll(() => cells(page)).toEqual([['A', 'B'], ['', '']])
+  })
+
+  test('Delete at the end of a cell does not pull in the next cell', async ({ page }) => {
+    await newTable(page)
+    await page.keyboard.type('A')
+    await page.keyboard.press('Tab'); await page.keyboard.type('B')
+    await page.keyboard.press('Shift+Tab')
+    await settleSelection(page)
+    await page.keyboard.press('End'); await settleSelection(page); await page.keyboard.press('Delete')
+    await page.waitForTimeout(800)
+    await expect.poll(() => cells(page)).toEqual([['A', 'B'], ['', '']])
+  })
+
+  test('Backspace and Delete inside a cell\'s text work as anywhere', async ({ page }) => {
+    await newTable(page)
+    await page.keyboard.type('ABC')
+    await page.keyboard.press('Backspace')
+    await settleSelection(page)
+    await page.keyboard.press('ArrowLeft'); await settleSelection(page); await page.keyboard.press('Delete')
+    await expect.poll(() => cells(page)).toEqual([['A', ''], ['', '']])
   })
 })

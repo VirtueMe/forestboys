@@ -96,3 +96,26 @@ function mapContainer(node: TreeNode, change: (block: SanityBlock, place: Place)
   }
   return copy ?? node
 }
+
+/** One step of an editor path: a field name, or the `_key` of an item in a list. */
+export type PathSegment = string | { _key: string }
+
+/**
+ * The node with `_key === key`, a text block or a container, wherever it is: the node, the editor path to it
+ * (`[{_key: table}, 'rows', {_key: row}, 'cells', {_key: cell}, 'content', {_key: block}]`) and the containers around it,
+ * outermost first. Null when no node has that key.
+ */
+export function findNode(nodes: unknown, key: string, prefix: PathSegment[] = [], chain: TreeNode[] = []): { node: TreeNode; path: PathSegment[]; containers: TreeNode[] } | null {
+  if (!Array.isArray(nodes)) return null
+  for (const node of nodes) {
+    if (!isTyped(node)) continue
+    const path: PathSegment[] = [...prefix, { _key: node._key as string }]
+    if (node._key === key) return { node, path, containers: chain }
+    if (!isContainer(node)) continue
+    for (const [field, list] of listsIn(node)) {
+      const found = findNode(list, key, [...path, field], [...chain, node])
+      if (found) return found
+    }
+  }
+  return null
+}

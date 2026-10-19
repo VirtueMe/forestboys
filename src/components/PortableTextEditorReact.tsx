@@ -18,7 +18,7 @@ import {
   type PortableTextBlock,
   type TextBlockRenderProps,
 } from '@portabletext/editor'
-import { defineBehavior, execute, forward } from '@portabletext/editor/behaviors'
+import { defineBehavior, effect, execute, forward } from '@portabletext/editor/behaviors'
 import { BehaviorPlugin, EventListenerPlugin, NodePlugin } from '@portabletext/editor/plugins'
 import {
   getActiveAnnotations, getFocusTextBlock, getSelectedTextBlocks, getSelectedValue, getSelection, isActiveDecorator, isActiveListItem, isActiveStyle, isSelectionExpanded,
@@ -26,9 +26,10 @@ import {
 import React from 'react'
 import { neo4jQuery } from '@/composables/useNeo4j.ts'
 import { linkTextRange, selectionTextRange, splitMarks, type SpanPoint, type TextRange } from '@/utils/linkText.ts'
-import { walkBlocks } from '@/utils/blockTree.ts'
+import { walkBlocks, type PathSegment } from '@/utils/blockTree.ts'
 import { listIndexes, type ListBlock } from '@/utils/listIndex.ts'
 import { hasLinkMark, resolveLinkTarget, type SanityBlock } from '@/utils/portableText.ts'
+import { cellAt, firstBlockOf, firstSpanKey, lastBlockOf, lastSpanOf, nextCell, previousCell, rowsWithBlockIn, rowsWithRowAfter, type CellAt } from '@/utils/tableNav.ts'
 
 const DECORATORS = ['strong', 'em', 'underline'] as const
 
@@ -552,6 +553,105 @@ const listItemIsNoHeading = defineBehavior({
   actions: [({ event }) => [forward(event), execute({ type: 'style.add', style: 'normal' })]],
 })
 
+/** A caret at the start of the first block of a cell, as a selection the editor takes. */
+function cellStart(cell: CellAt, row: number, col: number, rows: unknown): NonNullable<EditorSelection> | null {
+  const table = { ...cell.table, rows } as CellAt['table']
+  const block = firstBlockOf(table, row, col)
+  const span  = block && firstSpanKey(block)
+  const r = (rows as { _key: string; cells: { _key: string }[] }[])[row]
+  if (!block || !span || !r) return null
+  const path: PathSegment[] = [
+    ...cell.tablePath, 'rows', { _key: r._key }, 'cells', { _key: r.cells[col]._key }, 'content', { _key: block._key as string }, 'children', { _key: span },
+  ]
+  const point = { path, offset: 0 }
+  return { anchor: point, focus: point }
+}
+
+/** Where the caret is in a table: the cell it is in, or null outside one. */
+const caretCell = (snapshot: Parameters<typeof getFocusTextBlock>[0]): CellAt | null => {
+  const key = getFocusTextBlock(snapshot)?.node._key
+  return key ? cellAt(snapshot.context.value, key) : null
+}
+
+const plainTab = (e: { key: string; shiftKey: boolean; altKey: boolean; ctrlKey: boolean; metaKey: boolean }, shift: boolean) =>
+  e.key === 'Tab' && e.shiftKey === shift && !e.altKey && !e.ctrlKey && !e.metaKey
+
+/**
+ * Tab in a table cell goes to the next cell, and in the last cell of the table adds a row and goes to its first cell
+ * (#312). Shift+Tab goes back, and from the first cell is left to the browser, which moves focus out of the editor: a
+ * keyboard user is never trapped. Outside a table Tab is the browser's, as it always was.
+ */
+const tabInTable = defineBehavior({
+  on: 'keyboard.keydown',
+  guard: ({ snapshot, event }) => plainTab(event.originEvent, false) && caretCell(snapshot) !== null,
+  actions: [({ snapshot }) => {
+    const at = caretCell(snapshot)!
+    const to = nextCell(at.table, at.row, at.col)
+    if (to) {
+      const rows = rowsWithBlockIn(at.table, to.row, to.col, keyGenerator)
+      const sel  = cellStart(at, to.row, to.col, rows)
+      return [
+        ...(rows === at.table.rows ? [] : [execute({ type: 'block.set', at: at.tablePath, props: { rows } })]),
+        ...(sel ? [execute({ type: 'select', at: sel })] : []),
+      ]
+    }
+    const { rows } = rowsWithRowAfter(at.table, at.row, keyGenerator)
+    const sel = cellStart(at, at.row + 1, 0, rows)
+    return [execute({ type: 'block.set', at: at.tablePath, props: { rows } }), ...(sel ? [execute({ type: 'select', at: sel })] : [])]
+  }],
+})
+
+/**
+ * Is the caret at the very start of the cell's first block, or the very end of its last? Backspace there would reach
+ * into whatever comes before the table (it took the full stop off the paragraph above), and Delete would pull in the
+ * next cell: neither is something a cell edit means, so they do nothing (#312). Inside the cell, and between its own
+ * blocks, they work as they do anywhere.
+ */
+function caretAtCellEdge(snapshot: Parameters<typeof getFocusTextBlock>[0], edge: 'start' | 'end'): boolean {
+  const at = caretCell(snapshot)
+  const sel = snapshot.context.selection
+  const key = getFocusTextBlock(snapshot)?.node._key
+  if (!at || !sel || isSelectionExpanded(snapshot)) return false
+  const block = edge === 'start' ? firstBlockOf(at.table, at.row, at.col) : lastBlockOf(at.table, at.row, at.col)
+  if (!block || block._key !== key) return false
+  const span = edge === 'start' ? (block.children as { _key: string }[] | undefined)?.[0] : lastSpanOf(block)
+  const focusSpan = (sel.focus.path.at(-1) as { _key?: string } | undefined)?._key
+  if (!span || focusSpan !== span._key) return false
+  const text = (span as { text?: string }).text ?? ''
+  return edge === 'start' ? sel.focus.offset === 0 : sel.focus.offset >= text.length
+}
+
+const backspaceAtCellStart = defineBehavior({
+  on: 'keyboard.keydown',
+  guard: ({ snapshot, event }) => event.originEvent.key === 'Backspace' && !event.originEvent.metaKey && !event.originEvent.ctrlKey && !event.originEvent.altKey && caretAtCellEdge(snapshot, 'start'),
+  actions: [() => [effect(() => undefined)]],
+})
+
+const deleteAtCellEnd = defineBehavior({
+  on: 'keyboard.keydown',
+  guard: ({ snapshot, event }) => event.originEvent.key === 'Delete' && !event.originEvent.metaKey && !event.originEvent.ctrlKey && !event.originEvent.altKey && caretAtCellEdge(snapshot, 'end'),
+  actions: [() => [effect(() => undefined)]],
+})
+
+const shiftTabInTable = defineBehavior({
+  on: 'keyboard.keydown',
+  guard: ({ snapshot, event }) => {
+    if (!plainTab(event.originEvent, true)) return false
+    const at = caretCell(snapshot)
+    return !!at && previousCell(at.table, at.row, at.col) !== null
+  },
+  actions: [({ snapshot }) => {
+    const at = caretCell(snapshot)!
+    const to = previousCell(at.table, at.row, at.col)!
+    const rows = rowsWithBlockIn(at.table, to.row, to.col, keyGenerator)
+    const sel  = cellStart(at, to.row, to.col, rows)
+    return [
+      ...(rows === at.table.rows ? [] : [execute({ type: 'block.set', at: at.tablePath, props: { rows } })]),
+      ...(sel ? [execute({ type: 'select', at: sel })] : []),
+    ]
+  }],
+})
+
 /** What the link box was opened on — fixed then, so a click elsewhere in the editor can't change what Enter does. */
 interface LinkTarget {
   /** The selected words: the ones to link, or to take a link off. */
@@ -805,7 +905,7 @@ export function PortableTextEditorReact({ value, label, generation, onChange, ex
     }),
     React.createElement(ValueReader, { registerReader }),
     React.createElement(NodePlugin, { nodes }),
-    React.createElement(BehaviorPlugin, { behaviors: [replaceWords, listItemIsNoHeading] }),
+    React.createElement(BehaviorPlugin, { behaviors: [replaceWords, listItemIsNoHeading, tabInTable, shiftTabInTable, backspaceAtCellStart, deleteAtCellEnd] }),
     React.createElement(Toolbar, { expanded, onToggleExpand }),
     React.createElement(PortableTextEditable, {
       'aria-label': label,
