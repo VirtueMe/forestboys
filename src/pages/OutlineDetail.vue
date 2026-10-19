@@ -82,6 +82,13 @@
           <!-- eslint-enable vue/no-v-html -->
         </section>
 
+        <section v-if="galleryImages.length" class="section">
+          <h2 class="section-heading">Galleri ({{ galleryImages.length }})</h2>
+          <ImageSlider :images="galleryImages" />
+        </section>
+
+        <PersonExternalRefs v-if="externalRefs.length" :refs="externalRefs" />
+
         <section v-if="mentions.length" class="section">
           <h2 class="section-heading">Omtalte personer ({{ mentions.length }})</h2>
           <div class="link-list">
@@ -112,6 +119,8 @@ import { blocksToHtml } from '../utils/portableText.ts'
 import AdminViewTabs, { type AdminViewMode } from '../components/AdminViewTabs.vue'
 import DescriptionEditor from '../components/DescriptionEditor.vue'
 import BundleReviewPanel from '../components/BundleReviewPanel.vue'
+import ImageSlider from '../components/ImageSlider.vue'
+import PersonExternalRefs from '../components/person/PersonExternalRefs.vue'
 import type { Section } from '../components/SectionsEditor.vue'
 
 const mode = ref<AdminViewMode>('preview')
@@ -121,7 +130,7 @@ const { user } = useAuth()
 const isAdmin = computed(() => user.value?.role === 'admin')
 
 const data = inject(OutlineDataKey, () => useOutlineData(), true)
-const { outline: item, savedSections, mentions, loadOutline, resetOutline } = data
+const { outline: item, savedSections, mentions, externalRefs, galleryImages, loadOutline, resetOutline } = data
 
 const outlineSlug = computed(() => item.value?.slug ?? null)
 const bundles = useEntityBundles({
