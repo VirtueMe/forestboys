@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.18.1](https://github.com/VirtueMe/forestboys/compare/v0.18.0...v0.18.1) (2026-10-19)
+
+
+### Bug fixes
+
+* **outlines:** the outline page shows the images and the links the graph has ([f6a71f8](https://github.com/VirtueMe/forestboys/commit/f6a71f8c648a095fcf7613ab444a1628a3c4a4e8)), closes [#321](https://github.com/VirtueMe/forestboys/issues/321)
+
 ## [0.18.0](https://github.com/VirtueMe/forestboys/compare/v0.17.0...v0.18.0) (2026-10-19)
 
 
