@@ -87,7 +87,7 @@ test.describe('the full window', () => {
 
 // The table button (#260): a block is a table because an editor said so, not because it has a tab.
 test.describe('the table button', () => {
-  const button = (page: import('@playwright/test').Page) => page.getByRole('button', { name: 'Tabell' })
+  const button = (page: import('@playwright/test').Page) => page.getByRole('button', { name: 'Tabell', exact: true })
 
   test('makes the block under the caret preformatted, and a second click makes it a paragraph again', async ({ page }) => {
     await openEditor(page, 'paragraph')

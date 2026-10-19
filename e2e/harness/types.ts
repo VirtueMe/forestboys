@@ -7,6 +7,8 @@ export interface Block {
   level?: number
   markDefs?: { _key: string; _type: string; [prop: string]: unknown }[]
   children?: { _key: string; _type: string; text: string; marks?: string[] }[]
+  /** A container (a box, a table, a row, a cell) holds lists of blocks in fields of its own (#308). */
+  [field: string]: unknown
 }
 
 /** The handle the harness page puts on `window.__harness`. */
