@@ -164,6 +164,16 @@ onBeforeUnmount(() => {
 .pt-menu-item:hover  { background: var(--paper); }
 .pt-menu-item.active { background: var(--focus); color: #fff; border-color: var(--focus); }
 
+/* The tools of a table (#312): small groups of buttons under the toolbar button. */
+.pt-table-panel { left: auto; right: 0; min-width: 200px; max-width: calc(100vw - 32px); gap: 6px; padding: 8px; }
+.pt-panel-group { display: flex; flex-direction: column; gap: 3px; }
+.pt-panel-title { font-size: 11px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: var(--muted); }
+.pt-panel-row { display: flex; flex-wrap: wrap; gap: 4px; }
+.pt-panel-row .pt-menu-item { border-color: var(--rule); }
+.pt-panel-row .pt-menu-item:disabled { opacity: 0.4; cursor: default; }
+.pt-panel-row .pt-menu-item:disabled:hover { background: transparent; }
+.pt-tb-caret { margin-left: 3px; font-size: 10px; }
+
 .pt-tb-btn:disabled { opacity: 0.4; cursor: default; }
 .pt-tb-btn:disabled:hover { background: transparent; }
 .pt-tb-btn.active { background: var(--focus); color: #fff; border-color: var(--focus); }
