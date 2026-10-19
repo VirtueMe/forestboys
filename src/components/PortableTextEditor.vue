@@ -305,6 +305,11 @@ onBeforeUnmount(() => {
   vertical-align: top;
   min-width: 6em;
 }
+/* The options of the table, drawn as a rule that is solid, over the dotted one that is only there to put the caret in (#312). */
+.pt-editable .pt-edit-grid--topbottom { border-top: 1px solid var(--ink-soft); border-bottom: 1px solid var(--ink-soft); }
+.pt-editable .pt-edit-grid--around    { border: 1px solid var(--ink-soft); }
+.pt-editable .pt-edit-grid--rows    tr + tr .pt-edit-cell { border-top-style: solid; border-top-color: var(--ink-soft); }
+.pt-editable .pt-edit-grid--columns .pt-edit-cell + .pt-edit-cell { border-left-style: solid; border-left-color: var(--ink-soft); }
 .pt-editable .pt-edit-cell > :last-child { margin-bottom: 0; }
 .pt-editable .pt-edit-cell p { margin: 0 0 0.4em; }
 

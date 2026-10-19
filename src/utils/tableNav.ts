@@ -140,3 +140,21 @@ export function deleteColumn(table: TreeNode, col: number, row: number): Structu
   const cells = list(rows[row]?.cells)
   return { rows, select: { row: Math.min(row, rows.length - 1), col: Math.min(col, Math.max(cells.length - 1, 0)) } }
 }
+
+/** One option of a table the panel can change: the frame, or one of the two rules. */
+export type TableOption = { frame: 'none' | 'topBottom' | 'around' } | { rowLines: boolean } | { columnLines: boolean }
+
+/**
+ * What a change of one option does to the table's fields (#312): the default state is no field at all, so a plain
+ * table stays plain data (`frame: 'none'`, `rowLines: false` are never written), and what is not the default is written.
+ * The page reads a missing field and a default one alike (src/utils/portableText.ts).
+ */
+export function optionEdit(change: TableOption): { set: Record<string, unknown>; unset: string[] } {
+  const [field, value] = Object.entries(change)[0] as [string, unknown]
+  const isDefault = value === 'none' || value === false
+  return isDefault ? { set: {}, unset: [field] } : { set: { [field]: value }, unset: [] }
+}
+
+/** The frame a table has: a field that is not one of the known frames counts as none. */
+export const frameOf = (table: TreeNode): 'none' | 'topBottom' | 'around' =>
+  table.frame === 'topBottom' || table.frame === 'around' ? table.frame : 'none'

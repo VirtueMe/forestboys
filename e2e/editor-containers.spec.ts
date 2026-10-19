@@ -414,3 +414,127 @@ test.describe('wrapping in a box and taking a box apart', () => {
     await expect.poll(() => tree(page)).toEqual(['Første.', 'Andre.', 'Tredje.'])
   })
 })
+
+test.describe('the options of a table', () => {
+  const tools = (page: Page) => page.getByRole('button', { name: 'Tabellverktøy' })
+  const option = (page: Page, name: string) => page.getByRole('button', { name })
+  /** The first table anywhere in the value, as the editor reported it. */
+  const firstTable = async (page: Page): Promise<Record<string, unknown>> => {
+    const find = (nodes: unknown): Record<string, unknown> | null => {
+      for (const n of (Array.isArray(nodes) ? nodes : []) as Block[]) {
+        if (n._type === 'table') return n
+        for (const f of ['content', 'rows', 'cells']) { const hit = n[f] ? find(n[f]) : null; if (hit) return hit }
+      }
+      return null
+    }
+    return find(await blocksOf(page)) ?? {}
+  }
+  const fields = async (page: Page) => {
+    const t = await firstTable(page)
+    return { frame: t.frame, rowLines: t.rowLines, columnLines: t.columnLines }
+  }
+  const newTable = async (page: Page) => {
+    await openEditor(page, 'paragraph')
+    await caretAtEndOf(page, 'Første avsnitt.')
+    await page.getByRole('button', { name: 'Tabell med celler' }).click()
+    await settleSelection(page)
+    await tools(page).click()
+  }
+
+  test('a new table has no options, and the panel shows no frame and no rules', async ({ page }) => {
+    await newTable(page)
+    await expect(option(page, 'Ingen ramme')).toHaveAttribute('aria-pressed', 'true')
+    await expect(option(page, 'Ramme topp og bunn')).toHaveAttribute('aria-pressed', 'false')
+    await expect(option(page, 'Ramme rundt')).toHaveAttribute('aria-pressed', 'false')
+    await expect(option(page, 'Linjer mellom rader')).toHaveAttribute('aria-pressed', 'false')
+    await expect(option(page, 'Linjer mellom kolonner')).toHaveAttribute('aria-pressed', 'false')
+    expect(await fields(page)).toEqual({ frame: undefined, rowLines: undefined, columnLines: undefined })
+  })
+
+  test('the frame is one of none, top and bottom, around: choosing one replaces the other', async ({ page }) => {
+    await newTable(page)
+    await option(page, 'Ramme rundt').click()
+    await expect.poll(() => fields(page)).toEqual({ frame: 'around', rowLines: undefined, columnLines: undefined })
+    await expect(option(page, 'Ramme rundt')).toHaveAttribute('aria-pressed', 'true')
+    await expect(page.locator('.pt-editable .pt-edit-grid--around')).toHaveCount(1)
+
+    await option(page, 'Ramme topp og bunn').click()
+    await expect.poll(() => fields(page)).toEqual({ frame: 'topBottom', rowLines: undefined, columnLines: undefined })
+    await expect(option(page, 'Ramme rundt')).toHaveAttribute('aria-pressed', 'false')
+    await expect(page.locator('.pt-editable .pt-edit-grid--topbottom')).toHaveCount(1)
+    await expect(page.locator('.pt-editable .pt-edit-grid--around')).toHaveCount(0)
+  })
+
+  test('none takes the frame field away, so a plain table is plain data', async ({ page }) => {
+    await newTable(page)
+    await option(page, 'Ramme rundt').click()
+    await expect.poll(async () => (await firstTable(page)).frame).toBe('around')
+    await option(page, 'Ingen ramme').click()
+    await expect.poll(async () => 'frame' in (await firstTable(page))).toBe(false)
+  })
+
+  test('the rules between rows and between columns are switches, and off takes the field away', async ({ page }) => {
+    await newTable(page)
+    await option(page, 'Linjer mellom rader').click()
+    await option(page, 'Linjer mellom kolonner').click()
+    await expect.poll(() => fields(page)).toEqual({ frame: undefined, rowLines: true, columnLines: true })
+    await expect(page.locator('.pt-editable .pt-edit-grid--rows.pt-edit-grid--columns')).toHaveCount(1)
+
+    await option(page, 'Linjer mellom rader').click()
+    await expect.poll(async () => 'rowLines' in (await firstTable(page))).toBe(false)
+    await expect(option(page, 'Linjer mellom rader')).toHaveAttribute('aria-pressed', 'false')
+    expect((await firstTable(page)).columnLines).toBe(true)
+  })
+
+  test('the panel stays open for the next change, and the cells are not touched', async ({ page }) => {
+    await newTable(page)
+    await page.keyboard.press('Escape')                       // close it to type in the first cell
+    await page.locator('.pt-editable .pt-edit-cell').first().click()
+    await page.keyboard.type('A')
+    await tools(page).click()
+    await option(page, 'Linjer mellom rader').click()
+    await option(page, 'Ramme rundt').click()
+    await expect(page.getByRole('group', { name: 'Tabellverktøy' })).toBeVisible()
+    await expect.poll(() => fields(page)).toEqual({ frame: 'around', rowLines: true, columnLines: undefined })
+    const t = await firstTable(page) as { rows: { cells: { content: Block[] }[] }[] }
+    expect((t.rows[0].cells[0].content[0].children ?? []).map(c => c.text).join('')).toBe('A')
+  })
+
+  test('is one undo step: one Ctrl+Z takes the last option back', async ({ page }) => {
+    await newTable(page)
+    await option(page, 'Ramme rundt').click()
+    await option(page, 'Linjer mellom rader').click()
+    await expect.poll(() => fields(page)).toEqual({ frame: 'around', rowLines: true, columnLines: undefined })
+    await page.keyboard.press('Escape')
+    await settleSelection(page)
+    await page.keyboard.press('Control+z')
+    await expect.poll(() => fields(page)).toEqual({ frame: 'around', rowLines: undefined, columnLines: undefined })
+  })
+
+  test('a stored table with options is drawn with them, and the panel shows them', async ({ page }) => {
+    await openEditor(page, 'paragraph')
+    const para = { _key: 'p', _type: 'block', style: 'normal', markDefs: [], children: [{ _key: 'ps', _type: 'span', text: 'x', marks: [] }] }
+    await setFromOutside(page, [{
+      _key: 't', _type: 'table', frame: 'topBottom', rowLines: true, columnLines: true,
+      rows: [{ _key: 'r', _type: 'row', cells: [{ _key: 'c1', _type: 'cell', content: [para] }, { _key: 'c2', _type: 'cell', content: [{ ...para, _key: 'q' }] }] }],
+    }])
+    await expect(page.locator('.pt-editable .pt-edit-grid--topbottom.pt-edit-grid--rows.pt-edit-grid--columns')).toHaveCount(1)
+    await page.locator('.pt-editable .pt-edit-cell').first().click()
+    await settleSelection(page)
+    await tools(page).click()
+    await expect(option(page, 'Ramme topp og bunn')).toHaveAttribute('aria-pressed', 'true')
+    await expect(option(page, 'Linjer mellom rader')).toHaveAttribute('aria-pressed', 'true')
+    await expect(option(page, 'Linjer mellom kolonner')).toHaveAttribute('aria-pressed', 'true')
+  })
+
+  test('works on a table in a box, and leaves the box alone', async ({ page }) => {
+    await openEditor(page, 'containers')
+    await page.locator('.pt-editable .pt-edit-box .pt-edit-cell').first().click()
+    await settleSelection(page)
+    await tools(page).click()
+    await option(page, 'Ramme rundt').click()
+    await expect.poll(async () => (await firstTable(page)).frame).toBe('around')
+    expect((await tree(page)).slice(0, 4)).toEqual(['Før boksen.', '<infoBox>', '  I boksen.', '  <table>'])
+    await expect(page.locator('.pt-editable .pt-edit-box .pt-edit-grid--around')).toHaveCount(1)
+  })
+})
