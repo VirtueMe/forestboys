@@ -567,6 +567,9 @@ property or description changed) and records why in the entity's `refusal`; see 
   "expectedSha": "<sha of current block at generation time>",
   "newValue":    { /* PT block JSON, _type: "block", children: [...] */ }
 }
+// A box (`infoBox`) or a table (`table`) in a description is ONE block: the same op replaces it whole, `newValue` is the
+// whole container and `expectedSha` the sha of all of it. There is no path to a block inside a cell. Ingest checks the
+// tree (docs/BUNDLE-FORMAT.md, «Containers»).
 
 // Add an edge to/from an existing entity (when not part of a create-entity op).
 {

@@ -40,7 +40,7 @@ export const BLOCK_PATH_RE = /^section\.([a-z0-9-]+)\.block\.([A-Za-z0-9_-]+)$/
 
 export type BundleOp =
   | { op: 'create-entity'; kind: string; slug: string; props: Record<string, unknown>; edges?: { type: string; to: string; props?: Record<string, unknown> }[]; descriptions?: { order: number; content: string }[] }
-  | { op: 'modify-block'; blockPath: string; expectedSha: string; newValue: PtBlock }
+  | { op: 'modify-block'; blockPath: string; expectedSha: string; newValue: PtNode }
   | { op: 'add-edge';     type: string; from: string; to: string; props?: Record<string, unknown> }
   | { op: 'remove-edge';  type: string; from: string; to: string }
   /** The whole text of one Description of the entity, replaced (or created when `expectedSha` is empty): #161. */
@@ -88,6 +88,16 @@ export interface PtBlock {
   children: unknown[]
   [k: string]: unknown
 }
+
+/** A box or a table, which holds blocks of its own. For a bundle it is one block: replaced whole, hashed whole (#315). */
+export interface PtContainer {
+  _type: 'infoBox' | 'table'
+  _key:  string
+  [k: string]: unknown
+}
+
+/** What a `modify-block` replaces and writes: a text block, or a container. */
+export type PtNode = PtBlock | PtContainer
 
 export interface DriftedProp {
   prop:     string
@@ -213,7 +223,7 @@ export interface DriftedBlock {
   blockPath:    string
   expectedSha:  string
   actualSha:    string
-  currentValue: PtBlock | null
+  currentValue: PtNode | null
 }
 
 /** Compare the user-supplied expectedShas against live block content. */
@@ -245,7 +255,7 @@ export async function readLiveBlock(
   env:       Neo4jEnv,
   entityId:  string,
   blockPath: string,
-): Promise<PtBlock | null> {
+): Promise<PtNode | null> {
   const idMatch = entityId.match(ENTITY_ID_RE)
   const pMatch  = blockPath.match(BLOCK_PATH_RE)
   if (!idMatch || !pMatch) return null
@@ -269,7 +279,7 @@ export async function readLiveBlock(
   for (const row of rows) {
     if (!row.content) continue
     try {
-      const blocks = JSON.parse(row.content) as PtBlock[]
+      const blocks = JSON.parse(row.content) as PtNode[]
       const found  = blocks.find((b) => b?._key === key)
       if (found) return found
     } catch {
@@ -555,11 +565,11 @@ async function applyModifyBlock(
     { slug },
   )
 
-  let target: { descId: string; blocks: PtBlock[]; idx: number } | null = null
+  let target: { descId: string; blocks: PtNode[]; idx: number } | null = null
   for (const row of rows) {
     if (!row.content) continue
     try {
-      const blocks = JSON.parse(row.content) as PtBlock[]
+      const blocks = JSON.parse(row.content) as PtNode[]
       const idx    = blocks.findIndex((b) => b?._key === key)
       if (idx !== -1) {
         target = { descId: row.descId, blocks, idx }

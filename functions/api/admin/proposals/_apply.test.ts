@@ -6,7 +6,7 @@ vi.mock('~/_lib/neo4j.ts', () => ({ runCypher: vi.fn(), runCypherTx: vi.fn() }))
 vi.mock('~/_lib/link-guard.ts', () => ({ judgeStored: vi.fn(() => Promise.resolve({ blocked: [] })), storedContents: vi.fn(() => Promise.resolve([])) }))
 
 const { runCypher, runCypherTx } = await import('~/_lib/neo4j.ts')
-const { applyEntityOps, checkDescriptionDrift, checkEntityExists, checkOpLinks, manifestSetStatus, setAside } = await import('./_apply.ts')
+const { applyEntityOps, checkDescriptionDrift, checkDrift, checkEntityExists, checkOpLinks, manifestSetStatus, setAside } = await import('./_apply.ts')
 const { judgeStored } = await import('~/_lib/link-guard.ts')
 const { recordOf, recordKey, toMetadata } = await import('../../../../src/utils/entityRecord.ts')
 
@@ -286,5 +286,41 @@ describe('setting an entity aside when accept refuses it (#185)', () => {
     await setAside(b as never, BUNDLE, 'Article:a0', [{ prop: 'title', expected: 'a', actual: 'b' }])
     const after = await manifestSetStatus(b as never, BUNDLE, 'Article:a0', 'denied')
     expect(after.entities[0]).toMatchObject({ status: 'denied', refusal: [{ prop: 'title' }] })
+  })
+})
+
+// A box or a table is one block for a bundle (#315): found by its key at the top, replaced whole, hashed whole.
+describe('modify-block on a container', () => {
+  const text = (key: string, t = key) => ({ _type: 'block', _key: key, children: [{ _type: 'span', _key: `${key}s`, text: t }] })
+  const table = (cellText: string) => ({ _type: 'table', _key: 'tab1', rows: [{ _type: 'row', _key: 'r1', cells: [{ _type: 'cell', _key: 'c1', content: [text('x', cellText)] }] }] })
+  const live = () => JSON.stringify([text('a'), table('Gammel'), text('z')])
+  const modify = (newValue: unknown) => ({ op: 'modify-block', blockPath: 'section.crew.block.tab1', expectedSha: '', newValue })
+
+  it('replaces the whole container, leaves the blocks around it, and keeps the old container as previousValue with its sha', async () => {
+    graph({ descriptions: [{ descId: 'd1', content: live() }] })
+    await applyEntityOps(env, 'Transport:mtb-683', payload('Transport:mtb-683', [modify(table('Ny'))]), 'b', AT)
+    const [, , params] = writes()[0]
+    expect(JSON.parse(String((params as Row).content))).toEqual([text('a'), table('Ny'), text('z')])
+    expect((params as Row).previousValue).toBe(JSON.stringify(table('Gammel')))
+    expect((params as Row).previousSha).toBe(await stableSha(table('Gammel')))
+    expect(statements().find(s => s.includes('SET d.content'))).toContain("d.previousKind   = 'block'")
+  })
+
+  it('finds no drift when the live container has the sha the proposal saw, however its JSON is written', async () => {
+    graph({ descriptions: [{ descId: 'd1', content: JSON.stringify([text('a'), table('Gammel')], null, 2) }] })
+    const sha = await stableSha(table('Gammel'))
+    expect(await checkDrift(env, 'Transport:mtb-683', [modify(table('Ny'))] as never, { 'section.crew.block.tab1': sha })).toEqual([])
+  })
+
+  it('reports drift when a cell changed inside the container, with the live container as the current value', async () => {
+    graph({ descriptions: [{ descId: 'd1', content: JSON.stringify([text('a'), table('Endret av en annen')]) }] })
+    const seen = await stableSha(table('Gammel'))
+    const drift = await checkDrift(env, 'Transport:mtb-683', [modify(table('Ny'))] as never, { 'section.crew.block.tab1': seen })
+    expect(drift).toEqual([{ blockPath: 'section.crew.block.tab1', expectedSha: seen, actualSha: await stableSha(table('Endret av en annen')), currentValue: table('Endret av en annen') }])
+  })
+
+  it('hands the new container to the link guard as a description, like any block', async () => {
+    await checkOpLinks(env, 'Transport:mtb-683', [modify(table('Ny'))] as never)
+    expect(vi.mocked(judgeStored).mock.calls[0][2]).toEqual([JSON.stringify([table('Ny')])])
   })
 })

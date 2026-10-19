@@ -122,6 +122,14 @@ Constraints:
 - `modify-block` is **only for existing entities** you are amending.
   Never emit `modify-block` ops on an entity you are also creating in
   the same bundle.
+- A description may hold a **container**: a box (`infoBox`) or a table
+  (`table`, with rows, cells and blocks inside; see `docs/PORTABLETEXT.md`).
+  A container is ONE block. To change what is in it, send one
+  `modify-block` with the whole container as `newValue` (same `_key`,
+  `expectedSha` the sha of the whole container); never an op on a block
+  inside a cell, and no headings in a table cell. A container you are not
+  changing stays exactly as it is, also inside a `set-description`
+  `content`. Do not make a new box or table yourself.
 - Preserve the outline's bilingual structure when present — don't
   translate Norwegian into English or vice versa. Original quotes,
   signatures, and dates stay verbatim.

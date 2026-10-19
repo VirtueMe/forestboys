@@ -265,3 +265,43 @@ describe('the origin stamp is written by the accept, not set by a bundle', () =>
     expect(reason(forOutline(create({ canonicalName: 'x', startDate: '1942-03', origin: 'unknown' })))).toBeNull()
   })
 })
+
+describe('a container is one block for a bundle (#315)', () => {
+  const text = (key: string, over: Record<string, unknown> = {}) => ({ _type: 'block', _key: key, style: 'normal', markDefs: [], children: [{ _type: 'span', _key: `${key}s`, text: key, marks: [] }], ...over })
+  const table = (rows: unknown[] = [{ _type: 'row', _key: 'r', cells: [{ _type: 'cell', _key: 'c', content: [text('a')] }] }], over: Record<string, unknown> = {}) => ({ _type: 'table', _key: 'tab1', rows, ...over })
+  const box = (...content: unknown[]) => ({ _type: 'infoBox', _key: 'box1', content })
+  const withOp = (op: Record<string, unknown>): IngestBody => { const b = syncBundle(); ;((b.entities as Record<string, unknown>[])[0].ops as unknown[]) = [op]; return b }
+  const modify = (newValue: unknown) => withOp({ op: 'modify-block', blockPath: 'section.overview.block.tab1', expectedSha: 'abc', newValue })
+
+  it('takes a modify-block that replaces a text block, a box or a table whole', () => {
+    expect(reason(modify(text('tab1')))).toBeNull()
+    expect(reason(modify(box(text('a'), table())))).toBeNull()
+    expect(reason(modify(table([{ _type: 'row', _key: 'r', cells: [{ _type: 'cell', _key: 'c', content: [text('a')] }] }], { frame: 'topBottom', rowLines: true })))).toBeNull()
+  })
+
+  it('refuses a malformed container, saying where', () => {
+    expect(reason(modify(table([])))).toContain('modify-block: newValue: rows[] needs at least 1')
+    expect(reason(modify(box({ _type: 'block', _key: 'x' })))).toContain('modify-block: newValue.content[0]: children[] required')
+    expect(reason(modify(table(undefined, { frame: 'dotted' })))).toContain('frame must be one of')
+  })
+
+  it('refuses a heading in a table cell, and a type it does not know', () => {
+    const heading = [{ _type: 'row', _key: 'r', cells: [{ _type: 'cell', _key: 'c', content: [text('h', { style: 'h3' })] }] }]
+    expect(reason(modify(table(heading)))).toContain('a table cell holds no headings')
+    expect(reason(modify({ _type: 'columns', _key: 'k', left: [] }))).toContain('infoBox, table')
+    expect(reason(modify({ _type: 'row', _key: 'k', cells: [] }))).toContain('infoBox, table')
+  })
+
+  it('checks the containers in a set-description and in a create-entity description, and leaves other blocks as they are', () => {
+    const set = (blocks: unknown[]) => withOp({ op: 'set-description', order: 1, expectedSha: '', content: JSON.stringify(blocks) })
+    expect(reason(set([text('a'), box(text('x')), table(), { _type: 'image', _key: 'i' }]))).toBeNull()
+    expect(reason(set([text('a'), table([])]))).toContain('set-description: content[1]: rows[] needs at least 1')
+
+    const create = (blocks: unknown[]): IngestBody => outlineBundle({
+      entities: [{ ...(outlineBundle().entities as Record<string, unknown>[])[0],
+        ops: [{ op: 'create-entity', kind: 'Operation', slug: 'linge-pulje-4', props: { canonicalName: 'Linge Pulje 4' }, descriptions: [{ order: 1, content: JSON.stringify(blocks) }] }] }],
+    })
+    expect(reason(create([text('a'), box(text('x'))]))).toBeNull()
+    expect(reason(create([box({ _type: 'infoBox', _key: 'inner', content: [] })]))).toContain('create-entity: description.content[0].content[0]: must be a text block')
+  })
+})

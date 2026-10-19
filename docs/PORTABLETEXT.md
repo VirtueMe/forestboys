@@ -317,8 +317,11 @@ hold blocks, and `blocksToHtml` and `blocksToText` read the tree:
 - A container the reader does not know, and a `row` or `cell` on its own, is drawn as what it holds: text is never dropped.
 - `blocksToText` reads a table as rows on lines with a tab between cells (a cell's blocks on one line), a box one block to a
   line, and an unknown container as its contents.
-- The checks of a description (headings, links, lists, #314), bundles (#315) and the editor (#312) learn containers in their own
-  issues; until then a description with a container is only ever made by hand.
+- The checks of a description (headings, links, lists) read inside containers through one walk, `src/utils/blockTree.ts` (#314).
+  A heading in a box counts in the section's outline; a table cell holds none (reported as `in-cell`).
+- **Bundles** treat a top-level container as one block (#315): `modify-block` replaces it whole, hashed whole for `expectedSha`,
+  and ingest checks the tree (`functions/_lib/description-blocks.ts`). `docs/BUNDLE-FORMAT.md`, *Containers*.
+- The editor (#312) learns to make them; until then a description with a container is only ever made by hand.
 
 Sanity has no such style, so everything that takes a description in from Sanity runs it through
 `preformattedFromSanity` (the description sync, the event and person rules, the importers). The graph and
