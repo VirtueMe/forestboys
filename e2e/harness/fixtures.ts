@@ -69,6 +69,25 @@ export const fixtures: Record<string, Block[]> = {
     block('t1', '1.  Første\n2.  Andre', { style: 'preformatted' }),
   ],
 
+  // A paragraph, a box with a paragraph and a table in it, and a table of its own (#312).
+  containers: [
+    block('c0', 'Før boksen.'),
+    {
+      _key: 'box', _type: 'infoBox', content: [
+        block('bx1', 'I boksen.'),
+        { _key: 'tin', _type: 'table', rows: [{ _key: 'ri', _type: 'row', cells: [
+          { _key: 'ci1', _type: 'cell', content: [block('ti1', 'A1')] },
+          { _key: 'ci2', _type: 'cell', content: [block('ti2', 'B1')] },
+        ] }] },
+      ],
+    },
+    { _key: 'tab', _type: 'table', rows: [{ _key: 'ra', _type: 'row', cells: [
+      { _key: 'ca1', _type: 'cell', content: [block('ta1', 'CON'), block('ta1b', 'PAK')] },
+      { _key: 'ca2', _type: 'cell', content: [block('ta2', '16')] },
+    ] }] },
+    block('c9', 'Etter tabellen.'),
+  ],
+
   // Enough text that the editor's box scrolls inside itself (#123).
   long: Array.from({ length: 40 }, (_, i) => block(`p${i}`, `Avsnitt nummer ${i + 1}. `.repeat(6))),
 }

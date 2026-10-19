@@ -5,10 +5,12 @@
 
 import {
   defineAnnotation,
+  defineContainer,
   defineDecorator,
   defineSchema,
   defineTextBlock,
   EditorProvider,
+  keyGenerator,
   PortableTextEditable,
   useEditor,
   useEditorSelector,
@@ -24,6 +26,7 @@ import {
 import React from 'react'
 import { neo4jQuery } from '@/composables/useNeo4j.ts'
 import { linkTextRange, selectionTextRange, splitMarks, type SpanPoint, type TextRange } from '@/utils/linkText.ts'
+import { walkBlocks } from '@/utils/blockTree.ts'
 import { listIndexes, type ListBlock } from '@/utils/listIndex.ts'
 import { hasLinkMark, resolveLinkTarget, type SanityBlock } from '@/utils/portableText.ts'
 
@@ -68,7 +71,15 @@ const schemaDefinition = defineSchema({
     { name: 'number' },
   ],
   inlineObjects: [],
-  blockObjects: [],
+  // Containers (#308): a box holds text blocks and tables, a table is rows of cells, a cell holds text blocks. A cell
+  // takes paragraphs and quotes, with the lists and marks of the root schema, and no headings: the page reads a heading
+  // in a cell as a fault (src/utils/headingOutline.ts) and ingest refuses it (functions/_lib/description-blocks.ts).
+  blockObjects: [
+    { name: 'infoBox', fields: [{ name: 'content', type: 'array', of: [{ type: 'block' }, { type: 'table' }] }] },
+    { name: 'table',   fields: [{ name: 'rows',    type: 'array', of: [{ type: 'row' }] }] },
+    { name: 'row',     fields: [{ name: 'cells',   type: 'array', of: [{ type: 'cell' }] }] },
+    { name: 'cell',    fields: [{ name: 'content', type: 'array', of: [{ type: 'block', styles: [{ name: 'normal' }, { name: 'blockquote' }] }] }] },
+  ],
 })
 
 // How the marks, the styles and the two annotations are drawn. Registered nodes, not the render props
@@ -94,7 +105,33 @@ function TextBlock(props: TextBlockRenderProps) {
   })
 }
 
+// How the containers are drawn while editing (the CSS is in PortableTextEditor.vue): the page draws the final look (#313),
+// this one shows the cells with a dotted rule so there is somewhere to put the caret. The table sits in a wrapper that
+// scrolls sideways, as on the page, and takes the editor's attributes.
+const cellContainer = defineContainer({
+  type: 'cell', arrayField: 'content',
+  render: ({ attributes, children }) => React.createElement('td', { ...attributes, className: 'pt-edit-cell' }, children),
+})
+const rowContainer = defineContainer({
+  type: 'row', arrayField: 'cells',
+  render: ({ attributes, children }) => React.createElement('tr', attributes, children),
+  of: [cellContainer],
+})
+const tableContainer = defineContainer({
+  type: 'table', arrayField: 'rows',
+  render: ({ attributes, children }) => React.createElement('div', { ...attributes, className: 'pt-edit-grid-wrap' },
+    React.createElement('table', { className: 'pt-edit-grid' }, React.createElement('tbody', null, children))),
+  of: [rowContainer],
+})
+const boxContainer = defineContainer({
+  type: 'infoBox', arrayField: 'content',
+  render: ({ attributes, children }) => React.createElement('div', { ...attributes, className: 'pt-edit-box' }, children),
+  of: [tableContainer],
+})
+
 const nodes = [
+  tableContainer,
+  boxContainer,
   ...DECORATORS.map(name => defineDecorator({
     type:   name,
     render: ({ children }) => React.createElement(decoratorTags[name], null, children),
@@ -238,6 +275,21 @@ const preformattedIcon = React.createElement(
   React.createElement('path', { d: 'M2 7h12M6.5 7v6' }),
 )
 
+/** A box with two lines of text in it: the info box. */
+const boxIcon = React.createElement(
+  'svg',
+  { width: 16, height: 16, viewBox: '0 0 16 16', fill: 'none', stroke: 'currentColor', strokeWidth: 1.5, strokeLinecap: 'round', strokeLinejoin: 'round', 'aria-hidden': true },
+  React.createElement('rect', { x: 2, y: 3, width: 12, height: 10, rx: 1 }),
+  React.createElement('path', { d: 'M5 7h6M5 10h4' }),
+)
+
+/** Rules above, between and below, and one rule between two columns: a table of cells with no box around it. */
+const cellsIcon = React.createElement(
+  'svg',
+  { width: 16, height: 16, viewBox: '0 0 16 16', fill: 'none', stroke: 'currentColor', strokeWidth: 1.5, strokeLinecap: 'round', 'aria-hidden': true },
+  React.createElement('path', { d: 'M2 3.5h12M2 8h12M2 12.5h12M8 3.5v9' }),
+)
+
 /** Two chain links: the link icon of Sanity's editor (Feather «link»). */
 const linkIcon = React.createElement(
   'svg',
@@ -290,6 +342,16 @@ function ListButton({ name, label, title }: { name: 'bullet' | 'number'; label: 
 const selectionInList = (snapshot: Parameters<typeof getSelectedTextBlocks>[0]) =>
   getSelectedTextBlocks(snapshot).some(({ node }) => !!node.listItem)
 
+/** The containers around the text block the caret is in, outermost first; none at the top. */
+const focusAncestors = (snapshot: Parameters<typeof getFocusTextBlock>[0]): readonly string[] => {
+  const key = getFocusTextBlock(snapshot)?.node._key
+  let found: readonly string[] = []
+  if (key) walkBlocks(snapshot.context.value, (b, place) => { if (b._key === key) found = place.ancestors })
+  return found
+}
+const caretInCell = (snapshot: Parameters<typeof getFocusTextBlock>[0]) => focusAncestors(snapshot).includes('cell')
+
+const IN_CELL_TITLE = 'Ikke tillatt i en tabellcelle'
 const IN_LIST_TITLE = 'Overskrifter kan ikke brukes i en liste'
 
 const PREFORMATTED_IN_LIST_TITLE = 'Tabell kan ikke brukes i en liste'
@@ -305,12 +367,15 @@ function StyleButton({ name, label, heading, title, ariaLabel, inListTitle }: {
 }) {
   const editor = useEditor()
   const active = useEditorSelector(editor, isActiveStyle(name))
-  const blocked = useEditorSelector(editor, snapshot => (!!heading || !!inListTitle) && selectionInList(snapshot))
+  const listBlocked = useEditorSelector(editor, snapshot => (!!heading || !!inListTitle) && selectionInList(snapshot))
+  // A cell takes paragraphs and quotes only (the schema): no headings, no fixed-width text.
+  const cellBlocked = useEditorSelector(editor, snapshot => (!!heading || !!inListTitle) && caretInCell(snapshot))
+  const blocked = listBlocked || cellBlocked
   return React.createElement(ToolbarButton, {
     label,
     active,
     disabled: blocked,
-    title:    blocked ? (inListTitle ?? IN_LIST_TITLE) : title,
+    title:    cellBlocked ? IN_CELL_TITLE : listBlocked ? (inListTitle ?? IN_LIST_TITLE) : title,
     ariaLabel,
     onClick: () => editor.send({ type: 'style.toggle', style: name }),
   })
@@ -326,7 +391,9 @@ const DEEP_HEADINGS = ['h4', 'h5', 'h6'] as const
 function DeepHeadingMenu() {
   const editor = useEditor()
   const active = useEditorSelector(editor, snapshot => DEEP_HEADINGS.find(h => isActiveStyle(h)(snapshot)))
-  const blocked = useEditorSelector(editor, selectionInList)
+  const listBlocked = useEditorSelector(editor, selectionInList)
+  const cellBlocked = useEditorSelector(editor, caretInCell)
+  const blocked = listBlocked || cellBlocked
   const [open, setOpen] = React.useState(false)
   React.useEffect(() => { if (blocked) setOpen(false) }, [blocked])
   const root = React.useRef<HTMLSpanElement>(null)
@@ -350,7 +417,7 @@ function DeepHeadingMenu() {
       label:      '▾',
       active:     !!active,
       onClick:    () => setOpen(v => !v),
-      title:      blocked ? IN_LIST_TITLE : 'Flere overskriftsnivåer (H4–H6)',
+      title:      cellBlocked ? IN_CELL_TITLE : listBlocked ? IN_LIST_TITLE : 'Flere overskriftsnivåer (H4–H6)',
       ariaLabel:  'Flere overskriftsnivåer',
       extraClass: 'pt-tb-more',
       disabled:   blocked,
@@ -667,6 +734,39 @@ function LinkAnnotationButton() {
   )
 }
 
+const newBlock = () => ({ _type: 'block', _key: keyGenerator(), style: 'normal', markDefs: [], children: [{ _type: 'span', _key: keyGenerator(), text: '', marks: [] }] })
+const newCell  = () => ({ _type: 'cell', _key: keyGenerator(), content: [newBlock()] })
+/** A table of two rows and two columns, each cell with an empty paragraph: rows and columns are added from there. */
+const newTable = () => ({ _type: 'table', _key: keyGenerator(), rows: [0, 1].map(() => ({ _type: 'row', _key: keyGenerator(), cells: [newCell(), newCell()] })) })
+const newBox   = () => ({ _type: 'infoBox', _key: keyGenerator(), content: [newBlock()] })
+
+/**
+ * Insert a box or a table after the block the caret is in, and put the caret in it (#312). A box goes at the top only
+ * (it holds blocks and tables, not another box); a table goes at the top or in a box, never in a cell. The buttons say
+ * why they are off, so the click is not silently refused by the schema.
+ */
+function ContainerButtons() {
+  const editor    = useEditor()
+  const ancestors = useEditorSelector(editor, focusAncestors)
+  const noFocus   = useEditorSelector(editor, snapshot => !getFocusTextBlock(snapshot))
+  const boxOff    = noFocus || ancestors.length > 0
+  const tableOff  = noFocus || ancestors.includes('cell')
+  const insert = (block: object) => editor.send({ type: 'insert.block', block, placement: 'after', select: 'start' } as never)
+  return React.createElement(
+    React.Fragment, null,
+    React.createElement(ToolbarButton, {
+      label: boxIcon, active: false, disabled: boxOff, ariaLabel: 'Infoboks',
+      title: noFocus ? 'Sett markøren i teksten først' : boxOff ? 'En infoboks kan ikke ligge i en boks eller en tabell' : 'Infoboks',
+      onClick: () => insert(newBox()),
+    }),
+    React.createElement(ToolbarButton, {
+      label: cellsIcon, active: false, disabled: tableOff, ariaLabel: 'Tabell med celler',
+      title: noFocus ? 'Sett markøren i teksten først' : tableOff ? 'En tabell kan ikke ligge i en tabellcelle' : 'Tabell med celler',
+      onClick: () => insert(newTable()),
+    }),
+  )
+}
+
 function Toolbar({ expanded, onToggleExpand }: { expanded: boolean; onToggleExpand: () => void }) {
   return React.createElement(
     'div',
@@ -679,6 +779,7 @@ function Toolbar({ expanded, onToggleExpand }: { expanded: boolean; onToggleExpa
     ),
     React.createElement(StyleButton,     { name: 'blockquote', label: '❝' }),
     React.createElement(StyleButton,     { name: 'preformatted', label: preformattedIcon, title: 'Tabell (fast bredde)', ariaLabel: 'Tabell', inListTitle: PREFORMATTED_IN_LIST_TITLE }),
+    React.createElement(ContainerButtons),
     React.createElement('span',          { className: 'pt-tb-sep' }),
     React.createElement(DecoratorButton, { name: 'strong',    label: 'B' }),
     React.createElement(DecoratorButton, { name: 'em',        label: 'I' }),
