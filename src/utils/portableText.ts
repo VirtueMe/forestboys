@@ -223,7 +223,7 @@ const array = (v: unknown): TextNode[] => Array.isArray(v) ? v.filter((x): x is 
  * The HTML of a container (#313). A box draws its blocks and tables in a frame; a table is rows of cells, each cell
  * drawn as the blocks it holds, and a short row is padded so the columns line up. Any other container, and a row or a
  * cell on its own, is drawn as what it holds, so no text goes missing before a reader for its type exists. The options
- * of a table are classes: `frame` (`topBottom` | `around`), `rowLines` and `columnLines`. Empty gives nothing.
+ * of a table are classes: `frame` (`topBottom` | `around`), `width` (`full`), `rowLines` and `columnLines`. Empty gives nothing.
  */
 function containerHtml(node: TextNode): string {
   switch (node._type) {
@@ -238,6 +238,7 @@ function containerHtml(node: TextNode): string {
       const trs  = rows.map(r => `<tr>${[...r, ...Array<string>(cols - r.length).fill('')].map(c => `<td>${c}</td>`).join('')}</tr>`)
       const classes = ['pt-table',
         node.frame === 'topBottom' ? 'pt-table--topbottom' : node.frame === 'around' ? 'pt-table--around' : '',
+        node.width === 'full' ? 'pt-table--full' : '',
         node.rowLines === true ? 'pt-table--rows' : '', node.columnLines === true ? 'pt-table--columns' : '',
       ].filter(Boolean).join(' ')
       return `<div class="pt-table-wrap"><table class="${classes}"><tbody>${trs.join('')}</tbody></table></div>`

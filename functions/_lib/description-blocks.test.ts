@@ -27,6 +27,12 @@ describe('checkTopLevelBlock', () => {
   it('takes the options of a table, and none', () => {
     expect(checkTopLevelBlock(table('t', [row('r', cell('c', text('a')))], { frame: 'around', rowLines: true, columnLines: false }), 'v')).toBeNull()
     expect(checkTopLevelBlock(table('t', [row('r', cell('c', text('a')))], { frame: 'none' }), 'v')).toBeNull()
+    expect(checkTopLevelBlock(table('t', [row('r', cell('c', text('a')))], { width: 'full' }), 'v')).toBeNull()
+    expect(checkTopLevelBlock(table('t', [row('r', cell('c', text('a')))], { width: 'compact' }), 'v')).toBeNull()
+  })
+
+  it('refuses a width that is neither compact nor full', () => {
+    expect(checkTopLevelBlock(table('t', [row('r', cell('c', text('a')))], { width: 'wide' }), 'v')).toContain('width must be one of compact, full')
   })
 
   it('takes a cell with no blocks, and a text block in a cell that is a list item or a quote', () => {

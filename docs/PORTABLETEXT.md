@@ -292,8 +292,9 @@ Use `blocksToHtml()` for anything the user sees.
 ## Tables: the `preformatted` style (#260)
 
 A table, a roster or any text that must keep its spacing is a block with the style `preformatted`. The
-editor has a button for it (the table icon, next to the quote), and `blocksToHtml` draws consecutive
-`preformatted` blocks as one `<pre class="pre-table">`. Nothing is guessed: a tab in an ordinary paragraph
+editor no longer has a button for it (#325): the box (below) is the fixed-width block as a container, and holds tables of
+cells. Stored `preformatted` blocks still load, are edited, and are drawn as before: `blocksToHtml` draws consecutive
+`preformatted` blocks as one `<pre class="pre-table">`, and the **P** button turns one into a paragraph. Nothing is guessed: a tab in an ordinary paragraph
 is just a tab. Before #260 the renderer called any tab-bearing block without prose a table (`isTableBlock`,
 #256); `scripts/migrations/preformatted-table-blocks.ts` set the style on those blocks once (production,
 2026-10-14), the renderer's guess is gone, and `scripts/lib/preformatted-blocks.ts` keeps the old rule, frozen,
@@ -306,14 +307,15 @@ hold blocks, and `blocksToHtml` and `blocksToText` read the tree:
 
 ```
 { _type: 'infoBox', content: [ …blocks, tables… ] }
-{ _type: 'table', frame?, rowLines?, columnLines?, rows: [ { _type: 'row', cells: [ { _type: 'cell', content: [ …blocks… ] } ] } ] }
+{ _type: 'table', frame?, width?, rowLines?, columnLines?, rows: [ { _type: 'row', cells: [ { _type: 'cell', content: [ …blocks… ] } ] } ] }
 ```
 
 - A **box** is `<div class="pt-box">` around what it holds; it may hold a table.
 - A **table** is `<div class="pt-table-wrap"><table class="pt-table">`; a cell is drawn as the blocks it holds (paragraphs, lists,
   marks, links), a short row is padded so the columns line up, and the table scrolls sideways as one unit.
 - The options of a table are fields on it, drawn as classes: `frame` (`topBottom` or `around`, else none) →
-  `pt-table--topbottom` / `pt-table--around`; `rowLines: true` → `pt-table--rows`; `columnLines: true` → `pt-table--columns`.
+  `pt-table--topbottom` / `pt-table--around`; `width: 'full'` → `pt-table--full` (the whole column; else the table is as wide as
+  its content); `rowLines: true` → `pt-table--rows`; `columnLines: true` → `pt-table--columns`.
 - A container the reader does not know, and a `row` or `cell` on its own, is drawn as what it holds: text is never dropped.
 - `blocksToText` reads a table as rows on lines with a tab between cells (a cell's blocks on one line), a box one block to a
   line, and an unknown container as its contents.
@@ -329,14 +331,21 @@ hold blocks, and `blocksToHtml` and `blocksToText` read the tree:
 schema says what each may hold: a box holds text blocks and tables, a cell holds paragraphs and quotes (with the lists and marks of
 the root schema) and **no headings**, which the heading check and ingest refuse as well. The toolbar:
 
-- **Infoboks** inserts an empty box after the block with the caret. With the caret in a box it takes the box apart (what it held stays,
+- **Infoboks** is the one box, and it is the fixed-width block as a container (#325): the type, tint, tab size and sideways scroll of
+  `pre.pre-table`, with no border, so spaces and tabs stay where they were typed. It holds text blocks and tables, and a table in it
+  takes the mono type. It inserts an empty box after the block with the caret. With the caret in a box it takes the box apart (what it held stays,
   in order); with text blocks selected across several paragraphs it wraps them in a new box. It is off in a cell, and for a selection
   that takes in a box or a table.
-- **Tabell med celler** inserts a 2 × 2 table, at the top or in a box, never in a cell. The older fixed-width *Tabell* button
-  (`preformatted`) is a different thing and is off in a cell.
-- **Tabellverktøy** (on only with the caret in a cell) opens a panel: a row above or below, a column before or after, delete the row, the
-  column or the table; the **frame** (none, top and bottom, around); and switches for the rules between rows and between columns.
-  A table keeps one row and one column.
+- **Tabell med celler** inserts a 2 × 2 table, at the top or in a box, never in a cell. A table that ends its box (or the text) gets an
+  empty paragraph after it, so there is somewhere to write below it.
+- **Tabellverktøy**, the ▾ beside *Tabell med celler*, is one split button with it (like H3 and its ▾) and is on only with the caret in a
+  cell. It opens a panel that stays open for the next change: a row above or below, a column before or after, delete the row, the
+  column or the table; the **frame** (none, top and bottom, around); the **width** (compact: as wide as the content, the default; or
+  full width: the whole column); switches for the rules between rows and between columns; and **Avsnitt etter**, which adds an empty
+  paragraph after the table. A table keeps one row and one column.
+
+Getting out below a table: besides the paragraph that insert adds, **Avsnitt etter** brings one back if it was deleted, and
+**ArrowDown** at the very end of the last cell of a table that ends its box (or the text) does the same from the keyboard.
 
 The keys in a cell: **Tab** goes to the next cell (in the last cell it adds a row), **Shift+Tab** goes back (from the first cell it
 leaves the editor, so the keyboard is never trapped), **Enter** adds a block in the cell, and **Backspace** at the very start of a
@@ -348,7 +357,7 @@ Things that are easy to get wrong:
   `src/utils/tableNav.ts`, the walk over the tree in `src/utils/blockTree.ts`.
 - **A field the schema does not name is dropped by the editor.** A new table option needs the schema (`blockObjects` in the editor),
   the validator (`functions/_lib/description-blocks.ts`), the page renderer (`containerHtml`) and the panel to agree.
-- A node with the default state carries no field (`frame: 'none'` and `rowLines: false` are never written).
+- A node with the default state carries no field (`frame: 'none'`, `width: 'compact'` and `rowLines: false` are never written).
 - Replacing a block with `set` cannot be undone and left a block twice: wrapping uses insert and delete, with fresh keys on the copies.
 - While editing, the cells have a dotted rule so there is somewhere to put the caret; the options are drawn as solid rules over it.
   The page draws the final look (`.pt-box`, `.pt-table`).

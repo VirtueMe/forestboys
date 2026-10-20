@@ -172,7 +172,6 @@ onBeforeUnmount(() => {
 .pt-panel-row .pt-menu-item { border-color: var(--rule); }
 .pt-panel-row .pt-menu-item:disabled { opacity: 0.4; cursor: default; }
 .pt-panel-row .pt-menu-item:disabled:hover { background: transparent; }
-.pt-tb-caret { margin-left: 3px; font-size: 10px; }
 
 .pt-tb-btn:disabled { opacity: 0.4; cursor: default; }
 .pt-tb-btn:disabled:hover { background: transparent; }
@@ -290,15 +289,21 @@ onBeforeUnmount(() => {
 /* A box and a table while editing (#312). The page draws the final look (.pt-box, .pt-table in main.css); here the cells get a
    dotted rule so there is somewhere to put the caret. No accent colour (DESIGN.md). */
 .pt-editable .pt-edit-box {
-  background: color-mix(in srgb, var(--rule) 25%, var(--paper-raised));
-  border: 1px solid var(--rule);
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 11px;
+  tab-size: 4;
+  white-space: pre;
+  overflow-x: auto;
+  line-height: 1.65;
+  background: color-mix(in srgb, var(--rule) 50%, var(--paper-raised));
   border-radius: 3px;
-  padding: 8px 12px;
+  padding: 8px 10px;
   margin: 0 0 0.75em;
 }
 .pt-editable .pt-edit-box > :last-child { margin-bottom: 0; }
 .pt-editable .pt-edit-grid-wrap { overflow-x: auto; margin: 0 0 0.75em; }
-.pt-editable .pt-edit-grid { border-collapse: collapse; min-width: 100%; }
+.pt-editable .pt-edit-grid { border-collapse: collapse; }
+.pt-editable .pt-edit-grid--full { width: 100%; }
 .pt-editable .pt-edit-cell {
   border: 1px dotted var(--rule);
   padding: 4px 8px;

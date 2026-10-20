@@ -4,7 +4,7 @@
  * `table › rows › row › cells › cell › content › blocks`; its cells are walked left to right, row by row.
  */
 
-import { findNode, isTextBlock, walkBlocks, type PathSegment, type TreeNode } from './blockTree.ts'
+import { findNode, isTextBlock, siblingLists, walkBlocks, type PathSegment, type TreeNode } from './blockTree.ts'
 
 export interface CellAt {
   /** The editor path to the table, to set its fields. */
@@ -141,20 +141,29 @@ export function deleteColumn(table: TreeNode, col: number, row: number): Structu
   return { rows, select: { row: Math.min(row, rows.length - 1), col: Math.min(col, Math.max(cells.length - 1, 0)) } }
 }
 
-/** One option of a table the panel can change: the frame, or one of the two rules. */
-export type TableOption = { frame: 'none' | 'topBottom' | 'around' } | { rowLines: boolean } | { columnLines: boolean }
+/** One option of a table the panel can change: the frame, the width, or one of the two rules. */
+export type TableOption = { frame: 'none' | 'topBottom' | 'around' } | { width: 'compact' | 'full' } | { rowLines: boolean } | { columnLines: boolean }
 
 /**
  * What a change of one option does to the table's fields (#312): the default state is no field at all, so a plain
- * table stays plain data (`frame: 'none'`, `rowLines: false` are never written), and what is not the default is written.
+ * table stays plain data (`frame: 'none'`, `width: 'compact'`, `rowLines: false` are never written), and what is not the default is written.
  * The page reads a missing field and a default one alike (src/utils/portableText.ts).
  */
 export function optionEdit(change: TableOption): { set: Record<string, unknown>; unset: string[] } {
   const [field, value] = Object.entries(change)[0] as [string, unknown]
-  const isDefault = value === 'none' || value === false
+  const isDefault = value === 'none' || value === 'compact' || value === false
   return isDefault ? { set: {}, unset: [field] } : { set: { [field]: value }, unset: [] }
 }
 
 /** The frame a table has: a field that is not one of the known frames counts as none. */
 export const frameOf = (table: TreeNode): 'none' | 'topBottom' | 'around' =>
   table.frame === 'topBottom' || table.frame === 'around' ? table.frame : 'none'
+
+/** The width a table has: as wide as its content (compact), or the whole column (full); a missing or unknown one is compact. */
+export const widthOf = (table: TreeNode): 'compact' | 'full' => table.width === 'full' ? 'full' : 'compact'
+
+/** Is the node with `key` the last of its siblings, at the top or in a box? Nothing after it to put a caret in. */
+export function isLastSibling(nodes: unknown, key: string): boolean {
+  const list = siblingLists(nodes).find(l => l.list.some(n => n._key === key))?.list
+  return !!list && list.at(-1)?._key === key
+}

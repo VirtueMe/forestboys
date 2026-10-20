@@ -57,7 +57,56 @@ test.describe('the box and table buttons', () => {
       'Første avsnitt.',
       '<table>', '  <row>', '    <cell>', '      A1', '    <cell>', '      ',
       '  <row>', '    <cell>', '      ', '    <cell>', '      ',
+      '',   // a table that ends the text gets an empty paragraph after it, to write in
     ])
+  })
+
+  test('a table put last in a box gets an empty paragraph after it in the box', async ({ page }) => {
+    await openEditor(page, 'paragraph')
+    await caretAtEndOf(page, 'Første avsnitt.')
+    await box(page).click()
+    await table(page).click()
+    await expect.poll(async () => (await tree(page)).filter(l => !l.startsWith('      ') && !l.startsWith('    <') && !l.startsWith('  <row>')))
+      .toEqual(['Første avsnitt.', '<infoBox>', '  ', '  <table>', '  '])
+  })
+
+  test('ArrowDown at the end of the last cell of a last table adds a paragraph after it and goes there', async ({ page }) => {
+    await openEditor(page, 'paragraph')
+    const cell = (k: string, text: string) => ({ _key: `tc${k}`, _type: 'cell', content: [{ _key: `tp${k}`, _type: 'block', style: 'normal', markDefs: [], children: [{ _key: `ts${k}`, _type: 'span', text, marks: [] }] }] })
+    await setFromOutside(page, (await blocksOf(page)).concat([
+      { _key: 'bx', _type: 'infoBox', content: [{ _key: 't', _type: 'table', rows: [{ _key: 'r', _type: 'row', cells: [cell('1', 'A'), cell('2', 'B')] }] }] },
+    ]))
+    await caretAtEndOf(page, 'B')
+    await settleSelection(page)
+    await page.keyboard.press('ArrowDown')
+    await settleSelection(page)
+    await page.keyboard.type('Etter')
+    await expect.poll(async () => (await tree(page)).at(-1)).toBe('  Etter')
+    await expect.poll(async () => (await tree(page)).at(-2)).toBe('        B')
+  })
+
+  test('«Avsnitt etter» in the table tools adds a paragraph after a table that has none, so it can be got back later', async ({ page }) => {
+    await openEditor(page, 'paragraph')
+    const cell = { _key: 'tc1', _type: 'cell', content: [{ _key: 'tp1', _type: 'block', style: 'normal', markDefs: [], children: [{ _key: 'ts1', _type: 'span', text: 'Celle', marks: [] }] }] }
+    await setFromOutside(page, (await blocksOf(page)).concat([{ _key: 't', _type: 'table', rows: [{ _key: 'r', _type: 'row', cells: [cell] }] }]))
+    await expect(page.locator('.pt-editable .pt-edit-cell')).toContainText('Celle')
+    await caretAtEndOf(page, 'Celle')
+    await settleSelection(page)
+    await page.getByRole('button', { name: 'Tabellverktøy' }).click()
+    await page.getByRole('button', { name: 'Nytt avsnitt etter tabellen' }).click()
+    await settleSelection(page)
+    await page.keyboard.type('Tilbake')
+    await expect.poll(async () => (await tree(page)).at(-1)).toBe('Tilbake')
+    await expect.poll(async () => (await tree(page)).at(-2)).toBe('      Celle')
+  })
+
+  test('ArrowDown in a table with something after it moves on as it always did, and adds nothing', async ({ page }) => {
+    await openEditor(page, 'containers')
+    const before = await tree(page)
+    await page.locator('.pt-editable .pt-edit-cell').last().click()
+    await page.keyboard.press('End')
+    await page.keyboard.press('ArrowDown')
+    expect(await tree(page)).toEqual(before)
   })
 
   test('a box is put after the paragraph with the caret, and a table can go into it', async ({ page }) => {
@@ -90,18 +139,15 @@ test.describe('the box and table buttons', () => {
     await expect(table(page)).toHaveAttribute('title', 'En tabell kan ikke ligge i en tabellcelle')
   })
 
-  test('the heading and fixed-width buttons are off in a cell, and on again outside it', async ({ page }) => {
+  test('the heading button is off in a cell, and on again outside it', async ({ page }) => {
     await openEditor(page, 'containers')
     const h3 = page.getByRole('button', { name: 'H3' })
-    const fixed = page.getByRole('button', { name: 'Tabell', exact: true })
     await page.locator('.pt-editable .pt-edit-cell').nth(2).click()
     await expect(h3).toBeDisabled()
-    await expect(fixed).toBeDisabled()
     await expect(h3).toHaveAttribute('title', 'Ikke tillatt i en tabellcelle')
 
     await caretAtEndOf(page, 'Etter tabellen.')
     await expect(h3).toBeEnabled()
-    await expect(fixed).toBeEnabled()
   })
 })
 
@@ -227,7 +273,7 @@ test.describe('the keyboard in a table', () => {
 test.describe('the table tools', () => {
   const tools = (page: Page) => page.getByRole('button', { name: 'Tabellverktøy' })
   const use = async (page: Page, name: string) => {
-    await tools(page).click()
+    if (await page.getByRole('group', { name: 'Tabellverktøy' }).count() === 0) await tools(page).click()
     await page.getByRole('button', { name }).click()
   }
   const newTable = async (page: Page, fixture = 'paragraph') => {
@@ -293,6 +339,15 @@ test.describe('the table tools', () => {
     await expect.poll(() => cells(page)).toEqual([['A', '', 'B1', ''], ['C', '', 'D', '']])
   })
 
+  test('the panel stays open after a row or a column is added, for the next one', async ({ page }) => {
+    await filled(page)
+    await use(page, 'Ny kolonne etter')
+    await use(page, 'Ny rad under')
+    await use(page, 'Ny kolonne etter')
+    await expect(page.getByRole('group', { name: 'Tabellverktøy' })).toBeVisible()
+    await expect.poll(() => cells(page)).toEqual([['A', 'B', '', ''], ['', '', '', ''], ['C', 'D', '', '']])
+  })
+
   test('deletes the row the caret is in, and the caret goes to the row that took its place', async ({ page }) => {
     await filled(page)
     await use(page, 'Slett rad')
@@ -316,7 +371,6 @@ test.describe('the table tools', () => {
     await use(page, 'Slett rad')      // the caret was in B, so it goes to D, the cell of its column in the row that took its place
     await use(page, 'Slett kolonne')  // and D's column goes
     await expect.poll(() => cells(page)).toEqual([['C']])
-    await tools(page).click()
     await expect(page.getByRole('button', { name: 'Slett rad' })).toBeDisabled()
     await expect(page.getByRole('button', { name: 'Slett kolonne' })).toBeDisabled()
     await expect(page.getByRole('button', { name: 'Slett tabell' })).toBeEnabled()
@@ -334,10 +388,10 @@ test.describe('the table tools', () => {
   test('deletes the table and puts the caret in the paragraph before it', async ({ page }) => {
     await newTable(page)
     await use(page, 'Slett tabell')
-    await expect.poll(() => tree(page)).toEqual(['Første avsnitt.'])
+    await expect.poll(() => tree(page)).toEqual(['Første avsnitt.', ''])
     await settleSelection(page)
     await page.keyboard.type('!')
-    await expect.poll(() => tree(page)).toEqual(['!Første avsnitt.'])
+    await expect.poll(() => tree(page)).toEqual(['!Første avsnitt.', ''])
   })
 
   test('deletes a table in a box and leaves the box with what else it held', async ({ page }) => {
@@ -431,7 +485,7 @@ test.describe('the options of a table', () => {
   }
   const fields = async (page: Page) => {
     const t = await firstTable(page)
-    return { frame: t.frame, rowLines: t.rowLines, columnLines: t.columnLines }
+    return { frame: t.frame, width: t.width, rowLines: t.rowLines, columnLines: t.columnLines }
   }
   const newTable = async (page: Page) => {
     await openEditor(page, 'paragraph')
@@ -454,15 +508,28 @@ test.describe('the options of a table', () => {
   test('the frame is one of none, top and bottom, around: choosing one replaces the other', async ({ page }) => {
     await newTable(page)
     await option(page, 'Ramme rundt').click()
-    await expect.poll(() => fields(page)).toEqual({ frame: 'around', rowLines: undefined, columnLines: undefined })
+    await expect.poll(() => fields(page)).toEqual({ frame: 'around', width: undefined, rowLines: undefined, columnLines: undefined })
     await expect(option(page, 'Ramme rundt')).toHaveAttribute('aria-pressed', 'true')
     await expect(page.locator('.pt-editable .pt-edit-grid--around')).toHaveCount(1)
 
     await option(page, 'Ramme topp og bunn').click()
-    await expect.poll(() => fields(page)).toEqual({ frame: 'topBottom', rowLines: undefined, columnLines: undefined })
+    await expect.poll(() => fields(page)).toEqual({ frame: 'topBottom', width: undefined, rowLines: undefined, columnLines: undefined })
     await expect(option(page, 'Ramme rundt')).toHaveAttribute('aria-pressed', 'false')
     await expect(page.locator('.pt-editable .pt-edit-grid--topbottom')).toHaveCount(1)
     await expect(page.locator('.pt-editable .pt-edit-grid--around')).toHaveCount(0)
+  })
+
+  test('the width is compact or full: full is a field and a class, compact takes the field away', async ({ page }) => {
+    await newTable(page)
+    await expect(option(page, 'Bredde kompakt')).toHaveAttribute('aria-pressed', 'true')
+    await option(page, 'Bredde full').click()
+    await expect.poll(() => fields(page)).toEqual({ frame: undefined, width: 'full', rowLines: undefined, columnLines: undefined })
+    await expect(option(page, 'Bredde full')).toHaveAttribute('aria-pressed', 'true')
+    await expect(page.locator('.pt-editable .pt-edit-grid--full')).toHaveCount(1)
+
+    await option(page, 'Bredde kompakt').click()
+    await expect.poll(() => fields(page)).toEqual({ frame: undefined, width: undefined, rowLines: undefined, columnLines: undefined })
+    await expect(page.locator('.pt-editable .pt-edit-grid--full')).toHaveCount(0)
   })
 
   test('none takes the frame field away, so a plain table is plain data', async ({ page }) => {
@@ -495,7 +562,7 @@ test.describe('the options of a table', () => {
     await option(page, 'Linjer mellom rader').click()
     await option(page, 'Ramme rundt').click()
     await expect(page.getByRole('group', { name: 'Tabellverktøy' })).toBeVisible()
-    await expect.poll(() => fields(page)).toEqual({ frame: 'around', rowLines: true, columnLines: undefined })
+    await expect.poll(() => fields(page)).toEqual({ frame: 'around', width: undefined, rowLines: true, columnLines: undefined })
     const t = await firstTable(page) as { rows: { cells: { content: Block[] }[] }[] }
     expect((t.rows[0].cells[0].content[0].children ?? []).map(c => c.text).join('')).toBe('A')
   })
@@ -504,11 +571,11 @@ test.describe('the options of a table', () => {
     await newTable(page)
     await option(page, 'Ramme rundt').click()
     await option(page, 'Linjer mellom rader').click()
-    await expect.poll(() => fields(page)).toEqual({ frame: 'around', rowLines: true, columnLines: undefined })
+    await expect.poll(() => fields(page)).toEqual({ frame: 'around', width: undefined, rowLines: true, columnLines: undefined })
     await page.keyboard.press('Escape')
     await settleSelection(page)
     await page.keyboard.press('Control+z')
-    await expect.poll(() => fields(page)).toEqual({ frame: 'around', rowLines: undefined, columnLines: undefined })
+    await expect.poll(() => fields(page)).toEqual({ frame: 'around', width: undefined, rowLines: undefined, columnLines: undefined })
   })
 
   test('a stored table with options is drawn with them, and the panel shows them', async ({ page }) => {

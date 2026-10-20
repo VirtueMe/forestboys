@@ -213,14 +213,21 @@ section.section:last-of-type { margin-bottom: var(--space-xl); }
   line-height: 1.65;
   margin: 0 0 var(--space-sm);
 }
-/* A box (#313): blocks, and tables, in a frame; a raised paper tone and a hairline, no accent colour. */
+/* A box (#313): the fixed-width block as a container. Same type and tint as .pre-table, and it holds blocks and tables; no accent colour. */
 .portable-text .pt-box {
-  background: var(--paper-raised);
-  border: 1px solid var(--rule);
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 11px;
+  tab-size: 4;
+  white-space: pre;
+  overflow-x: auto;
+  background: color-mix(in srgb, var(--rule) 50%, var(--paper-raised));
   border-radius: 3px;
-  padding: var(--space-sm) var(--space-md);
+  padding: 8px 10px;
+  line-height: 1.65;
   margin: 0 0 var(--space-sm);
 }
+.portable-text .pt-box p { white-space: pre; }
+.portable-text .pt-box table.pt-table { font-family: inherit; font-size: inherit; line-height: inherit; }
 .portable-text .pt-box > :last-child { margin-bottom: 0; }
 
 /* A table of cells (#313): scrolls sideways as one unit; the lines are options on the table, none by default. */
@@ -234,6 +241,7 @@ section.section:last-of-type { margin-bottom: var(--space-xl); }
   font-size: var(--size-body-ui);
   line-height: 1.45;
 }
+.portable-text table.pt-table--full { width: 100%; }
 .portable-text .pt-table td {
   padding: var(--space-xs) var(--space-md);
   vertical-align: top;
