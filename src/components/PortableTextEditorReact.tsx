@@ -27,6 +27,7 @@ import React from 'react'
 import { neo4jQuery } from '@/composables/useNeo4j.ts'
 import { linkTextRange, selectionTextRange, splitMarks, type SpanPoint, type TextRange } from '@/utils/linkText.ts'
 import { findNode, siblingLists, walkBlocks, type PathSegment } from '@/utils/blockTree.ts'
+import { cellTexts, guessSeparator, linesOf, SEPARATORS, tableFromBlocks, type Separator, type TextBlock } from '@/utils/textTable.ts'
 import { listIndexes, type ListBlock } from '@/utils/listIndex.ts'
 import { hasLinkMark, resolveLinkTarget, type SanityBlock } from '@/utils/portableText.ts'
 import {
@@ -734,7 +735,24 @@ function spansTopLevel(snapshot: Parameters<typeof getFocusTextBlock>[0]): boole
   return !!sel && top(sel.anchor.path) !== top(sel.focus.path)
 }
 
+/**
+ * The keys of the text blocks a selection takes in, when they could become a table (#328): more than the caret, plain text
+ * blocks side by side in one list (the top or a box), none in a list or a cell. Null otherwise.
+ */
+function convertKeys(snapshot: Parameters<typeof getFocusTextBlock>[0]): string[] | null {
+  if (!isSelectionExpanded(snapshot)) return null
+  const picked = getSelectedTextBlocks(snapshot)
+  if (!picked.length || picked.some(({ path }) => path.some(s => s === 'rows' || s === 'cells'))) return null
+  const firstKey = picked[0].node._key, lastKey = picked.at(-1)!.node._key
+  const list = siblingLists(snapshot.context.value).find(l => l.list.some(n => n._key === firstKey))?.list ?? []
+  const i = list.findIndex(n => n._key === firstKey), j = list.findIndex(n => n._key === lastKey)
+  if (i === -1 || j === -1) return null
+  const span = list.slice(Math.min(i, j), Math.max(i, j) + 1)
+  return span.every(n => n._type === 'block' && !n.listItem) ? span.map(n => n._key as string) : null
+}
+
 const WRAP_BLOCKS = 'custom.wrapBlocks'
+const CONVERT_TO_TABLE = 'custom.convertToTable'
 const UNWRAP_BOX  = 'custom.unwrapBox'
 
 /**
@@ -757,6 +775,29 @@ const wrapBlocksBehavior = defineBehavior<{ keys: string[] }>({
     return [
       execute({ type: 'insert.block', block: box, placement: 'before', at: { anchor: point, focus: point } } as never),
       ...event.keys.map(k => execute({ type: 'delete.block', at: [{ _key: k }] })),
+      ...(sel ? [execute({ type: 'select', at: sel })] : []),
+    ]
+  }],
+})
+
+/**
+ * Put a table made of the text blocks `keys` (side by side, in order) where they were, and take them away (#328). Only
+ * insert and delete, so it is one undo step, as wrapping in a box is; the cells are copies with keys of their own.
+ */
+const convertToTableBehavior = defineBehavior<{ keys: string[]; sep: Separator; header: boolean }>({
+  on: CONVERT_TO_TABLE,
+  actions: [({ snapshot, event }) => {
+    const found = event.keys.map(k => findNode(snapshot.context.value, k))
+    if (!found.length || found.some(f => !f || f.node._type !== 'block' || !(f.node.children as unknown[] | undefined)?.length)) return []
+    const table = tableFromBlocks(found.map(f => f!.node as TextBlock), event.sep, event.header, keyGenerator)
+    if (!table) return []
+    const first = found[0]!
+    const point = { path: [...first.path, 'children', { _key: (first.node.children as { _key: string }[])[0]._key }], offset: 0 }
+    const tablePath: PathSegment[] = [...first.path.slice(0, -1), { _key: table._key as string }]
+    const sel = cellStart({ tablePath, table, row: 0, col: 0 }, 0, 0, table.rows)
+    return [
+      execute({ type: 'insert.block', block: table, placement: 'before', at: { anchor: point, focus: point } } as never),
+      ...found.map(f => execute({ type: 'delete.block', at: f!.path } as never)),
       ...(sel ? [execute({ type: 'select', at: sel })] : []),
     ]
   }],
@@ -1031,6 +1072,11 @@ function ContainerButtons() {
 function TablePanel() {
   const editor  = useEditor()
   const inTable = useEditorSelector(editor, snapshot => caretCell(snapshot) !== null)
+  const convKeys = useEditorSelector(editor, snapshot => (convertKeys(snapshot) ?? []).join(','))
+  const canConvert = !inTable && convKeys !== ''
+  const enabled = inTable || canConvert
+  const [pickedSep, setPickedSep] = React.useState<Separator | null>(null)
+  const [header, setHeader] = React.useState(false)
   const rowCount = useEditorSelector(editor, snapshot => (caretCell(snapshot)?.table.rows as unknown[] | undefined)?.length ?? 0)
   const colCount = useEditorSelector(editor, snapshot => { const t = caretCell(snapshot)?.table; return t ? columnsOf(t) : 0 })
   const frame       = useEditorSelector(editor, snapshot => { const t = caretCell(snapshot)?.table; return t ? frameOf(t) : 'none' })
@@ -1038,7 +1084,8 @@ function TablePanel() {
   const rowLines    = useEditorSelector(editor, snapshot => caretCell(snapshot)?.table.rowLines === true)
   const columnLines = useEditorSelector(editor, snapshot => caretCell(snapshot)?.table.columnLines === true)
   const [open, setOpen] = React.useState(false)
-  React.useEffect(() => { if (!inTable) setOpen(false) }, [inTable])
+  React.useEffect(() => { if (!enabled) setOpen(false) }, [enabled])
+  React.useEffect(() => { if (!open) { setPickedSep(null); setHeader(false) } }, [open])
   const root = React.useRef<HTMLSpanElement>(null)
 
   React.useEffect(() => {
@@ -1087,16 +1134,49 @@ function TablePanel() {
     React.createElement('div', { className: 'pt-panel-row' }, ...items),
   )
 
+  // The lines to turn into a table (#328): the separator is guessed from them, and the person can switch it.
+  const source = open && canConvert
+    ? convKeys.split(',').map(k => findNode(editor.getSnapshot().context.value, k)?.node).filter((b): b is TextBlock => !!b)
+    : []
+  const sep: Separator = pickedSep ?? guessSeparator(linesOf(source)) ?? 'tab'
+  const preview = source.length ? tableFromBlocks(source, sep, header, keyGenerator) : null
+  const previewRows = preview ? cellTexts(preview) : []
+  const columns = Math.max(0, ...previewRows.map(r => r.length))
+  const SEPARATOR_LABELS: Record<Separator, string> = { tab: 'Tabulator', spaces: '2+ mellomrom', semicolon: 'Semikolon', pipe: 'Loddrett strek' }
+  const convertPanel = open && canConvert ? React.createElement(
+    'div',
+    { className: 'pt-menu pt-table-panel', role: 'group', 'aria-label': 'Gjør om til tabell' },
+    group('Skilletegn', ...SEPARATORS.map(s => item(SEPARATOR_LABELS[s], `Skilletegn ${SEPARATOR_LABELS[s].toLowerCase()}`, () => setPickedSep(s), false, sep === s))),
+    group('Overskrift', item('Første linje', 'Første linje er overskrift', () => setHeader(h => !h), false, header)),
+    React.createElement(
+      'div', { className: 'pt-panel-group', key: 'preview' },
+      React.createElement('span', { className: 'pt-panel-title' }, preview ? `${previewRows.length} rader × ${columns} kolonner` : 'Ingen tekst å lage tabell av'),
+      preview ? React.createElement(
+        'table', { className: 'pt-conv-preview', 'aria-label': 'Forhåndsvisning' },
+        React.createElement('tbody', null, previewRows.slice(0, 4).map((row, i) => React.createElement(
+          'tr', { key: i }, row.map((text, j) => React.createElement(i === 0 && header ? 'th' : 'td', { key: j }, text)),
+        ))),
+      ) : null,
+    ),
+    group('Tabell', item('Gjør om til tabell', 'Gjør om til tabell', () => {
+      if (preview) editor.send({ type: CONVERT_TO_TABLE, keys: convKeys.split(','), sep, header } as never)
+      setOpen(false)
+    }, !preview)),
+  ) : null
+
   return React.createElement(
     'span',
     { className: 'pt-tb-menu', ref: root },
     React.createElement(ToolbarButton, {
       label: '▾', extraClass: 'pt-tb-more',
-      active: open, disabled: !inTable, expanded: open, ariaLabel: 'Tabellverktøy',
-      title: inTable ? 'Rader, kolonner og sletting' : 'Sett markøren i en tabellcelle for å bruke tabellverktøyene',
+      active: open, disabled: !enabled, expanded: open, ariaLabel: 'Tabellverktøy',
+      title: inTable ? 'Rader, kolonner og sletting'
+        : canConvert ? 'Gjør de merkede linjene om til en tabell'
+        : 'Sett markøren i en tabellcelle for å bruke tabellverktøyene, eller merk linjer som skal bli en tabell',
       onClick: () => setOpen(v => !v),
     }),
-    open ? React.createElement(
+    open && canConvert ? convertPanel : null,
+    open && inTable ? React.createElement(
       'div',
       { className: 'pt-menu pt-table-panel', role: 'group', 'aria-label': 'Tabellverktøy' },
       group('Rad',
@@ -1165,7 +1245,7 @@ export function PortableTextEditorReact({ value, label, generation, onChange, ex
     }),
     React.createElement(ValueReader, { registerReader }),
     React.createElement(NodePlugin, { nodes }),
-    React.createElement(BehaviorPlugin, { behaviors: [replaceWords, listItemIsNoHeading, tabInTable, shiftTabInTable, arrowDownOutOfTable, backspaceAtCellStart, deleteAtCellEnd, wrapBlocksBehavior, unwrapBoxBehavior] }),
+    React.createElement(BehaviorPlugin, { behaviors: [replaceWords, listItemIsNoHeading, tabInTable, shiftTabInTable, arrowDownOutOfTable, backspaceAtCellStart, deleteAtCellEnd, wrapBlocksBehavior, unwrapBoxBehavior, convertToTableBehavior] }),
     React.createElement(Toolbar, { expanded, onToggleExpand }),
     React.createElement(PortableTextEditable, {
       'aria-label': label,
