@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.19.0](https://github.com/VirtueMe/forestboys/compare/v0.18.1...v0.19.0) (2026-10-20)
+
+
+### Features
+
+* **editor:** the box is the fixed-width block, and the table is one split button ([90782de](https://github.com/VirtueMe/forestboys/commit/90782de4e0d8adc16f562defe24a023e59e3d95f)), closes [#325](https://github.com/VirtueMe/forestboys/issues/325)
+
 ## [0.18.1](https://github.com/VirtueMe/forestboys/compare/v0.18.0...v0.18.1) (2026-10-19)
 
 
