@@ -302,7 +302,7 @@ test.describe('the table tools', () => {
   test('the button is off outside a table and on in a cell, and says what it is for', async ({ page }) => {
     await openEditor(page, 'containers')
     await expect(tools(page)).toBeDisabled()
-    await expect(tools(page)).toHaveAttribute('title', 'Sett markøren i en tabellcelle for å bruke tabellverktøyene')
+    await expect(tools(page)).toHaveAttribute('title', 'Sett markøren i en tabellcelle for å bruke tabellverktøyene, eller merk linjer som skal bli en tabell')
     await page.locator('.pt-editable .pt-edit-cell').nth(2).click()
     await expect(tools(page)).toBeEnabled()
   })

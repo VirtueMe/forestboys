@@ -168,6 +168,9 @@ onBeforeUnmount(() => {
 .pt-table-panel { left: auto; right: 0; min-width: 200px; max-width: calc(100vw - 32px); gap: 6px; padding: 8px; }
 .pt-panel-group { display: flex; flex-direction: column; gap: 3px; }
 .pt-panel-title { font-size: 11px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: var(--muted); }
+.pt-conv-preview { border-collapse: collapse; font-size: 11px; max-width: 100%; }
+.pt-conv-preview td, .pt-conv-preview th { border: 1px dotted var(--rule); padding: 1px 6px; max-width: 9em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: left; font-weight: normal; }
+.pt-conv-preview th { font-weight: 700; }
 .pt-panel-row { display: flex; flex-wrap: wrap; gap: 4px; }
 .pt-panel-row .pt-menu-item { border-color: var(--rule); }
 .pt-panel-row .pt-menu-item:disabled { opacity: 0.4; cursor: default; }

@@ -344,6 +344,16 @@ the root schema) and **no headings**, which the heading check and ingest refuse 
   full width: the whole column); switches for the rules between rows and between columns; and **Avsnitt etter**, which adds an empty
   paragraph after the table. A table keeps one row and one column.
 
+Turning text into a table (#328): with lines selected (more than the caret; text blocks side by side at the top or in a box,
+none in a list or a cell) the ▾ is on and opens **Gjør om til tabell** instead of the table tools. A line is a row, and a line
+break inside a paragraph is a row of its own. The separator is guessed from the lines (a tab; else a run of two or more spaces;
+else `;`; else `|`, whichever is in at least half of the lines that have anything in them) and can be switched; **Første linje**
+makes the first row bold; the panel previews the table. Padding with spaces of any width, as the old fixed-width tables have,
+is read as one separator, so a `preformatted` block converts too; a cell that was left empty in such a table is lost, because
+the spaces around it are one separator. Short rows are padded with empty cells, lines with nothing in them are left out, marks
+and links stay on their words, and a heading becomes a plain paragraph in its cell. It is one undo step (insert and delete,
+as wrapping in a box is), and the caret goes to the first cell. The splitting is `src/utils/textTable.ts`.
+
 Getting out below a table: besides the paragraph that insert adds, **Avsnitt etter** brings one back if it was deleted, and
 **ArrowDown** at the very end of the last cell of a table that ends its box (or the text) does the same from the keyboard.
 
