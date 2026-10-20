@@ -354,6 +354,14 @@ the spaces around it are one separator. Short rows are padded with empty cells, 
 and links stay on their words, and a heading becomes a plain paragraph in its cell. It is one undo step (insert and delete,
 as wrapping in a box is), and the caret goes to the first cell. The splitting is `src/utils/textTable.ts`.
 
+Pasting a table (#328): a table on the clipboard is pasted as a table, not as flat paragraphs. It is the `<table>` of Word or a web
+page (bold, italic, underline and links in a cell are kept, `<th>` cells are bold, a `colspan` takes the columns it spans, a short row
+is padded), or tab-separated rows (Excel, Sheets, a text file) of more than one line, most with a tab. The table goes after the
+paragraph with the caret, or before it when it is empty, with an empty paragraph below when nothing else is, and the caret goes to the
+first cell; it is one undo step. Left to the ordinary paste: HTML with text around its table, one cell from Excel, one line with a
+tab, a paste over a selection, and a paste into a cell, a list, a heading or a quote. Quoted cells with line breaks in them are not
+read. The code is `src/utils/pastedTable.ts` and the `pasteTable` behavior in the editor.
+
 Getting out below a table: besides the paragraph that insert adds, **Avsnitt etter** brings one back if it was deleted, and
 **ArrowDown** at the very end of the last cell of a table that ends its box (or the text) does the same from the keyboard.
 
