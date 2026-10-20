@@ -27,7 +27,8 @@ import React from 'react'
 import { neo4jQuery } from '@/composables/useNeo4j.ts'
 import { linkTextRange, selectionTextRange, splitMarks, type SpanPoint, type TextRange } from '@/utils/linkText.ts'
 import { findNode, siblingLists, walkBlocks, type PathSegment } from '@/utils/blockTree.ts'
-import { cellTexts, guessSeparator, linesOf, SEPARATORS, tableFromBlocks, type Separator, type TextBlock } from '@/utils/textTable.ts'
+import { tablesFromClipboard } from '@/utils/pastedTable.ts'
+import { cellTexts, flatText, guessSeparator, linesOf, SEPARATORS, tableFromBlocks, type Separator, type TextBlock } from '@/utils/textTable.ts'
 import { listIndexes, type ListBlock } from '@/utils/listIndex.ts'
 import { hasLinkMark, resolveLinkTarget, type SanityBlock } from '@/utils/portableText.ts'
 import {
@@ -803,6 +804,40 @@ const convertToTableBehavior = defineBehavior<{ keys: string[]; sep: Separator; 
   }],
 })
 
+/**
+ * A table on the clipboard (Word, a web page, Excel) is pasted as a table (#328): after the paragraph with the caret, or in
+ * place of an empty one, with an empty paragraph below it when nothing else is. Left to the ordinary paste: a paste that is
+ * not tables, one into a cell, a list, a heading or a quote, and one over a selection. One undo step.
+ */
+const pasteTable = defineBehavior({
+  on: 'clipboard.paste',
+  guard: ({ snapshot, event }) => {
+    if (isSelectionExpanded(snapshot) || caretCell(snapshot)) return false
+    const focus = getFocusTextBlock(snapshot)?.node
+    if (!focus || focus.listItem || (focus.style && focus.style !== 'normal')) return false
+    const data = event.originEvent.dataTransfer
+    const tables = tablesFromClipboard({ html: data.getData('text/html'), text: data.getData('text/plain') }, keyGenerator)
+    return tables ? { tables } : false
+  },
+  actions: [({ snapshot }, { tables }) => {
+    const block = getFocusTextBlock(snapshot)!.node
+    const found = findNode(snapshot.context.value, block._key)!
+    const span = (block.children as { _key: string }[])[0]._key
+    const point = { path: [...found.path, 'children', { _key: span }], offset: 0 }
+    const at = { anchor: point, focus: point }
+    const empty = flatText(block as TextBlock) === ''
+    const tablePath: PathSegment[] = [...found.path.slice(0, -1), { _key: tables[0]._key as string }]
+    const sel = cellStart({ tablePath, table: tables[0], row: 0, col: 0 }, 0, 0, tables[0].rows)
+    const trailing = !empty && isLastSibling(snapshot.context.value, block._key)
+    return [
+      ...(trailing ? [execute({ type: 'insert.block', block: newBlock(), placement: 'after', at } as never)] : []),
+      // After the paragraph, one by one from the last, so they end up in order; before an empty one, in order.
+      ...(empty ? tables : [...tables].reverse()).map(t => execute({ type: 'insert.block', block: t, placement: empty ? 'before' : 'after', at } as never)),
+      ...(sel ? [execute({ type: 'select', at: sel })] : []),
+    ]
+  }],
+})
+
 /** Take the box apart: what it held stays where the box was, in the same order, as one undo step. */
 const unwrapBoxBehavior = defineBehavior<{ boxKey: string }>({
   on: UNWRAP_BOX,
@@ -1245,7 +1280,7 @@ export function PortableTextEditorReact({ value, label, generation, onChange, ex
     }),
     React.createElement(ValueReader, { registerReader }),
     React.createElement(NodePlugin, { nodes }),
-    React.createElement(BehaviorPlugin, { behaviors: [replaceWords, listItemIsNoHeading, tabInTable, shiftTabInTable, arrowDownOutOfTable, backspaceAtCellStart, deleteAtCellEnd, wrapBlocksBehavior, unwrapBoxBehavior, convertToTableBehavior] }),
+    React.createElement(BehaviorPlugin, { behaviors: [replaceWords, listItemIsNoHeading, tabInTable, shiftTabInTable, arrowDownOutOfTable, backspaceAtCellStart, deleteAtCellEnd, wrapBlocksBehavior, unwrapBoxBehavior, convertToTableBehavior, pasteTable] }),
     React.createElement(Toolbar, { expanded, onToggleExpand }),
     React.createElement(PortableTextEditable, {
       'aria-label': label,
