@@ -17,6 +17,7 @@ export type ContainerType = typeof CONTAINER_TYPES[number]
 export const isContainerType = (t: unknown): t is ContainerType => (CONTAINER_TYPES as readonly string[]).includes(t as string)
 
 const FRAMES = ['none', 'topBottom', 'around'] as const
+const WIDTHS = ['compact', 'full'] as const
 const HEADING = /^h[1-6]$/
 
 type Obj = Record<string, unknown>
@@ -56,6 +57,7 @@ function checkRow(node: unknown, at: string): string | null {
 function checkTable(node: Obj, at: string): string | null {
   if (typeof node._key !== 'string' || !node._key) return `${at}: _key required`
   if (node.frame !== undefined && !(FRAMES as readonly unknown[]).includes(node.frame)) return `${at}: frame must be one of ${FRAMES.join(', ')}`
+  if (node.width !== undefined && !(WIDTHS as readonly unknown[]).includes(node.width)) return `${at}: width must be one of ${WIDTHS.join(', ')}`
   for (const flag of ['rowLines', 'columnLines'] as const) {
     if (node[flag] !== undefined && typeof node[flag] !== 'boolean') return `${at}: ${flag} must be true or false`
   }

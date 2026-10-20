@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test'
-import { blocksOf, caretAtEndOf, openEditor, reportedTexts } from './helpers/editor.ts'
+import { caretAtEndOf, openEditor, reportedTexts } from './helpers/editor.ts'
 
 // The toolbar and the full-window mode (#123).
 test.describe('the toolbar and the box', () => {
@@ -85,25 +85,11 @@ test.describe('the full window', () => {
   })
 })
 
-// The table button (#260): a block is a table because an editor said so, not because it has a tab.
-test.describe('the table button', () => {
-  const button = (page: import('@playwright/test').Page) => page.getByRole('button', { name: 'Tabell', exact: true })
-
-  test('makes the block under the caret preformatted, and a second click makes it a paragraph again', async ({ page }) => {
-    await openEditor(page, 'paragraph')
-    await caretAtEndOf(page, 'Første avsnitt.')
-    await button(page).click()
-    await expect(page.locator('.pt-editable pre')).toContainText('Første avsnitt.')
-    await expect.poll(async () => (await blocksOf(page))[0].style).toBe('preformatted')
-
-    await button(page).click()
-    await expect(page.locator('.pt-editable pre')).toHaveCount(0)
-    await expect.poll(async () => (await blocksOf(page))[0].style).toBe('normal')
-  })
-
-  test('the button says what it is, and a stored preformatted block is drawn as a box', async ({ page }) => {
+// A stored fixed-width block (#260) is still drawn; the editor has no button to make a new one.
+test.describe('a stored fixed-width block', () => {
+  test('is drawn as a box, and there is no button for it', async ({ page }) => {
     await openEditor(page, 'marks')
     await expect(page.locator('.pt-editable pre')).toHaveCount(1)
-    await expect(button(page)).toHaveAttribute('title', 'Tabell (fast bredde)')
+    await expect(page.getByRole('button', { name: 'Tabell', exact: true })).toHaveCount(0)
   })
 })

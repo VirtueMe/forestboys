@@ -30,7 +30,7 @@ import { findNode, siblingLists, walkBlocks, type PathSegment } from '@/utils/bl
 import { listIndexes, type ListBlock } from '@/utils/listIndex.ts'
 import { hasLinkMark, resolveLinkTarget, type SanityBlock } from '@/utils/portableText.ts'
 import {
-  addColumn, addRow, cellAt, columnsOf, deleteColumn, deleteRow, emptyBlock, firstBlockOf, firstSpanKey, frameOf, lastBlockOf, lastSpanOf, nextCell, optionEdit,
+  addColumn, addRow, cellAt, columnsOf, deleteColumn, deleteRow, emptyBlock, firstBlockOf, firstSpanKey, frameOf, isLastSibling, lastBlockOf, lastSpanOf, nextCell, optionEdit, widthOf,
   previousCell, rowsWithBlockIn, rowsWithRowAfter, type CellAt, type StructureEdit, type TableOption,
 } from '@/utils/tableNav.ts'
 
@@ -83,7 +83,7 @@ const schemaDefinition = defineSchema({
     // The options of a table are fields of its own, so the editor keeps them: a field the schema does not name is dropped.
     { name: 'table',   fields: [
       { name: 'rows', type: 'array', of: [{ type: 'row' }] },
-      { name: 'frame', type: 'string' }, { name: 'rowLines', type: 'boolean' }, { name: 'columnLines', type: 'boolean' },
+      { name: 'frame', type: 'string' }, { name: 'width', type: 'string' }, { name: 'rowLines', type: 'boolean' }, { name: 'columnLines', type: 'boolean' },
     ] },
     { name: 'row',     fields: [{ name: 'cells',   type: 'array', of: [{ type: 'cell' }] }] },
     { name: 'cell',    fields: [{ name: 'content', type: 'array', of: [{ type: 'block', styles: [{ name: 'normal' }, { name: 'blockquote' }] }] }] },
@@ -131,7 +131,7 @@ const tableContainer = defineContainer({
   render: ({ attributes, children, node }) => {
     const frame = frameOf(node)
     const classes = ['pt-edit-grid', frame === 'topBottom' && 'pt-edit-grid--topbottom', frame === 'around' && 'pt-edit-grid--around',
-      node.rowLines === true && 'pt-edit-grid--rows', node.columnLines === true && 'pt-edit-grid--columns'].filter(Boolean).join(' ')
+      widthOf(node) === 'full' && 'pt-edit-grid--full', node.rowLines === true && 'pt-edit-grid--rows', node.columnLines === true && 'pt-edit-grid--columns'].filter(Boolean).join(' ')
     return React.createElement('div', { ...attributes, className: 'pt-edit-grid-wrap' },
       React.createElement('table', { className: classes }, React.createElement('tbody', null, children)))
   },
@@ -281,14 +281,6 @@ const numberListIcon = React.createElement(
   [3.5, 8, 12.5].map(y => React.createElement('path', { key: `l${y}`, d: `M6 ${y}h8` })),
 )
 
-/** A box with a row and two columns marked out: a table of fixed-width text. */
-const preformattedIcon = React.createElement(
-  'svg',
-  { width: 16, height: 16, viewBox: '0 0 16 16', fill: 'none', stroke: 'currentColor', strokeWidth: 1.5, strokeLinejoin: 'round', 'aria-hidden': true },
-  React.createElement('rect', { x: 2, y: 3, width: 12, height: 10, rx: 1 }),
-  React.createElement('path', { d: 'M2 7h12M6.5 7v6' }),
-)
-
 /** A box with two lines of text in it: the info box. */
 const boxIcon = React.createElement(
   'svg',
@@ -367,8 +359,6 @@ const caretInCell = (snapshot: Parameters<typeof getFocusTextBlock>[0]) => focus
 
 const IN_CELL_TITLE = 'Ikke tillatt i en tabellcelle'
 const IN_LIST_TITLE = 'Overskrifter kan ikke brukes i en liste'
-
-const PREFORMATTED_IN_LIST_TITLE = 'Tabell kan ikke brukes i en liste'
 
 function StyleButton({ name, label, heading, title, ariaLabel, inListTitle }: {
   name: string
@@ -644,6 +634,30 @@ const deleteAtCellEnd = defineBehavior({
   on: 'keyboard.keydown',
   guard: ({ snapshot, event }) => event.originEvent.key === 'Delete' && !event.originEvent.metaKey && !event.originEvent.ctrlKey && !event.originEvent.altKey && caretAtCellEdge(snapshot, 'end'),
   actions: [() => [effect(() => undefined)]],
+})
+
+/** The event that puts an empty paragraph after a table and the caret in it. */
+const paragraphAfter = (tablePath: PathSegment[]) => {
+  const point = { path: tablePath, offset: 0 }
+  return { type: 'insert.block', block: newBlock(), placement: 'after', at: { anchor: point, focus: point }, select: 'start' } as never
+}
+
+/**
+ * ArrowDown at the very end of the last cell of a table that is the last thing in its box (or in the text) adds an empty
+ * paragraph after the table and puts the caret in it: otherwise there is nowhere to write after the table.
+ */
+const arrowDownOutOfTable = defineBehavior({
+  on: 'keyboard.keydown',
+  guard: ({ snapshot, event }) => {
+    const e = event.originEvent
+    if (e.key !== 'ArrowDown' || e.shiftKey || e.altKey || e.ctrlKey || e.metaKey) return false
+    const at = caretCell(snapshot)
+    return !!at && nextCell(at.table, at.row, at.col) === null && caretAtCellEdge(snapshot, 'end')
+      && isLastSibling(snapshot.context.value, at.table._key as string)
+  },
+  actions: [({ snapshot }) => {
+    return [execute(paragraphAfter(caretCell(snapshot)!.tablePath))]
+  }],
 })
 
 const shiftTabInTable = defineBehavior({
@@ -990,11 +1004,22 @@ function ContainerButtons() {
         : wrapKeys ? 'Sett det merkede i en infoboks' : 'Infoboks',
       onClick: () => (inBox ? unwrapBox(editor) : wrapKeys ? wrapBlocks(editor, wrapKeys.split(',')) : insert(newBox())),
     }),
-    React.createElement(ToolbarButton, {
-      label: cellsIcon, active: false, disabled: tableOff, ariaLabel: 'Tabell med celler',
-      title: noFocus ? 'Sett markøren i teksten først' : tableOff ? 'En tabell kan ikke ligge i en tabellcelle' : 'Tabell med celler',
-      onClick: () => insert(newTable()),
-    }),
+    // The table and its tools are one split button: the ▾ is on only with the caret in a table.
+    React.createElement('span', { className: 'pt-tb-split' },
+      React.createElement(ToolbarButton, {
+        label: cellsIcon, active: false, disabled: tableOff, ariaLabel: 'Tabell med celler',
+        title: noFocus ? 'Sett markøren i teksten først' : tableOff ? 'En tabell kan ikke ligge i en tabellcelle' : 'Tabell med celler',
+        onClick: () => {
+          // A table that ends up last gets an empty paragraph after it, so there is somewhere to write below it.
+          const key = getFocusTextBlock(editor.getSnapshot())?.node._key
+          if (key && isLastSibling(editor.getSnapshot().context.value, key)) {
+            editor.send({ type: 'insert.block', block: newBlock(), placement: 'after', select: 'none' } as never)
+          }
+          insert(newTable())
+        },
+      }),
+      React.createElement(TablePanel),
+    ),
   )
 }
 
@@ -1009,6 +1034,7 @@ function TablePanel() {
   const rowCount = useEditorSelector(editor, snapshot => (caretCell(snapshot)?.table.rows as unknown[] | undefined)?.length ?? 0)
   const colCount = useEditorSelector(editor, snapshot => { const t = caretCell(snapshot)?.table; return t ? columnsOf(t) : 0 })
   const frame       = useEditorSelector(editor, snapshot => { const t = caretCell(snapshot)?.table; return t ? frameOf(t) : 'none' })
+  const width       = useEditorSelector(editor, snapshot => { const t = caretCell(snapshot)?.table; return t ? widthOf(t) : 'compact' })
   const rowLines    = useEditorSelector(editor, snapshot => caretCell(snapshot)?.table.rowLines === true)
   const columnLines = useEditorSelector(editor, snapshot => caretCell(snapshot)?.table.columnLines === true)
   const [open, setOpen] = React.useState(false)
@@ -1027,7 +1053,7 @@ function TablePanel() {
     }
   }, [open])
 
-  /** Apply one edit to the caret's table; the caret goes where the edit says, or stays. */
+  /** Apply one edit to the caret's table; the caret goes where the edit says, or stays. The panel stays open for the next. */
   const run = (make: (at: CellAt) => StructureEdit | null) => {
     const at = caretCell(editor.getSnapshot())
     const edit = at && make(at)
@@ -1035,7 +1061,6 @@ function TablePanel() {
     editor.send({ type: 'block.set', at: at.tablePath, props: { rows: edit.rows } })
     const sel = edit.select && cellStart(at, edit.select.row, edit.select.col, edit.rows)
     if (sel) editor.send({ type: 'select', at: sel })
-    setOpen(false)
   }
 
   /** Change one option of the caret's table: one change to its fields, so one undo step. The panel stays open for the next. */
@@ -1066,7 +1091,7 @@ function TablePanel() {
     'span',
     { className: 'pt-tb-menu', ref: root },
     React.createElement(ToolbarButton, {
-      label: React.createElement(React.Fragment, null, cellsIcon, React.createElement('span', { className: 'pt-tb-caret' }, '▾')),
+      label: '▾', extraClass: 'pt-tb-more',
       active: open, disabled: !inTable, expanded: open, ariaLabel: 'Tabellverktøy',
       title: inTable ? 'Rader, kolonner og sletting' : 'Sett markøren i en tabellcelle for å bruke tabellverktøyene',
       onClick: () => setOpen(v => !v),
@@ -1086,10 +1111,19 @@ function TablePanel() {
         item('Ingen', 'Ingen ramme', () => setOption({ frame: 'none' }), false, frame === 'none'),
         item('Topp og bunn', 'Ramme topp og bunn', () => setOption({ frame: 'topBottom' }), false, frame === 'topBottom'),
         item('Rundt', 'Ramme rundt', () => setOption({ frame: 'around' }), false, frame === 'around')),
+      group('Bredde',
+        item('Kompakt', 'Bredde kompakt', () => setOption({ width: 'compact' }), false, width === 'compact'),
+        item('Full bredde', 'Bredde full', () => setOption({ width: 'full' }), false, width === 'full')),
       group('Linjer',
         item('Mellom rader', 'Linjer mellom rader', () => setOption({ rowLines: !rowLines }), false, rowLines),
         item('Mellom kolonner', 'Linjer mellom kolonner', () => setOption({ columnLines: !columnLines }), false, columnLines)),
-      group('Tabell', item('Slett tabell', 'Slett tabell', () => { deleteTable(editor); setOpen(false) })),
+      group('Tabell',
+        item('Avsnitt etter', 'Nytt avsnitt etter tabellen', () => {
+          const at = caretCell(editor.getSnapshot())
+          if (at) editor.send(paragraphAfter(at.tablePath))
+          setOpen(false)
+        }),
+        item('Slett tabell', 'Slett tabell', () => { deleteTable(editor); setOpen(false) })),
     ) : null,
   )
 }
@@ -1105,9 +1139,7 @@ function Toolbar({ expanded, onToggleExpand }: { expanded: boolean; onToggleExpa
       React.createElement(DeepHeadingMenu),
     ),
     React.createElement(StyleButton,     { name: 'blockquote', label: '❝' }),
-    React.createElement(StyleButton,     { name: 'preformatted', label: preformattedIcon, title: 'Tabell (fast bredde)', ariaLabel: 'Tabell', inListTitle: PREFORMATTED_IN_LIST_TITLE }),
     React.createElement(ContainerButtons),
-    React.createElement(TablePanel),
     React.createElement('span',          { className: 'pt-tb-sep' }),
     React.createElement(DecoratorButton, { name: 'strong',    label: 'B' }),
     React.createElement(DecoratorButton, { name: 'em',        label: 'I' }),
@@ -1133,7 +1165,7 @@ export function PortableTextEditorReact({ value, label, generation, onChange, ex
     }),
     React.createElement(ValueReader, { registerReader }),
     React.createElement(NodePlugin, { nodes }),
-    React.createElement(BehaviorPlugin, { behaviors: [replaceWords, listItemIsNoHeading, tabInTable, shiftTabInTable, backspaceAtCellStart, deleteAtCellEnd, wrapBlocksBehavior, unwrapBoxBehavior] }),
+    React.createElement(BehaviorPlugin, { behaviors: [replaceWords, listItemIsNoHeading, tabInTable, shiftTabInTable, arrowDownOutOfTable, backspaceAtCellStart, deleteAtCellEnd, wrapBlocksBehavior, unwrapBoxBehavior] }),
     React.createElement(Toolbar, { expanded, onToggleExpand }),
     React.createElement(PortableTextEditable, {
       'aria-label': label,

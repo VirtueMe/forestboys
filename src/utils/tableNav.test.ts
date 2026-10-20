@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { TreeNode } from './blockTree.ts'
-import { addColumn, addRow, cellAt, columnsOf, deleteColumn, deleteRow, emptyRow, firstBlockOf, firstSpanKey, frameOf, nextCell, optionEdit, previousCell, rowsWithBlockIn, rowsWithRowAfter } from './tableNav.ts'
+import { addColumn, addRow, cellAt, columnsOf, deleteColumn, deleteRow, emptyRow, firstBlockOf, firstSpanKey, frameOf, isLastSibling, nextCell, optionEdit, previousCell, widthOf, rowsWithBlockIn, rowsWithRowAfter } from './tableNav.ts'
 
 const p = (key: string) => ({ _type: 'block', _key: key, style: 'normal', children: [{ _type: 'span', _key: `${key}s`, text: key }] })
 const cell = (key: string, ...content: unknown[]) => ({ _type: 'cell', _key: key, content })
@@ -219,12 +219,14 @@ describe('optionEdit and frameOf', () => {
     expect(optionEdit({ frame: 'topBottom' })).toEqual({ set: { frame: 'topBottom' }, unset: [] })
     expect(optionEdit({ rowLines: true })).toEqual({ set: { rowLines: true }, unset: [] })
     expect(optionEdit({ columnLines: true })).toEqual({ set: { columnLines: true }, unset: [] })
+    expect(optionEdit({ width: 'full' })).toEqual({ set: { width: 'full' }, unset: [] })
   })
 
   it('takes the field away for the default, so a plain table has no option fields at all', () => {
     expect(optionEdit({ frame: 'none' })).toEqual({ set: {}, unset: ['frame'] })
     expect(optionEdit({ rowLines: false })).toEqual({ set: {}, unset: ['rowLines'] })
     expect(optionEdit({ columnLines: false })).toEqual({ set: {}, unset: ['columnLines'] })
+    expect(optionEdit({ width: 'compact' })).toEqual({ set: {}, unset: ['width'] })
   })
 
   it('reads the frame, and a missing or unknown one as none', () => {
@@ -233,5 +235,23 @@ describe('optionEdit and frameOf', () => {
     expect(frameOf({ _type: 'table' })).toBe('none')
     expect(frameOf({ _type: 'table', frame: 'dotted' })).toBe('none')
     expect(frameOf({ _type: 'table', frame: 'none' })).toBe('none')
+  })
+
+  it('reads the width, and a missing or unknown one as compact', () => {
+    expect(widthOf({ _type: 'table', width: 'full' })).toBe('full')
+    expect(widthOf({ _type: 'table' })).toBe('compact')
+    expect(widthOf({ _type: 'table', width: 'compact' })).toBe('compact')
+    expect(widthOf({ _type: 'table', width: 'wide' })).toBe('compact')
+  })
+})
+
+describe('isLastSibling', () => {
+  it('is true for the last of the top list and the last of a box, false for the rest and for a key that is not there', () => {
+    const v = [p('a'), { _type: 'infoBox', _key: 'box', content: [p('b'), table('t', row('r', cell('c', p('x'))))] }, p('z')]
+    expect(isLastSibling(v, 'z')).toBe(true)
+    expect(isLastSibling(v, 'box')).toBe(false)
+    expect(isLastSibling(v, 't')).toBe(true)
+    expect(isLastSibling(v, 'b')).toBe(false)
+    expect(isLastSibling(v, 'nope')).toBe(false)
   })
 })

@@ -189,6 +189,8 @@ describe('blocksToHtml', () => {
         .toContain('<table class="pt-table pt-table--topbottom pt-table--rows pt-table--columns">')
       expect(blocksToHtml([table(rows, { frame: 'around' })])).toContain('class="pt-table pt-table--around"')
       expect(blocksToHtml([table(rows, { frame: 'none', rowLines: false })])).toContain('<table class="pt-table">')
+      expect(blocksToHtml([table(rows, { width: 'full' })])).toContain('<table class="pt-table pt-table--full">')
+      expect(blocksToHtml([table(rows, { width: 'compact' })])).toContain('<table class="pt-table">')
     })
 
     it('draws a table inside a box, and a list, a link and a mark inside a cell', () => {
