@@ -254,6 +254,10 @@ section.section:last-of-type { margin-bottom: var(--space-xl); }
 .portable-text .pt-table td:last-child  { padding-right: 0; }
 .portable-text .pt-table td > :first-child { margin-top: 0; }
 .portable-text .pt-table td > :last-child  { margin-bottom: 0; }
+/* No word wrap (#331): the cells keep each line whole, and a line break that was typed stays one (pre, not nowrap). The table
+   scrolls sideways in its wrap, as it does when it is wider than the column. Named down to the paragraph: .portable-text p is pre-line. */
+.portable-text .pt-table--nowrap td,
+.portable-text .pt-table--nowrap td :where(p, li, blockquote) { white-space: pre; }
 .portable-text .pt-table--topbottom { border-top: 1px solid var(--rule); border-bottom: 1px solid var(--rule); }
 .portable-text .pt-table--around { border: 1px solid var(--rule); }
 .portable-text .pt-table--around td:first-child { padding-left: var(--space-sm); }

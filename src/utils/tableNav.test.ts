@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { TreeNode } from './blockTree.ts'
-import { addColumn, addRow, cellAt, columnsOf, deleteColumn, deleteRow, emptyRow, firstBlockOf, firstSpanKey, frameOf, isLastSibling, nextCell, optionEdit, previousCell, widthOf, rowsWithBlockIn, rowsWithRowAfter } from './tableNav.ts'
+import { addColumn, addRow, cellAt, columnsOf, deleteColumn, deleteRow, emptyRow, firstBlockOf, firstSpanKey, frameOf, isLastSibling, nextCell, noWrapOf, optionEdit, previousCell, widthOf, rowsWithBlockIn, rowsWithRowAfter } from './tableNav.ts'
 
 const p = (key: string) => ({ _type: 'block', _key: key, style: 'normal', children: [{ _type: 'span', _key: `${key}s`, text: key }] })
 const cell = (key: string, ...content: unknown[]) => ({ _type: 'cell', _key: key, content })
@@ -220,6 +220,7 @@ describe('optionEdit and frameOf', () => {
     expect(optionEdit({ rowLines: true })).toEqual({ set: { rowLines: true }, unset: [] })
     expect(optionEdit({ columnLines: true })).toEqual({ set: { columnLines: true }, unset: [] })
     expect(optionEdit({ width: 'full' })).toEqual({ set: { width: 'full' }, unset: [] })
+    expect(optionEdit({ noWrap: true })).toEqual({ set: { noWrap: true }, unset: [] })
   })
 
   it('takes the field away for the default, so a plain table has no option fields at all', () => {
@@ -227,6 +228,7 @@ describe('optionEdit and frameOf', () => {
     expect(optionEdit({ rowLines: false })).toEqual({ set: {}, unset: ['rowLines'] })
     expect(optionEdit({ columnLines: false })).toEqual({ set: {}, unset: ['columnLines'] })
     expect(optionEdit({ width: 'compact' })).toEqual({ set: {}, unset: ['width'] })
+    expect(optionEdit({ noWrap: false })).toEqual({ set: {}, unset: ['noWrap'] })
   })
 
   it('reads the frame, and a missing or unknown one as none', () => {
@@ -235,6 +237,13 @@ describe('optionEdit and frameOf', () => {
     expect(frameOf({ _type: 'table' })).toBe('none')
     expect(frameOf({ _type: 'table', frame: 'dotted' })).toBe('none')
     expect(frameOf({ _type: 'table', frame: 'none' })).toBe('none')
+  })
+
+  it('reads noWrap: only true turns wrapping off, a missing or other value wraps', () => {
+    expect(noWrapOf({ _type: 'table', noWrap: true })).toBe(true)
+    expect(noWrapOf({ _type: 'table' })).toBe(false)
+    expect(noWrapOf({ _type: 'table', noWrap: false })).toBe(false)
+    expect(noWrapOf({ _type: 'table', noWrap: 'yes' })).toBe(false)
   })
 
   it('reads the width, and a missing or unknown one as compact', () => {

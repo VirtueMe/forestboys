@@ -141,12 +141,12 @@ export function deleteColumn(table: TreeNode, col: number, row: number): Structu
   return { rows, select: { row: Math.min(row, rows.length - 1), col: Math.min(col, Math.max(cells.length - 1, 0)) } }
 }
 
-/** One option of a table the panel can change: the frame, the width, or one of the two rules. */
-export type TableOption = { frame: 'none' | 'topBottom' | 'around' } | { width: 'compact' | 'full' } | { rowLines: boolean } | { columnLines: boolean }
+/** One option of a table the panel can change: the frame, the width, one of the two rules, or whether the text wraps. */
+export type TableOption = { frame: 'none' | 'topBottom' | 'around' } | { width: 'compact' | 'full' } | { rowLines: boolean } | { columnLines: boolean } | { noWrap: boolean }
 
 /**
  * What a change of one option does to the table's fields (#312): the default state is no field at all, so a plain
- * table stays plain data (`frame: 'none'`, `width: 'compact'`, `rowLines: false` are never written), and what is not the default is written.
+ * table stays plain data (`frame: 'none'`, `width: 'compact'`, `rowLines: false`, `noWrap: false` are never written), and what is not the default is written.
  * The page reads a missing field and a default one alike (src/utils/portableText.ts).
  */
 export function optionEdit(change: TableOption): { set: Record<string, unknown>; unset: string[] } {
@@ -167,3 +167,6 @@ export function isLastSibling(nodes: unknown, key: string): boolean {
   const list = siblingLists(nodes).find(l => l.list.some(n => n._key === key))?.list
   return !!list && list.at(-1)?._key === key
 }
+
+/** Does the table keep its text from wrapping? Only `noWrap: true` does; a missing or any other field wraps, as every table did. */
+export const noWrapOf = (table: TreeNode): boolean => table.noWrap === true

@@ -307,6 +307,9 @@ onBeforeUnmount(() => {
 .pt-editable .pt-edit-grid-wrap { overflow-x: auto; margin: 0 0 0.75em; }
 .pt-editable .pt-edit-grid { border-collapse: collapse; }
 .pt-editable .pt-edit-grid--full { width: 100%; }
+/* No word wrap (#331), as the page draws it: pre keeps a typed line break; the wrap scrolls sideways. */
+.pt-editable .pt-edit-grid--nowrap .pt-edit-cell,
+.pt-editable .pt-edit-grid--nowrap .pt-edit-cell :where(p, li, blockquote) { white-space: pre; }
 .pt-editable .pt-edit-cell {
   border: 1px dotted var(--rule);
   padding: 4px 8px;

@@ -44,10 +44,10 @@ async function measure(page: Page) {
 
 const person = PAGES.find(p => p.kind === 'person')!
 
-async function openWith(page: Page, width: number) {
+async function openWith(page: Page, width: number, content: unknown[] = blocks) {
   await page.setViewportSize({ width, height: 900 })
   await openRecordedPage(page, person)
-  await page.locator('.portable-text').first().evaluate((el, html) => { el.innerHTML = html }, blocksToHtml(blocks))
+  await page.locator('.portable-text').first().evaluate((el, html) => { el.innerHTML = html }, blocksToHtml(content))
 }
 
 test.describe('the reading limit and tables', () => {
@@ -89,5 +89,51 @@ test.describe('the reading limit and tables', () => {
       return { table: wider(':scope > .pt-table-wrap'), pre: wider(':scope > pre.pre-table') }
     })
     expect(scrolls).toEqual({ table: true, pre: true })
+  })
+})
+
+// No word wrap on a table (#331): an entry such as HLD-Drop is not broken at its hyphen, and a typed line break stays one.
+test.describe('a table without word wrap', () => {
+  const drops = (extra: Record<string, unknown>) => ({
+    _key: 'tdrops', _type: 'table', ...extra,
+    rows: [0, 1].map(r => ({
+      _key: `dr${r}`, _type: 'row',
+      cells: ['HLD-Drop', 'AM 301', 'Rjukan-Drop', 'Operasjon Grouse', 'Kommentar med flere ord'].map((text, c) => cell(`d${r}${c}`, text)),
+    })),
+  })
+
+  /** The height of the first row's first cell, and the computed white-space of its paragraph. */
+  const firstCell = (page: Page) => page.evaluate(() => {
+    const td = document.querySelector('.portable-text table.pt-table td') as HTMLElement
+    return { height: Math.round(td.getBoundingClientRect().height), whiteSpace: getComputedStyle(td.querySelector('p')!).whiteSpace, lineHeight: parseFloat(getComputedStyle(td).lineHeight) }
+  })
+
+  test('wraps by default, and does not wrap with noWrap: HLD-Drop stays on one line', async ({ page }) => {
+    await openWith(page, 390, [drops({})])
+    const wrapped = await firstCell(page)
+    expect(wrapped.whiteSpace).toBe('pre-line')
+    expect(wrapped.height).toBeGreaterThan(wrapped.lineHeight * 1.5)      // broken at the hyphen on a phone
+
+    await openWith(page, 390, [drops({ noWrap: true })])
+    const whole = await firstCell(page)
+    expect(whole.whiteSpace).toBe('pre')
+    expect(whole.height).toBeLessThan(whole.lineHeight * 1.5 + 12)         // one line and the cell's padding
+  })
+
+  test('the table scrolls sideways in its own box, and the page does not get wider', async ({ page }) => {
+    await openWith(page, 390, [drops({ noWrap: true })])
+    const m = await page.evaluate(() => {
+      const wrap = document.querySelector('.portable-text .pt-table-wrap') as HTMLElement
+      return { scrolls: wrap.scrollWidth > wrap.clientWidth, page: document.documentElement.scrollWidth - window.innerWidth }
+    })
+    expect(m).toEqual({ scrolls: true, page: expect.any(Number) })
+    expect(m.page).toBeLessThanOrEqual(0)
+  })
+
+  test('a line break that was typed in a cell stays a line break', async ({ page }) => {
+    const broken = { _key: 'tb', _type: 'table', noWrap: true, rows: [{ _key: 'rb', _type: 'row', cells: [cell('b0', 'Første linje\nAndre linje')] }] }
+    await openWith(page, 1440, [broken])
+    const height = await page.evaluate(() => Math.round((document.querySelector('.portable-text table.pt-table td p') as HTMLElement).getBoundingClientRect().height))
+    expect(height).toBeGreaterThan(30)                                      // two lines, not one
   })
 })
