@@ -191,6 +191,9 @@ describe('blocksToHtml', () => {
       expect(blocksToHtml([table(rows, { frame: 'none', rowLines: false })])).toContain('<table class="pt-table">')
       expect(blocksToHtml([table(rows, { width: 'full' })])).toContain('<table class="pt-table pt-table--full">')
       expect(blocksToHtml([table(rows, { width: 'compact' })])).toContain('<table class="pt-table">')
+      expect(blocksToHtml([table(rows, { noWrap: true })])).toContain('<table class="pt-table pt-table--nowrap">')
+      expect(blocksToHtml([table(rows, { noWrap: false })])).toContain('<table class="pt-table">')
+      expect(blocksToHtml([table(rows, { width: 'full', noWrap: true, rowLines: true })])).toContain('<table class="pt-table pt-table--full pt-table--nowrap pt-table--rows">')
     })
 
     it('draws a table inside a box, and a list, a link and a mark inside a cell', () => {

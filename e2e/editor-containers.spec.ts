@@ -485,7 +485,7 @@ test.describe('the options of a table', () => {
   }
   const fields = async (page: Page) => {
     const t = await firstTable(page)
-    return { frame: t.frame, width: t.width, rowLines: t.rowLines, columnLines: t.columnLines }
+    return { frame: t.frame, width: t.width, noWrap: t.noWrap, rowLines: t.rowLines, columnLines: t.columnLines }
   }
   const newTable = async (page: Page) => {
     await openEditor(page, 'paragraph')
@@ -530,6 +530,20 @@ test.describe('the options of a table', () => {
     await option(page, 'Bredde kompakt').click()
     await expect.poll(() => fields(page)).toEqual({ frame: undefined, width: undefined, rowLines: undefined, columnLines: undefined })
     await expect(page.locator('.pt-editable .pt-edit-grid--full')).toHaveCount(0)
+  })
+
+  test('no word wrap is a switch: on writes noWrap and draws the cells without wrapping, off takes the field away, one undo step each', async ({ page }) => {
+    await newTable(page)
+    await expect(option(page, 'Ikke bryt linjer')).toHaveAttribute('aria-pressed', 'false')
+    await option(page, 'Ikke bryt linjer').click()
+    await expect.poll(() => fields(page)).toEqual({ frame: undefined, width: undefined, noWrap: true, rowLines: undefined, columnLines: undefined })
+    await expect(option(page, 'Ikke bryt linjer')).toHaveAttribute('aria-pressed', 'true')
+    await expect(page.locator('.pt-editable .pt-edit-grid--nowrap')).toHaveCount(1)
+    await expect(page.locator('.pt-editable .pt-edit-grid--nowrap .pt-edit-cell p').first()).toHaveCSS('white-space', 'pre')
+
+    await option(page, 'Ikke bryt linjer').click()
+    await expect.poll(() => fields(page)).toEqual({ frame: undefined, width: undefined, noWrap: undefined, rowLines: undefined, columnLines: undefined })
+    await expect(page.locator('.pt-editable .pt-edit-grid--nowrap')).toHaveCount(0)
   })
 
   test('none takes the frame field away, so a plain table is plain data', async ({ page }) => {

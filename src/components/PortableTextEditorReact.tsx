@@ -32,7 +32,7 @@ import { cellTexts, flatText, guessSeparator, linesOf, SEPARATORS, tableFromBloc
 import { listIndexes, type ListBlock } from '@/utils/listIndex.ts'
 import { hasLinkMark, resolveLinkTarget, type SanityBlock } from '@/utils/portableText.ts'
 import {
-  addColumn, addRow, cellAt, columnsOf, deleteColumn, deleteRow, emptyBlock, firstBlockOf, firstSpanKey, frameOf, isLastSibling, lastBlockOf, lastSpanOf, nextCell, optionEdit, widthOf,
+  addColumn, addRow, cellAt, columnsOf, deleteColumn, deleteRow, emptyBlock, firstBlockOf, firstSpanKey, frameOf, isLastSibling, lastBlockOf, lastSpanOf, nextCell, noWrapOf, optionEdit, widthOf,
   previousCell, rowsWithBlockIn, rowsWithRowAfter, type CellAt, type StructureEdit, type TableOption,
 } from '@/utils/tableNav.ts'
 
@@ -85,7 +85,7 @@ const schemaDefinition = defineSchema({
     // The options of a table are fields of its own, so the editor keeps them: a field the schema does not name is dropped.
     { name: 'table',   fields: [
       { name: 'rows', type: 'array', of: [{ type: 'row' }] },
-      { name: 'frame', type: 'string' }, { name: 'width', type: 'string' }, { name: 'rowLines', type: 'boolean' }, { name: 'columnLines', type: 'boolean' },
+      { name: 'frame', type: 'string' }, { name: 'width', type: 'string' }, { name: 'rowLines', type: 'boolean' }, { name: 'columnLines', type: 'boolean' }, { name: 'noWrap', type: 'boolean' },
     ] },
     { name: 'row',     fields: [{ name: 'cells',   type: 'array', of: [{ type: 'cell' }] }] },
     { name: 'cell',    fields: [{ name: 'content', type: 'array', of: [{ type: 'block', styles: [{ name: 'normal' }, { name: 'blockquote' }] }] }] },
@@ -133,7 +133,7 @@ const tableContainer = defineContainer({
   render: ({ attributes, children, node }) => {
     const frame = frameOf(node)
     const classes = ['pt-edit-grid', frame === 'topBottom' && 'pt-edit-grid--topbottom', frame === 'around' && 'pt-edit-grid--around',
-      widthOf(node) === 'full' && 'pt-edit-grid--full', node.rowLines === true && 'pt-edit-grid--rows', node.columnLines === true && 'pt-edit-grid--columns'].filter(Boolean).join(' ')
+      widthOf(node) === 'full' && 'pt-edit-grid--full', noWrapOf(node) && 'pt-edit-grid--nowrap', node.rowLines === true && 'pt-edit-grid--rows', node.columnLines === true && 'pt-edit-grid--columns'].filter(Boolean).join(' ')
     return React.createElement('div', { ...attributes, className: 'pt-edit-grid-wrap' },
       React.createElement('table', { className: classes }, React.createElement('tbody', null, children)))
   },
@@ -1116,6 +1116,7 @@ function TablePanel() {
   const colCount = useEditorSelector(editor, snapshot => { const t = caretCell(snapshot)?.table; return t ? columnsOf(t) : 0 })
   const frame       = useEditorSelector(editor, snapshot => { const t = caretCell(snapshot)?.table; return t ? frameOf(t) : 'none' })
   const width       = useEditorSelector(editor, snapshot => { const t = caretCell(snapshot)?.table; return t ? widthOf(t) : 'compact' })
+  const noWrap      = useEditorSelector(editor, snapshot => { const t = caretCell(snapshot)?.table; return t ? noWrapOf(t) : false })
   const rowLines    = useEditorSelector(editor, snapshot => caretCell(snapshot)?.table.rowLines === true)
   const columnLines = useEditorSelector(editor, snapshot => caretCell(snapshot)?.table.columnLines === true)
   const [open, setOpen] = React.useState(false)
@@ -1229,6 +1230,8 @@ function TablePanel() {
       group('Bredde',
         item('Kompakt', 'Bredde kompakt', () => setOption({ width: 'compact' }), false, width === 'compact'),
         item('Full bredde', 'Bredde full', () => setOption({ width: 'full' }), false, width === 'full')),
+      group('Tekstbryting',
+        item('Ikke bryt linjer', 'Ikke bryt linjer', () => setOption({ noWrap: !noWrap }), false, noWrap)),
       group('Linjer',
         item('Mellom rader', 'Linjer mellom rader', () => setOption({ rowLines: !rowLines }), false, rowLines),
         item('Mellom kolonner', 'Linjer mellom kolonner', () => setOption({ columnLines: !columnLines }), false, columnLines)),

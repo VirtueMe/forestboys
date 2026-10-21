@@ -146,7 +146,7 @@ A description can hold a box (`infoBox`) or a table (`table › row › cell`), 
   are compared as values, so a container is carried and compared like the rest.
 - Ingest refuses a malformed container (`functions/_lib/description-blocks.ts`): a box holds text blocks and tables; a table
   has rows, a row has cells, a cell holds text blocks only and no heading; `frame` is `none`, `topBottom` or `around`; `width` is `compact` or `full`;
-  `rowLines` and `columnLines` are booleans; every node has a `_key`. A top-level entry of any other type than a text block
+  `rowLines`, `columnLines` and `noWrap` are booleans; every node has a `_key`. A top-level entry of any other type than a text block
   or these two is refused in `modify-block`, and left as it is in a description's JSON.
 - The bot keeps or replaces a container whole and does not make new ones (`scripts/prompts/proposal-bundle.txt`).
 

@@ -307,7 +307,7 @@ hold blocks, and `blocksToHtml` and `blocksToText` read the tree:
 
 ```
 { _type: 'infoBox', content: [ …blocks, tables… ] }
-{ _type: 'table', frame?, width?, rowLines?, columnLines?, rows: [ { _type: 'row', cells: [ { _type: 'cell', content: [ …blocks… ] } ] } ] }
+{ _type: 'table', frame?, width?, noWrap?, rowLines?, columnLines?, rows: [ { _type: 'row', cells: [ { _type: 'cell', content: [ …blocks… ] } ] } ] }
 ```
 
 - A **box** is `<div class="pt-box">` around what it holds; it may hold a table.
@@ -315,7 +315,8 @@ hold blocks, and `blocksToHtml` and `blocksToText` read the tree:
   marks, links), a short row is padded so the columns line up, and the table scrolls sideways as one unit.
 - The options of a table are fields on it, drawn as classes: `frame` (`topBottom` or `around`, else none) →
   `pt-table--topbottom` / `pt-table--around`; `width: 'full'` → `pt-table--full` (the whole column; else the table is as wide as
-  its content); `rowLines: true` → `pt-table--rows`; `columnLines: true` → `pt-table--columns`.
+  its content); `noWrap: true` → `pt-table--nowrap` (the cells do not wrap; `white-space: pre` on their paragraphs, so a typed line break
+  stays one, and the table scrolls sideways in its wrap); `rowLines: true` → `pt-table--rows`; `columnLines: true` → `pt-table--columns`.
 - A container the reader does not know, and a `row` or `cell` on its own, is drawn as what it holds: text is never dropped.
 - `blocksToText` reads a table as rows on lines with a tab between cells (a cell's blocks on one line), a box one block to a
   line, and an unknown container as its contents.
@@ -341,7 +342,8 @@ the root schema) and **no headings**, which the heading check and ingest refuse 
 - **Tabellverktøy**, the ▾ beside *Tabell med celler*, is one split button with it (like H3 and its ▾) and is on only with the caret in a
   cell. It opens a panel that stays open for the next change: a row above or below, a column before or after, delete the row, the
   column or the table; the **frame** (none, top and bottom, around); the **width** (compact: as wide as the content, the default; or
-  full width: the whole column); switches for the rules between rows and between columns; and **Avsnitt etter**, which adds an empty
+  full width: the whole column); **Ikke bryt linjer** (#331: no word wrap, so an entry such as `HLD-Drop` stays whole; off is the
+  default and wraps); switches for the rules between rows and between columns; and **Avsnitt etter**, which adds an empty
   paragraph after the table. A table keeps one row and one column.
 
 Turning text into a table (#328): with lines selected (more than the caret; text blocks side by side at the top or in a box,
@@ -375,7 +377,7 @@ Things that are easy to get wrong:
   `src/utils/tableNav.ts`, the walk over the tree in `src/utils/blockTree.ts`.
 - **A field the schema does not name is dropped by the editor.** A new table option needs the schema (`blockObjects` in the editor),
   the validator (`functions/_lib/description-blocks.ts`), the page renderer (`containerHtml`) and the panel to agree.
-- A node with the default state carries no field (`frame: 'none'`, `width: 'compact'` and `rowLines: false` are never written).
+- A node with the default state carries no field (`frame: 'none'`, `width: 'compact'`, `noWrap: false` and `rowLines: false` are never written).
 - Replacing a block with `set` cannot be undone and left a block twice: wrapping uses insert and delete, with fresh keys on the copies.
 - While editing, the cells have a dotted rule so there is somewhere to put the caret; the options are drawn as solid rules over it.
   The page draws the final look (`.pt-box`, `.pt-table`).

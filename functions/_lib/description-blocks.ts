@@ -58,7 +58,7 @@ function checkTable(node: Obj, at: string): string | null {
   if (typeof node._key !== 'string' || !node._key) return `${at}: _key required`
   if (node.frame !== undefined && !(FRAMES as readonly unknown[]).includes(node.frame)) return `${at}: frame must be one of ${FRAMES.join(', ')}`
   if (node.width !== undefined && !(WIDTHS as readonly unknown[]).includes(node.width)) return `${at}: width must be one of ${WIDTHS.join(', ')}`
-  for (const flag of ['rowLines', 'columnLines'] as const) {
+  for (const flag of ['rowLines', 'columnLines', 'noWrap'] as const) {
     if (node[flag] !== undefined && typeof node[flag] !== 'boolean') return `${at}: ${flag} must be true or false`
   }
   return checkList(node.rows, 'rows', at, checkRow, 1)

@@ -31,6 +31,13 @@ describe('checkTopLevelBlock', () => {
     expect(checkTopLevelBlock(table('t', [row('r', cell('c', text('a')))], { width: 'compact' }), 'v')).toBeNull()
   })
 
+  it('takes noWrap as a boolean, and refuses anything else', () => {
+    const t = (extra: Record<string, unknown>) => table('t', [row('r', cell('c', text('a')))], extra)
+    expect(checkTopLevelBlock(t({ noWrap: true }), 'v')).toBeNull()
+    expect(checkTopLevelBlock(t({ noWrap: false }), 'v')).toBeNull()
+    expect(checkTopLevelBlock(t({ noWrap: 'yes' }), 'v')).toContain('noWrap must be true or false')
+  })
+
   it('refuses a width that is neither compact nor full', () => {
     expect(checkTopLevelBlock(table('t', [row('r', cell('c', text('a')))], { width: 'wide' }), 'v')).toContain('width must be one of compact, full')
   })
