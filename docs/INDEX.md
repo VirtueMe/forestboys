@@ -21,6 +21,7 @@ Entry point for all design and architecture documents.
 | [BUNDLE-FORMAT.md](BUNDLE-FORMAT.md) | Packages of entity snapshots and how an import becomes a review bundle — no Sanity metadata, a source ref per entity (#159) |
 | [ROLES.md](ROLES.md) | Requirements for editable relation roles with name, description and a visitor-facing explanation popover (draft) |
 | [PERSON-RANKS.md](PERSON-RANKS.md) | Requirements for a person's known rank plus an optional dated rank history with acting flag and sourced notes (draft) |
+| [SELF-EVOLVING-ARCHIVE.md](SELF-EVOLVING-ARCHIVE.md) | Vision: an analysis loop where AI proposes knowledge and system changes, editors decide, every run is recorded (epic #337) |
 
 ---
 
