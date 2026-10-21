@@ -1,5 +1,25 @@
 # Changelog
 
+## [0.20.0](https://github.com/VirtueMe/forestboys/compare/v0.19.0...v0.20.0) (2026-10-21)
+
+
+### Features
+
+* **design:** tables, boxes and fixed-width blocks are not held to the reading limit ([5b3f059](https://github.com/VirtueMe/forestboys/commit/5b3f059afe57feac25ebde3f3995d9f321333cc3)), closes [#330](https://github.com/VirtueMe/forestboys/issues/330)
+* **editor:** paste a table as a table ([09f1134](https://github.com/VirtueMe/forestboys/commit/09f11346ccb84f1da0662f8dc26d262db50dd6f1)), closes [#328](https://github.com/VirtueMe/forestboys/issues/328)
+* **editor:** turn selected lines into a table ([95c7cab](https://github.com/VirtueMe/forestboys/commit/95c7cabf052c4382cbcaec6376c6def9f2eabe7d)), closes [#328](https://github.com/VirtueMe/forestboys/issues/328)
+* **editor:** turn word wrap off or on for a table ([705a787](https://github.com/VirtueMe/forestboys/commit/705a787cf166fb07e10449fabb7941ab91189c16)), closes [#331](https://github.com/VirtueMe/forestboys/issues/331)
+
+
+### Bug fixes
+
+* **editor:** the full window is as wide as the section, not 960px ([028e6af](https://github.com/VirtueMe/forestboys/commit/028e6af8891b116976d52ab8ce2405d658b9dbf6)), closes [#332](https://github.com/VirtueMe/forestboys/issues/332)
+
+
+### Documentation
+
+* add the self-evolving archive vision ([d071f83](https://github.com/VirtueMe/forestboys/commit/d071f8349e4e55d9c89aec1badcc4104636538a3)), closes [#337](https://github.com/VirtueMe/forestboys/issues/337)
+
 ## [0.19.0](https://github.com/VirtueMe/forestboys/compare/v0.18.1...v0.19.0) (2026-10-20)
 
 
