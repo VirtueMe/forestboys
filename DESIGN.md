@@ -208,7 +208,8 @@ technical data: IDs, slugs, code snippets in source citations.
 - `h3` (18px sans) — sub-section labels, form group headings.
 - `body` (17px serif, 1.55 leading) — prose (Portable Text output, long
   descriptions). Constrain to `prose-max-width` (68ch) regardless of screen
-  width.
+  width; tables, boxes and fixed-width blocks are the exception (see
+  "Portable Text rendering").
 - `body-ui` (15px sans) — anything inside a control, card footer, filter
   panel, or table cell.
 - `label` (13px sans, 500 weight) — form field labels.
@@ -258,7 +259,10 @@ Paper surfaces cast almost nothing. Use shadow to signal *layer*, not decoration
 
 Mobile-first PWA, fluid to `content-max-width` (1320px) on desktop. Prose
 columns constrain to `prose-max-width` (68ch) *regardless of viewport* —
-widescreen prose at 1200px is unreadable for Norwegian long-form.
+widescreen prose at 1200px is unreadable for Norwegian long-form. The measure
+is for what is read as lines of prose: a table, a box and a fixed-width block
+are not held to it (#330), and use the whole column their description sits in
+(about 1290px on a desktop window, the content width less the page's gutter).
 
 - `.shell` is `height: 100%; display: flex; flex-direction: column`.
 - `AppNav` is `nav-height` (48px), flex-shrink: 0.
@@ -387,8 +391,12 @@ boxes in up to four rows above, joined to their dot by a leader line.
 ### Portable Text rendering
 
 Long-form prose output from Sanity Portable Text → HTML. Use `body` type at
-`prose-max-width`. Set once on `.portable-text` in
-`main.css`; components do not restyle it. Inline styles:
+`prose-max-width`. Set once in `main.css`, on the prose children of
+`.portable-text` (`.portable-text > :not(.pt-table-wrap, .pt-box, pre.pre-table)`)
+and not on the container, so a table (`.pt-table-wrap`), a box (`.pt-box`) and a
+fixed-width block (`pre.pre-table`) may use the whole column and scroll sideways
+beyond it (#330). A new kind of block is prose until it is listed there.
+Components do not restyle it. Inline styles:
 
 - Links: `ink` with `1px solid rule` underline (not standard browser
   underline), becomes `faded-red` on hover

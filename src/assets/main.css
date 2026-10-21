@@ -156,14 +156,18 @@ section.section:last-of-type { margin-bottom: var(--space-xl); }
 /* ── Portable Text ─────────────────────────────────────────────
  * Shared by every component that renders blocksToHtml() output inside
  * .portable-text (DESIGN.md, "Portable Text rendering"). Low specificity
- * on purpose: a component's own rule on its own class still wins. */
+ * on purpose: a component's own rule on its own class still wins.
+ *
+ * The reading measure (#330) is on what is read, not on the container: text keeps --prose-max-width, while a table,
+ * a box and a fixed-width block (which have columns, or lines as long as they were typed) may use the whole column
+ * the description sits in, and scroll sideways beyond it. A new kind of block is prose until it is listed here. */
 .portable-text {
   font-family: var(--font-serif);
   font-size: var(--size-body);
   line-height: var(--leading-prose);
   color: var(--ink);
-  max-width: var(--prose-max-width);
 }
+.portable-text > :where(:not(.pt-table-wrap, .pt-box, pre.pre-table)) { max-width: var(--prose-max-width); }
 .portable-text > :last-child { margin-bottom: 0; }
 .portable-text p {
   margin: 0 0 var(--space-sm);
