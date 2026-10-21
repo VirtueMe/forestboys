@@ -226,14 +226,16 @@ onBeforeUnmount(() => {
 /* Full window (#123): the host fills the viewport above the nav (z-index 100–200) and the save bar,
    below anything modal. overscroll-behavior stops a scroll that reaches the end of the text from
    moving the page behind it. The page is zoomed (--page-zoom), which scales the padding but not 100vw,
-   so the viewport is divided by the zoom to keep the editor 960 page px wide at every size. */
+   so the viewport is divided by the zoom to keep the editor the same page px wide at every size. It is as wide as the
+   section it came from (#332): the content width less the section's own padding on both sides, about 1288 px, and
+   no wider on a big screen; narrower than that it fills the window, less the gutter. */
 .pt-editor-host--full {
   position: fixed;
   inset: 0;
   z-index: 500;
   display: flex;
   flex-direction: column;
-  padding: 12px max(12px, calc((100vw / var(--page-zoom) - 960px) / 2));
+  padding: 12px max(12px, calc((100vw / var(--page-zoom) - (var(--content-max-width) - 2 * var(--space-md))) / 2));
   background: var(--paper);
   overflow-y: auto;
   overscroll-behavior: contain;
