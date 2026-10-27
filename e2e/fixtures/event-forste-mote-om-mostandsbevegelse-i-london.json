@@ -334,6 +334,13 @@
    "truncatedFrom": 2307
   },
   {
+   "query": "\n      MATCH (e:Operation|Incident {slug: $slug})-[:USED]->(t:Transport)\n      RETURN t.slug AS targetSlug, coalesce(t.canonicalName, t.name) AS targetName\n      ORDER BY targetName\n    ",
+   "params": {
+    "slug": "forste-mote-om-mostandsbevegelse-i-london"
+   },
+   "rows": []
+  },
+  {
    "query": "\n    MATCH (i:Incident)\n    RETURN i.slug AS slug,\n           i.title + CASE WHEN i.date IS NOT NULL THEN ' · ' + i.date ELSE '' END AS name\n    ORDER BY i.date DESC, i.title\n  ",
    "params": {},
    "rows": []
@@ -342,10 +349,6 @@
    "query": "\n    MATCH (l:Location)\n    RETURN l.slug AS slug, coalesce(l.canonicalName, l.title) AS name\n    ORDER BY name\n  ",
    "params": {},
    "rows": [
-    {
-     "slug": "finneru ",
-     "name": " Mærratjern"
-    },
     {
      "slug": "1-fjellbu",
      "name": "1 Fjellbu"
@@ -441,9 +444,13 @@
     {
      "slug": "29-cella",
      "name": "29 Cella"
+    },
+    {
+     "slug": "3-godly",
+     "name": "3 Godly"
     }
    ],
-   "truncatedFrom": 1156
+   "truncatedFrom": 1161
   },
   {
    "query": "MATCH (n {slug: $slug})\n       WHERE n:Incident OR n:Operation\n       RETURN CASE WHEN 'Operation' IN labels(n) THEN 'operation' ELSE 'incident' END AS kind,\n              coalesce(n.codeName, n.canonicalName, n.title) AS name,\n              n.date AS date",
@@ -479,12 +486,20 @@
    "params": {},
    "rows": [
     {
+     "slug": "avd-d-mi-iv",
+     "name": "Avd D. \"Mi IV\""
+    },
+    {
      "slug": "boac-balder",
      "name": "BOAC/BALDER"
     },
     {
      "slug": "british-commandos",
      "name": "British Commandos"
+    },
+    {
+     "slug": "cohq",
+     "name": "COHQ"
     },
     {
      "slug": "catalina-trafikken",
@@ -567,19 +582,11 @@
      "name": "RNNSU  Royal Norwegian Naval Special Unit "
     },
     {
-     "slug": "shaef",
-     "name": "SHAEF"
-    },
-    {
-     "slug": "sis",
-     "name": "SIS"
-    },
-    {
-     "slug": "soe",
-     "name": "SOE"
+     "slug": "sas",
+     "name": "SAS"
     }
    ],
-   "truncatedFrom": 30
+   "truncatedFrom": 33
   },
   {
    "query": "\n    MATCH (op:Operation {slug: $slug})-[:FROM]->(l:Location)\n    RETURN l.slug AS targetSlug, coalesce(l.canonicalName, l.title) AS targetName\n    LIMIT 1\n  ",
@@ -1139,7 +1146,7 @@
     },
     {
      "slug": "dumfries",
-     "name": "Dumfries ",
+     "name": "Dumfries",
      "aliases": []
     },
     {
@@ -1159,17 +1166,17 @@
     },
     {
      "slug": "great-yarmouth",
-     "name": "Great Yarmouth ",
+     "name": "Great Yarmouth",
      "aliases": []
     },
     {
      "slug": "greenock-clyde",
-     "name": "Greenock  Clyde",
+     "name": "Greenock Clyde",
      "aliases": []
     },
     {
      "slug": "hms-mantis-lowestoft",
-     "name": "HMS Mantis  Lowestoft",
+     "name": "HMS Mantis Lowestoft",
      "aliases": []
     },
     {
@@ -1229,11 +1236,118 @@
     },
     {
      "slug": "lunna-voe",
-     "name": "Lunna Voe  SHGJ",
+     "name": "Lunna Voe SHGJ",
      "aliases": []
     }
    ],
-   "truncatedFrom": 145
+   "truncatedFrom": 147
+  },
+  {
+   "query": "\n    MATCH (t:Transport)\n    RETURN t.slug AS slug, coalesce(t.canonicalName, t.name) AS name\n    ORDER BY name\n  ",
+   "params": {},
+   "rows": [
+    {
+     "slug": "20-fot-apen-bat",
+     "name": "20 fot åpen båt"
+    },
+    {
+     "slug": "37-fly-reports-all-squadrons",
+     "name": "37 fly REPORTS all Squadrons"
+    },
+    {
+     "slug": "37-fly",
+     "name": "37 fly fra Sqdn: 50-110-114-235-236-248-404"
+    },
+    {
+     "slug": "apostlenes-hester",
+     "name": "Apostlenes hester"
+    },
+    {
+     "slug": "armstrong-whitworth-aw38-whitley-mk-v-g-agcg",
+     "name": "Armstrong Whitworth AW38 Whitley MK V G-AGCG"
+    },
+    {
+     "slug": "armstrong-whitworth-aw38-whitley-mk-v-g-agck",
+     "name": "Armstrong Whitworth AW38 Whitley MK V G-AGCK"
+    },
+    {
+     "slug": "armstrong-whitworth-aw38-whitley-mk-v-g-ageb",
+     "name": "Armstrong Whitworth AW38 Whitley MK V G-AGEB"
+    },
+    {
+     "slug": "armstrong-whitworth-aw38-whitley-mk-v-g-agec",
+     "name": "Armstrong Whitworth AW38 Whitley MK V G-AGEC"
+    },
+    {
+     "slug": "armstrong-whitworth-whitley-mk-v-p5029",
+     "name": "Armstrong Whitworth AW38 Whitley Mk V P5029 E ✬"
+    },
+    {
+     "slug": "armstrong-whitworth-aw38-whitley-mk-v-r6828-ma-r",
+     "name": "Armstrong Whitworth AW38 Whitley Mk V R6828 MA-R"
+    },
+    {
+     "slug": "armstrong-whitworth-aw38-whitley-mk-v-wxxx2-nf",
+     "name": "Armstrong Whitworth AW38 Whitley Mk V Z9125 NF-A ✬"
+    },
+    {
+     "slug": "armstrong-whitworth-aw38-whitley-mk-v-z9158-nf-k",
+     "name": "Armstrong Whitworth AW38 Whitley Mk V Z9158 NF-K ✬"
+    },
+    {
+     "slug": "armstrong-whitworth-whitley-mk-v-z9245",
+     "name": "Armstrong Whitworth AW38 Whitley Mk V Z9245"
+    },
+    {
+     "slug": "armstrong-whitworth-aw38-whitley-mk-v-z9230-nf-n",
+     "name": "Armstrong Whitworth AW38 Whitley Mk. V Z9230 NF-N ✬ ✝"
+    },
+    {
+     "slug": "armstrong-whitworth-aw38-whitley-mk-v-z9275-nf",
+     "name": "Armstrong Whitworth AW38 Whitley Mk. V Z9275 NF-G ✬ ✝"
+    },
+    {
+     "slug": "armstrong-whitworth-aw38-whitley-mk-v-z9287-nf-k",
+     "name": "Armstrong Whitworth AW38 Whitley Mk. V Z9287 NF-K ✬"
+    },
+    {
+     "slug": "armstrong-whitworth-aw38-whitley-v-t4166-nf-r",
+     "name": "Armstrong Whitworth AW38 Whitley V T4166 NF-R ✬ ✝"
+    },
+    {
+     "slug": "armstrong-whitworth-whitley",
+     "name": "Armstrong Whitworth Whitley"
+    },
+    {
+     "slug": "boeing-b-17f-115-bo-flying-fortress-se-bak",
+     "name": "BOEING B-17F-115-BO Flying Fortress SE-BAK"
+    },
+    {
+     "slug": "black-ranger-a163",
+     "name": "Black Ranger A163"
+    },
+    {
+     "slug": "blohm-and-voss-bv-138-seedrache",
+     "name": "Blohm & Voss BV 138 Seedrache"
+    },
+    {
+     "slug": "consolidated-c87-liberator-express",
+     "name": "Consolidated C87 Liberator Express"
+    },
+    {
+     "slug": "consolidated-catalina-i-b-pby-5b-170-fp121-ql-z-jossing",
+     "name": "Consolidated Catalina I B PBY-5B 170 FP121 QL-Z \"Jøssing\""
+    },
+    {
+     "slug": "consolidated-catalina-i-b-pby-5b-170-fp183-vingtor-ii",
+     "name": "Consolidated Catalina I B PBY-5B 170 FP183 3D-D \"Vingtor II\""
+    },
+    {
+     "slug": "consolidated-catalina-i-b-pby-5b-170-fp314-viking",
+     "name": "Consolidated Catalina I B PBY-5B 170 FP314 KK-A \"Viking\""
+    }
+   ],
+   "truncatedFrom": 1082
   },
   {
    "query": "\n    MATCH (u:Unit)\n    RETURN u.slug AS slug, u.canonicalName AS name\n    ORDER BY u.canonicalName\n  ",
@@ -1258,6 +1372,10 @@
     {
      "slug": "anglo-norwegian-collaboration-committee",
      "name": "ANGLO-NORWEGIAN COLLABORATION COMMITTEE"
+    },
+    {
+     "slug": "d41-finnmark",
+     "name": "D41-Finnmark"
     },
     {
      "slug": "den-norske-regjering",
@@ -1334,13 +1452,9 @@
     {
      "slug": "linge-course-i",
      "name": "Kompani Linge — Kurs I"
-    },
-    {
-     "slug": "linge-course-k",
-     "name": "Kompani Linge — Kurs K"
     }
    ],
-   "truncatedFrom": 72
+   "truncatedFrom": 73
   },
   {
    "query": "\n      MATCH (u:Unit)-[:PARTICIPATED_IN]->(op:Operation {slug: $slug})\n      RETURN u.slug AS targetSlug, u.canonicalName AS targetName\n      ORDER BY targetName\n    ",

@@ -96,12 +96,12 @@
           </div>
         </section>
 
-        <!-- Transportmiddel (Sanity-only for now) -->
-        <section v-if="event?.transport?.length" class="section">
+        <!-- Transportmiddel -->
+        <section v-if="displayTransport.length" class="section">
           <h2 class="section-heading">Transportmiddel</h2>
           <div class="transport-list">
             <RouterLink
-              v-for="t in event.transport"
+              v-for="t in displayTransport"
               :key="t.slug"
               :to="`/transport/${t.slug}`"
               class="section-link"
@@ -215,6 +215,7 @@ const {
   inOperationEntries, inOperationTargets,
   orgEntries, orgTargets,
   unitEntries, unitTargets,
+  transportEntries, transportTargets,
   fromLocationEntries, fromLocationTargets,
   toLocationEntries,   toLocationTargets,
   fromStationEntries,  fromStationTargets,
@@ -244,6 +245,7 @@ const relationsData = computed<EventRelationsData>(() => ({
   inOperation:  { entries: inOperationEntries.value,  targets: inOperationTargets.value  },
   org:          { entries: orgEntries.value,           targets: orgTargets.value          },
   unit:         { entries: unitEntries.value,          targets: unitTargets.value         },
+  transport:    { entries: transportEntries.value,     targets: transportTargets.value    },
   fromLocation: { entries: fromLocationEntries.value,  targets: fromLocationTargets.value },
   toLocation:   { entries: toLocationEntries.value,    targets: toLocationTargets.value   },
   fromStation:  { entries: fromStationEntries.value,   targets: fromStationTargets.value  },
@@ -275,6 +277,9 @@ const displayPeople = computed(() =>
   personEntries.value.length
     ? personEntries.value.map((p) => ({ slug: p.targetSlug, name: p.targetName }))
     : (event.value?.people ?? []),
+)
+const displayTransport = computed(() =>
+  transportEntries.value.map((t) => ({ slug: t.targetSlug, name: t.targetName })),
 )
 const displayGallery = computed(() =>
   neoGallery.value.length
