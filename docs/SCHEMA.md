@@ -137,6 +137,8 @@ ORDER BY CASE WHEN r.description IS NOT NULL THEN 1 ELSE 0 END,
          coalesce(r.order, 999), name
 ```
 
+The lists an editor orders by hand are the exception: the **people of an event** (`PARTICIPATED_IN` / `INVOLVED_IN`), the **members of a unit** (`MEMBER_OF`, the unit's own before those of its sub-units), the **people of a course** (`ATTENDED`: everyone starts together, so the order is the enrolment order) and the **units of an organisation** (`PART_OF`). `order` is the 1-based position in the list, the editor's move panel writes it, and it wins over the annotation: `ORDER BY coalesce(r.order, 999), name` (a unit's members: then `startDate`). An edge without an `order` sorts after those with one.
+
 ### Crew-role validation
 
 Whether a `CREW_OF.role` is legal on a given Transport is a single hierarchical traversal — same shape as the Unit hierarchical filter rule:
@@ -225,14 +227,14 @@ Vocabularies:
 
 | Edge                  | To                                        | Properties                                            |
 |-----------------------|-------------------------------------------|-------------------------------------------------------|
-| `MEMBER_OF`           | `Unit` \| `Organization`                  | `role, description, sourceRefs[], startDate, endDate` |
+| `MEMBER_OF`           | `Unit` \| `Organization`                  | `role, description, sourceRefs[], startDate, endDate, order` |
 | `RANK`                | `Rank`                                    | `state, sourceRef` — exactly one: the rank the person is known by (PERSON-RANKS.md) |
 | `HELD_RANK`           | `Rank`                                    | `id, from, to, acting, sourceRefs, state` — rank history, 0..n; partial dates |
 | `HAS_RANK_NOTE`       | `Description`                             | per history entry — `Description.rankEntryId` = the edge's `id`, then `ABOUT_RANK` |
 | `INVOLVED_IN`         | `Incident`                                | `role, outcome, order`                                |
 | `PARTICIPATED_IN`     | `Operation`                               | `role, startDate, endDate, order`                     |
 | `STATIONED_AT`        | `Location` \| `Station`                  | `id, role, startDate, endDate, state, sourceRef, sourceRefs` — one edge per stay (docs/PERSON-STATIONED-AT.md) |
-| `ATTENDED`            | `Unit {type:"course"}`                    | `startDate, endDate, passed` — course attendance; all three may be null, dates are partial (`YYYY`, `YYYY-MM`, `YYYY-MM-DD`), `passed` is a boolean |
+| `ATTENDED`            | `Unit {type:"course"}`                    | `startDate, endDate, passed, order` — course attendance; the first three may be null, dates are partial (`YYYY`, `YYYY-MM`, `YYYY-MM-DD`), `passed` is a boolean; `order` is the place in the course (the enrolment order) |
 | `CREW_OF`             | `Transport`                               | `role` (controlled vocab — RAF WWII + SOE dispatcher) |
 | `BORN_AT`             | `Location`                                | —                                                     |
 | `HOME_AT`             | `Location`                                | —                                                     |
@@ -246,7 +248,7 @@ Vocabularies:
 **Rules:**
 - Every `Person` MUST have exactly one `RANK` edge (the rank they are known by). The default is `Rank{canonicalName:"Menig"}` (tier 1) with `sourceRef = 'sanity-migration:person:<id>:default:menig-soldier-baseline'`. The `HELD_RANK` history is optional.
 - `MEMBER_OF` typically points at the most-specific Unit; parent Units/Orgs are reached via `PART_OF` traversal.
-- `ATTENDED` is course attendance and is kept apart from membership: its target is always a `Unit {type:"course"}` (the editors skip any other unit). It is written as a whole set from either side (`PATCH /api/admin/person/:slug/attendances`, `PATCH /api/admin/unit/:slug/attendees`), which replaces that person's or that course's `ATTENDED` edges. The note for one attendance is keyed by the course (`PATCH /api/admin/person/:slug/attendance-note/:unitSlug`), so it survives a replace.
+- `ATTENDED` is course attendance and is kept apart from membership: its target is always a `Unit {type:"course"}` (the editors skip any other unit). It is written as a whole set from either side (`PATCH /api/admin/person/:slug/attendances`, `PATCH /api/admin/unit/:slug/attendees`), as a difference (`saveEdgeSet`): an attendance that stays keeps its edge and its `order`. The note for one attendance is keyed by the course (`PATCH /api/admin/person/:slug/attendance-note/:unitSlug`), so it survives a replace.
 
 ---
 

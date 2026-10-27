@@ -8,6 +8,7 @@ import { neo4jQuery } from '@/composables/useNeo4j.ts'
 import { authFetch }  from '@/composables/useAuth.ts'
 import type { Section } from '@/components/SectionsEditor.vue'
 import type { RelationEntry, RelationStrategy, RelationTarget } from './RelationStrategy.ts'
+import { ORG_UNITS_QUERY, UNIT_ATTENDEES_QUERY, UNIT_MEMBERS_QUERY } from '@/composables/orderedMemberQueries.ts'
 
 interface CitationRow {
   inline:       boolean | null
@@ -574,40 +575,7 @@ function personMemberRowToEntry(r: PersonMemberRow): RelationEntry {
 export const UnitMembersStrategy: RelationStrategy = {
   fetchTargets: () => PersonInvolvementStrategy.fetchTargets(),
   async fetchEntries(unitSlug) {
-    const rows = await neo4jQuery<PersonMemberRow>(`
-      MATCH (p:Person)-[m:MEMBER_OF]->(u:Unit {slug: $slug})
-      OPTIONAL MATCH (p)-[:HAS_MEMBERSHIP_NOTE]->(d:Description)-[:ABOUT_UNIT]->(u)
-      OPTIONAL MATCH (d)-[:SOURCED_FROM]->(from:Source)
-      WITH p, m, d, from
-      OPTIONAL MATCH (d)-[cites:CITES]->(src:Source)
-      WITH p, m, d, from,
-           collect(CASE WHEN src IS NULL THEN NULL ELSE {
-             inline:       coalesce(cites.inline, false),
-             sourceId:     src.id,
-             sourceTitle:  src.title,
-             sourceUrl:    src.url,
-             sourceAuthor: src.authorFreeText
-           } END) AS rawCites
-      WITH p, m, d, from,
-           CASE WHEN d IS NULL THEN NULL ELSE {
-             order:     coalesce(d.order, 1),
-             content:   d.content,
-             citations: [x IN rawCites WHERE x IS NOT NULL],
-             sourcedFrom: CASE WHEN from IS NULL THEN NULL ELSE {
-               id:             from.id,
-               title:          from.title,
-               url:             from.url,
-               authorFreeText: from.authorFreeText,
-               license:        from.license,
-               attribution:    from.attribution
-             } END
-           } END AS section
-      WITH p, m, collect(section) AS rawSections
-      RETURN p.slug AS targetSlug, p.canonicalName AS targetName,
-             m.role AS role, m.startDate AS startDate, m.endDate AS endDate,
-             [x IN rawSections WHERE x IS NOT NULL] AS sections
-      ORDER BY m.startDate, targetName
-    `, { slug: unitSlug })
+    const rows = await neo4jQuery<PersonMemberRow>(UNIT_MEMBERS_QUERY, { slug: unitSlug })
     return rows.map(personMemberRowToEntry)
   },
   async saveEntries(unitSlug, entries) {
@@ -615,9 +583,10 @@ export const UnitMembersStrategy: RelationStrategy = {
       method:  'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        members: entries.map(e => ({
+        members: entries.map((e, i) => ({
           personSlug: e.targetSlug,
           role:       e.role ?? null,
+          order:      i + 1,
           startDate:  e.startDate,
           endDate:    e.endDate,
         })),
@@ -659,40 +628,7 @@ function personAttendeeRowToEntry(r: PersonAttendeeRow): RelationEntry {
 export const UnitAttendeesStrategy: RelationStrategy = {
   fetchTargets: () => PersonInvolvementStrategy.fetchTargets(),
   async fetchEntries(unitSlug) {
-    const rows = await neo4jQuery<PersonAttendeeRow>(`
-      MATCH (p:Person)-[a:ATTENDED]->(u:Unit {slug: $slug})
-      OPTIONAL MATCH (p)-[:HAS_ATTENDANCE_NOTE]->(d:Description)-[:ABOUT_UNIT]->(u)
-      OPTIONAL MATCH (d)-[:SOURCED_FROM]->(from:Source)
-      WITH p, a, d, from
-      OPTIONAL MATCH (d)-[cites:CITES]->(src:Source)
-      WITH p, a, d, from,
-           collect(CASE WHEN src IS NULL THEN NULL ELSE {
-             inline:       coalesce(cites.inline, false),
-             sourceId:     src.id,
-             sourceTitle:  src.title,
-             sourceUrl:    src.url,
-             sourceAuthor: src.authorFreeText
-           } END) AS rawCites
-      WITH p, a, d, from,
-           CASE WHEN d IS NULL THEN NULL ELSE {
-             order:     coalesce(d.order, 1),
-             content:   d.content,
-             citations: [x IN rawCites WHERE x IS NOT NULL],
-             sourcedFrom: CASE WHEN from IS NULL THEN NULL ELSE {
-               id:             from.id,
-               title:          from.title,
-               url:             from.url,
-               authorFreeText: from.authorFreeText,
-               license:        from.license,
-               attribution:    from.attribution
-             } END
-           } END AS section
-      WITH p, a, collect(section) AS rawSections
-      RETURN p.slug AS targetSlug, p.canonicalName AS targetName,
-             a.passed AS passed, a.startDate AS startDate, a.endDate AS endDate,
-             [x IN rawSections WHERE x IS NOT NULL] AS sections
-      ORDER BY a.startDate, targetName
-    `, { slug: unitSlug })
+    const rows = await neo4jQuery<PersonAttendeeRow>(UNIT_ATTENDEES_QUERY, { slug: unitSlug })
     return rows.map(personAttendeeRowToEntry)
   },
   async saveEntries(unitSlug, entries) {
@@ -700,8 +636,9 @@ export const UnitAttendeesStrategy: RelationStrategy = {
       method:  'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        attendees: entries.map(e => ({
+        attendees: entries.map((e, i) => ({
           personSlug: e.targetSlug,
+          order:      i + 1,
           passed:     e.passed ?? null,
           startDate:  e.startDate,
           endDate:    e.endDate,
@@ -1164,43 +1101,7 @@ export const OrganizationUnitsStrategy: RelationStrategy = {
     return rows
   },
   async fetchEntries(orgSlug) {
-    const rows = await neo4jQuery<UnitPartOfRow>(`
-      MATCH (u:Unit)-[r:PART_OF]->(o:Organization {slug: $slug})
-      OPTIONAL MATCH (o)-[:HAS_MEMBER_UNIT_NOTE]->(d:Description)-[:ABOUT_UNIT]->(u)
-      OPTIONAL MATCH (d)-[:SOURCED_FROM]->(from:Source)
-      WITH u, r, d, from
-      OPTIONAL MATCH (d)-[cites:CITES]->(src:Source)
-      WITH u, r, d, from,
-           collect(CASE WHEN src IS NULL THEN NULL ELSE {
-             inline:       coalesce(cites.inline, false),
-             sourceId:     src.id,
-             sourceTitle:  src.title,
-             sourceUrl:    src.url,
-             sourceAuthor: src.authorFreeText
-           } END) AS rawCites
-      WITH u, r,
-           CASE WHEN d IS NULL THEN NULL ELSE {
-             order:     coalesce(d.order, 1),
-             content:   d.content,
-             citations: [x IN rawCites WHERE x IS NOT NULL],
-             sourcedFrom: CASE WHEN from IS NULL THEN NULL ELSE {
-               id:             from.id,
-               title:          from.title,
-               url:             from.url,
-               authorFreeText: from.authorFreeText,
-               license:        from.license,
-               attribution:    from.attribution
-             } END
-           } END AS section
-      WITH u, r, collect(section) AS rawSections
-      RETURN u.slug          AS targetSlug,
-             u.canonicalName AS targetName,
-             r.role          AS role,
-             r.order         AS \`order\`,
-             [x IN rawSections WHERE x IS NOT NULL] AS sections
-      ORDER BY CASE WHEN size([x IN rawSections WHERE x IS NOT NULL]) > 0 THEN 1 ELSE 0 END,
-               coalesce(r.order, 999), targetName
-    `, { slug: orgSlug })
+    const rows = await neo4jQuery<UnitPartOfRow>(ORG_UNITS_QUERY, { slug: orgSlug })
     return rows.map(unitPartOfRowToEntry)
   },
   async saveEntries(orgSlug, entries) {
@@ -1208,10 +1109,10 @@ export const OrganizationUnitsStrategy: RelationStrategy = {
       method:  'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        units: entries.map(e => ({
+        units: entries.map((e, i) => ({
           unitSlug: e.targetSlug,
           role:     e.role ?? null,
-          order:    typeof e.order === 'number' ? e.order : null,
+          order:    i + 1,
         })),
       }),
     })

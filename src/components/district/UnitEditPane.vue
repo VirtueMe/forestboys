@@ -25,6 +25,7 @@
         :entries="personEntries"
         :targets="personTargets"
         :strategy="personStrategy"
+        reorderable
         :label="isCourse ? 'Deltakere (rediger)' : 'Medlemmer (rediger)'"
         add-label="+ Legg til person"
         empty-label="Ingen personer knyttet"

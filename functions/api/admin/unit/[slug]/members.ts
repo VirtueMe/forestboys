@@ -51,9 +51,10 @@ export const onRequestPatch: PagesFunction<Env> = async ({ request, env, params 
   try {
     await saveEdgeSet(env, {
       anchor: { label: 'Unit', slug }, rel: 'MEMBER_OF', direction: 'in', targetLabel: 'Person',
-      items: members.map(m => ({
+      items: members.map((m, i) => ({
         slug:  m.personSlug,
         props: {
+          order:     i + 1,
           role:      typeof m.role      === 'string' ? m.role      : null,
           startDate: typeof m.startDate === 'string' ? m.startDate : null,
           endDate:   typeof m.endDate   === 'string' ? m.endDate   : null,

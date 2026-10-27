@@ -5,6 +5,7 @@
 
 import { requireAdmin } from '~/_lib/require-admin.ts'
 import { runCypher, type Neo4jEnv } from '~/_lib/neo4j.ts'
+import { saveEdgeSet } from '~/_lib/edge-set.ts'
 
 interface Env extends Neo4jEnv {
   SESSION_SECRET: string
@@ -43,33 +44,22 @@ export const onRequestPatch: PagesFunction<Env> = async ({ request, env, params 
   }
 
   try {
-    await runCypher(env, `
-      MATCH ()-[r:ATTENDED]->(u:Unit {slug: $slug}) DELETE r
-    `, { slug })
+    const course = await runCypher(env, `MATCH (u:Unit {slug: $slug, type: 'course'}) RETURN u.slug AS slug`, { slug }, 'Read')
+    if (!course.length) return json({ error: 'Not a course' }, 400)
 
-    if (attendees.length) {
-      await runCypher(env, `
-        MATCH (u:Unit {slug: $slug})
-        WHERE u.type = 'course'
-        UNWIND $items AS x
-        OPTIONAL MATCH (p:Person {slug: x.personSlug})
-        FOREACH (_ IN CASE WHEN p IS NOT NULL THEN [1] ELSE [] END |
-          CREATE (p)-[:ATTENDED {
-            startDate: x.startDate,
-            endDate:   x.endDate,
-            passed:    x.passed
-          }]->(u)
-        )
-      `, {
-        slug,
-        items: attendees.map(a => ({
-          personSlug: a.personSlug,
-          startDate:  typeof a.startDate === 'string' ? a.startDate : null,
-          endDate:    typeof a.endDate   === 'string' ? a.endDate   : null,
-          passed:     typeof a.passed    === 'boolean' ? a.passed   : null,
-        })),
-      })
-    }
+    await saveEdgeSet(env, {
+      anchor: { label: 'Unit', slug }, rel: 'ATTENDED', direction: 'in', targetLabel: 'Person',
+      items: attendees.map((a, i) => ({
+        slug:  a.personSlug,
+        props: {
+          order:     i + 1,
+          startDate: typeof a.startDate === 'string' ? a.startDate : null,
+          endDate:   typeof a.endDate   === 'string' ? a.endDate   : null,
+          passed:    typeof a.passed    === 'boolean' ? a.passed    : null,
+        },
+      })),
+    })
+
     return json({ ok: true, count: attendees.length })
   } catch (e) {
     return json({ error: (e as Error).message }, 502)

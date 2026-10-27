@@ -20,6 +20,7 @@ import { neo4jQuery } from './useNeo4j.ts'
 import type { SlideImage } from '@/components/ImageSlider.vue'
 import type { Section } from '@/components/SectionsEditor.vue'
 import type { EventListItem } from '@/utils/eventList.ts'
+import { UNIT_MEMBERS_PAGE_QUERY } from './orderedMemberQueries.ts'
 
 export interface UnitNode {
   name:          string
@@ -234,19 +235,7 @@ export function useUnitData() {
         ),
         // Members — with rank (skip Menig baseline) + status + edge meta.
         neo4jQuery<UnitMember>(
-          `MATCH (p:Person)-[m:MEMBER_OF]->(:Unit)-[:PART_OF*0..]->(u:Unit {slug: $slug})
-           OPTIONAL MATCH (p)-[:RANK]->(r:Rank)
-           WHERE r.canonicalName <> 'Menig'
-           WITH p, r, collect(m) AS edges
-           WITH p, r,
-                head([e IN edges WHERE e.description IS NOT NULL] + edges) AS m
-           RETURN p.slug AS slug, p.canonicalName AS name,
-                  r.abbreviation AS rank, p.status AS status,
-                  m.role AS role, m.description AS description,
-                  m.sourceRefs AS sourceRefs,
-                  m.startDate AS startDate, m.endDate AS endDate
-           ORDER BY CASE WHEN m.description IS NOT NULL THEN 1 ELSE 0 END,
-                    name`,
+          UNIT_MEMBERS_PAGE_QUERY,
           { slug },
         ),
         // The members' incidents and operations within the unit's lifetime: an operation counts when its period
