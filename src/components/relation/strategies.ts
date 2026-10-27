@@ -415,12 +415,12 @@ export const PersonInvolvementStrategy: RelationStrategy = {
   },
   async fetchEntries(incidentSlug) {
     const rows = await neo4jQuery<PersonEntryRow>(`
-      MATCH (p:Person)-[:INVOLVED_IN]->(i:Incident {slug: $slug})
+      MATCH (p:Person)-[r:INVOLVED_IN]->(i:Incident {slug: $slug})
       OPTIONAL MATCH (p)-[:HAS_INCIDENT_NOTE]->(d:Description)-[:ABOUT_INCIDENT]->(i)
       OPTIONAL MATCH (d)-[:SOURCED_FROM]->(from:Source)
-      WITH p, d, from
+      WITH p, r.order AS pos, d, from
       OPTIONAL MATCH (d)-[cites:CITES]->(src:Source)
-      WITH p, d, from,
+      WITH p, pos, d, from,
            collect(CASE WHEN src IS NULL THEN NULL ELSE {
              inline:       coalesce(cites.inline, false),
              sourceId:     src.id,
@@ -428,7 +428,7 @@ export const PersonInvolvementStrategy: RelationStrategy = {
              sourceUrl:    src.url,
              sourceAuthor: src.authorFreeText
            } END) AS rawCites
-      WITH p, d, from,
+      WITH p, pos, d, from,
            CASE WHEN d IS NULL THEN NULL ELSE {
              order:     coalesce(d.order, 1),
              content:   d.content,
@@ -442,10 +442,10 @@ export const PersonInvolvementStrategy: RelationStrategy = {
                attribution:    from.attribution
              } END
            } END AS section
-      WITH p, collect(section) AS rawSections
+      WITH p, pos, collect(section) AS rawSections
       RETURN p.slug AS targetSlug, p.canonicalName AS targetName,
              [x IN rawSections WHERE x IS NOT NULL] AS sections
-      ORDER BY targetName
+      ORDER BY coalesce(pos, 999), targetName
     `, { slug: incidentSlug })
     return rows.map(personRowToEntry)
   },
@@ -498,12 +498,12 @@ export const PersonParticipationStrategy: RelationStrategy = {
   fetchTargets: () => PersonInvolvementStrategy.fetchTargets(),
   async fetchEntries(operationSlug) {
     const rows = await neo4jQuery<PersonEntryRow>(`
-      MATCH (p:Person)-[:PARTICIPATED_IN]->(op:Operation {slug: $slug})
+      MATCH (p:Person)-[r:PARTICIPATED_IN]->(op:Operation {slug: $slug})
       OPTIONAL MATCH (p)-[:HAS_OPERATION_NOTE]->(d:Description)-[:ABOUT_OPERATION]->(op)
       OPTIONAL MATCH (d)-[:SOURCED_FROM]->(from:Source)
-      WITH p, d, from
+      WITH p, r.order AS pos, d, from
       OPTIONAL MATCH (d)-[cites:CITES]->(src:Source)
-      WITH p, d, from,
+      WITH p, pos, d, from,
            collect(CASE WHEN src IS NULL THEN NULL ELSE {
              inline:       coalesce(cites.inline, false),
              sourceId:     src.id,
@@ -511,7 +511,7 @@ export const PersonParticipationStrategy: RelationStrategy = {
              sourceUrl:    src.url,
              sourceAuthor: src.authorFreeText
            } END) AS rawCites
-      WITH p, d, from,
+      WITH p, pos, d, from,
            CASE WHEN d IS NULL THEN NULL ELSE {
              order:     coalesce(d.order, 1),
              content:   d.content,
@@ -525,10 +525,10 @@ export const PersonParticipationStrategy: RelationStrategy = {
                attribution:    from.attribution
              } END
            } END AS section
-      WITH p, collect(section) AS rawSections
+      WITH p, pos, collect(section) AS rawSections
       RETURN p.slug AS targetSlug, p.canonicalName AS targetName,
              [x IN rawSections WHERE x IS NOT NULL] AS sections
-      ORDER BY targetName
+      ORDER BY coalesce(pos, 999), targetName
     `, { slug: operationSlug })
     return rows.map(personRowToEntry)
   },
