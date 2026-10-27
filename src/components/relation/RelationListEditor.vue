@@ -1,9 +1,6 @@
 <template>
   <section class="edit-section">
-    <div class="edit-section-head">
-      <h2 class="edit-section-heading">{{ label }}</h2>
-      <button type="button" class="edit-btn-outline" @click="addEntry">{{ addLabel }}</button>
-    </div>
+    <h2 class="edit-section-heading">{{ label }}</h2>
     <div v-if="!entries.length" class="edit-empty">{{ emptyLabel }}</div>
     <ul v-else class="membership-list">
       <li
@@ -128,6 +125,9 @@
         </div>
       </li>
     </ul>
+    <div class="edit-add">
+      <button type="button" class="edit-btn-outline" @click="addEntry">{{ addLabel }}</button>
+    </div>
   </section>
 
   <footer v-if="dirty" class="edit-save-bar">
@@ -401,13 +401,7 @@ function revert() {
   margin: 0 0 var(--space-md);
 }
 
-.edit-section-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-sm);
-  margin-bottom: var(--space-md);
-}
+.edit-add { margin-top: var(--space-md); }
 
 .edit-btn-outline {
   padding: var(--space-sm) var(--space-md);
