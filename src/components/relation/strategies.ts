@@ -1086,6 +1086,44 @@ export const OperationUnitsStrategy: RelationStrategy = {
 }
 
 /**
+ * EventTransportStrategy — Transport (aircraft, vessels) used in an
+ * Operation or Incident via (event)-[:USED]->(Transport). Same slot for
+ * both kinds; the endpoint matches either label.
+ */
+async function fetchTransportOptions(): Promise<RelationTarget[]> {
+  return neo4jQuery<RelationTarget>(`
+    MATCH (t:Transport)
+    RETURN t.slug AS slug, coalesce(t.canonicalName, t.name) AS name
+    ORDER BY name
+  `)
+}
+
+export const EventTransportStrategy: RelationStrategy = {
+  fetchTargets: fetchTransportOptions,
+  async fetchEntries(eventSlug) {
+    const rows = await neo4jQuery<HierarchyRow>(`
+      MATCH (e:Operation|Incident {slug: $slug})-[:USED]->(t:Transport)
+      RETURN t.slug AS targetSlug, coalesce(t.canonicalName, t.name) AS targetName
+      ORDER BY targetName
+    `, { slug: eventSlug })
+    return rows.map(hierarchyRowToEntry)
+  },
+  async saveEntries(eventSlug, entries) {
+    const res = await authFetch(`/api/admin/event/${encodeURIComponent(eventSlug)}/transport`, {
+      method:  'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ transport: entries.map(e => ({ transportSlug: e.targetSlug })) }),
+    })
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({})) as { error?: string }
+      throw new Error(body.error ?? `HTTP ${res.status}`)
+    }
+  },
+  saveNote: noopSaveNote,
+  targetRoute(entry) { return `/transport/${entry.targetSlug}` },
+}
+
+/**
  * OrganizationUnitsStrategy — PART_OF edges from Unit to Organization.
  * Used on OrganizationDetail to edit Underavdelinger. Edge carries role +
  * order. Description is modelled as a Description node owned by the

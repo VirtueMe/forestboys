@@ -79,6 +79,21 @@
       :show-description="false"
     />
 
+    <RelationListEditor
+      :parent-slug="slug"
+      :entries="data.transport.entries"
+      :targets="data.transport.targets"
+      :strategy="EventTransportStrategy"
+      label="Transportmidler"
+      add-label="+ Legg til transportmiddel"
+      empty-label="Ingen transportmidler knyttet"
+      search-placeholder="Søk transportmiddel…"
+      picker-chip-aria="Bytt transportmiddel"
+      validation-empty="Velg transportmiddel for alle oppføringer før du lagrer."
+      :show-dates="false"
+      :show-description="false"
+    />
+
     <template v-if="kind === 'operation'">
       <RelationListEditor
         :parent-slug="slug"
@@ -224,6 +239,13 @@
       label="Relaterte hendelser"
       @open="e => activeEntry = e"
     />
+    <RelationListView
+      v-if="data.transport.entries.length"
+      :entries="data.transport.entries"
+      :strategy="EventTransportStrategy"
+      label="Transportmidler"
+      @open="e => activeEntry = e"
+    />
     <template v-if="kind === 'operation'">
       <RelationListView
         v-if="data.org.entries.length"
@@ -275,7 +297,7 @@ import {
   PersonInvolvementStrategy, PersonParticipationStrategy,
   SubIncidentsStrategy, SubOperationsStrategy, OperationIncidentsStrategy,
   IncidentInOperationStrategy,
-  OperationOrganizationsStrategy, OperationUnitsStrategy,
+  OperationOrganizationsStrategy, OperationUnitsStrategy, EventTransportStrategy,
   OperationFromLocationStrategy, OperationToLocationStrategy,
   OperationFromStationStrategy,  OperationToStationStrategy,
   IncidentAtLocationStrategy,    IncidentAtStationStrategy,
@@ -292,6 +314,7 @@ export interface EventRelationsData {
   inOperation:  { entries: RelationEntry[]; targets: RelationTarget[] }
   org:          { entries: RelationEntry[]; targets: RelationTarget[] }
   unit:         { entries: RelationEntry[]; targets: RelationTarget[] }
+  transport:    { entries: RelationEntry[]; targets: RelationTarget[] }
   fromLocation: { entries: RelationEntry[]; targets: RelationTarget[] }
   toLocation:   { entries: RelationEntry[]; targets: RelationTarget[] }
   fromStation:  { entries: RelationEntry[]; targets: RelationTarget[] }

@@ -18,7 +18,7 @@ import {
   PersonInvolvementStrategy, PersonParticipationStrategy,
   SubIncidentsStrategy, SubOperationsStrategy, OperationIncidentsStrategy,
   IncidentInOperationStrategy,
-  OperationOrganizationsStrategy, OperationUnitsStrategy,
+  OperationOrganizationsStrategy, OperationUnitsStrategy, EventTransportStrategy,
   OperationFromLocationStrategy, OperationToLocationStrategy,
   OperationFromStationStrategy,  OperationToStationStrategy,
   IncidentAtLocationStrategy, IncidentAtStationStrategy,
@@ -86,6 +86,8 @@ export function useEventData() {
   const orgTargets           = ref<RelationTarget[]>([])
   const unitEntries          = ref<RelationEntry[]>([])
   const unitTargets          = ref<RelationTarget[]>([])
+  const transportEntries     = ref<RelationEntry[]>([])
+  const transportTargets     = ref<RelationTarget[]>([])
   // Location/station single-target slots. Loaded lazy-by-kind: an
   // Incident gets `at*`; an Operation gets `from*` + `to*`. The unused
   // sets stay empty.
@@ -140,6 +142,8 @@ export function useEventData() {
     orgTargets.value           = []
     unitEntries.value          = []
     unitTargets.value          = []
+    transportEntries.value     = []
+    transportTargets.value     = []
     fromLocationEntries.value  = []
     fromLocationTargets.value  = []
     toLocationEntries.value    = []
@@ -225,6 +229,10 @@ export function useEventData() {
     stationFrom.value   = stFromRows[0]  ?? null
     stationTo.value     = stToRows[0]    ?? null
     gallery.value       = galleryRows
+    ;[transportEntries.value, transportTargets.value] = await Promise.all([
+      EventTransportStrategy.fetchEntries(slug),
+      EventTransportStrategy.fetchTargets(),
+    ])
 
     if (row.kind === 'incident') {
       const [se, st, ie, it, atL, atLT, atS, atST] = await Promise.all([
@@ -296,6 +304,7 @@ export function useEventData() {
     inOperationEntries, inOperationTargets,
     orgEntries,         orgTargets,
     unitEntries,        unitTargets,
+    transportEntries,   transportTargets,
     fromLocationEntries, fromLocationTargets,
     toLocationEntries,   toLocationTargets,
     fromStationEntries,  fromStationTargets,
