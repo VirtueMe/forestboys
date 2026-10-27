@@ -17,7 +17,7 @@
             @click="toggleIndex(i)"
           >
             <span class="membership-unit-name">{{ e.targetName || e.targetSlug || '—' }}</span>
-            <span v-if="summaryOf(e)" class="membership-meta">{{ summaryOf(e) }}</span>
+            <span class="membership-meta">{{ summaryOf(e) }}</span>
             <span
               v-if="e.sections.length"
               class="desc-marker"
