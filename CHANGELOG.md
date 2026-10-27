@@ -1,5 +1,20 @@
 # Changelog
 
+## [0.21.0](https://github.com/VirtueMe/forestboys/compare/v0.20.0...v0.21.0) (2026-10-27)
+
+
+### Features
+
+* **editor:** order the units of an organisation, the members of a unit and a course ([32d0ded](https://github.com/VirtueMe/forestboys/commit/32d0ded1505c63778ce0d0c5996fee0e1505ffd4)), closes [#355](https://github.com/VirtueMe/forestboys/issues/355)
+* **editor:** the add button of a relation list is under the list ([dea5268](https://github.com/VirtueMe/forestboys/commit/dea52688f4768df11b1e56f2ccdaa0545b4ece6c)), closes [#358](https://github.com/VirtueMe/forestboys/issues/358)
+* **editor:** the add-section button is under the sections ([bf3bc68](https://github.com/VirtueMe/forestboys/commit/bf3bc683b3ccbb187b63b6e07a8be183b23ceb20)), closes [#360](https://github.com/VirtueMe/forestboys/issues/360)
+* **events:** the people of an event keep an order the editor sets ([04f4930](https://github.com/VirtueMe/forestboys/commit/04f49306b81f87509e0367a84197248a3f9a6096)), closes [#355](https://github.com/VirtueMe/forestboys/issues/355)
+
+
+### Bug fixes
+
+* **editor:** add and show the transport an event used ([0f69a5a](https://github.com/VirtueMe/forestboys/commit/0f69a5aba90b00ed978390ed123d1b1c708caf57)), closes [#356](https://github.com/VirtueMe/forestboys/issues/356)
+
 ## [0.20.0](https://github.com/VirtueMe/forestboys/compare/v0.19.0...v0.20.0) (2026-10-21)
 
 
