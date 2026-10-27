@@ -1,8 +1,7 @@
 <template>
   <div class="sections-editor">
-    <div class="sections-editor-head">
-      <span v-if="label" class="sections-editor-label">{{ label }}</span>
-      <button type="button" class="btn-secondary-outline" @click="addSection">+ Legg til seksjon</button>
+    <div v-if="label" class="sections-editor-head">
+      <span class="sections-editor-label">{{ label }}</span>
     </div>
 
     <div class="sections">
@@ -77,6 +76,10 @@
           />
         </div>
       </div>
+    </div>
+
+    <div class="sections-editor-add">
+      <button type="button" class="btn-secondary-outline" @click="addSection">+ Legg til seksjon</button>
     </div>
   </div>
 </template>
@@ -204,12 +207,10 @@ function onSourceSaved(updated: SourceRef) {
 
 <style scoped>
 .sections-editor-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-md);
   margin-bottom: var(--space-sm);
 }
+
+.sections-editor-add { margin-top: var(--space-md); }
 
 .sections-editor-label {
   font-family: var(--font-sans);
