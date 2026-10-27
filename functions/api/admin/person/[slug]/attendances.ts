@@ -6,13 +6,14 @@
  * Course attendance is a distinct concern from organisational membership:
  *   (Person)-[:ATTENDED {startDate, endDate}]->(Unit { type: "course" })
  *
- * OPTIONAL MATCH on unitSlug means unknown slugs silently skip. Non-course
- * Units also silently skip so admins can't accidentally wire a membership
- * via this endpoint.
+ * Unknown slugs silently skip. Non-course Units also silently skip so admins
+ * can't accidentally wire a membership via this endpoint. Saved as a difference
+ * (saveEdgeSet): an attendance that stays keeps its `order` in the course.
  */
 
 import { requireAdmin } from '~/_lib/require-admin.ts'
-import { runCypher, type Neo4jEnv } from '~/_lib/neo4j.ts'
+import type { Neo4jEnv } from '~/_lib/neo4j.ts'
+import { saveEdgeSet } from '~/_lib/edge-set.ts'
 
 interface Env extends Neo4jEnv {
   SESSION_SECRET: string
@@ -54,33 +55,18 @@ export const onRequestPatch: PagesFunction<Env> = async ({ request, env, params 
   }
 
   try {
-    await runCypher(env, `
-      MATCH (p:Person {slug: $slug})-[r:ATTENDED]->()
-      DELETE r
-    `, { slug })
-
-    if (attendances.length) {
-      await runCypher(env, `
-        MATCH (p:Person {slug: $slug})
-        UNWIND $items AS a
-        OPTIONAL MATCH (u:Unit {slug: a.unitSlug})
-        FOREACH (_ IN CASE WHEN u IS NOT NULL AND u.type = 'course' THEN [1] ELSE [] END |
-          CREATE (p)-[:ATTENDED {
-            startDate: a.startDate,
-            endDate:   a.endDate,
-            passed:    a.passed
-          }]->(u)
-        )
-      `, {
-        slug,
-        items: attendances.map(a => ({
-          unitSlug:  a.unitSlug,
+    await saveEdgeSet(env, {
+      anchor: { label: 'Person', slug }, rel: 'ATTENDED', direction: 'out', targetLabel: 'Unit',
+      targetWhere: `t.type = 'course'`,
+      items: attendances.map(a => ({
+        slug:  a.unitSlug,
+        props: {
           startDate: typeof a.startDate === 'string' ? a.startDate : null,
           endDate:   typeof a.endDate   === 'string' ? a.endDate   : null,
           passed:    typeof a.passed    === 'boolean' ? a.passed    : null,
-        })),
-      })
-    }
+        },
+      })),
+    })
 
     return json({ ok: true, count: attendances.length })
   } catch (e) {
