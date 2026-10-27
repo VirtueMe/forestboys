@@ -90,9 +90,10 @@ function applyField(field: string, g: GraphEvent, d: Doc, l: Lookups): Stmt[] {
                  WHERE coalesce(r.sourceRef, '') STARTS WITH 'sanity' AND NOT p.slug IN $slugs
                DELETE r
                WITH DISTINCT e
-               UNWIND $slugs AS slug
-               MATCH (p:Person {slug: slug})
-               MERGE (p)-[r:\`${edge}\`]->(e) ON CREATE SET r = $edge`,
+               UNWIND range(0, size($slugs) - 1) AS i
+               MATCH (p:Person {slug: $slugs[i]})
+               MERGE (p)-[r:\`${edge}\`]->(e) ON CREATE SET r = $edge
+               SET r.order = i + 1`,
         params: { id, slugs, edge: PARTICIPANT_EDGE },
       }]
     }

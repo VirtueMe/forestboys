@@ -229,8 +229,8 @@ Vocabularies:
 | `RANK`                | `Rank`                                    | `state, sourceRef` — exactly one: the rank the person is known by (PERSON-RANKS.md) |
 | `HELD_RANK`           | `Rank`                                    | `id, from, to, acting, sourceRefs, state` — rank history, 0..n; partial dates |
 | `HAS_RANK_NOTE`       | `Description`                             | per history entry — `Description.rankEntryId` = the edge's `id`, then `ABOUT_RANK` |
-| `INVOLVED_IN`         | `Incident`                                | `role, outcome`                                       |
-| `PARTICIPATED_IN`     | `Operation`                               | `role, startDate, endDate`                            |
+| `INVOLVED_IN`         | `Incident`                                | `role, outcome, order`                                |
+| `PARTICIPATED_IN`     | `Operation`                               | `role, startDate, endDate, order`                     |
 | `STATIONED_AT`        | `Location` \| `Station`                  | `id, role, startDate, endDate, state, sourceRef, sourceRefs` — one edge per stay (docs/PERSON-STATIONED-AT.md) |
 | `ATTENDED`            | `Unit {type:"course"}`                    | `startDate, endDate, passed` — course attendance; all three may be null, dates are partial (`YYYY`, `YYYY-MM`, `YYYY-MM-DD`), `passed` is a boolean |
 | `CREW_OF`             | `Transport`                               | `role` (controlled vocab — RAF WWII + SOE dispatcher) |
@@ -371,7 +371,7 @@ Operations are journeys / missions / campaigns: they have an orchestrator, parti
 
 **Inbound:**
 - `(:Operation)-[:RELATED_TO {kind:'contains'}]->(o)` — parent campaign (single in practice)
-- `(:Person)-[:PARTICIPATED_IN]->(o)` — multi
+- `(:Person)-[:PARTICIPATED_IN {order}]->(o)` — multi; `order` is the editor's 1-based position in the people list, read `coalesce(r.order, 999), name`
 - `(:Unit)-[:PARTICIPATED_IN]->(o)` — multi, units involved regardless of orchestrator (RAF squadrons, Norwegian patrols, Wehrmacht pursuers)
 
 **Demote rules** — `PATCH /api/admin/event/:slug/kind` to `incident` blocks (409) if the Operation has any `ORCHESTRATED_BY` org or `(:Unit)-[:PARTICIPATED_IN]->` edges, since incidents don't carry these. Body `{force:true}` strips them in one transaction. Future extension: same blocker check for `FROM/TO/FROM_STATION/TO_STATION`.
@@ -402,7 +402,7 @@ The "what happened" node. Point-in-time, single-place. Org/Unit context is **not
 **Inbound:**
 - `(:Operation)-[:RELATED_TO {kind:'contains'}]->(i)` — parent operation (single in practice)
 - `(:Incident)-[:RELATED_TO {kind:'contains'}]->(i)` — parent incident
-- `(:Person)-[:INVOLVED_IN]->(i)` — participants
+- `(:Person)-[:INVOLVED_IN {order}]->(i)` — participants; `order` as on `PARTICIPATED_IN`
 - `(:Operation)-[:ENDED_BY]->(i)`
 
 ---

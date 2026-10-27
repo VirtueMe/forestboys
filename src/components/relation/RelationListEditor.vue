@@ -7,24 +7,87 @@
         v-for="(e, i) in entries"
         :key="i"
         class="membership-item"
-        :class="{ expanded: expandedIndex === i }"
+        :class="{ expanded: expandedIndex === i, moving: movingEntry === e }"
       >
-        <button
-          type="button"
-          class="membership-summary"
-          :aria-expanded="expandedIndex === i"
-          @click="toggleIndex(i)"
-        >
-          <span class="membership-unit-name">{{ e.targetName || e.targetSlug || '—' }}</span>
-          <span v-if="summaryOf(e)" class="membership-meta">{{ summaryOf(e) }}</span>
-          <span
-            v-if="e.sections.length"
-            class="desc-marker"
-            aria-label="Har beskrivelse"
-            title="Har beskrivelse"
-          >i</span>
-          <span class="membership-chevron">{{ expandedIndex === i ? '▾' : '▸' }}</span>
-        </button>
+        <div class="membership-head">
+          <button
+            type="button"
+            class="membership-summary"
+            :aria-expanded="expandedIndex === i"
+            @click="toggleIndex(i)"
+          >
+            <span class="membership-unit-name">{{ e.targetName || e.targetSlug || '—' }}</span>
+            <span v-if="summaryOf(e)" class="membership-meta">{{ summaryOf(e) }}</span>
+            <span
+              v-if="e.sections.length"
+              class="desc-marker"
+              aria-label="Har beskrivelse"
+              title="Har beskrivelse"
+            >i</span>
+          </button>
+          <div
+            v-if="reorderable && entries.length > 1"
+            class="move-wrap"
+            :class="{ open: movingEntry === e }"
+            @keydown.esc="closeMove"
+          >
+            <button
+              type="button"
+              class="move-toggle"
+              aria-haspopup="true"
+              :aria-expanded="movingEntry === e"
+              :aria-label="`Flytt ${entryName(e)}`"
+              @click="toggleMove(e)"
+            >
+              Flytt
+            </button>
+            <div v-if="movingEntry === e" class="move-panel" role="group" :aria-label="`Plassering for ${entryName(e)}`">
+              <div class="move-pos">
+                <label class="move-pos-label">
+                  Plass
+                  <input
+                    v-model="moveInput"
+                    class="edit-input move-pos-input"
+                    :class="{ 'edit-input-invalid': moveError }"
+                    type="text"
+                    inputmode="numeric"
+                    aria-label="Plassering"
+                    :aria-invalid="!!moveError"
+                    @keydown.enter.prevent="applyMove"
+                  />
+                </label>
+                <span>av {{ entries.length }}</span>
+                <button
+                  type="button"
+                  class="move-btn"
+                  aria-label="Flytt til valgt plass"
+                  :disabled="!!moveError || moveTo === movePos"
+                  @click="applyMove"
+                >
+                  Flytt
+                </button>
+              </div>
+              <p v-if="moveError" class="move-error" role="alert">{{ moveError }}</p>
+              <div class="move-steps">
+                <button type="button" class="move-btn" :disabled="movePos === 1" @click="moveEntry(movePos - 1, 0)">Til toppen</button>
+                <button type="button" class="move-btn" :disabled="movePos === 1" @click="moveEntry(movePos - 1, movePos - 2)">Opp</button>
+                <button type="button" class="move-btn" :disabled="movePos === entries.length" @click="moveEntry(movePos - 1, movePos)">Ned</button>
+                <button type="button" class="move-btn" :disabled="movePos === entries.length" @click="moveEntry(movePos - 1, entries.length - 1)">Til bunnen</button>
+              </div>
+            </div>
+          </div>
+          <!-- Last in the row, after «Flytt»: the arrow is in the same place whatever the row holds. The summary
+               button is the control for keyboards and readers; this is a bigger target for the pointer. -->
+          <button
+            type="button"
+            class="membership-chevron"
+            tabindex="-1"
+            aria-hidden="true"
+            @click="toggleIndex(i)"
+          >
+            {{ expandedIndex === i ? '▾' : '▸' }}
+          </button>
+        </div>
         <div v-if="expandedIndex === i" class="membership-body">
           <div :class="showRole ? 'membership-edit-top' : 'attendance-edit-top'">
             <div class="unit-picker">
@@ -150,7 +213,7 @@
 <script setup lang="ts">
 // Parent owns the `entries` array (reactive). Editor mutates in place.
 /* eslint-disable vue/no-mutating-props */
-import { computed, ref, watch, toRef } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, shallowRef, watch, toRef } from 'vue'
 import SectionsEditor, { type Section } from '@/components/SectionsEditor.vue'
 import SourceRefsEditor from '@/components/SourceRefsEditor.vue'
 import type { RelationEntry, RelationStrategy, RelationTarget } from './RelationStrategy.ts'
@@ -195,10 +258,13 @@ const props = withDefaults(defineProps<{
   summaryExtra?:    ((e: RelationEntry) => string) | null
   /** The dates are when an event happened: «12.–15. april 1945», no open dash (#284). */
   eventDates?:      boolean
+  /** Rows can be moved up, down or to the top; the strategy must save the list in order (#355). */
+  reorderable?:     boolean
 }>(), {
   showRole:        false,
   showDates:       true,
   eventDates:      false,
+  reorderable:     false,
   showPassed:      false,
   showDescription: true,
   showSources:     false,
@@ -316,6 +382,48 @@ function addEntry() {
   })
   expandedIndex.value = props.entries.length - 1
 }
+
+const entryName = (e: RelationEntry) => e.targetName || e.targetSlug || 'oppføringen'
+
+function moveEntry(from: number, to: number) {
+  if (to < 0 || to >= props.entries.length || to === from) return
+  const open = expandedIndex.value === null ? null : props.entries[expandedIndex.value]
+  const [moved] = props.entries.splice(from, 1)
+  props.entries.splice(to, 0, moved)
+  expandedIndex.value = open ? props.entries.indexOf(open) : null
+}
+
+// The panel follows its entry, not its index: the entry keeps the panel when it moves.
+const movingEntry = shallowRef<RelationEntry | null>(null)
+const moveInput   = ref('')
+const movePos     = computed(() => (movingEntry.value ? props.entries.indexOf(movingEntry.value) + 1 : 0))
+const moveTo      = computed(() => Number(moveInput.value))
+const moveError   = computed(() => {
+  const text = moveInput.value.trim()
+  if (!/^\d+$/.test(text)) return 'Skriv et tall.'
+  const n = Number(text)
+  return n < 1 || n > props.entries.length ? `Velg en plass fra 1 til ${props.entries.length}.` : ''
+})
+
+watch(movePos, pos => { if (pos) moveInput.value = String(pos); else movingEntry.value = null })
+
+function toggleMove(e: RelationEntry) {
+  movingEntry.value = movingEntry.value === e ? null : e
+  if (!movingEntry.value) return
+  // The position is what is typed first: ready to replace.
+  void nextTick(() => document.querySelector<HTMLInputElement>('.move-wrap.open .move-pos-input')?.select())
+}
+function closeMove() { movingEntry.value = null }
+function applyMove() {
+  if (moveError.value || moveTo.value === movePos.value) return
+  moveEntry(movePos.value - 1, moveTo.value - 1)
+}
+
+function onPointerDown(ev: PointerEvent) {
+  if (movingEntry.value && !(ev.target as Element).closest('.move-wrap.open')) closeMove()
+}
+onMounted(() => document.addEventListener('pointerdown', onPointerDown))
+onBeforeUnmount(() => document.removeEventListener('pointerdown', onPointerDown))
 
 function removeEntry(i: number) {
   const e = props.entries[i]
@@ -464,12 +572,76 @@ function revert() {
   border-radius: var(--radius-md);
 }
 .membership-item.expanded { border-color: var(--focus); }
+.membership-item.moving { border-color: var(--focus); background: var(--paper-sunken); }
+
+.membership-head { display: flex; align-items: center; }
+
+.move-wrap {
+  position: relative;
+  padding-right: var(--space-sm);
+  flex-shrink: 0;
+}
+.move-toggle,
+.move-btn {
+  height: 32px;
+  padding: 0 var(--space-md);
+  font-family: var(--font-sans);
+  font-size: var(--size-label);
+  font-weight: 500;
+  color: var(--ink);
+  background: transparent;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  white-space: nowrap;
+}
+.move-toggle:hover,
+.move-wrap.open .move-toggle,
+.move-btn:hover:not(:disabled) { background: var(--paper-sunken); }
+.move-btn:disabled { color: var(--muted); cursor: default; opacity: 0.5; }
+
+.move-panel {
+  position: absolute;
+  top: calc(100% + var(--space-xs));
+  right: var(--space-sm);
+  z-index: 10;
+  width: 260px;
+  max-width: calc(100vw - 2 * var(--space-md));
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+  padding: var(--space-md);
+  background: var(--paper-raised);
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-md);
+}
+.move-pos {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  font-family: var(--font-sans);
+  font-size: var(--size-body-ui);
+  color: var(--ink);
+  white-space: nowrap;
+}
+.move-pos-label { display: flex; align-items: center; gap: var(--space-sm); }
+.move-pos .move-btn { margin-left: auto; }
+.move-pos-input { width: 56px; text-align: center; }
+.move-error {
+  margin: 0;
+  font-family: var(--font-sans);
+  font-size: var(--size-label);
+  color: var(--danger);
+}
+.move-steps { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-xs); }
 
 .membership-summary {
   display: flex;
   align-items: center;
   gap: var(--space-sm);
-  width: 100%;
+  flex: 1;
+  min-width: 0;
   padding: var(--space-sm) var(--space-md);
   background: transparent;
   border: none;
@@ -510,8 +682,13 @@ function revert() {
 }
 
 .membership-chevron {
+  align-self: stretch;
+  padding: 0 var(--space-md) 0 var(--space-sm);
   font-size: var(--size-label);
   color: var(--muted);
+  background: transparent;
+  border: none;
+  cursor: pointer;
   flex-shrink: 0;
 }
 

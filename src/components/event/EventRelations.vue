@@ -8,6 +8,7 @@
       :strategy="personStrategy"
       :label="personLabel"
       add-label="+ Legg til person"
+      reorderable
       empty-label="Ingen personer knyttet"
       search-placeholder="Søk person…"
       picker-chip-aria="Bytt person"

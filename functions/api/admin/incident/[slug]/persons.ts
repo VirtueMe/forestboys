@@ -43,7 +43,7 @@ export const onRequestPatch: PagesFunction<Env> = async ({ request, env, params 
   try {
     await saveEdgeSet(env, {
       anchor: { label: 'Incident', slug }, rel: 'INVOLVED_IN', direction: 'in', targetLabel: 'Person',
-      items: persons.map(p => ({ slug: p.personSlug })),
+      items: persons.map((p, i) => ({ slug: p.personSlug, props: { order: i + 1 } })),
     })
 
     return json({ ok: true, count: persons.length })
