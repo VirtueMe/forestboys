@@ -61,16 +61,12 @@
           :endpoint="`/api/admin/outline/${item.slug}/sections`"
           @saved="onSectionsSaved"
         />
-        <section class="section edit-pane">
-          <button
-            type="button"
-            class="bot-request"
-            :disabled="requesting || botRunning"
-            @click="onRequestBundle"
-          >
-            {{ requesting ? 'Sender…' : botRunning ? 'Jobber…' : 'Be om forslag' }}
-          </button>
-        </section>
+        <OutlinePeopleEditor
+          :slug="item.slug"
+          :entries="peopleEntries"
+          :targets="personTargets"
+          @saved="onPeopleSaved"
+        />
       </template>
 
       <!-- View panes -->
@@ -121,6 +117,9 @@ import DescriptionEditor from '../components/DescriptionEditor.vue'
 import BundleReviewPanel from '../components/BundleReviewPanel.vue'
 import ImageSlider from '../components/ImageSlider.vue'
 import PersonExternalRefs from '../components/person/PersonExternalRefs.vue'
+import OutlinePeopleEditor from '../components/outline/OutlinePeopleEditor.vue'
+import { OutlineMentionsStrategy } from '../components/relation/strategies.ts'
+import type { RelationEntry, RelationTarget } from '../components/relation/RelationStrategy.ts'
 import type { Section } from '../components/SectionsEditor.vue'
 
 const mode = ref<AdminViewMode>('preview')
@@ -147,15 +146,42 @@ watch(generationPending, (v) => { if (v) botRunning.value = true; else botRunnin
 
 const loading = ref(true)
 
+// The people editor's rows and the people it can pick from (admins only: the target list is every person).
+const peopleEntries = ref<RelationEntry[]>([])
+const personTargets  = ref<RelationTarget[]>([])
+
 async function load(slug: string): Promise<void> {
   loading.value = true
   resetOutline()
+  peopleEntries.value = []
   try {
     await loadOutline(slug)
-    if (isAdmin.value && item.value) void loadOpenBundles(slug)
+    if (isAdmin.value && item.value) {
+      void loadOpenBundles(slug)
+      void loadPeople(slug)
+    }
   } finally {
     loading.value = false
   }
+}
+
+async function loadPeople(slug: string): Promise<void> {
+  if (slug === 'new') { peopleEntries.value = []; return }
+  try {
+    const [entries, targets] = await Promise.all([OutlineMentionsStrategy.fetchEntries(slug), OutlineMentionsStrategy.fetchTargets()])
+    peopleEntries.value = entries
+    personTargets.value = targets
+  } catch {
+    peopleEntries.value = []
+    personTargets.value = []
+  }
+}
+
+/** What the editor saved is what the view lists: no second read. */
+function onPeopleSaved(): void {
+  mentions.value = peopleEntries.value
+    .map(e => ({ slug: e.targetSlug, name: e.targetName }))
+    .sort((a, b) => a.name.localeCompare(b.name, 'nb'))
 }
 
 function onSectionsSaved(sections: Section[]): void {
