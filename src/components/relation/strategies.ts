@@ -992,6 +992,35 @@ export const OperationOrganizationsStrategy: RelationStrategy = {
 }
 
 /**
+ * OutlineMentionsStrategy — the people an Outline mentions, (Outline)-[:MENTIONS]->(Person) (#389).
+ * A plain link: no role, dates or note. The names are what the page lists as «Omtalte personer».
+ */
+export const OutlineMentionsStrategy: RelationStrategy = {
+  fetchTargets: () => PersonInvolvementStrategy.fetchTargets(),
+  async fetchEntries(outlineSlug) {
+    const rows = await neo4jQuery<HierarchyRow>(`
+      MATCH (:Outline {slug: $slug})-[:MENTIONS]->(p:Person)
+      RETURN p.slug AS targetSlug, p.canonicalName AS targetName
+      ORDER BY targetName
+    `, { slug: outlineSlug })
+    return rows.map(hierarchyRowToEntry)
+  },
+  async saveEntries(outlineSlug, entries) {
+    const res = await authFetch(`/api/admin/outline/${encodeURIComponent(outlineSlug)}/people`, {
+      method:  'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ people: entries.map(e => e.targetSlug) }),
+    })
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({})) as { error?: string }
+      throw new Error(body.error ?? `HTTP ${res.status}`)
+    }
+  },
+  saveNote: noopSaveNote,
+  targetRoute(entry) { return `/person/${entry.targetSlug}` },
+}
+
+/**
  * OperationUnitsStrategy — Units participating in an Operation via
  * (Unit)-[:PARTICIPATED_IN]->(Operation). Independent of orchestrating
  * orgs — RAF squadrons, Norwegian patrols, Wehrmacht pursuers can all
