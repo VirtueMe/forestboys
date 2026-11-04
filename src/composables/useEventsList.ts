@@ -78,6 +78,14 @@ export function useEventsList() {
   return { events, loading, init, renameEvent }
 }
 
+/** The people of an event in the order an editor set (r.order), then by name; one row per person. */
+export function eventPeopleQuery(kindLabel: string): string {
+  return `MATCH (p:Person)-[r:INVOLVED_IN|PARTICIPATED_IN]->(:\`${kindLabel}\` {slug: $slug})
+       WITH p, min(coalesce(r.order, 999)) AS pos
+       RETURN p.slug AS slug, p.canonicalName AS name
+       ORDER BY pos, name`
+}
+
 /**
  * One-shot Neo4j detail fetch for a single Incident/Operation slug,
  * shaped as IdbEventDetail so EventPanel can consume it without
@@ -148,9 +156,7 @@ export async function fetchEventDetailFromNeo4j(slug: string): Promise<IdbEventD
         )
       : Promise.resolve([] as { slug: string; title: string }[]),
     neo4jQuery<{ slug: string; name: string }>(
-      `MATCH (p:Person)-[:INVOLVED_IN|PARTICIPATED_IN]->(:\`${kindLabel}\` {slug: $slug})
-       RETURN DISTINCT p.slug AS slug, p.canonicalName AS name
-       ORDER BY name`,
+      eventPeopleQuery(kindLabel),
       { slug },
     ),
     neo4jQuery<{ id: string; url: string | null; caption: string | null }>(
