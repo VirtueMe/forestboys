@@ -366,3 +366,23 @@ export async function fetchGraphPeople(): Promise<Map<string, GraphPerson>> {
     await driver.close()
   }
 }
+
+/** Every Person slug after the sync must be unique: the graph's slugs, then the renames and new people, minus the accepted deletions (applied first). */
+export function slugCollisions(
+  graph: Iterable<{ id: string; slug: string }>,
+  renames: { id: string; to: string }[],
+  created: { id: string; slug: string }[],
+  deletedIds: Iterable<string>,
+): string[] {
+  const owner = new Map<string, string>([...graph].map(g => [g.id, g.slug]))
+  for (const id of deletedIds) owner.delete(id)
+  for (const r of renames) if (owner.has(r.id)) owner.set(r.id, r.to)
+  for (const c of created) owner.set(c.id, c.slug)
+  const seen = new Map<string, string>()
+  const out: string[] = []
+  for (const [id, slug] of owner) {
+    if (seen.has(slug)) out.push(`slug held twice after sync: ${slug} (${seen.get(slug)}, ${id})`)
+    seen.set(slug, id)
+  }
+  return out
+}

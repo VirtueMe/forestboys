@@ -54,7 +54,7 @@ import { loadEnv } from '../lib/env.ts'
 import { preformattedFromSanity } from '../lib/preformatted-blocks.ts'
 import {
   FIELDS, calibrate, classify, fetchGraphPeople, fetchSanityPeople, loadApril, connectNeo4j, stampsFromBaseline, verifyStamps,
-  sanityLinks, stampFor, str, type Doc, type GraphPerson,
+  sanityLinks, slugCollisions, stampFor, str, type Doc, type GraphPerson,
 } from '../lib/person-sync.ts'
 import { imageSources, importableLinks, linkSource, parsePerson, personClaims, rankEdge, sanMigRef } from '../lib/person-rule.ts'
 import { deletionStmts, deletionSummary, planDeletions } from '../lib/person-deletions.ts'
@@ -411,13 +411,12 @@ async function main() {
     // Every Person slug after the renames, plus the new people, must be unique.
     const all = await session.run(`MATCH (p:Person) RETURN p.slug AS slug, coalesce(p.sanityId, elementId(p)) AS id`)
     const owner = new Map<string, string>(all.records.map(rec => [rec.get('id') as string, rec.get('slug') as string]))
-    for (const r of renames) owner.set(r.id, r.to)
-    for (const c of created) owner.set(c.sanityId, c.slug)
-    const seen = new Map<string, string>()
-    for (const [id, slug] of owner) {
-      if (seen.has(slug)) errors.push(`slug held twice after sync: ${slug} (${seen.get(slug)}, ${id})`)
-      seen.set(slug, id)
-    }
+    errors.push(...slugCollisions(
+      [...owner].map(([id, slug]) => ({ id, slug })),
+      renames,
+      created.map(c => ({ id: c.sanityId, slug: c.slug })),
+      deleted.map(d => d.sanityId),
+    ))
     const ranks = [...new Set(created.map(c => c.stmts[0].params.rank as string))]
     const rr = await session.run(`UNWIND $ranks AS r OPTIONAL MATCH (k:Rank {slug: r}) RETURN r, k IS NOT NULL AS ok`, { ranks })
     for (const rec of rr.records) if (!rec.get('ok')) errors.push(`rank missing: ${rec.get('r')}`)
@@ -479,6 +478,12 @@ async function main() {
 
     let done = 0
     try {
+      for (const d of deleted) {
+        await ws.executeWrite(async (tx: ManagedTransaction) => {
+          for (const s of deletionStmts(d)) await tx.run(s.text, s.params)
+        })
+      }
+      if (deleted.length) console.log(`Deleted ${deleted.length} people.`)
       if (renames.length) {
         await ws.executeWrite(async (tx: ManagedTransaction) => {
           for (const s of renameStmts(renames)) await tx.run(s.text, s.params)
@@ -491,12 +496,6 @@ async function main() {
         })
         done++
       }
-      for (const d of deleted) {
-        await ws.executeWrite(async (tx: ManagedTransaction) => {
-          for (const s of deletionStmts(d)) await tx.run(s.text, s.params)
-        })
-      }
-      if (deleted.length) console.log(`Deleted ${deleted.length} people.`)
       // A slug a new person took over, or the alias of a person who is gone, is no alias any more (#96).
       await ws.run(dropShadowedAliases('Person', '/person/'))
       await ws.run(DROP_DANGLING_ALIASES)

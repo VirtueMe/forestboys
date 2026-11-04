@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
 import { Neo4jError, type Driver } from 'neo4j-driver'
-import { FIELDS, classify, connectNeo4j, stampFor, stampsFromBaseline, verifyStamps, type Doc, type GraphPerson } from './person-sync.ts'
+import { FIELDS, classify, connectNeo4j, slugCollisions, stampFor, stampsFromBaseline, verifyStamps, type Doc, type GraphPerson } from './person-sync.ts'
 
 const person = (over: Partial<GraphPerson> = {}): GraphPerson => ({
   sanityId: 'p1', sanityUpdatedAt: '2026-04-01', slug: 'ola-nordmann', canonicalName: 'Ola Nordmann',
@@ -169,5 +169,22 @@ describe('connectNeo4j', () => {
     await expect(connectNeo4j({ open, waits: [1, 2], sleep })).rejects.toThrow('unauthorized')
     expect(made).toHaveLength(1)
     expect(sleep).not.toHaveBeenCalled()
+  })
+})
+
+describe('slugCollisions', () => {
+  const graph = [{ id: 'old', slug: 'leif-larsen-kinn' }, { id: 'new', slug: 'leif-kinn' }, { id: 'x', slug: 'other' }]
+  const renames = [{ id: 'new', to: 'leif-larsen-kinn' }]
+
+  it('flags a rename onto a slug a node still holds', () => {
+    expect(slugCollisions(graph, renames, [], [])).toEqual(['slug held twice after sync: leif-larsen-kinn (old, new)'])
+  })
+
+  it('passes when the holder is an accepted deletion', () => {
+    expect(slugCollisions(graph, renames, [], ['old'])).toEqual([])
+  })
+
+  it('flags a new person on a taken slug', () => {
+    expect(slugCollisions(graph, [], [{ id: 'n', slug: 'other' }], [])).toHaveLength(1)
   })
 })
