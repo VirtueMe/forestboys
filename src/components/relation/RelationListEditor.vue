@@ -1,193 +1,220 @@
 <template>
   <section class="edit-section">
-    <h2 class="edit-section-heading">{{ label }}</h2>
-    <div v-if="!entries.length" class="edit-empty">{{ emptyLabel }}</div>
-    <ul v-else class="membership-list">
-      <li
-        v-for="(e, i) in entries"
-        :key="i"
-        class="membership-item"
-        :class="{ expanded: expandedIndex === i, moving: movingEntry === e }"
+    <div class="edit-section-head">
+      <h2 class="edit-section-heading">
+        {{ label }}
+        <span class="edit-section-count" :aria-label="`${entries.length} oppføringer`">{{ entries.length }}</span>
+      </h2>
+      <button
+        v-if="collapsible"
+        type="button"
+        class="list-toggle"
+        :aria-expanded="showAll"
+        :aria-controls="listId"
+        @click="showAll = !showAll"
       >
-        <div class="membership-head">
-          <button
-            type="button"
-            class="membership-summary"
-            :aria-expanded="expandedIndex === i"
-            @click="toggleIndex(i)"
+        {{ showAll ? 'Vis færre' : `Vis alle ${entries.length}` }}
+      </button>
+    </div>
+    <div v-if="!entries.length" class="edit-empty">{{ emptyLabel }}</div>
+    <template v-else>
+      <div
+        :id="listId"
+        class="list-scroll"
+        :class="{ collapsed }"
+        :style="collapsed && clipHeight ? { maxHeight: `${clipHeight + 4}px` } : undefined"
+        :tabindex="collapsed ? 0 : undefined"
+        :role="collapsed ? 'region' : undefined"
+        :aria-label="collapsed ? `${label}, rullbar liste` : undefined"
+      >
+        <ul ref="listEl" class="membership-list">
+          <li
+            v-for="(e, i) in entries"
+            :key="i"
+            class="membership-item"
+            :class="{ expanded: expandedIndex === i, moving: movingEntry === e }"
           >
-            <span class="membership-unit-name">{{ e.targetName || e.targetSlug || '—' }}</span>
-            <span v-if="summaryOf(e)" class="membership-meta">{{ summaryOf(e) }}</span>
-            <span
-              v-if="e.sections.length"
-              class="desc-marker"
-              aria-label="Har beskrivelse"
-              title="Har beskrivelse"
-            >i</span>
-          </button>
-          <div
-            v-if="reorderable && entries.length > 1"
-            class="move-wrap"
-            :class="{ open: movingEntry === e }"
-            @keydown.esc="closeMove"
-          >
-            <button
-              type="button"
-              class="move-toggle"
-              aria-haspopup="true"
-              :aria-expanded="movingEntry === e"
-              :aria-label="`Flytt ${entryName(e)}`"
-              @click="toggleMove(e)"
-            >
-              Flytt
-            </button>
-            <div v-if="movingEntry === e" class="move-panel" role="group" :aria-label="`Plassering for ${entryName(e)}`">
-              <div class="move-pos">
-                <label class="move-pos-label">
-                  Plass
-                  <input
-                    v-model="moveInput"
-                    class="edit-input move-pos-input"
-                    :class="{ 'edit-input-invalid': moveError }"
-                    type="text"
-                    inputmode="numeric"
-                    aria-label="Plassering"
-                    :aria-invalid="!!moveError"
-                    @keydown.enter.prevent="applyMove"
-                  />
-                </label>
-                <span>av {{ entries.length }}</span>
+            <div class="membership-head">
+              <button
+                type="button"
+                class="membership-summary"
+                :aria-expanded="expandedIndex === i"
+                @click="toggleIndex(i)"
+              >
+                <span class="membership-unit-name">{{ e.targetName || e.targetSlug || '—' }}</span>
+                <span v-if="summaryOf(e)" class="membership-meta">{{ summaryOf(e) }}</span>
+                <span
+                  v-if="e.sections.length"
+                  class="desc-marker"
+                  aria-label="Har beskrivelse"
+                  title="Har beskrivelse"
+                >i</span>
+              </button>
+              <div
+                v-if="reorderable && entries.length > 1"
+                class="move-wrap"
+                :class="{ open: movingEntry === e }"
+                @keydown.esc="closeMove"
+              >
                 <button
                   type="button"
-                  class="move-btn"
-                  aria-label="Flytt til valgt plass"
-                  :disabled="!!moveError || moveTo === movePos"
-                  @click="applyMove"
+                  class="move-toggle"
+                  aria-haspopup="true"
+                  :aria-expanded="movingEntry === e"
+                  :aria-label="`Flytt ${entryName(e)}`"
+                  @click="toggleMove(e)"
                 >
                   Flytt
                 </button>
-              </div>
-              <p v-if="moveError" class="move-error" role="alert">{{ moveError }}</p>
-              <div class="move-steps">
-                <button type="button" class="move-btn" :disabled="movePos === 1" @click="moveEntry(movePos - 1, 0)">Til toppen</button>
-                <button type="button" class="move-btn" :disabled="movePos === 1" @click="moveEntry(movePos - 1, movePos - 2)">Opp</button>
-                <button type="button" class="move-btn" :disabled="movePos === entries.length" @click="moveEntry(movePos - 1, movePos)">Ned</button>
-                <button type="button" class="move-btn" :disabled="movePos === entries.length" @click="moveEntry(movePos - 1, entries.length - 1)">Til bunnen</button>
-              </div>
-            </div>
-          </div>
-          <!-- Last in the row, after «Flytt»: the arrow is in the same place whatever the row holds. The summary
-               button is the control for keyboards and readers; this is a bigger target for the pointer. -->
-          <button
-            type="button"
-            class="membership-chevron"
-            tabindex="-1"
-            aria-hidden="true"
-            @click="toggleIndex(i)"
-          >
-            {{ expandedIndex === i ? '▾' : '▸' }}
-          </button>
-        </div>
-        <div v-if="expandedIndex === i" class="membership-body">
-          <div :class="showRole ? 'membership-edit-top' : 'attendance-edit-top'">
-            <div class="unit-picker">
-              <div v-if="e.targetSlug" class="unit-chip">
-                <span class="unit-chip-name">{{ e.targetName || e.targetSlug }}</span>
-                <button
-                  type="button"
-                  class="unit-chip-clear"
-                  :aria-label="pickerChipAria"
-                  @click="clearTarget(e)"
-                >
-                  ✕
-                </button>
-              </div>
-              <template v-else>
-                <input
-                  v-model="pickerQuery"
-                  class="edit-input"
-                  :class="{ 'edit-input-invalid': !e.targetSlug }"
-                  type="text"
-                  :placeholder="searchPlaceholder"
-                  @focus="pickerOpen = true"
-                  @blur="onPickerBlur"
-                />
-                <div v-if="pickerOpen && (filteredTargets.length || createHref)" class="unit-results">
-                  <button
-                    v-for="opt in filteredTargets"
-                    :key="opt.slug"
-                    type="button"
-                    class="unit-result"
-                    @mousedown.prevent="pickTarget(e, opt)"
-                  >
-                    {{ opt.name }}
-                    <span v-if="aliasHint(pickerQuery, opt.name, opt.aliases)" class="unit-alias">· {{ aliasHint(pickerQuery, opt.name, opt.aliases) }}</span>
-                  </button>
-                  <a
-                    v-if="createHref"
-                    :href="createHref"
-                    class="unit-result unit-result--create"
-                  >{{ createLabel || '+ Opprett ny' }}</a>
+                <div v-if="movingEntry === e" class="move-panel" role="group" :aria-label="`Plassering for ${entryName(e)}`">
+                  <div class="move-pos">
+                    <label class="move-pos-label">
+                      Plass
+                      <input
+                        v-model="moveInput"
+                        class="edit-input move-pos-input"
+                        :class="{ 'edit-input-invalid': moveError }"
+                        type="text"
+                        inputmode="numeric"
+                        aria-label="Plassering"
+                        :aria-invalid="!!moveError"
+                        @keydown.enter.prevent="applyMove"
+                      />
+                    </label>
+                    <span>av {{ entries.length }}</span>
+                    <button
+                      type="button"
+                      class="move-btn"
+                      aria-label="Flytt til valgt plass"
+                      :disabled="!!moveError || moveTo === movePos"
+                      @click="applyMove"
+                    >
+                      Flytt
+                    </button>
+                  </div>
+                  <p v-if="moveError" class="move-error" role="alert">{{ moveError }}</p>
+                  <div class="move-steps">
+                    <button type="button" class="move-btn" :disabled="movePos === 1" @click="moveEntry(movePos - 1, 0)">Til toppen</button>
+                    <button type="button" class="move-btn" :disabled="movePos === 1" @click="moveEntry(movePos - 1, movePos - 2)">Opp</button>
+                    <button type="button" class="move-btn" :disabled="movePos === entries.length" @click="moveEntry(movePos - 1, movePos)">Ned</button>
+                    <button type="button" class="move-btn" :disabled="movePos === entries.length" @click="moveEntry(movePos - 1, entries.length - 1)">Til bunnen</button>
+                  </div>
                 </div>
-              </template>
+              </div>
+              <!-- Last in the row, after «Flytt»: the arrow is in the same place whatever the row holds. The summary
+               button is the control for keyboards and readers; this is a bigger target for the pointer. -->
+              <button
+                type="button"
+                class="membership-chevron"
+                tabindex="-1"
+                aria-hidden="true"
+                @click="toggleIndex(i)"
+              >
+                {{ expandedIndex === i ? '▾' : '▸' }}
+              </button>
             </div>
-            <select
-              v-if="showRole && roleScope"
-              v-model="e.role"
-              class="edit-input membership-role"
-              :title="e.role ? roleText(e.role) : undefined"
-            >
-              <option :value="null">—</option>
-              <option v-for="r in roleOptions" :key="r.key" :value="r.key">{{ r.name }}</option>
-              <!-- A stored value outside this group stays visible instead of silently blanking. -->
-              <option v-if="e.role && !roleOptions.some(r => r.key === e.role)" :value="e.role">{{ e.role }} (ukjent)</option>
-            </select>
-            <button type="button" class="rank-remove-btn" @click="removeEntry(i)">Fjern</button>
-          </div>
-          <p v-if="showRole && roleScope && e.role && roleText(e.role)" class="role-help">{{ roleText(e.role) }}</p>
-          <div v-if="showDates" class="membership-edit-dates">
-            <input
-              class="edit-input edit-input-date"
-              type="text"
-              placeholder="Startdato"
-              :value="e.startDate ?? ''"
-              @input="e.startDate = ($event.target as HTMLInputElement).value || null"
-            />
-            <span class="rank-dash">–</span>
-            <input
-              class="edit-input edit-input-date"
-              type="text"
-              placeholder="Sluttdato"
-              :value="e.endDate ?? ''"
-              @input="e.endDate = ($event.target as HTMLInputElement).value || null"
-            />
-          </div>
-          <div v-if="showPassed" class="passed-seg">
-            <label class="passed-seg-opt" :class="{ active: e.passed === null || e.passed === undefined }">
-              <input type="radio" :value="null" :checked="e.passed === null || e.passed === undefined" @change="e.passed = null" />
-              Ukjent
-            </label>
-            <label class="passed-seg-opt" :class="{ active: e.passed === true }">
-              <input type="radio" :value="true" :checked="e.passed === true" @change="e.passed = true" />
-              Bestått
-            </label>
-            <label class="passed-seg-opt" :class="{ active: e.passed === false }">
-              <input type="radio" :value="false" :checked="e.passed === false" @change="e.passed = false" />
-              Ikke bestått
-            </label>
-          </div>
-          <slot name="extra-fields" :entry="e"></slot>
-          <div v-if="showSources" class="membership-sources">
-            <label class="membership-desc-label">Kilder</label>
-            <SourceRefsEditor :model-value="e.sourceRefs ?? []" @update:model-value="v => e.sourceRefs = v" />
-          </div>
-          <div v-if="showDescription" class="membership-desc-wrap">
-            <label class="membership-desc-label">Beskrivelse</label>
-            <SectionsEditor :sections="e.sections" />
-          </div>
-        </div>
-      </li>
-    </ul>
+            <div v-if="expandedIndex === i" class="membership-body">
+              <div :class="showRole ? 'membership-edit-top' : 'attendance-edit-top'">
+                <div class="unit-picker">
+                  <div v-if="e.targetSlug" class="unit-chip">
+                    <span class="unit-chip-name">{{ e.targetName || e.targetSlug }}</span>
+                    <button
+                      type="button"
+                      class="unit-chip-clear"
+                      :aria-label="pickerChipAria"
+                      @click="clearTarget(e)"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                  <template v-else>
+                    <input
+                      v-model="pickerQuery"
+                      class="edit-input"
+                      :class="{ 'edit-input-invalid': !e.targetSlug }"
+                      type="text"
+                      :placeholder="searchPlaceholder"
+                      @focus="pickerOpen = true"
+                      @blur="onPickerBlur"
+                    />
+                    <div v-if="pickerOpen && (filteredTargets.length || createHref)" class="unit-results">
+                      <button
+                        v-for="opt in filteredTargets"
+                        :key="opt.slug"
+                        type="button"
+                        class="unit-result"
+                        @mousedown.prevent="pickTarget(e, opt)"
+                      >
+                        {{ opt.name }}
+                        <span v-if="aliasHint(pickerQuery, opt.name, opt.aliases)" class="unit-alias">· {{ aliasHint(pickerQuery, opt.name, opt.aliases) }}</span>
+                      </button>
+                      <a
+                        v-if="createHref"
+                        :href="createHref"
+                        class="unit-result unit-result--create"
+                      >{{ createLabel || '+ Opprett ny' }}</a>
+                    </div>
+                  </template>
+                </div>
+                <select
+                  v-if="showRole && roleScope"
+                  v-model="e.role"
+                  class="edit-input membership-role"
+                  :title="e.role ? roleText(e.role) : undefined"
+                >
+                  <option :value="null">—</option>
+                  <option v-for="r in roleOptions" :key="r.key" :value="r.key">{{ r.name }}</option>
+                  <!-- A stored value outside this group stays visible instead of silently blanking. -->
+                  <option v-if="e.role && !roleOptions.some(r => r.key === e.role)" :value="e.role">{{ e.role }} (ukjent)</option>
+                </select>
+                <button type="button" class="rank-remove-btn" @click="removeEntry(i)">Fjern</button>
+              </div>
+              <p v-if="showRole && roleScope && e.role && roleText(e.role)" class="role-help">{{ roleText(e.role) }}</p>
+              <div v-if="showDates" class="membership-edit-dates">
+                <input
+                  class="edit-input edit-input-date"
+                  type="text"
+                  placeholder="Startdato"
+                  :value="e.startDate ?? ''"
+                  @input="e.startDate = ($event.target as HTMLInputElement).value || null"
+                />
+                <span class="rank-dash">–</span>
+                <input
+                  class="edit-input edit-input-date"
+                  type="text"
+                  placeholder="Sluttdato"
+                  :value="e.endDate ?? ''"
+                  @input="e.endDate = ($event.target as HTMLInputElement).value || null"
+                />
+              </div>
+              <div v-if="showPassed" class="passed-seg">
+                <label class="passed-seg-opt" :class="{ active: e.passed === null || e.passed === undefined }">
+                  <input type="radio" :value="null" :checked="e.passed === null || e.passed === undefined" @change="e.passed = null" />
+                  Ukjent
+                </label>
+                <label class="passed-seg-opt" :class="{ active: e.passed === true }">
+                  <input type="radio" :value="true" :checked="e.passed === true" @change="e.passed = true" />
+                  Bestått
+                </label>
+                <label class="passed-seg-opt" :class="{ active: e.passed === false }">
+                  <input type="radio" :value="false" :checked="e.passed === false" @change="e.passed = false" />
+                  Ikke bestått
+                </label>
+              </div>
+              <slot name="extra-fields" :entry="e"></slot>
+              <div v-if="showSources" class="membership-sources">
+                <label class="membership-desc-label">Kilder</label>
+                <SourceRefsEditor :model-value="e.sourceRefs ?? []" @update:model-value="v => e.sourceRefs = v" />
+              </div>
+              <div v-if="showDescription" class="membership-desc-wrap">
+                <label class="membership-desc-label">Beskrivelse</label>
+                <SectionsEditor :sections="e.sections" />
+              </div>
+            </div>
+          </li>
+        </ul>
+      </div>
+    </template>
     <div class="edit-add">
       <button type="button" class="edit-btn-outline" @click="addEntry">{{ addLabel }}</button>
     </div>
@@ -213,7 +240,7 @@
 <script setup lang="ts">
 // Parent owns the `entries` array (reactive). Editor mutates in place.
 /* eslint-disable vue/no-mutating-props */
-import { computed, nextTick, onBeforeUnmount, onMounted, ref, shallowRef, watch, toRef } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, shallowRef, useId, useTemplateRef, watch, toRef } from 'vue'
 import SectionsEditor, { type Section } from '@/components/SectionsEditor.vue'
 import SourceRefsEditor from '@/components/SourceRefsEditor.vue'
 import type { RelationEntry, RelationStrategy, RelationTarget } from './RelationStrategy.ts'
@@ -260,11 +287,14 @@ const props = withDefaults(defineProps<{
   eventDates?:      boolean
   /** Rows can be moved up, down or to the top; the strategy must save the list in order (#355). */
   reorderable?:     boolean
+  /** A list longer than this is a scroll view of its first rows, with a toggle for the whole list (#393). 0 = never. */
+  visibleRows?:     number
 }>(), {
   showRole:        false,
   showDates:       true,
   eventDates:      false,
   reorderable:     false,
+  visibleRows:     10,
   showPassed:      false,
   showDescription: true,
   showSources:     false,
@@ -284,6 +314,33 @@ const roleOptions = useRoleOptions(toRef(props, 'roleScope'))
 const roleText    = (key: string) => roles.value.get(key)?.text ?? ''
 
 const expandedIndex = ref<number | null>(null)
+
+// A long list is a scroll view of its first `visibleRows` rows, as tall as those rows are (they differ in height).
+// Editing a row (opening it, moving it, adding one) shows the whole list: the picker and the move panel drop below
+// their row and must not be cut off by a short box.
+const listId    = `relation-list-${useId()}`
+const listEl    = useTemplateRef<HTMLUListElement>('listEl')
+const showAll   = ref(false)
+const clipHeight = ref<number | null>(null)
+const collapsible = computed(() => props.visibleRows > 0 && props.entries.length > props.visibleRows)
+const collapsed   = computed(() => collapsible.value && !showAll.value)
+
+function measureClip() {
+  const last = listEl.value?.children[props.visibleRows - 1] as HTMLElement | undefined
+  clipHeight.value = last ? last.offsetTop + last.offsetHeight : null
+}
+let listObserver: ResizeObserver | null = null
+watch(listEl, el => {
+  listObserver?.disconnect()
+  listObserver = null
+  if (!el) return
+  measureClip()
+  if (typeof ResizeObserver !== 'undefined') {
+    listObserver = new ResizeObserver(measureClip)
+    listObserver.observe(el)
+  }
+}, { flush: 'post' })
+watch(() => props.entries.length, () => { void nextTick(measureClip) })
 const pickerQuery   = ref('')
 const pickerOpen    = ref(false)
 const saving        = ref(false)
@@ -349,6 +406,7 @@ const filteredTargets = computed(() => {
 
 function toggleIndex(i: number) {
   expandedIndex.value = expandedIndex.value === i ? null : i
+  if (expandedIndex.value !== null) showAll.value = true
   pickerQuery.value = ''
   pickerOpen.value = false
 }
@@ -381,6 +439,8 @@ function addEntry() {
     hasDescription: false,
   })
   expandedIndex.value = props.entries.length - 1
+  showAll.value = true
+  void nextTick(() => (listEl.value?.lastElementChild as HTMLElement | null)?.scrollIntoView({ block: 'nearest' }))
 }
 
 const entryName = (e: RelationEntry) => e.targetName || e.targetSlug || 'oppføringen'
@@ -410,6 +470,7 @@ watch(movePos, pos => { if (pos) moveInput.value = String(pos); else movingEntry
 function toggleMove(e: RelationEntry) {
   movingEntry.value = movingEntry.value === e ? null : e
   if (!movingEntry.value) return
+  showAll.value = true
   // The position is what is typed first: ready to replace.
   void nextTick(() => document.querySelector<HTMLInputElement>('.move-wrap.open .move-pos-input')?.select())
 }
@@ -423,7 +484,10 @@ function onPointerDown(ev: PointerEvent) {
   if (movingEntry.value && !(ev.target as Element).closest('.move-wrap.open')) closeMove()
 }
 onMounted(() => document.addEventListener('pointerdown', onPointerDown))
-onBeforeUnmount(() => document.removeEventListener('pointerdown', onPointerDown))
+onBeforeUnmount(() => {
+  document.removeEventListener('pointerdown', onPointerDown)
+  listObserver?.disconnect()
+})
 
 function removeEntry(i: number) {
   const e = props.entries[i]
@@ -499,6 +563,15 @@ function revert() {
 <style scoped>
 .edit-section { margin-top: var(--space-lg); }
 
+.edit-section-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-md);
+  margin: 0 0 var(--space-md);
+}
+.edit-section-head .edit-section-heading { margin: 0; }
+
 .edit-section-heading {
   font-family: var(--font-sans);
   font-size: var(--size-caps);
@@ -509,7 +582,40 @@ function revert() {
   margin: 0 0 var(--space-md);
 }
 
+.edit-section-count {
+  margin-left: var(--space-xs);
+  font-weight: 400;
+  letter-spacing: 0;
+}
+.edit-section-count::before { content: '· '; }
+
+/* A long list: the first rows, scrolled (#393). The box is as tall as those rows; JS sets max-height. */
+.list-scroll.collapsed {
+  overflow-y: auto;
+  box-sizing: border-box;
+  padding: 2px;            /* room for the focus ring and the border of the rows at the edges */
+  margin: -2px;
+}
+.list-scroll.collapsed:focus-visible { outline: 1px solid var(--focus); }
+.list-toggle {
+  flex-shrink: 0;
+  padding: var(--space-xs) 0;
+  font-family: var(--font-sans);
+  font-size: var(--size-label);
+  font-weight: 500;
+  color: var(--ink-soft);
+  background: none;
+  border: 0;
+  cursor: pointer;
+  text-decoration: underline;
+  text-decoration-color: var(--rule);
+  text-underline-offset: 3px;
+}
+.list-toggle:hover { color: var(--ink); text-decoration-color: var(--ink); }
+
 .edit-add { margin-top: var(--space-md); }
+/* Room below the last list's button, as below the last section of a page (main.css). */
+.edit-section:last-of-type { margin-bottom: var(--space-xl); }
 
 .edit-btn-outline {
   padding: var(--space-sm) var(--space-md);
@@ -558,6 +664,7 @@ function revert() {
 
 /* ── List of memberships / attendances ──────────────────────── */
 .membership-list {
+  position: relative;           /* the rows' offsetTop is measured from here (#393) */
   list-style: none;
   padding: 0;
   margin: 0;
