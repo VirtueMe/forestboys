@@ -859,14 +859,14 @@
    "truncatedFrom": 3960
   },
   {
-   "query": "MATCH (p:Person)-[:INVOLVED_IN|PARTICIPATED_IN]->(:`Operation` {slug: $slug})\n       RETURN DISTINCT p.slug AS slug, p.canonicalName AS name\n       ORDER BY name",
+   "query": "MATCH (p:Person)-[r:INVOLVED_IN|PARTICIPATED_IN]->(:`Operation` {slug: $slug})\n       WITH p, min(coalesce(r.order, 999)) AS pos\n       RETURN p.slug AS slug, p.canonicalName AS name\n       ORDER BY pos, name",
    "params": {
     "slug": "forste-mote-om-mostandsbevegelse-i-london"
    },
    "rows": [
     {
-     "slug": "eric-colban",
-     "name": "Eric Colban Sendemann i London"
+     "slug": "sverre-midtskau",
+     "name": "Sverre Midtskau"
     },
     {
      "slug": "gerd-egede-nissen-skuespiller",
@@ -881,16 +881,16 @@
      "name": "Martin Jensen Linge"
     },
     {
+     "slug": "unni-diesen-ud",
+     "name": "Unni Diesen UD"
+    },
+    {
      "slug": "olav-rytter-nrk",
      "name": "Olav Rytter"
     },
     {
-     "slug": "sverre-midtskau",
-     "name": "Sverre Midtskau"
-    },
-    {
-     "slug": "unni-diesen-ud",
-     "name": "Unni Diesen UD"
+     "slug": "eric-colban",
+     "name": "Eric Colban Sendemann i London"
     }
    ]
   },
@@ -901,8 +901,8 @@
    },
    "rows": [
     {
-     "targetSlug": "eric-colban",
-     "targetName": "Eric Colban Sendemann i London",
+     "targetSlug": "sverre-midtskau",
+     "targetName": "Sverre Midtskau",
      "sections": []
     },
     {
@@ -921,18 +921,18 @@
      "sections": []
     },
     {
+     "targetSlug": "unni-diesen-ud",
+     "targetName": "Unni Diesen UD",
+     "sections": []
+    },
+    {
      "targetSlug": "olav-rytter-nrk",
      "targetName": "Olav Rytter",
      "sections": []
     },
     {
-     "targetSlug": "sverre-midtskau",
-     "targetName": "Sverre Midtskau",
-     "sections": []
-    },
-    {
-     "targetSlug": "unni-diesen-ud",
-     "targetName": "Unni Diesen UD",
+     "targetSlug": "eric-colban",
+     "targetName": "Eric Colban Sendemann i London",
      "sections": []
     }
    ]
