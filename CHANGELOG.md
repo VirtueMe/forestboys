@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.21.1](https://github.com/VirtueMe/forestboys/compare/v0.21.0...v0.21.1) (2026-11-04)
+
+
+### Bug fixes
+
+* **sync:** accept a Sanity deletion that holds the slug a survivor is renamed to ([f7ec3ef](https://github.com/VirtueMe/forestboys/commit/f7ec3ef50d8d7089c0d725c149d597b54eb0f9e9))
+
 ## [0.21.0](https://github.com/VirtueMe/forestboys/compare/v0.20.0...v0.21.0) (2026-10-27)
 
 
