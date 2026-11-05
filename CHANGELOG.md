@@ -1,5 +1,23 @@
 # Changelog
 
+## [0.22.0](https://github.com/VirtueMe/forestboys/compare/v0.21.1...v0.22.0) (2026-11-05)
+
+
+### Features
+
+* **editor:** a long relation list is a scroll view of its first 10 rows ([a10192b](https://github.com/VirtueMe/forestboys/commit/a10192be3ac183f28f32e55d8c54fe05f193acc3))
+* **editor:** add and remove the people of an outline in edit mode ([f2d431a](https://github.com/VirtueMe/forestboys/commit/f2d431a9723c6087414c5bb4fc400b053e058c6f)), closes [#389](https://github.com/VirtueMe/forestboys/issues/389)
+* **editor:** save the people an outline mentions ([bdd21fd](https://github.com/VirtueMe/forestboys/commit/bdd21fd22a4a6d003cf9e7064568bc854c9476bf))
+* **events:** the transport of an event keeps an order the editor sets ([e4211c2](https://github.com/VirtueMe/forestboys/commit/e4211c2e4f728ea1513c41d6c78cd4676b4e6d75))
+
+
+### Bug fixes
+
+* **admin:** the card image upload works, and is tested ([23ee312](https://github.com/VirtueMe/forestboys/commit/23ee312b468947c1d9c15295042777b9d0cb0ea0)), closes [#402](https://github.com/VirtueMe/forestboys/issues/402)
+* **events:** list the people on the /events panel in the order set by the editor ([63c69fb](https://github.com/VirtueMe/forestboys/commit/63c69fb44f5120c7d8ae5eb99217dae06f07f138))
+* **events:** read the event preview only from the graph, drop the Sanity event fetch ([af8a84f](https://github.com/VirtueMe/forestboys/commit/af8a84f38d1e82a653fb6de544ff07be28b3b122)), closes [#357](https://github.com/VirtueMe/forestboys/issues/357)
+* **sync:** number the people of a new event in the order Sanity gives ([8d73d62](https://github.com/VirtueMe/forestboys/commit/8d73d62dfb41d37faaf2f34350562ca1c1181280)), closes [#399](https://github.com/VirtueMe/forestboys/issues/399)
+
 ## [0.21.1](https://github.com/VirtueMe/forestboys/compare/v0.21.0...v0.21.1) (2026-11-04)
 
 
