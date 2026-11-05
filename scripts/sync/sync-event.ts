@@ -103,7 +103,8 @@ function applyField(field: string, g: GraphEvent, d: Doc, l: Lookups): Stmt[] {
         text: `${E}
                OPTIONAL MATCH (e)-[r:USED]->(t:Transport) WHERE NOT t.slug IN $slugs DELETE r
                WITH DISTINCT e
-               UNWIND $slugs AS slug MATCH (t:Transport {slug: slug}) MERGE (e)-[:USED]->(t)`,
+               UNWIND range(0, size($slugs) - 1) AS i
+               MATCH (t:Transport {slug: $slugs[i]}) MERGE (e)-[r:USED]->(t) SET r.order = i + 1`,
         params: { id, slugs },
       }]
     }

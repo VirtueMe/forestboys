@@ -87,6 +87,7 @@
       :strategy="EventTransportStrategy"
       label="Transportmidler"
       add-label="+ Legg til transportmiddel"
+      reorderable
       empty-label="Ingen transportmidler knyttet"
       search-placeholder="Søk transportmiddel…"
       picker-chip-aria="Bytt transportmiddel"

@@ -6,8 +6,8 @@
  *
  *   (Operation|Incident)-[:USED]->(Transport)
  *
- * Edges to Transport that stay in the list are kept as they are (their
- * `role` and `sourceRef` survive); the rest are removed. USED edges to
+ * Edges to Transport that stay in the list are kept (their `role` and
+ * `sourceRef` survive) and get `order` = the list position; the rest are removed. USED edges to
  * EquipmentType are not touched.
  */
 
@@ -48,10 +48,11 @@ export const onRequestPatch: PagesFunction<Env> = async ({ request, env, params 
     if (slugs.length) {
       await runCypher(env, `
         MATCH (e:Operation|Incident {slug: $slug})
-        UNWIND $slugs AS tSlug
-        OPTIONAL MATCH (t:Transport {slug: tSlug})
+        UNWIND range(0, size($slugs) - 1) AS i
+        OPTIONAL MATCH (t:Transport {slug: $slugs[i]})
         FOREACH (_ IN CASE WHEN t IS NOT NULL THEN [1] ELSE [] END |
-          MERGE (e)-[:USED]->(t)
+          MERGE (e)-[r:USED]->(t)
+          SET r.order = i + 1
         )
       `, { slug, slugs })
     }

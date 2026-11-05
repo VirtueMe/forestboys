@@ -132,3 +132,11 @@ export const UNIT_MEMBERS_PAGE_QUERY = `
          m.sourceRefs AS sourceRefs,
          m.startDate AS startDate, m.endDate AS endDate
   ORDER BY reduce(o = 999, x IN orders | CASE WHEN x < o THEN x ELSE o END), name`
+
+/** The transport an event used, in the order the editor set (#398); the ones without an order follow, by name. */
+export const EVENT_TRANSPORT_QUERY = `
+      MATCH (e:Operation|Incident {slug: $slug})-[r:USED]->(t:Transport)
+      WITH t, min(coalesce(r.order, 999)) AS pos
+      RETURN t.slug AS targetSlug, coalesce(t.canonicalName, t.name) AS targetName
+      ORDER BY pos, targetName
+`
