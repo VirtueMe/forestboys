@@ -131,8 +131,8 @@ export async function writeEvent(tx: ManagedTransaction, p: EventPlan, stamps: R
     MATCH (e:Operation {sanityId: $id}) UNWIND $people AS slug MATCH (p:Person {slug: slug})
     MERGE (p)-[r:PARTICIPATED_IN]->(e) SET r += $edge`, { id, people: p.people, edge: PARTICIPANT_EDGE })
   await tx.run(`
-    MATCH (e:Operation {sanityId: $id}) UNWIND $transport AS slug MATCH (t:Transport {slug: slug})
-    MERGE (e)-[:USED]->(t)`, { id, transport: p.transport })
+    MATCH (e:Operation {sanityId: $id}) UNWIND range(0, size($transport) - 1) AS i MATCH (t:Transport {slug: $transport[i]})
+    MERGE (e)-[r:USED]->(t) SET r.order = i + 1`, { id, transport: p.transport })
   await tx.run(`
     MATCH (e:Operation {sanityId: $id}) UNWIND $images AS img
     MERGE (s:Source {id: img.id}) ON CREATE SET s.type = 'photograph', s.url = img.url, s.sanityAssetRef = img.assetRef

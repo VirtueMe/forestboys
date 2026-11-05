@@ -137,7 +137,7 @@ ORDER BY CASE WHEN r.description IS NOT NULL THEN 1 ELSE 0 END,
          coalesce(r.order, 999), name
 ```
 
-The lists an editor orders by hand are the exception: the **people of an event** (`PARTICIPATED_IN` / `INVOLVED_IN`), the **members of a unit** (`MEMBER_OF`, the unit's own before those of its sub-units), the **people of a course** (`ATTENDED`: everyone starts together, so the order is the enrolment order) and the **units of an organisation** (`PART_OF`). `order` is the 1-based position in the list, the editor's move panel writes it, and it wins over the annotation: `ORDER BY coalesce(r.order, 999), name` (a unit's members: then `startDate`). An edge without an `order` sorts after those with one.
+The lists an editor orders by hand are the exception: the **people of an event** (`PARTICIPATED_IN` / `INVOLVED_IN`), the **transport of an event** (`USED` to `Transport`), the **members of a unit** (`MEMBER_OF`, the unit's own before those of its sub-units), the **people of a course** (`ATTENDED`: everyone starts together, so the order is the enrolment order) and the **units of an organisation** (`PART_OF`). `order` is the 1-based position in the list, the editor's move panel writes it, and it wins over the annotation: `ORDER BY coalesce(r.order, 999), name` (a unit's members: then `startDate`). An edge without an `order` sorts after those with one.
 
 ### Crew-role validation
 
@@ -396,7 +396,7 @@ The "what happened" node. Point-in-time, single-place. Org/Unit context is **not
 | `RELATED_TO {kind:'contains'}`  | `Incident`      | multi — sub-incidents               |
 | `AT`                            | `Location`      | single — where it happened          |
 | `AT_STATION`                    | `Station`       | single — radio station, airfield, etc. |
-| `USED`                          | `Transport`     | `role`                              |
+| `USED`                          | `Transport`     | `role, order`                       |
 | `USED`                          | `EquipmentType` | `quantity, role`                    |
 | `SOURCED_FROM`                  | `Source`        | provenance                          |
 | `HAS_IMAGE`                     | `Source`        | gallery                             |
@@ -443,7 +443,7 @@ The pre-Round-3 import label. Currently coexists with `Incident`:
 | `ARRIVED_AT_STATION`       | `Station`         | flight events                                    |
 | `DEPARTED_FROM_LOCATION`   | `Location`        | non-station departures                           |
 | `ARRIVED_AT_LOCATION`      | `Location`        | non-station arrivals                             |
-| `USED`                     | `Transport`       | aircraft / vessel used                           |
+| `USED`                     | `Transport`       | aircraft / vessel used; `order` is the editor's 1-based position, read `coalesce(r.order, 999), name` |
 | `RESULTED_IN`              | `Station`         | outcome — historic, sparse                       |
 
 Migration target: `Event` → `Incident`, normalize `DEPARTED_FROM_STATION` → `FROM`, `ARRIVED_AT_STATION` → `TO`, drop `RESULTED_IN`.
@@ -564,7 +564,7 @@ Aircraft, fishing boats, MTBs, support craft.
 
 **Inbound:**
 - `(:Person)-[:CREW_OF {role}]->(t)` — `role` is a string validated against `CrewRole.APPLIES_TO_CLASS` walked from the Transport's `OF_CLASS`. See **Crew-role validation** under cross-cutting conventions.
-- `(:Event)-[:USED]->(t)`
+- `(:Event)-[:USED {order}]->(t)` — `order` is the position in the event's list of transport
 
 **Legacy properties not yet migrated:**
 

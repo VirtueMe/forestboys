@@ -334,7 +334,7 @@
    "truncatedFrom": 2307
   },
   {
-   "query": "\n      MATCH (e:Operation|Incident {slug: $slug})-[:USED]->(t:Transport)\n      RETURN t.slug AS targetSlug, coalesce(t.canonicalName, t.name) AS targetName\n      ORDER BY targetName\n    ",
+   "query": "\n      MATCH (e:Operation|Incident {slug: $slug})-[r:USED]->(t:Transport)\n      WITH t, min(coalesce(r.order, 999)) AS pos\n      RETURN t.slug AS targetSlug, coalesce(t.canonicalName, t.name) AS targetName\n      ORDER BY pos, targetName\n",
    "params": {
     "slug": "forste-mote-om-mostandsbevegelse-i-london"
    },

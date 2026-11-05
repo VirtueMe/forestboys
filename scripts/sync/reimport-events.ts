@@ -70,7 +70,7 @@ async function main() {
     const nodes: Record<string, unknown>[] = []
     const edges: Record<string, { event: string; target: string }[]> = {}
     const people: { event: string; target: string }[] = []
-    const transport: { event: string; target: string }[] = []
+    const transport: { event: string; target: string; order: number }[] = []
     const images: Record<string, unknown>[] = []
     const links: Record<string, unknown>[] = []
     const descriptions: Record<string, unknown>[] = []
@@ -87,7 +87,7 @@ async function main() {
       nodes.push(p.node)
       for (const e of p.single) (edges[e.type] ??= []).push({ event: d._id, target: e.target })
       for (const t of p.people) people.push({ event: d._id, target: t })
-      for (const t of p.transport) transport.push({ event: d._id, target: t })
+      p.transport.forEach((t, i) => transport.push({ event: d._id, target: t, order: i + 1 }))
       for (const img of p.images) images.push({ event: d._id, ...img })
       for (const src of p.links) links.push({ event: d._id, source: src })
       if (p.description) descriptions.push({ event: d._id, props: p.description })
@@ -196,7 +196,8 @@ async function main() {
       await run(`
         UNWIND $rows AS x
         MATCH (e:Operation {sanityId: x.event}), (t:Transport {slug: x.target})
-        MERGE (e)-[:USED]->(t)`, transport)
+        MERGE (e)-[r:USED]->(t)
+        SET r.order = coalesce(r.order, x.order)`, transport)
       await run(`
         UNWIND $rows AS img
         MATCH (e:Operation {sanityId: img.event})

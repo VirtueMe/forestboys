@@ -8,7 +8,7 @@ import { neo4jQuery } from '@/composables/useNeo4j.ts'
 import { authFetch }  from '@/composables/useAuth.ts'
 import type { Section } from '@/components/SectionsEditor.vue'
 import type { RelationEntry, RelationStrategy, RelationTarget } from './RelationStrategy.ts'
-import { ORG_UNITS_QUERY, UNIT_ATTENDEES_QUERY, UNIT_MEMBERS_QUERY } from '@/composables/orderedMemberQueries.ts'
+import { EVENT_TRANSPORT_QUERY, ORG_UNITS_QUERY, UNIT_ATTENDEES_QUERY, UNIT_MEMBERS_QUERY } from '@/composables/orderedMemberQueries.ts'
 
 interface CitationRow {
   inline:       boolean | null
@@ -1067,11 +1067,7 @@ async function fetchTransportOptions(): Promise<RelationTarget[]> {
 export const EventTransportStrategy: RelationStrategy = {
   fetchTargets: fetchTransportOptions,
   async fetchEntries(eventSlug) {
-    const rows = await neo4jQuery<HierarchyRow>(`
-      MATCH (e:Operation|Incident {slug: $slug})-[:USED]->(t:Transport)
-      RETURN t.slug AS targetSlug, coalesce(t.canonicalName, t.name) AS targetName
-      ORDER BY targetName
-    `, { slug: eventSlug })
+    const rows = await neo4jQuery<HierarchyRow>(EVENT_TRANSPORT_QUERY, { slug: eventSlug })
     return rows.map(hierarchyRowToEntry)
   },
   async saveEntries(eventSlug, entries) {
