@@ -1,17 +1,16 @@
 /**
  * useEventData — Neo4j data layer shared by Operation + Incident.
  *
- * Both kinds live in EventDetail.vue today; the page hasn't been
- * refactored to inject this yet. The composable exists for the
- * proposal-preview wrapper so bundles touching Operation/Incident can
- * render a focused preview without pulling in the rest of the page.
+ * Both kinds are read through EventDetail.vue, which injects this (or the
+ * proposal-wrapped version) so a bundle touching Operation/Incident can
+ * render a focused preview.
  *
- * Returned refs cover the Neo4j-sourced shape (kind, name, date,
- * description sections, the four relation arrays). Sanity-IDB extras
- * (gallery, movie, legacy descriptions) stay in EventDetail.vue.
+ * Returned refs cover the whole page: kind, name, date, description
+ * sections, places, bases, gallery, links and the relation arrays.
  */
 import { ref, computed } from 'vue'
 import { neo4jQuery } from './useNeo4j.ts'
+import { eventLinksQuery, toEventLinks, type EventLink } from './useEventsList.ts'
 import type { Section } from '@/components/SectionsEditor.vue'
 import type { RelationEntry, RelationTarget } from '@/components/relation/RelationStrategy.ts'
 import {
@@ -71,6 +70,7 @@ export function useEventData() {
   const stationFrom  = ref<EventStationRef  | null>(null)
   const stationTo    = ref<EventStationRef  | null>(null)
   const gallery      = ref<EventGalleryImage[]>([])
+  const links        = ref<EventLink[]>([])
 
   const personEntries        = ref<RelationEntry[]>([])
   const personTargets        = ref<RelationTarget[]>([])
@@ -128,6 +128,7 @@ export function useEventData() {
     stationFrom.value          = null
     stationTo.value            = null
     gallery.value              = []
+    links.value                = []
     personEntries.value        = []
     personTargets.value        = []
     subIncidentEntries.value   = []
@@ -184,7 +185,7 @@ export function useEventData() {
     }
 
     const kindLabel = row.kind === 'operation' ? 'Operation' : 'Incident'
-    const [descRows, persons, personTargetsList, locFromRows, locToRows, stFromRows, stToRows, galleryRows] = await Promise.all([
+    const [descRows, persons, personTargetsList, locFromRows, locToRows, stFromRows, stToRows, galleryRows, linkRows] = await Promise.all([
       neo4jQuery<SectionRow>(
         `MATCH (:\`${kindLabel}\` {slug: $slug})-[:HAS_CONTENT]->(d:Description)
          RETURN d.order AS order, d.content AS content
@@ -220,6 +221,7 @@ export function useEventData() {
          ORDER BY coalesce(r.order, 9999), s.id`,
         { slug },
       ),
+      neo4jQuery<{ id: string | null; title: string | null; url: string | null }>(eventLinksQuery(kindLabel), { slug }),
     ])
     savedSections.value = descRows.map(rowToSection)
     personEntries.value = persons
@@ -229,6 +231,7 @@ export function useEventData() {
     stationFrom.value   = stFromRows[0]  ?? null
     stationTo.value     = stToRows[0]    ?? null
     gallery.value       = galleryRows
+    links.value         = toEventLinks(linkRows)
     ;[transportEntries.value, transportTargets.value] = await Promise.all([
       EventTransportStrategy.fetchEntries(slug),
       EventTransportStrategy.fetchTargets(),
@@ -297,6 +300,7 @@ export function useEventData() {
     locationFrom, locationTo,
     stationFrom,  stationTo,
     gallery,
+    links,
     personEntries, personTargets,
     subIncidentEntries, subIncidentTargets,
     subOperationEntries, subOperationTargets,

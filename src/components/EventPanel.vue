@@ -105,7 +105,7 @@
         </div>
       </section>
 
-      <!-- Galleri (images still served from Sanity by asset ref) -->
+      <!-- Galleri -->
       <section v-if="event.gallery?.length" class="section">
         <h2 class="section-heading">Galleri</h2>
         <div class="carousel">
@@ -167,9 +167,8 @@ const isAdmin = computed(() => user.value?.role === 'admin')
 const placeRoute = usePlaceRoute()
 
 // Neo4j event data — used for the edit form + Forslag tab. EventsView
-// loads detail via fetchEventDetailFromNeo4j into the `event` prop, so
-// the live page already has the basics; this composable's loadEvent
-// re-fetches richer relation context for editing.
+// loads the read view via fetchEventDetailFromNeo4j into the `event` prop;
+// this composable's loadEvent re-fetches richer relation context for editing.
 const eventData = useEventData()
 const {
   event: neoEvent,

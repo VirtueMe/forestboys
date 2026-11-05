@@ -5,7 +5,7 @@
     <div v-if="loading" class="status">Laster hendelse…</div>
     <div v-else-if="error" class="status error">Hendelsen ble ikke funnet.</div>
 
-    <template v-else-if="event || neoEvent">
+    <template v-else-if="neoEvent">
       <!-- Timeline.js section -->
       <section class="timeline-section">
         <h2 class="timeline-heading">Tidslinjeutforsker</h2>
@@ -140,12 +140,12 @@
           </p>
         </section>
 
-        <!-- Nyttige lenker (Sanity-only for now) -->
-        <section v-if="event?.links?.length" class="section">
+        <!-- Nyttige lenker -->
+        <section v-if="links.length" class="section">
           <h2 class="section-heading">Nyttige lenker</h2>
           <div class="links-list">
             <a
-              v-for="link in event.links"
+              v-for="link in links"
               :key="link.link"
               :href="link.link"
               target="_blank"
@@ -174,14 +174,11 @@
 import { ref, computed, onMounted, inject } from 'vue'
 import { useRouter, RouterLink } from 'vue-router'
 import { useDetailSlug } from '@/composables/useDetailSlug.ts'
-import { fetchEventDetailBySlug } from '../composables/useLocationCache.ts'
 import { useAuth } from '../composables/useAuth.ts'
 import { usePlaceRoute } from '../composables/usePlaceRoute.ts'
 import { useEventData } from '../composables/useEventData.ts'
 import { EventDataKey } from '../composables/proposalDataInjection.ts'
-import { SANITY_IMG } from '../config/sanity.ts'
 import { blocksToHtml } from '../utils/portableText.ts'
-import type { IdbEventDetail } from '../types/idb.ts'
 import RelationListView   from '../components/relation/RelationListView.vue'
 import RelationInfoPopup  from '../components/relation/RelationInfoPopup.vue'
 import {
@@ -193,7 +190,6 @@ import type { EventRelationsData } from '../components/event/EventRelations.vue'
 
 const detailSlug = useDetailSlug()
 const router = useRouter()
-const event = ref<IdbEventDetail | null>(null)
 const loading = ref(true)
 const error = ref(false)
 const currentImageIndex = ref(0)
@@ -235,7 +231,7 @@ const personStrategy = computed(() =>
   neoEvent.value?.kind === 'operation' ? PersonParticipationStrategy : PersonInvolvementStrategy,
 )
 
-const { locationFrom, locationTo, stationFrom, stationTo, gallery: neoGallery } = eventData
+const { locationFrom, locationTo, stationFrom, stationTo, gallery, links } = eventData
 
 const relationsData = computed<EventRelationsData>(() => ({
   person:       { entries: personEntries.value,       targets: personTargets.value       },
@@ -268,58 +264,35 @@ async function onSlugChanged(newSlug: string) {
   await loadEvent(newSlug)
 }
 
-// Prefer Neo4j edges; fall back to Sanity-IDB if Neo4j hasn't materialized.
-const displayLocationFrom = computed(() => locationFrom.value ?? event.value?.locationFrom ?? null)
-const displayLocationTo   = computed(() => locationTo.value   ?? event.value?.locationTo   ?? null)
-const displayStationFrom  = computed(() => stationFrom.value  ?? event.value?.stationFrom  ?? null)
-const displayStationTo    = computed(() => stationTo.value    ?? event.value?.stationTo    ?? null)
+// Everything is read from the graph: an empty set is shown as empty, so a removed
+// person, place, base or image does not come back from an older copy.
+const displayLocationFrom = locationFrom
+const displayLocationTo   = locationTo
+const displayStationFrom  = stationFrom
+const displayStationTo    = stationTo
 const displayPeople = computed(() =>
-  personEntries.value.length
-    ? personEntries.value.map((p) => ({ slug: p.targetSlug, name: p.targetName }))
-    : (event.value?.people ?? []),
+  personEntries.value.map((p) => ({ slug: p.targetSlug, name: p.targetName })),
 )
 const displayTransport = computed(() =>
   transportEntries.value.map((t) => ({ slug: t.targetSlug, name: t.targetName })),
 )
-const displayGallery = computed(() =>
-  neoGallery.value.length
-    ? neoGallery.value.map((g) => ({ url: g.url, caption: g.caption, asset: null }))
-    : (event.value?.gallery ?? []).map((g) => ({
-        url:     null,
-        caption: g.caption ?? null,
-        asset:   g.asset,
-      })),
-)
+const displayGallery = gallery
 const descriptionHtml = computed<string>(() => {
-  if (savedSections.value.length) {
-    const parts: string[] = []
-    for (const s of savedSections.value) {
-      if (!s.content) continue
-      try {
-        const blocks = JSON.parse(s.content) as unknown[]
-        parts.push(blocksToHtml(blocks))
-      } catch { /* skip */ }
-    }
-    return parts.join('')
+  const parts: string[] = []
+  for (const s of savedSections.value) {
+    if (!s.content) continue
+    try {
+      const blocks = JSON.parse(s.content) as unknown[]
+      parts.push(blocksToHtml(blocks))
+    } catch { /* skip */ }
   }
-  return event.value?.description ? blocksToHtml(event.value.description) : ''
+  return parts.join('')
 })
 
-const displayName = computed(() => neoEvent.value?.canonicalName || event.value?.title || '')
+const displayName = computed(() => neoEvent.value?.canonicalName || '')
 const displayDate = computed(() => neoEvent.value?.date || '')
 
-const currentImageUrl = computed<string>(() => {
-  const g = displayGallery.value
-  if (!g.length) return ''
-  const item = g[currentImageIndex.value]
-  if (item.url) return item.url
-  if (item.asset && '_ref' in item.asset) {
-    const path = item.asset._ref
-      .replace(/^image-/, '').replace(/-([a-z]+)$/, '.$1')
-    return `${SANITY_IMG}/${path}?w=900&auto=format`
-  }
-  return ''
-})
+const currentImageUrl = computed<string>(() => displayGallery.value[currentImageIndex.value]?.url ?? '')
 
 function prevImage() {
   const len = displayGallery.value.length
@@ -342,15 +315,9 @@ function handleInternalLinks(e: MouseEvent) {
 }
 
 onMounted(async () => {
-  const slug = detailSlug.value
-  // Run Neo4j load in parallel; let the Sanity fetch fail independently
-  // (the slug may be Neo4j-only with no Sanity counterpart).
-  const [sanityResult] = await Promise.allSettled([
-    fetchEventDetailBySlug(slug),
-    loadEvent(slug),
-  ])
-  if (sanityResult.status === 'fulfilled') event.value = sanityResult.value
-  if (!event.value && !neoEvent.value) error.value = true
+  try { await loadEvent(detailSlug.value) }
+  catch { /* shown as not found below */ }
+  if (!neoEvent.value) error.value = true
   loading.value = false
 })
 </script>

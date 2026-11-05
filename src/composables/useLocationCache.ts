@@ -1,10 +1,9 @@
 import { openDB, type IDBPDatabase, type DBSchema } from 'idb'
 import { ref } from 'vue'
-import { SANITY_CDN, SANITY_IMG } from '../config/sanity.ts'
 import { neo4jQuery } from './useNeo4j.ts'
 import { cacheState } from './cacheFreshness.ts'
 import { currentRole, ensureUser } from './useAuth.ts'
-import type { IdbLocation, IdbStation, IdbPerson, IdbEvent, IdbTransport, IdbOutline, IdbCache, IdbEventDetail, SavedPosition, SavedMapState } from '../types/idb.ts'
+import type { IdbLocation, IdbStation, IdbPerson, IdbEvent, IdbTransport, IdbOutline, IdbCache, SavedPosition, SavedMapState } from '../types/idb.ts'
 
 interface MilorgDB extends DBSchema {
   cache: {
@@ -28,38 +27,6 @@ const STORE = 'cache' as const
 // any v17 Sanity-shaped cache from previous deployments. v19: stations carry
 // their other names (HAS_NAME), so a v18 cache has none to search.
 const CACHE_KEY = 'v19-station-names'
-
-// Convert Sanity Portable Text block array to a plain string.
-// Each block becomes one paragraph; non-block types (images etc.) are skipped.
-function blocksToText(blocks: unknown): string | undefined {
-  if (!Array.isArray(blocks) || blocks.length === 0) return undefined
-  const paragraphs: string[] = []
-  for (const block of blocks) {
-    if (
-      block !== null &&
-      typeof block === 'object' &&
-      '_type' in block &&
-      (block as { _type: string })._type === 'block' &&
-      'children' in block &&
-      Array.isArray((block as { children: unknown[] }).children)
-    ) {
-      const text = (block as { children: { text?: string }[] }).children
-        .map(c => c.text ?? '').join('')
-      if (text.trim()) paragraphs.push(text.trim())
-    }
-  }
-  return paragraphs.length ? paragraphs.join('\n\n') : undefined
-}
-
-// Resolve the first gallery image to a CDN thumbnail URL.
-// Sanity _ref format: image-{hash}-{WxH}-{ext}  →  {hash}-{WxH}.{ext}
-function galleryThumb(gallery: unknown): string | undefined {
-  if (!Array.isArray(gallery) || !gallery.length) return undefined
-  const ref = (gallery[0] as { asset?: { _ref?: string } } | null)?.asset?._ref
-  if (!ref || typeof ref !== 'string') return undefined
-  const path = ref.replace(/^image-/, '').replace(/-(\w+)$/, '.$1')
-  return `${SANITY_IMG}/${path}?w=400&auto=format`
-}
 
 // Store the Promise, not the resolved value — safe against concurrent callers.
 // Reset to null on rejection so the next caller can retry.
@@ -110,10 +77,6 @@ export async function readMapState(): Promise<SavedMapState | null> {
 export async function saveMapState(state: SavedMapState): Promise<void> {
   const database = await getDb()
   await database.put('mapState', state, 'current')
-}
-
-function sanityUrl(query: string): string {
-  return `${SANITY_CDN}?query=${encodeURIComponent(query)}`
 }
 
 function isValidCoord(lat: unknown, lng: unknown): boolean {
@@ -300,67 +263,6 @@ async function fetchFromNeo4j(): Promise<IdbCache> {
     orgColors,
     districtColors,
   }
-}
-
-export async function fetchEventDetail(id: string): Promise<IdbEventDetail> {
-  const query = `*[_type == "event" && _id == "${id}"][0]{
-  _id, title, "slug": slug.current, date,
-  "organization": organization->name,
-  "district": district->name,
-  description,
-  "gallery": gallery[]{_key, asset, caption},
-  "links": links[]{_key, title, "url": link},
-  "locationFrom": locationFrom->{_id, title, "slug": slug.current},
-  "locationTo": locationTo->{_id, title, "slug": slug.current},
-  "stationFrom": stationFrom->{_id, title, "slug": slug.current},
-  "people": people[]->{_id, name, "slug": slug.current},
-  "transport": transport[]->{name}
-}`
-  const res = await fetch(sanityUrl(query))
-  if (!res.ok) throw new Error(`Sanity fetchEventDetail ${res.status}`)
-  const data = await res.json()
-  const raw = data.result as Record<string, unknown>
-  return {
-    ...raw,
-    description: blocksToText(raw.description),
-    thumbnailUrl: galleryThumb(raw.gallery),
-  } as IdbEventDetail
-}
-
-const eventDetailCache = new Map<string, IdbEventDetail>()
-
-/** Forget the loaded Sanity event details (after an admin save). */
-export function clearEventDetailCache(): void {
-  eventDetailCache.clear()
-}
-
-export async function fetchEventDetailBySlug(slug: string): Promise<IdbEventDetail | null> {
-  if (eventDetailCache.has(slug)) return eventDetailCache.get(slug)!
-  const query = `*[_type == "event" && slug.current == "${slug}"][0]{
-  _id, title, "slug": slug.current, date,
-  "organization": organization->name,
-  "district": district->name,
-  description,
-  "stationFrom": stationFrom->{ title, "slug": slug.current },
-  "stationTo": stationTo->{ title, "slug": slug.current },
-  "locationFrom": locationFrom->{ title, "slug": slug.current },
-  "locationTo": locationTo->{ title, "slug": slug.current },
-  "transport": transport[]->{ name, "slug": slug.current, type },
-  "people": people[]->{ name, "slug": slug.current },
-  "gallery": coalesce(gallery, []),
-  "links": coalesce(links[]{ title, link }, [])
-}`
-  const res = await fetch(sanityUrl(query))
-  if (!res.ok) throw new Error(`Sanity fetchEventDetailBySlug ${res.status}`)
-  const data = await res.json()
-  const raw = data.result as Record<string, unknown> | null
-  if (!raw) return null
-  const detail = {
-    ...raw,
-    thumbnailUrl: galleryThumb(raw.gallery),
-  } as IdbEventDetail
-  eventDetailCache.set(slug, detail)
-  return detail
 }
 
 export function useLocationCache() {
