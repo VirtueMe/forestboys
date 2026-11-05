@@ -58,3 +58,12 @@ describe('fetchEventDetailFromNeo4j: Nyttige lenker', () => {
     expect(q).not.toContain('`Operation`')
   })
 })
+
+describe('fetchEventDetailFromNeo4j: a slug the graph does not have', () => {
+  beforeEach(() => { vi.mocked(neo4jQuery).mockReset() })
+
+  it('returns null, so the page says «Hendelsen ble ikke funnet» and nothing is read from elsewhere', async () => {
+    vi.mocked(neo4jQuery).mockResolvedValue([])
+    expect(await fetchEventDetailFromNeo4j('missing')).toBeNull()
+  })
+})

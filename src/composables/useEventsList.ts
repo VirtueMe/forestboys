@@ -86,6 +86,25 @@ export function eventPeopleQuery(kindLabel: string): string {
        ORDER BY pos, name`
 }
 
+/** «Nyttige lenker»: the sources the event is referenced in (books, schedules, archive items). The relationship stores no order, so they come by title. */
+export function eventLinksQuery(kindLabel: string): string {
+  return `MATCH (:\`${kindLabel}\` {slug: $slug})-[:REFERENCED_IN]->(src:Source)
+       WHERE src.url IS NOT NULL AND trim(src.url) <> ''
+       RETURN DISTINCT src.id AS id, src.title AS title, src.url AS url
+       ORDER BY coalesce(src.title, src.url), src.url`
+}
+
+export interface EventLink { _key: string; title?: string; link: string }
+
+/** Same shape as Sanity's `links` array, which is what the pages read. */
+export function toEventLinks(rows: { id: string | null; title: string | null; url: string | null }[]): EventLink[] {
+  return rows.map(l => ({
+    _key:  l.id ?? l.url!,
+    title: l.title?.trim() || undefined,
+    link:  l.url!.trim(),
+  }))
+}
+
 /**
  * One-shot Neo4j detail fetch for a single Incident/Operation slug,
  * shaped as IdbEventDetail so EventPanel can consume it without
@@ -166,15 +185,7 @@ export async function fetchEventDetailFromNeo4j(slug: string): Promise<IdbEventD
        ORDER BY coalesce(r.order, 9999), s.id`,
       { slug },
     ),
-    // «Nyttige lenker»: the sources the event is referenced in (books, schedules,
-    // archive items). The relationship stores no order, so they come by title.
-    neo4jQuery<{ id: string | null; title: string | null; url: string | null }>(
-      `MATCH (:\`${kindLabel}\` {slug: $slug})-[:REFERENCED_IN]->(src:Source)
-       WHERE src.url IS NOT NULL AND trim(src.url) <> ''
-       RETURN DISTINCT src.id AS id, src.title AS title, src.url AS url
-       ORDER BY coalesce(src.title, src.url), src.url`,
-      { slug },
-    ),
+    neo4jQuery<{ id: string | null; title: string | null; url: string | null }>(eventLinksQuery(kindLabel), { slug }),
   ])
 
   // Synthesize PT description blocks from the Description content
@@ -188,12 +199,7 @@ export async function fetchEventDetailFromNeo4j(slug: string): Promise<IdbEventD
     } catch { /* skip malformed */ }
   }
 
-  // Same shape as Sanity's `links` array, which is what EventPanel reads.
-  const links = linkRows.map(l => ({
-    _key:  l.id ?? l.url!,
-    title: l.title?.trim() || undefined,
-    link:  l.url!.trim(),
-  }))
+  const links = toEventLinks(linkRows)
 
   // Gallery shape mirrors Sanity's; consumers read .url first, asset second.
   const gallery = galleryRows.map((g) => ({

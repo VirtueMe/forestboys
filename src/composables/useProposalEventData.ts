@@ -2,10 +2,8 @@
  * Proposal-preview wrapper for Operation + Incident. Shape mirrors
  * useProposalPersonData / useProposalUnitData / etc.
  *
- * The live `useEventData` is only used in proposal-preview today;
- * EventDetail.vue still owns its own fetch path. Once that page is
- * refactored to inject from EventDataKey, this composable swaps in
- * cleanly the same way Person/Unit do.
+ * EventDetail.vue injects its data from EventDataKey, so this composable
+ * swaps in for the live `useEventData` the same way Person/Unit do.
  */
 import { ref, computed } from 'vue'
 import { useEventData } from './useEventData.ts'

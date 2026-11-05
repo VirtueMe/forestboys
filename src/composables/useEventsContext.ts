@@ -1,6 +1,6 @@
 import { ref, computed, reactive, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { useLocationCache, fetchEventDetailBySlug, clearEventDetailCache } from './useLocationCache.ts'
+import { useLocationCache } from './useLocationCache.ts'
 import { cacheVersion } from './cacheFreshness.ts'
 import { useEventsList, fetchEventDetailFromNeo4j } from './useEventsList.ts'
 import { neo4jQuery } from './useNeo4j.ts'
@@ -239,12 +239,7 @@ export function useEventsContext() {
     detailError.value  = false
     const stale = () => visibleEvent.value?.slug !== slug
     try {
-      // Prefer Neo4j; fall back to Sanity-IDB if Neo4j has no entry.
-      let detail = await fetchEventDetailFromNeo4j(slug)
-      if (!detail) {
-        try { detail = await fetchEventDetailBySlug(slug) }
-        catch { detail = null }
-      }
+      const detail = await fetchEventDetailFromNeo4j(slug)
       if (!detail) { if (!stale()) detailError.value = true; return }
       detailCache[slug] = detail
     } catch {
@@ -259,7 +254,6 @@ export function useEventsContext() {
   // An admin saved something: drop the details held for other events and
   // reload the open one in place (the old text stays up until the new arrives).
   watch(cacheVersion, () => {
-    clearEventDetailCache()
     const open = visibleEvent.value
     for (const slug of Object.keys(detailCache)) if (slug !== open?.slug) delete detailCache[slug]
     if (open) void loadDetail(open, true)
