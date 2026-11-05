@@ -43,8 +43,14 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env, params }
   const guard = await requireAdmin(request, env)
   if (guard instanceof Response) return guard
 
-  const slug   = String(params.slug)
-  const cardId = String(params.cardId)
+  // The client sends the card id with encodeURIComponent ("card:home:1" -> "card%3Ahome%3A1"), and the params arrive as sent.
+  let slug: string, cardId: string
+  try {
+    slug   = decodeURIComponent(String(params.slug))
+    cardId = decodeURIComponent(String(params.cardId))
+  } catch {
+    return json({ error: 'Bad card id' }, 400)
+  }
   if (!cardId.startsWith(`card:${slug}:`)) {
     return json({ error: `Bad card id for page ${slug}: ${cardId}` }, 400)
   }
