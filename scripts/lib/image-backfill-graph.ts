@@ -42,3 +42,14 @@ export function placeKind(places: readonly string[]): string {
   const first = [...places].sort()[0]
   return first.replace(':', ' → ')
 }
+
+/** Every Sanity photo the graph knows, copied or not: its asset ref is the id without the prefix (`img:sanity:<ref>`). */
+export const KNOWN_ASSETS_QUERY = `
+MATCH (s:Source) WHERE s.id STARTS WITH 'img:sanity:'
+RETURN s.id AS id`
+
+/** The assets a Sanity document references that no Source in the graph stands for. Compared by id, never by url (#413). */
+export function missingAssets(referenced: Iterable<string>, sourceIds: Iterable<string>): string[] {
+  const known = new Set([...sourceIds].map(id => id.replace(/^img:sanity:/, '')))
+  return [...referenced].filter(ref => !known.has(ref)).sort()
+}
