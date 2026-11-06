@@ -20,6 +20,14 @@ bucket_name = "milorg-images"
 binding = "PROPOSALS"
 bucket_name = "milorg-proposals"
 
+# The worker that makes the WebP sizes of an uploaded photo (#410): it holds the Cloudflare Images binding, which Pages
+# cannot have («Configuration file for Pages projects does not support "images"»). The worker lives in workers/image-maker
+# and has to exist first: `npm run deploy:images`. A binding to a worker that does not exist can fail the whole deployment.
+# See docs/CLOUDFLARE.md.
+[[services]]
+binding = "IMAGE_MAKER"
+service = "milorg-image-maker"
+
 # The list of pages that exist (#220): the sitemap and the 404 check. KV, not the Cache API: a write is global, a cache
 # delete reaches one data centre. Created with `npx wrangler kv namespace create SITEMAP`; do not also define it in the
 # dashboard. Production and Preview share the namespace.

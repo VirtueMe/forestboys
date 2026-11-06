@@ -3,7 +3,8 @@
  *
  * /images/<id>[?w=N]  an image stored by the door (_lib/images.ts): the stored size that fits
  *                     w, else 900. No resizing here, so the answer is immutable.
- * /images/<key>       any other public key as it is (the card upload's `cards/...` until #410).
+ * /images/<key>       any other public key as it is: the one card image uploaded before #410 (`cards/...`, home card 4).
+ *                     The card upload stores through the door now; replacing that image retires this branch.
  *
  * `masters/` and `_meta/` are never served.
  */

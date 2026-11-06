@@ -30,6 +30,7 @@ document names every binding, variable and secret the code reads (names only, ne
 |---|---|---|
 | `milorg_users` | D1 database `milorg-users` | login and the user list (`functions/auth`, `_lib/oauth.ts`, `api/admin/users`) |
 | `IMAGES` | R2 bucket `milorg-images` | `GET /images/*`, image upload on the pages editor |
+| `IMAGE_MAKER` | service binding to the worker `milorg-image-maker`, which holds the Cloudflare Images binding (Pages cannot, #410) | `_lib/worker-image-maker.ts`, the card image upload; the editors' photo upload (#414) will use it too |
 | `PROPOSALS` | R2 bucket `milorg-proposals` | bundles, their indexes and the ingest (`api/proposals`, `api/admin/proposals`) |
 | `ASSETS` | the static app (`dist/`); Pages adds it itself, nothing to configure | the middleware fetches `index.html` through it to answer an entity page with 200 or 404 (#220) |
 | `SITEMAP` | KV namespace: one key, the list of pages that exist (#220) | `functions/_lib/sitemap.ts`, `/sitemap.txt`, the 404 check in `functions/_middleware.ts`; every write that changes the set of URLs rebuilds it. Without it the middleware fails open (200) |
@@ -60,6 +61,21 @@ applies to Standard only).
 | `ADMIN_BASE_URL` | optional | the site's address in the review link ingest writes into that comment |
 | `DIRECT_LOGIN_USERNAME`, `DIRECT_LOGIN_PASSWORD_HASH`, `DIRECT_LOGIN_USER_NAME`, `DIRECT_LOGIN_USER_EMAIL`, `DIRECT_LOGIN_ROLE` | optional | the direct (password) login of `/auth/token`; it is on only where both `DIRECT_LOGIN_USERNAME` and `DIRECT_LOGIN_PASSWORD_HASH` are set |
 | `BOT_DISPATCH_URL` | **never in production** | the address of the local bot runner (`npm run dev:bot`); when set, a bundle request goes there and not to GitHub, and ingest dispatches resolve jobs to it |
+
+## The image-maker worker (the Images binding)
+
+Pages refuses `[images]` in `wrangler.toml` («Configuration file for Pages projects does not support "images"», the first
+attempt at #410), and the Cloudflare docs describe the Images binding for Workers only. So the binding lives in
+`workers/image-maker` (worker `milorg-image-maker`), which makes the two WebP sizes of an uploaded photo, and the Pages
+project binds to it as `IMAGE_MAKER` (`[[services]]`). As with the Durable Object worker, a Pages deployment never deploys
+another worker, so the deploy comes first and a binding to a worker that does not exist can fail the whole deployment.
+
+- **Deploy** (needs `npx wrangler login`, or `CLOUDFLARE_API_TOKEN`, in a terminal): `npm run deploy:images`. It has no
+  public address (`workers_dev = false`): only the service binding reaches it, so it takes no login.
+- **What it does:** `POST /info` (the image bytes in, `{format, width, height}` out) and `POST /resize?width=<px>` (a WebP
+  of that width, never enlarged). The code is `functions/_lib/image-maker-handler.ts`; the worker's entry only calls it.
+- **Cost:** two transformations per upload (the 400 and 900 files); the size read is not one.
+- **Locally:** `npm run dev:images` runs it on :8791, next to `npm run dev:worker`; without it the upload answers 503.
 
 ## The bundle-events worker (the Durable Object)
 
