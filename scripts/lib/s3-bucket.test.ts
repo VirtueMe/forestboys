@@ -79,4 +79,30 @@ describe('S3Bucket manifest store', () => {
     await bucket(() => new Response('', { status: 404 })).s3.delete('x')
     await expect(bucket(() => new Response('', { status: 500 })).s3.delete('x')).rejects.toThrow('DELETE x: 500')
   })
+
+  describe('imageBucket', () => {
+    it('puts binary bytes unsigned with content type and metadata headers', async () => {
+      const { s3, calls } = bucket(() => new Response('', { status: 200 }))
+      const bytes = new Uint8Array([1, 2, 3])
+      await s3.imageBucket().put('masters/a.jxl', bytes, { httpMetadata: { contentType: 'image/jxl' }, customMetadata: { width: '10', sanitykey: 'a-1x1.png' } })
+      const h = calls[0].init.headers
+      expect(calls[0].init.method).toBe('PUT')
+      expect(calls[0].init.body).toBe(bytes)
+      expect(h['content-type']).toBe('image/jxl')
+      expect(h['x-amz-meta-width']).toBe('10')
+      expect(h['x-amz-meta-sanitykey']).toBe('a-1x1.png')
+      expect(h['x-amz-content-sha256']).toBe('UNSIGNED-PAYLOAD')
+    })
+
+    it('throws on a refused put', async () => {
+      const { s3 } = bucket(() => new Response('', { status: 403 }))
+      await expect(s3.imageBucket().put('k', new Uint8Array(1))).rejects.toThrow('PUT k: 403')
+    })
+
+    it('heads to customMetadata, and null when missing', async () => {
+      const { s3 } = bucket(() => new Response('', { headers: { 'x-amz-meta-width': '640', 'x-amz-meta-height': '480' } }))
+      expect((await s3.imageBucket().head('masters/a.jpg'))?.customMetadata).toEqual({ width: '640', height: '480' })
+      expect(await bucket(() => new Response('', { status: 404 })).s3.imageBucket().head('x')).toBeNull()
+    })
+  })
 })
