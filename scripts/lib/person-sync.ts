@@ -21,6 +21,7 @@ import { stableJson } from './sanity-sha.ts'
 import { preformattedFromSanity } from './preformatted-blocks.ts'
 import { loadBaselineFile } from './baseline.ts'
 import { importableLinks, parsePerson, rankEdge, urlToId, imageSources } from './person-rule.ts'
+import { isSanityImage, sanityImageKey } from './sanity-image.ts'
 
 export const API      = 'https://7r6kqtqy.api.sanity.io/v2021-08-31/data/query/production'
 export const BASELINE = 'data/sanity-baseline-2026-04/sanity-person.json'
@@ -326,8 +327,8 @@ export async function fetchGraphPeople(): Promise<Map<string, GraphPerson>> {
       }
       CALL {
         WITH p
-        OPTIONAL MATCH (p)-[:HAS_IMAGE]->(i:Source) WHERE i.url STARTS WITH 'https://cdn.sanity.io/'
-        RETURN [u IN collect(i.url) | last(split(u, '/'))] AS images, collect(i.id) AS imageIds
+        OPTIONAL MATCH (p)-[:HAS_IMAGE]->(i:Source) WHERE ${isSanityImage('i')}
+        RETURN [x IN collect(${sanityImageKey('i')}) WHERE x IS NOT NULL] AS images, collect(i.id) AS imageIds
       }
       CALL {
         WITH p

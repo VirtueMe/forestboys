@@ -22,6 +22,7 @@
 
 import { API, sha, type Doc } from './person-sync.ts'
 import { imageSources, type ImageSource } from './person-rule.ts'
+import { isSanityImage } from './sanity-image.ts'
 
 export const OUTLINE_FIELDS = ['title', 'people', 'gallery'] as const
 export type OutlineFieldName = typeof OUTLINE_FIELDS[number]
@@ -154,7 +155,7 @@ export const PEOPLE_QUERY = `MATCH (p:Person) WHERE p.sanityId IS NOT NULL RETUR
 /** Every Sanity-CDN image of an outline, in order, by its asset. */
 export const GRAPH_QUERY = `
   MATCH (o:Outline) WHERE o.sanityId IS NOT NULL
-  OPTIONAL MATCH (o)-[h:HAS_IMAGE]->(i:Source) WHERE i.url STARTS WITH 'https://cdn.sanity.io/'
+  OPTIONAL MATCH (o)-[h:HAS_IMAGE]->(i:Source) WHERE ${isSanityImage('i')}
   WITH o, h, i ORDER BY h.order
   WITH o, [x IN collect(coalesce(i.sanityAssetRef, replace(i.id, 'img:sanity:', ''))) WHERE x IS NOT NULL] AS imageRefs
   RETURN o.sanityId AS sanityId, o.slug AS slug, o.canonicalName AS canonicalName, imageRefs,
@@ -198,7 +199,7 @@ export const GALLERY_QUERY = `
   MATCH (o:Outline {sanityId: row.id})
   CALL (o, row) {
     OPTIONAL MATCH (o)-[r:HAS_IMAGE]->(old:Source)
-      WHERE old.url STARTS WITH 'https://cdn.sanity.io/' AND NOT old.id IN [i IN row.images | i.id]
+      WHERE ${isSanityImage('old')} AND NOT old.id IN [i IN row.images | i.id]
     DELETE r
   }
   CALL (o, row) {

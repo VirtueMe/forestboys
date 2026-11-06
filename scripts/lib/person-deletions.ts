@@ -43,6 +43,7 @@ interface EdgeRow {
   other: string | null
   otherSanityId: string | null
   url: string | null
+  otherId: string | null
   props: Record<string, unknown>
 }
 
@@ -72,7 +73,7 @@ export async function planDeletions(driver: Driver, graphIds: Map<string, string
         RETURN p.canonicalName AS name, p.description_sourceRef AS descRef,
                [x IN collect(CASE WHEN r IS NULL THEN NULL ELSE {
                  type: type(r), out: startNode(r) = p, label: labels(o)[0],
-                 other: coalesce(o.slug, o.id), otherSanityId: o.sanityId, url: o.url, props: properties(r)} END)
+                 other: coalesce(o.slug, o.id), otherSanityId: o.sanityId, url: o.url, otherId: o.id, props: properties(r)} END)
                 WHERE x IS NOT NULL] AS edges`, { id: sanityId })
       const rec = r.records[0]
       const descRef = rec.get('descRef') as string | null
@@ -84,7 +85,7 @@ export async function planDeletions(driver: Driver, graphIds: Map<string, string
         const derived =
           (e.type === 'RANK' && isSanityRef(e.props.sourceRef)) ||
           (e.type === 'REFERENCED_IN' && e.out && e.props.sourceRef == null) ||
-          (e.type === 'HAS_IMAGE' && e.out && !!e.url?.startsWith('https://cdn.sanity.io/')
+          (e.type === 'HAS_IMAGE' && e.out && (!!e.url?.startsWith('https://cdn.sanity.io/') || !!e.otherId?.startsWith('img:sanity:'))
             && Object.keys(e.props).every(k => k === 'order' || k === 'caption')) ||
           (e.type === 'HAS_CONTENT' && e.out && isSanityRef(descRef)) ||
           (EVENT_EDGES.has(e.type) && e.out && isSanityRef(e.props.sourceRef)) ||

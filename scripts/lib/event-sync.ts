@@ -31,6 +31,7 @@ import { eventDescription, type Lookups } from './event-rule.ts'
 import { importableLinks } from './person-rule.ts'
 import { API, connectNeo4j, type Doc } from './person-sync.ts'
 import { loadBaselineFile } from './baseline.ts'
+import { isSanityImage, sanityImageKey } from './sanity-image.ts'
 
 /** The Sanity events the graph last took in whole: the re-import of 2026-10-02
  *  (scripts/sync/reimport-events.ts). Before it, the April export. */
@@ -261,7 +262,7 @@ export async function fetchGraphEvents(): Promise<Map<string, GraphEvent>> {
              [(e)-[:TO_STATION]->(x)      | x.sanityId] AS stationTo,
              [(p:Person)-[r:PARTICIPATED_IN|INVOLVED_IN]->(e) WHERE coalesce(r.sourceRef, '') STARTS WITH 'sanity' | p.sanityId] AS people,
              [(e)-[:USED]->(t:Transport)  | t.sanityId] AS transport,
-             [(e)-[:HAS_IMAGE]->(s:Source) WHERE s.url STARTS WITH 'https://cdn.sanity.io/' | last(split(s.url, '/'))] AS images,
+             [(e)-[:HAS_IMAGE]->(s:Source) WHERE ${isSanityImage('s')} | ${sanityImageKey('s')}] AS images,
              [(e)-[r:REFERENCED_IN]->(s:Source) WHERE s.url IS NOT NULL AND coalesce(r.sourceRef, '') <> 'admin-edit' | s.url] AS links,
              head([(e)-[:HAS_CONTENT]->(d:Description) WHERE d.id = 'desc:event:' + e.sanityId | d.content]
                   + [(d:Description)-[:ABOUT]->(e) WHERE d.id = 'desc:event:' + e.sanityId | d.content]) AS description,
