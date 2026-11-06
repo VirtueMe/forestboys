@@ -43,6 +43,7 @@ import {
   PARTICIPANT_EDGE, SINGLE, descriptionProps, eventImages, eventLinks, loadLookups, planEvent, ref, refs, slugOf, str,
   writeEvent, type Lookups,
 } from '../lib/event-rule.ts'
+import { isSanityImage } from '../lib/sanity-image.ts'
 loadEnv()
 
 const write = process.argv.includes('--write')
@@ -113,7 +114,7 @@ function applyField(field: string, g: GraphEvent, d: Doc, l: Lookups): Stmt[] {
       return [{
         text: `${E}
                OPTIONAL MATCH (e)-[r:HAS_IMAGE]->(s:Source)
-                 WHERE s.url STARTS WITH 'https://cdn.sanity.io/' AND NOT s.id IN $ids
+                 WHERE ${isSanityImage('s')} AND NOT s.id IN $ids
                DELETE r
                WITH DISTINCT e
                UNWIND $images AS img

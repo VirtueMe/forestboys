@@ -32,6 +32,7 @@
 import { API, sha, type Doc } from './person-sync.ts'
 import { imageSources, sanMigRef, type ImageSource } from './person-rule.ts'
 import { tidyText } from '../../src/utils/tidyText.ts'
+import { isSanityImage } from './sanity-image.ts'
 
 export const PLACE_FIELDS = ['name', 'coordinates', 'type', 'gallery', 'slug'] as const
 export type PlaceFieldName = typeof PLACE_FIELDS[number]
@@ -228,7 +229,7 @@ export async function fetchSanityPlaces(kind: PlaceKind): Promise<Doc[]> {
 
 /** Every Sanity-CDN image of a node, in order, by its asset (the Source keeps it, or its id does). */
 const CDN_IMAGES = `
-  OPTIONAL MATCH (n)-[h:HAS_IMAGE]->(i:Source) WHERE i.url STARTS WITH 'https://cdn.sanity.io/'
+  OPTIONAL MATCH (n)-[h:HAS_IMAGE]->(i:Source) WHERE ${isSanityImage('i')}
   WITH n, h, i ORDER BY h.order
   WITH n, [x IN collect(coalesce(i.sanityAssetRef, replace(i.id, 'img:sanity:', ''))) WHERE x IS NOT NULL] AS imageRefs`
 
@@ -268,7 +269,7 @@ export const galleryQuery = (kind: PlaceKind) => `
   MATCH (n:\`${kind.label}\` {sanityId: row.id})
   CALL (n, row) {
     OPTIONAL MATCH (n)-[r:HAS_IMAGE]->(old:Source)
-      WHERE old.url STARTS WITH 'https://cdn.sanity.io/' AND NOT old.id IN [i IN row.images | i.id]
+      WHERE ${isSanityImage('old')} AND NOT old.id IN [i IN row.images | i.id]
     DELETE r
   }
   CALL (n, row) {

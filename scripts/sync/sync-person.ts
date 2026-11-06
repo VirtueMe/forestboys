@@ -60,6 +60,7 @@ import { imageSources, importableLinks, linkSource, parsePerson, personClaims, r
 import { deletionStmts, deletionSummary, planDeletions } from '../lib/person-deletions.ts'
 import { writeStampUndo } from '../lib/stamp-undo.ts'
 import { PERSON_RENAME_ALIASES, DROP_DANGLING_ALIASES, dropShadowedAliases } from '../../functions/_lib/slug-alias-cypher.ts'
+import { isSanityImage } from '../lib/sanity-image.ts'
 loadEnv()
 
 const write = process.argv.includes('--write')
@@ -169,7 +170,7 @@ function galleryStmt(id: string, d: Doc): Stmt {
   return {
     text: `${P}
            OPTIONAL MATCH (p)-[r:HAS_IMAGE]->(s:Source)
-             WHERE s.url STARTS WITH 'https://cdn.sanity.io/' AND NOT s.id IN $ids
+             WHERE ${isSanityImage('s')} AND NOT s.id IN $ids
            DELETE r
            WITH DISTINCT p
            UNWIND $images AS img
@@ -382,7 +383,7 @@ async function main() {
       const edited = await rs.run(`
         UNWIND $slugs AS slug
         MATCH (p:Person {slug: slug})-[h:HAS_IMAGE]->(s:Source)
-        WHERE s.url STARTS WITH 'https://cdn.sanity.io/' AND any(k IN keys(h) WHERE NOT k IN ['order', 'caption'])
+        WHERE ${isSanityImage('s')} AND any(k IN keys(h) WHERE NOT k IN ['order', 'caption'])
         RETURN DISTINCT p.sanityId AS id`, { slugs: [...acceptReview] })
       await rs.close()
       for (const rec of edited.records) {
