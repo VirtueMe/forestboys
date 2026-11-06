@@ -45,7 +45,7 @@ describe('classifyEvent without a baseline file (CI)', () => {
   const l = lookups()
 
   it('sends a changed field with no stamp to review, never to an automatic apply', () => {
-    const v = classifyEvent(graphEvent(), doc({ title: 'Landing at dawn' }), undefined, l)
+    const v = classifyEvent(graphEvent(), doc({ title: 'Landing at dawn' }), undefined, l, new Set())
     expect(verdictOf(v, 'title')).toBe('review')
   })
 
@@ -61,7 +61,7 @@ describe('classifyEvent without a baseline file (CI)', () => {
 
   it('is a conflict when the graph was edited since the stamp', () => {
     const g = graphEvent({ name: 'Landing (edited)', stamps: stampsFor(doc(), l) })
-    const v = classifyEvent(g, doc({ title: 'Landing at dawn' }), undefined, l)
+    const v = classifyEvent(g, doc({ title: 'Landing at dawn' }), undefined, l, new Set())
     expect(verdictOf(v, 'title')).toBe('conflict')
   })
 
@@ -180,11 +180,18 @@ describe('a description edited in the graph while Sanity is unchanged (#119)', (
     expect(c.description.total).toBe(1)
   })
 
-  it('leaves other fields alone: an edited title is still a conflict, not a reset', () => {
+  it('resets every other field the same way (#422): an edited title is rewritten, and calibration ignores it', () => {
     const g = graphEvent({ name: 'Landing (edited)', stamps })
     const v = classifyEvent(g, doc({ title: 'Landing at dawn', description: text('Original') }), undefined, l)
-    expect(verdictOf(v, 'title')).toBe('conflict')
-    expect(calibration(graphEvent({ name: 'Landing (edited)', stamps })).title.agree).toBe(0)
+    expect(verdictOf(v, 'title')).toBe('reset')
+    expect(calibration(graphEvent({ name: 'Landing (edited)', stamps })).title).toBeUndefined()
+  })
+
+  it('keeps conflict and calibration for a field outside the set (the cutover)', () => {
+    const g = graphEvent({ name: 'Landing (edited)', stamps })
+    const only = new Set(['description'])
+    expect(verdictOf(classifyEvent(g, doc({ title: 'Landing at dawn', description: text('Original') }), undefined, l, only), 'title')).toBe('conflict')
+    expect(calibration(g, only).title.agree).toBe(0)
   })
 })
 

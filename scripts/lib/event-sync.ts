@@ -125,13 +125,14 @@ export function stampsFor(d: Doc, l: Lookups): Record<string, string> {
 }
 
 /**
- * Fields where Sanity is the master and a hand edit in the graph does not stand (#119): the graph's
+ * Fields where Sanity is the master and a hand edit in the graph does not stand (#119, #422): the graph's
  * value is rewritten from Sanity, and calibration does not count the edit as a failure. Until the
  * cutover (docs/SANITY-SYNC.md) Jan edits in Sanity and tries the editor in the graph; one test edit
- * of one description must not block the whole event sync. Empty this set at the cutover — the graph's
- * edits then count again (`conflict`, calibration) — or run with `--keep-graph-edits` for one run.
+ * of one field must not block the whole event sync (`am-125`'s station did, from 2026-11-01). Every field
+ * the sync carries is in it. Empty this set at the cutover — the graph's edits then count again
+ * (`conflict`, calibration) — or run with `--keep-graph-edits` for one run.
  */
-export const RESET_FROM_SANITY: ReadonlySet<string> = new Set(['description'])
+export const RESET_FROM_SANITY: ReadonlySet<string> = new Set(EVENT_FIELDS.map(f => f.name))
 
 export type EventVerdict = 'already' | 'clean' | 'conflict' | 'review' | 'reset'
 

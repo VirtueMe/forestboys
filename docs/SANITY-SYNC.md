@@ -359,9 +359,10 @@ bundles.
   `clean` change, stamped, and listed in the dry run and the report
   (`↺ <slug>: description`, `rewritten` in the plan file). The text it replaces is in the
   backup (`event-before-<time>.json`, and the run artifact for 30 days). Calibration does not
-  count these edits. It is the event `description` only (`RESET_FROM_SANITY` in
-  `scripts/lib/event-sync.ts`): every other field keeps `conflict` and the calibration check, and
-  the other types' descriptions keep the `conflict` rule of `sync-description.ts`.
+  count these edits. Since #422 this is every event field the sync carries
+  (`RESET_FROM_SANITY` in `scripts/lib/event-sync.ts`): one hand-edited station (`am-125`) had made
+  calibration refuse the whole event sync every night from 2026-11-01. The other types' descriptions keep the
+  `conflict` rule of `sync-description.ts`.
   **Temporary:** at the cutover the graph becomes the authority — empty `RESET_FROM_SANITY` so
   the graph's edits count again. `--keep-graph-edits` switches it off for one run.
 - **A description split into sections is left alone** (#259). The ANCC minutes are cut into one section per
