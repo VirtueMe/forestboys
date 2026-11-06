@@ -425,7 +425,7 @@ change are saved to `data/sanity-delta/description-before-<type>-<time>.json`;
 
 ### Transports — their own fields
 
-`name`, `type`, `unit` and `regser` were imported once (April, and
+`name`, `type`, `unit`, `regser` and `gallery` were imported once (April, and
 `import-missing-refs.ts` for the new ones) and never again (#112). One sync
 carries them: `npx tsx scripts/sync/sync-transport.ts [--write]
 [--accept-review=<slug>,…]` (a dry run unless `--write`; the daily job runs it
@@ -440,6 +440,7 @@ Where the graph keeps each field:
 | `type` | `type` (+ `type_state`, `type_sourceRef`) |
 | `regser` | `regser` (+ `regser_state`, `regser_sourceRef`) |
 | `unit` | `rawUnit` (+ `rawUnit_state`, `rawUnit_sourceRef`) |
+| `gallery` | `HAS_IMAGE {order}` to the Sanity-CDN `Source` images, in Sanity's order (#420) |
 
 The import stores the unit as `rawUnit`; the transport editor writes `unit`
 (`functions/api/admin/transport/[slug]`). Where a node has `unit`, that is its
@@ -455,7 +456,7 @@ whitespace is therefore `already` — and is rewritten tidied. Slugs are not
 touched (#96, #115).
 
 Stamps: `<field>_sha` per field on the node (`name_sha`, `type_sha`, `unit_sha`,
-`regser_sha`), the hash of the tidied Sanity value last taken in. Per field:
+`regser_sha`, `gallery_sha`), the hash of the tidied Sanity value last taken in. Per field:
 
 | Verdict | When | What happens |
 |---|---|---|
@@ -465,6 +466,15 @@ Stamps: `<field>_sha` per field on the node (`name_sha`, `type_sha`, `unit_sha`,
 | conflict | Sanity changed and the graph value was edited | left alone, listed |
 | kept | no stamp, Sanity unchanged since the import, the graph differs | the graph edit stays, the stamp moves |
 | review | no stamp, Sanity changed since the import, the graph differs | left alone, listed; `--accept-review=<slug>` applies Sanity's |
+
+**The gallery leaves the editor alone**, as the places' does: only Sanity images
+Sanity no longer has are removed, and only `order` is set, so an image an editor
+added from elsewhere, and a hero mark, scope or caption on an edge, stay. It is
+compared as the image assets in order. One exception on the first run (no stamp):
+a graph that holds Sanity's images with some missing, in the same order, is
+`clean` whatever the dates say. The import left them out (42 transports had no
+`HAS_IMAGE` for 47 assets), and adding takes nothing from an editor. Another
+difference, an extra image or another order, follows the table.
 
 Without a stamp there is no baseline for a field: the export is not kept for
 transports, and the editor does not mark its edits. `sanityUpdatedAt` stands in

@@ -10,6 +10,8 @@
  *   unit    rawUnit, rawUnit_state, rawUnit_sourceRef — the import's property. The transport
  *           editor writes `unit` instead (functions/api/admin/transport/[slug]); where there
  *           is one, it is the graph's value, and the sync never overwrites it unseen.
+ *   gallery (n)-[:HAS_IMAGE {order}]->(:Source {id: 'img:sanity:<asset>'}), written by
+ *           `GALLERY_QUERY` as for places (#420); compared as the image assets in order.
  *
  * Values are compared whitespace-tidied (src/utils/tidyText.ts): Sanity has `" 42-7612"`,
  * tabs and double spaces in names. The graph gets the tidied value; the stamp is the hash of it.
@@ -22,16 +24,19 @@
  *   conflict   Sanity changed and the graph value was edited: left alone, listed
  *   kept       no stamp, Sanity unchanged since the import, the graph differs: the graph edit
  *              stays, the stamp moves (a later Sanity change is then a conflict)
+ *              (the gallery's exception: a graph holding Sanity's images with some missing, in order,
+ *              is `clean` — only additions, see `onlyMissingImages`)
  *   review     no stamp, Sanity changed since the import, the graph differs: no baseline to
  *              tell who edited, so left alone, listed (`--accept-review=<slug>,…` applies Sanity's)
  * Graph edits are never overwritten.
  */
 
 import { API, sha, type Doc } from './person-sync.ts'
-import { sanMigRef } from './person-rule.ts'
+import { imageSources, sanMigRef, type ImageSource } from './person-rule.ts'
+import { isSanityImage } from './sanity-image.ts'
 import { tidyText } from '../../src/utils/tidyText.ts'
 
-export const TRANSPORT_FIELDS = ['name', 'type', 'unit', 'regser'] as const
+export const TRANSPORT_FIELDS = ['name', 'type', 'unit', 'regser', 'gallery'] as const
 export type TransportFieldName = typeof TRANSPORT_FIELDS[number]
 
 export interface GraphTransport {
@@ -42,6 +47,8 @@ export interface GraphTransport {
   type:            string | null
   regser:          string | null
   rawUnit:         string | null
+  /** The Sanity-CDN images, in order, by asset. */
+  imageRefs:       string[]
   /** Set by the editor only (the import writes rawUnit). */
   unit:            string | null
   stamps:          Partial<Record<`${TransportFieldName}_sha`, string | null>>
@@ -51,7 +58,9 @@ export type TransportVerdict = 'clean' | 'already' | 'conflict' | 'kept' | 'revi
 export interface FieldVerdict { field: TransportFieldName; verdict: TransportVerdict }
 
 /** The tidied value of a field in Sanity, or '' when it has none. */
-export const sanityField = (d: Doc, f: TransportFieldName): string => tidyText(d[f] as string | null | undefined) ?? ''
+export const sanityImages = (d: Doc): ImageSource[] => imageSources(d.gallery)
+export const sanityField = (d: Doc, f: TransportFieldName): string =>
+  f === 'gallery' ? sanityImages(d).map(i => i.assetRef).join(' ') : tidyText(d[f] as string | null | undefined) ?? ''
 
 /** The raw value the graph holds for a field (null when nothing). */
 export function graphRaw(g: GraphTransport, f: TransportFieldName): string | null {
@@ -60,9 +69,20 @@ export function graphRaw(g: GraphTransport, f: TransportFieldName): string | nul
     case 'type':   return g.type
     case 'regser': return g.regser
     case 'unit':   return g.unit ?? g.rawUnit
+    case 'gallery': return g.imageRefs.join(' ')
   }
 }
 export const graphField = (g: GraphTransport, f: TransportFieldName): string => tidyText(graphRaw(g, f)) ?? ''
+
+/**
+ * First run of the gallery (no stamp): is the graph's gallery Sanity's with images missing, in the same order? The import
+ * left them out, and adding them takes nothing from an editor, so they are added without asking who last edited.
+ */
+export function onlyMissingImages(g: GraphTransport, s: Doc): boolean {
+  const sanity = sanityImages(s).map(i => i.assetRef)
+  let at = 0
+  return g.imageRefs.every(ref => { at = sanity.indexOf(ref, at) + 1; return at > 0 })
+}
 
 /** The fields of one transport that need a decision or a stamp. A field Sanity has not changed is left out. */
 export function classifyTransport(g: GraphTransport, s: Doc): FieldVerdict[] {
@@ -82,6 +102,7 @@ export function classifyTransport(g: GraphTransport, s: Doc): FieldVerdict[] {
     }
     // No stamp yet: the first run for this field.
     if (graph === now) push('already')
+    else if (field === 'gallery' && onlyMissingImages(g, s)) push('clean')
     else push(sanityUnchanged ? 'kept' : 'review')
   }
   return out
@@ -110,6 +131,7 @@ export function propsFor(d: Doc, field: TransportFieldName): Record<string, stri
     case 'type':   return claim('type', 'type')
     case 'regser': return claim('regser', 'regser')
     case 'unit':   return claim('rawUnit', 'unit')
+    case 'gallery': return {}   // written by GALLERY_QUERY
   }
 }
 
@@ -133,7 +155,7 @@ export async function fetchSanityTransports(): Promise<Doc[]> {
   for (;;) {
     const url = new URL(API)
     url.searchParams.set('query',
-      `*[_type == "transport" && !(_id in path("drafts.**")) && _id > $lastId] | order(_id asc) [0...1000] { _id, _updatedAt, name, type, unit, regser, reserve, slug }`)
+      `*[_type == "transport" && !(_id in path("drafts.**")) && _id > $lastId] | order(_id asc) [0...1000] { _id, _updatedAt, name, type, unit, regser, reserve, slug, gallery }`)
     url.searchParams.set('$lastId', JSON.stringify(lastId))
     const res = await fetch(url)
     if (!res.ok) throw new Error(`Sanity ${res.status}`)
@@ -146,9 +168,12 @@ export async function fetchSanityTransports(): Promise<Doc[]> {
 
 export const GRAPH_QUERY = `
   MATCH (n:Transport) WHERE n.sanityId IS NOT NULL
+  OPTIONAL MATCH (n)-[h:HAS_IMAGE]->(i:Source) WHERE ${isSanityImage('i')}
+  WITH n, h, i ORDER BY h.order
+  WITH n, [x IN collect(coalesce(i.sanityAssetRef, replace(i.id, 'img:sanity:', ''))) WHERE x IS NOT NULL] AS imageRefs
   RETURN n.sanityId AS sanityId, n.sanityUpdatedAt AS sanityUpdatedAt, n.slug AS slug,
-         n.canonicalName AS canonicalName, n.type AS type, n.regser AS regser, n.rawUnit AS rawUnit, n.unit AS unit,
-         {name_sha: n.name_sha, type_sha: n.type_sha, unit_sha: n.unit_sha, regser_sha: n.regser_sha} AS stamps`
+         n.canonicalName AS canonicalName, n.type AS type, n.regser AS regser, n.rawUnit AS rawUnit, n.unit AS unit, imageRefs,
+         {name_sha: n.name_sha, type_sha: n.type_sha, unit_sha: n.unit_sha, regser_sha: n.regser_sha, gallery_sha: n.gallery_sha} AS stamps`
 
 /**
  * Apply one batch: properties and stamps, the editor's `unit` dropped where the sync wrote the unit.
@@ -161,6 +186,28 @@ export const APPLY_QUERY = `
   SET n += row.props, n += row.stamps, n.sanityUpdatedAt = coalesce(row.at, n.sanityUpdatedAt)
   FOREACH (_ IN CASE WHEN row.dropUnit THEN [1] ELSE [] END | REMOVE n.unit)
   RETURN count(n) AS n`
+
+/**
+ * Make a node's Sanity-CDN images Sanity's gallery, in Sanity's order. Images an editor added from elsewhere, and what an
+ * editor set on an edge (hero, scope, caption), are left alone: only a Sanity image Sanity no longer has goes, and only
+ * `order` is set. The images are written in a subquery, so an empty gallery still counts its node.
+ */
+export const GALLERY_QUERY = `
+  UNWIND $rows AS row
+  MATCH (n:Transport {sanityId: row.id})
+  CALL (n, row) {
+    OPTIONAL MATCH (n)-[r:HAS_IMAGE]->(old:Source)
+      WHERE ${isSanityImage('old')} AND NOT old.id IN [i IN row.images | i.id]
+    DELETE r
+  }
+  CALL (n, row) {
+    UNWIND row.images AS img
+    MERGE (s:Source {id: img.id})
+      ON CREATE SET s.type = 'photograph', s.url = img.url, s.sanityAssetRef = img.assetRef
+    MERGE (n)-[h:HAS_IMAGE]->(s)
+    SET h.order = img.order
+  }
+  RETURN count(DISTINCT n) AS n`
 
 export const CREATE_QUERY = `
   UNWIND $rows AS row
