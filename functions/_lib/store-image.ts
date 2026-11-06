@@ -8,6 +8,7 @@
  * Write order: display files first, master last, with the dimensions on the master. So a
  * master that exists means the image is complete, and a repeat is a no-op.
  */
+import { SANITY_KEY_META } from './image-manifest.ts'
 import {
   contentHash, displayKey, extensionOf, imageUrl, masterKey, sizesToMake, validateImage,
   type AcceptedType, type DisplaySize, type ImageRefusal,
@@ -31,6 +32,8 @@ export interface StoreOptions {
   id?:      string
   /** The master to keep instead of the original bytes (a script's JPEG XL). */
   master?:  { bytes: Uint8Array, ext: string, contentType: string }
+  /** The Sanity key (`<hash>-<WxH>.<ext>`) of a copied photo; kept on the master so the copied-list can be rebuilt from a listing (#409). */
+  sanityKey?: string
   /** Called with the id once the image is stored, also on a repeat: the copied-list manifest (#409). */
   record?:  (id: string) => Promise<void>
 }
@@ -85,7 +88,10 @@ export async function storeImage(bucket: ImageBucket, bytes: Uint8Array, opts: S
   }
   await bucket.put(mKey, opts.master?.bytes ?? bytes, {
     httpMetadata:   { contentType: opts.master?.contentType ?? type },
-    customMetadata: { width: String(width), height: String(height), hash },
+    customMetadata: {
+      width: String(width), height: String(height), hash,
+      ...(opts.sanityKey ? { [SANITY_KEY_META]: opts.sanityKey } : {}),
+    },
   })
 
   return done({ width, height, sizes: widths, existed: false })
