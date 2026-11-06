@@ -11,7 +11,7 @@ const doc = (over: Record<string, unknown> = {}): Doc => ({
 
 const graph = (over: Partial<GraphTransport> = {}): GraphTransport => ({
   sanityId: 't1', sanityUpdatedAt: '2026-04-01', slug: 'nona-rhea', canonicalName: 'Nona Rhea', type: 'Bomber',
-  regser: '42-7612', rawUnit: '446 BS-1403 AAF', unit: null, stamps: {}, ...over,
+  regser: '42-7612', rawUnit: '446 BS-1403 AAF', unit: null, imageRefs: [], stamps: {}, ...over,
 })
 
 const verdictOf = (g: GraphTransport, s: Doc, field: string) => classifyTransport(g, s).find(v => v.field === field)?.verdict
@@ -93,5 +93,42 @@ describe('newTransportProps', () => {
       slug: 'nona-rhea', sanityId: 't1', canonicalName: 'Ford Liberator B-24H', regser: '42-7612',
       rawUnit: '446 BS-1403 AAF', reserve: 'R', name_sha: sha('Ford Liberator B-24H'),
     })
+  })
+})
+
+describe('gallery', () => {
+  const img = (n: string) => ({ _key: n, _type: 'image', asset: { _ref: `image-${n.repeat(40).slice(0, 40)}-10x10-png`, _type: 'reference' } })
+  const ref = (n: string) => `image-${n.repeat(40).slice(0, 40)}-10x10-png`
+  const withGallery = (...ns: string[]) => doc({ gallery: ns.map(img) })
+
+  it('compares the image assets in order', () => {
+    expect(verdictOf(graph({ imageRefs: [ref('a'), ref('b')] }), withGallery('a', 'b'), 'gallery')).toBe('already')
+  })
+
+  it('adds the images the import left out, on the first run, even where Sanity is unchanged', () => {
+    const s = withGallery('a', 'b', 'c')
+    expect(verdictOf(graph({ sanityUpdatedAt: s._updatedAt }), s, 'gallery')).toBe('clean')
+    expect(verdictOf(graph({ imageRefs: [ref('a'), ref('c')] }), s, 'gallery')).toBe('clean')
+  })
+
+  it('does not guess when the graph holds an image Sanity does not, or holds them in another order', () => {
+    const s = withGallery('a', 'b')
+    expect(verdictOf(graph({ imageRefs: [ref('x')], sanityUpdatedAt: s._updatedAt }), s, 'gallery')).toBe('kept')
+    expect(verdictOf(graph({ imageRefs: [ref('b'), ref('a')], sanityUpdatedAt: s._updatedAt }), s, 'gallery')).toBe('kept')
+    expect(verdictOf(graph({ imageRefs: [ref('x')] }), s, 'gallery')).toBe('review')
+  })
+
+  it('leaves a stamped gallery alone until Sanity changes it, and never overwrites an edited one', () => {
+    const s = withGallery('a', 'b')
+    const stamps = { gallery_sha: sha(`${ref('a')} ${ref('b')}`) }
+    expect(verdictOf(graph({ imageRefs: [ref('a'), ref('b')], stamps }), s, 'gallery')).toBeUndefined()
+    const old = { gallery_sha: sha(ref('a')) }   // Sanity has since added b
+    expect(verdictOf(graph({ imageRefs: [ref('a')], stamps: old }), s, 'gallery')).toBe('clean')
+    expect(verdictOf(graph({ imageRefs: [ref('x')], stamps: old }), s, 'gallery')).toBe('conflict')
+  })
+
+  it('has no properties of its own, and is stamped on a new transport', () => {
+    expect(propsFor(withGallery('a'), 'gallery')).toEqual({})
+    expect(newTransportProps(withGallery('a'))).toMatchObject({ gallery_sha: sha(ref('a')) })
   })
 })

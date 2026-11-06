@@ -24,9 +24,10 @@ import { resolve } from 'node:path'
 import neo4j from 'neo4j-driver'
 import { loadEnv } from '../lib/env.ts'
 import { connectNeo4j, type Doc } from '../lib/person-sync.ts'
+import type { ImageSource } from '../lib/person-rule.ts'
 import {
-  APPLY_QUERY, CREATE_QUERY, GRAPH_QUERY, classifyTransport, fetchSanityTransports, needsTidy, newTransportProps,
-  propsFor, sanityField, stampsFor, type FieldVerdict, type GraphTransport, type TransportFieldName,
+  APPLY_QUERY, CREATE_QUERY, GALLERY_QUERY, GRAPH_QUERY, classifyTransport, fetchSanityTransports, needsTidy, newTransportProps,
+  propsFor, sanityField, sanityImages, stampsFor, type FieldVerdict, type GraphTransport, type TransportFieldName,
   type TransportVerdict,
 } from '../lib/transport-sync.ts'
 loadEnv()
@@ -47,6 +48,8 @@ interface Row {
   props: Record<string, string | null>
   stamps: Record<string, string>
   dropUnit: boolean
+  /** The gallery to write, when the gallery is taken from Sanity. */
+  gallery: ImageSource[] | null
   /** null while a field is held for review: sanityUpdatedAt must not move past it. */
   at: string | null
 }
@@ -54,7 +57,7 @@ interface Row {
 function planTransport(g: GraphTransport, s: Doc, verdicts: FieldVerdict[], held: string[]): Row | null {
   const props: Record<string, string | null> = {}
   const taken: TransportFieldName[] = []
-  let dropUnit = false, reviewHeld = false
+  let dropUnit = false, reviewHeld = false, gallery: ImageSource[] | null = null
   for (const { field, verdict } of verdicts) {
     const accepted = verdict === 'review' && acceptReview.has(g.slug)
     if (verdict === 'conflict') { held.push(`${g.slug}: ${field} (conflict)`); continue }
@@ -63,12 +66,13 @@ function planTransport(g: GraphTransport, s: Doc, verdicts: FieldVerdict[], held
     if (field === 'name' && !sanityField(s, 'name')) { held.push(`${g.slug}: name (empty in Sanity)`); reviewHeld = true; continue }
     taken.push(field)
     if (verdict === 'kept') continue
+    if (field === 'gallery') { if (verdict === 'clean') gallery = sanityImages(s); continue }
     if (verdict === 'already' && !needsTidy(g, field)) continue
     Object.assign(props, propsFor(s, field))
     if (field === 'unit') dropUnit = true
   }
   if (!taken.length) return null
-  return { id: g.sanityId, slug: g.slug, props, stamps: stampsFor(s, taken), dropUnit, at: reviewHeld ? null : s._updatedAt }
+  return { id: g.sanityId, slug: g.slug, props, stamps: stampsFor(s, taken), dropUnit, gallery, at: reviewHeld ? null : s._updatedAt }
 }
 
 async function main() {
@@ -114,8 +118,10 @@ async function main() {
     // ── Report ──
     const stampOnly = rows.filter(r => !Object.keys(r.props).length).length
     console.log(`Transport: ${docs.length} in Sanity, ${graph.size} in the graph`)
-    console.log(`To write: ${rows.length - stampOnly} node(s) with values, ${stampOnly} stamp only`)
-    for (const [f, v] of Object.entries(count)) console.log(`  ${f.padEnd(7)} ${Object.entries(v).filter(([, n]) => n).map(([k, n]) => `${k} ${n}`).join(' · ')}`)
+    const galleryRows = rows.filter(r => r.gallery)
+    const galleryNew = created.filter(d => sanityImages(d).length)
+    console.log(`To write: ${rows.length - stampOnly} node(s) with values, ${stampOnly} stamp only, ${galleryRows.length} gallery`)
+    for (const [f, v] of Object.entries(count)) console.log(`  ${f.padEnd(8)} ${Object.entries(v).filter(([, n]) => n).map(([k, n]) => `${k} ${n}`).join(' · ')}`)
     console.log(`New in Sanity: ${created.length}`)
     for (const d of created) console.log(`  + ${slugOf(d)} — ${sanityField(d, 'name')}`)
     console.log(`No Sanity document for ${deleted.length} node(s)${deleted.length ? `: ${deleted.slice(0, 5).map(g => g.slug).join(', ')}` : ''}`)
@@ -128,19 +134,22 @@ async function main() {
     writeFileSync(resolve(OUT, 'transport-sync-plan.json'), JSON.stringify({
       generatedAt: new Date().toISOString(), counts: count, errors, held,
       rows: rows.filter(r => Object.keys(r.props).length).map(r => ({ slug: r.slug, props: r.props })),
+      galleries: galleryRows.map(r => ({ slug: r.slug, images: r.gallery!.map(i => i.assetRef) })),
       created: created.map(d => ({ slug: slugOf(d), name: sanityField(d, 'name') })),
       noSanityDocument: deleted.map(g => g.slug),
     }, null, 2) + '\n')
 
     if (!write) { console.log('\n(dry run — pass --write to apply)'); return }
     if (errors.length) { console.error('\nRefusing to write: there are errors.'); process.exitCode = 1; return }
-    if (!rows.length && !created.length) { console.log('\nNothing to write.'); return }
+    if (!rows.length && !created.length && !galleryRows.length) { console.log('\nNothing to write.'); return }
 
     // ── Backup ──
     const snap = (await read.run(`
       UNWIND $ids AS id MATCH (n:Transport {sanityId: id})
+      OPTIONAL MATCH (n)-[h:HAS_IMAGE]->(i:Source)
       RETURN n.sanityId AS sanityId, n.slug AS slug, n.sanityUpdatedAt AS sanityUpdatedAt,
-             properties(n) AS props`, { ids: rows.map(r => r.id) })).records.map(r => r.toObject())
+             properties(n) AS props,
+             collect(CASE WHEN i IS NULL THEN NULL ELSE {image: i.id, edge: properties(h)} END) AS images`, { ids: rows.map(r => r.id) })).records.map(r => r.toObject())
     const file = resolve(OUT, `transport-before-${new Date().toISOString().replace(/[:.]/g, '-')}.json`)
     writeFileSync(file, JSON.stringify({ created: created.map(d => d._id), nodes: snap }) + '\n')
     console.log(`\nBackup of ${snap.length} nodes: ${file}`)
@@ -156,9 +165,14 @@ async function main() {
       }
       const news = created.map(d => ({ props: newTransportProps(d) }))
       for (let i = 0; i < news.length; i += BATCH) await run(CREATE_QUERY, news.slice(i, i + BATCH), 'create', i)
+      const galleries = [
+        ...galleryRows.map(r => ({ id: r.id, images: r.gallery })),
+        ...galleryNew.map(d => ({ id: d._id, images: sanityImages(d) })),
+      ]
+      for (let i = 0; i < galleries.length; i += BATCH) await run(GALLERY_QUERY, galleries.slice(i, i + BATCH), 'gallery', i)
       const newest = docs.map(d => d._updatedAt).reduce((a, b) => (b > a ? b : a), '')
       await ws.run(`MERGE (s:SyncState {source: 'sanity', type: 'transport'}) SET s.importedUpTo = $newest, s.at = datetime()`, { newest })
-      console.log(`Applied: ${rows.length} node(s), ${created.length} created. SyncState transport.importedUpTo = ${newest}`)
+      console.log(`Applied: ${rows.length} node(s), ${created.length} created, ${galleries.length} galleries. SyncState transport.importedUpTo = ${newest}`)
     } finally { await ws.close() }
   } finally {
     await read.close()
