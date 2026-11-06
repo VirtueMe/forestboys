@@ -37,6 +37,12 @@ jobs:
       PRODUCTION_NEO4J_URI:      ${{ secrets.PRODUCTION_NEO4J_URI }}
       PRODUCTION_NEO4J_USERNAME: ${{ secrets.PRODUCTION_NEO4J_USERNAME }}
       PRODUCTION_NEO4J_PASSWORD: ${{ secrets.PRODUCTION_NEO4J_PASSWORD }}
+      # The photo copy below (#413): the IMAGES bucket over S3, and the token for Sanity's originals.
+      R2_ACCOUNT_ID:             ${{ secrets.R2_ACCOUNT_ID }}
+      R2_ACCESS_KEY_ID:          ${{ secrets.R2_ACCESS_KEY_ID }}
+      R2_SECRET_ACCESS_KEY:      ${{ secrets.R2_SECRET_ACCESS_KEY }}
+      R2_IMAGES_BUCKET:          ${{ secrets.R2_IMAGES_BUCKET }}
+      SANITY_READ_TOKEN:         ${{ secrets.SANITY_READ_TOKEN }}
 
     steps:
       - name: Checkout
@@ -49,6 +55,10 @@ jobs:
           cache: 'npm'
 
       - run: npm ci
+
+      # cjxl/djxl make the JPEG XL masters of the photo copy; without them a photo is kept as its original bytes.
+      - name: Install JPEG XL tools
+        run: sudo apt-get update && sudo apt-get install -y libjxl-tools
 
       # A step that fails stays red in the run, and the later steps still run
       # (!cancelled()): the event sync does not depend on the person sync, and
@@ -94,6 +104,13 @@ jobs:
       - name: Description sync
         if: ${{ !cancelled() }}
         run: npx tsx scripts/sync/sync-description.ts --type=all --production ${{ (github.event_name == 'schedule' || inputs.write) && '--write' || '' }}
+
+      # Photos and description links that arrived from Sanity on its CDN go to our bucket (#413, epic #405). After every
+      # sync that can bring one in; reads the copied-list once and writes it once. A failed photo keeps its Sanity
+      # address and is tried again tomorrow, and the step is red.
+      - name: Copy new photos to our bucket
+        if: ${{ !cancelled() }}
+        run: npx tsx scripts/sync/backfill-images.ts --production ${{ (github.event_name == 'schedule' || inputs.write) && '--write' || '' }}
 
       # The site's list of pages (sitemap.txt, 404 check) is rebuilt on the site's own writes; these syncs write to the
       # graph directly, so ask it to rebuild once they are done (#220).

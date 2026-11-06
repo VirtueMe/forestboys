@@ -12,6 +12,9 @@
  * the graph. With --write the S3 credentials of the IMAGES bucket are needed (R2_*, scripts/README.md).
  * Local graph unless --production; production needs an explicit go-ahead each time.
  *
+ * Also the sync's last step (#413): a photo that arrives from Sanity is a Source on its CDN until this runs, so the
+ * daily workflow runs it right after the syncs. The sync recognises a photo before and after the copy (sanity-image.ts).
+ *
  * Idempotent: the copied-list (`_meta/copied.json`) says what is in the bucket, so a second run fetches nothing.
  * Zero failures or it exits 1; a failed image keeps its Sanity address until a later run copies it.
  *
@@ -33,7 +36,7 @@ import {
   type CopyResult, type SanityImage,
 } from '../lib/image-backfill.ts'
 import {
-  DESCRIPTIONS_QUERY, SET_CONTENT_QUERY, SET_URL_QUERY, SOURCES_QUERY, placeKind,
+  DESCRIPTIONS_QUERY, KNOWN_ASSETS_QUERY, SET_CONTENT_QUERY, SET_URL_QUERY, SOURCES_QUERY, missingAssets, placeKind,
 } from '../lib/image-backfill-graph.ts'
 loadEnv()
 
@@ -182,8 +185,8 @@ async function main() {
 
     const referenced = await sanityReferencedAssets(token)
     if (referenced) {
-      const ours = new Set([...all].map(i => `image-${i.id}-${i.width}x${i.height}-${i.ext}`))
-      const missing = [...referenced].filter(id => !ours.has(id))
+      const known = (await session.run(KNOWN_ASSETS_QUERY)).records.map(r => r.get('id') as string)
+      const missing = missingAssets(referenced, known)
       console.log(`Sanity assets referenced by a document but not in the graph: ${missing.length} of ${referenced.size}`)
       if (missing.length) {
         mkdirSync(resolve(process.cwd(), 'data', 'image-backfill'), { recursive: true })

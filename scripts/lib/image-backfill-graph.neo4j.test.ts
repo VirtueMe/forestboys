@@ -7,7 +7,7 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import neo4j from 'neo4j-driver'
 import { neo4jDriver } from './person-sync.ts'
-import { DESCRIPTIONS_QUERY, SET_CONTENT_QUERY, SET_URL_QUERY, SOURCES_QUERY } from './image-backfill-graph.ts'
+import { DESCRIPTIONS_QUERY, KNOWN_ASSETS_QUERY, SET_CONTENT_QUERY, SET_URL_QUERY, SOURCES_QUERY } from './image-backfill-graph.ts'
 
 const ENABLED = process.env.NEO4J_TEST === '1'
 const P = `zz-test-${Math.random().toString(36).slice(2, 8)}-`
@@ -63,5 +63,18 @@ describe.skipIf(!ENABLED)('image backfill queries, against the local Neo4j', () 
     expect(n((await run(SET_CONTENT_QUERY, { rows: [{ id: `${P}d`, before, after: 'after' }] }))[0].n)).toBe(1)
     const [d] = await run(`MATCH (d:Description {id: $id}) RETURN d.content AS c`, { id: `${P}d` })
     expect(d.c).toBe('after')
+  })
+
+  it('a second sync of a copied photo changes nothing, and a new one is found for the next copy (#413)', async () => {
+    // What every sync writes for a gallery image (ON CREATE only), after the photo was copied.
+    const MERGE = `MERGE (s:Source {id: $id}) ON CREATE SET s.type = 'photograph', s.url = $cdn + 'a-1x1.png', s.sanityAssetRef = 'image-a-1x1-png' RETURN s.url AS url`
+    const [again] = await run(MERGE, { id: `${P}a`, cdn: CDN })
+    expect(again.url).toBe('/images/aaa')
+    await run(`CREATE (:Source {id: 'img:sanity:' + $p + 'fresh', url: $cdn + 'f-1x1.png'})`, { p: P, cdn: CDN })
+    const todo = (await run(SOURCES_QUERY)).map(r => r.id)
+    expect(todo).toContain(`img:sanity:${P}fresh`)
+    expect(todo).not.toContain(`${P}a`)
+    const known = (await run(KNOWN_ASSETS_QUERY)).map(r => r.id)
+    expect(known).toContain(`img:sanity:${P}fresh`)
   })
 })
