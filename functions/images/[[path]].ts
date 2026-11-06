@@ -1,18 +1,33 @@
 /**
  * GET /images/* — public R2 object streaming endpoint.
- * Path after /images/ is used as the R2 key.
+ *
+ * /images/<id>[?w=N]  an image stored by the door (_lib/images.ts): the stored size that fits
+ *                     w, else 900. No resizing here, so the answer is immutable.
+ * /images/<key>       any other public key as it is (the card upload's `cards/...` until #410).
+ *
+ * `masters/` and `_meta/` are never served.
  */
+import { displayKey, isImageId, isPrivateKey, sizeCandidates } from '../_lib/images.ts'
 
 interface Env {
   IMAGES: R2Bucket
 }
 
-export const onRequestGet: PagesFunction<Env> = async ({ params, env }) => {
+export const onRequestGet: PagesFunction<Env> = async ({ params, env, request }) => {
   const raw = params.path
-  const key = Array.isArray(raw) ? raw.join('/') : String(raw)
-  if (!key) return new Response('Not found', { status: 404 })
+  const key = Array.isArray(raw) ? raw.join('/') : String(raw ?? '')
+  if (!key || isPrivateKey(key)) return new Response('Not found', { status: 404 })
 
-  const obj = await env.IMAGES.get(key)
+  let obj: R2ObjectBody | null = null
+  if (isImageId(key)) {
+    const w = new URL(request.url).searchParams.get('w')
+    for (const size of sizeCandidates(w)) {
+      obj = await env.IMAGES.get(displayKey(key, size))
+      if (obj) break
+    }
+  } else {
+    obj = await env.IMAGES.get(key)
+  }
   if (!obj) return new Response('Not found', { status: 404 })
 
   const headers = new Headers()
