@@ -44,6 +44,11 @@ describe('S3Bucket manifest store', () => {
     expect(await s3.manifestStore().read()).toEqual({ text: '{"a":1}', etag: '"e3"' })
   })
 
+  it('reads a weak etag as the strong one, so the retry after a refused write is accepted', async () => {
+    const { s3 } = bucket(() => new Response('{}', { headers: { etag: 'W/"e5"' } }))
+    expect((await s3.manifestStore().read())?.etag).toBe('"e5"')
+  })
+
   it('lists the masters with their Sanity keys, across pages', async () => {
     const page = (keys: string[], next?: string) => `<ListBucketResult>${keys.map(k => `<Contents><Key>${k}</Key><LastModified>2026-01-02T00:00:00.000Z</LastModified></Contents>`).join('')}<IsTruncated>${!!next}</IsTruncated>${next ? `<NextContinuationToken>${next}</NextContinuationToken>` : ''}</ListBucketResult>`
     const { s3, calls } = bucket((url, init) => {
@@ -54,5 +59,24 @@ describe('S3Bucket manifest store', () => {
     for await (const m of s3.listMasters()) out.push(m)
     expect(out.map(m => [m.key, m.metadata?.sanitykey])).toEqual([['masters/a.jpg', 'a-1x1.jpg'], ['masters/b.jpg', undefined]])
     expect(calls.filter(c => c.init.method === 'GET')).toHaveLength(2)
+  })
+
+  it('heads an object: etag, size and the custom metadata, lowercase', async () => {
+    const { s3, calls } = bucket(() => new Response('', { headers: { etag: '"e4"', 'content-length': '12', 'x-amz-meta-sanitykey': 'a-1x1.jpg' } }))
+    expect(await s3.head('masters/a.jpg')).toEqual({ etag: '"e4"', size: 12, metadata: { sanitykey: 'a-1x1.jpg' } })
+    expect(calls[0].init.method).toBe('HEAD')
+  })
+
+  it('head is null on 404, an error otherwise', async () => {
+    expect(await bucket(() => new Response('', { status: 404 })).s3.head('x')).toBeNull()
+    await expect(bucket(() => new Response('', { status: 403 })).s3.head('x')).rejects.toThrow('HEAD x: 403')
+  })
+
+  it('deletes, and a missing object is fine', async () => {
+    const { s3, calls } = bucket(() => new Response(null, { status: 204 }))
+    await s3.delete('masters/a.jpg')
+    expect(calls[0].init.method).toBe('DELETE')
+    await bucket(() => new Response('', { status: 404 })).s3.delete('x')
+    await expect(bucket(() => new Response('', { status: 500 })).s3.delete('x')).rejects.toThrow('DELETE x: 500')
   })
 })
