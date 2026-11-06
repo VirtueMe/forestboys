@@ -35,6 +35,9 @@ const sha256 = (s: string | Uint8Array) => createHash('sha256').update(s).digest
 const hmac = (key: string | Buffer, s: string) => createHmac('sha256', key).update(s).digest()
 const encode = (s: string) => encodeURIComponent(s).replace(/[!'()*]/g, c => `%${c.charCodeAt(0).toString(16).toUpperCase()}`)
 
+/** R2 sometimes returns an etag as a weak validator (`W/"abc"`), e.g. on the read after a refused write; `If-Match` only accepts the strong form. */
+const strong = (etag: string | null) => (etag ?? '').replace(/^W\//, '')
+
 export const EMPTY_SHA256 = sha256('')
 
 /** AWS Signature V4 for one request. `headers` must hold host, x-amz-date and x-amz-content-sha256 already. */
@@ -92,6 +95,22 @@ export class S3Bucket {
     return this.doFetch(url.toString(), { method, headers, body })
   }
 
+  /** The object's size, etag and custom metadata (names as the server returns them, lowercase); null when it does not exist. */
+  async head(key: string): Promise<{ etag: string, size: number, metadata: Record<string, string> } | null> {
+    const r = await this.call('HEAD', key)
+    if (r.status === 404) return null
+    if (!r.ok) throw new Error(`HEAD ${key}: ${r.status}`)
+    const metadata: Record<string, string> = {}
+    r.headers.forEach((v, k) => { if (k.startsWith('x-amz-meta-')) metadata[k.slice('x-amz-meta-'.length)] = v })
+    return { etag: r.headers.get('etag') ?? '', size: Number(r.headers.get('content-length') ?? 0), metadata }
+  }
+
+  /** Delete one object. A missing object is not an error. */
+  async delete(key: string): Promise<void> {
+    const r = await this.call('DELETE', key)
+    if (!r.ok && r.status !== 404) throw new Error(`DELETE ${key}: ${r.status}`)
+  }
+
   /** The copied-list over the S3 API: If-Match / If-None-Match on the PUT. */
   manifestStore(key = MANIFEST_KEY): ManifestStore {
     return {
@@ -99,7 +118,7 @@ export class S3Bucket {
         const r = await this.call('GET', key)
         if (r.status === 404) return null
         if (!r.ok) throw new Error(`GET ${key}: ${r.status}`)
-        return { text: await r.text(), etag: r.headers.get('etag') ?? '' }
+        return { text: await r.text(), etag: strong(r.headers.get('etag')) }
       },
       write: async (text, etag) => {
         const r = await this.call('PUT', key, {}, {
@@ -108,7 +127,7 @@ export class S3Bucket {
         }, text)
         if (r.status === 412 || r.status === 409) return null
         if (!r.ok) throw new Error(`PUT ${key}: ${r.status}`)
-        return r.headers.get('etag') ?? ''
+        return strong(r.headers.get('etag'))
       },
     }
   }
