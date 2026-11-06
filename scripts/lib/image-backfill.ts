@@ -159,24 +159,35 @@ export async function makeMaster(bytes: Uint8Array, ext: string): Promise<Master
     const rebuilt = await readFile(back)
     const same = kind === 'jpg'
       ? Buffer.compare(rebuilt, bytes) === 0
-      : await samePixels(bytes, rebuilt)
+      : await samePixels(src, back)
     if (!same) return { how: 'jxl-failed', why: 'the decoded JPEG XL differs from the original' }
     const out = await readFile(jxl)
     return out.length < bytes.length
       ? { how: 'jxl', master: { bytes: new Uint8Array(out), ext: 'jxl', contentType: 'image/jxl' } }
       : { how: 'original', why: 'the JPEG XL is not smaller' }
   } catch (e) {
-    return { how: 'jxl-failed', why: (e as Error).message.split('\n')[0] }
+    const err = e as Error & { stderr?: string }
+    // cjxl's own reason (its last lines before «EncodeImageJXL() failed»), not the command line
+    const lines = (err.stderr ?? '').split('\n').map(l => l.trim()).filter(l => l && !l.startsWith('EncodeImageJXL'))
+    return { how: 'jxl-failed', why: lines.length ? lines.slice(-2).join(' ') : err.message.split('\n')[0] }
   } finally {
     await rm(dir, { recursive: true, force: true })
   }
 }
 
-async function samePixels(a: Uint8Array, b: Uint8Array): Promise<boolean> {
-  const read = (x: Uint8Array) => sharp(x, { limitInputPixels: false }).raw().toBuffer({ resolveWithObject: true })
-  const [ra, rb] = await Promise.all([read(a), read(b)])
-  return ra.info.width === rb.info.width && ra.info.height === rb.info.height
-    && ra.info.channels === rb.info.channels && Buffer.compare(ra.data, rb.data) === 0
+/**
+ * Pixel values as stored, at native depth, compared by ImageMagick (exit 0: no pixel differs). Not sharp:
+ * `djxl` tags its PNG with an ICC profile the original does not have, and sharp applies it when it reads
+ * the pixels, so identical files look different.
+ */
+async function samePixels(a: string, b: string): Promise<boolean> {
+  try {
+    await run('magick', ['compare', '-metric', 'AE', a, b, 'null:'])
+    return true
+  } catch (e) {
+    if ((e as { code?: number }).code === 1) return false
+    throw e
+  }
 }
 
 /** HEIF/HEIC: the door does not accept it, so the pixels go in as a lossless PNG and the original stays the master. */
