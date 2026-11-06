@@ -14,8 +14,17 @@ import {
   type AcceptedType, type DisplaySize, type ImageRefusal,
 } from './images.ts'
 
-/** The part of an R2 bucket the door uses. */
-export type ImageBucket = Pick<R2Bucket, 'put' | 'head'>
+/**
+ * The part of an R2 bucket the door uses. Structural, so the Worker's R2 binding fits as it
+ * is, and a script can pass its S3 client (`S3Bucket.imageBucket()`) without the Workers types.
+ */
+export interface ImageBucket {
+  head(key: string): Promise<{ customMetadata?: Record<string, string> } | null>
+  put(key: string, value: Uint8Array, options?: {
+    httpMetadata?:   { contentType?: string }
+    customMetadata?: Record<string, string>
+  }): Promise<unknown>
+}
 
 export interface ImageMaker {
   /** Pixel size of the image. */
@@ -52,8 +61,10 @@ export interface StoredImage {
 }
 
 export class ImageRefused extends Error {
-  constructor(readonly reason: ImageRefusal) {
+  readonly reason: ImageRefusal
+  constructor(reason: ImageRefusal) {
     super(`image refused: ${reason}`)
+    this.reason = reason
   }
 }
 

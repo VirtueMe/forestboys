@@ -8,6 +8,7 @@ import {
   MANIFEST_KEY, SANITY_KEY_META, type ManifestStore, type MasterListing,
 } from '../../functions/_lib/image-manifest.ts'
 import { MASTERS_PREFIX } from '../../functions/_lib/images.ts'
+import type { ImageBucket } from '../../functions/_lib/store-image.ts'
 
 export interface S3Config {
   accountId:       string
@@ -40,6 +41,9 @@ const strong = (etag: string | null) => (etag ?? '').replace(/^W\//, '')
 
 export const EMPTY_SHA256 = sha256('')
 
+/** Binary bodies (photos, up to 40 MB) are sent unsigned-payload: over HTTPS R2 accepts it, and nothing is hashed twice. */
+const UNSIGNED_PAYLOAD = 'UNSIGNED-PAYLOAD'
+
 /** AWS Signature V4 for one request. `headers` must hold host, x-amz-date and x-amz-content-sha256 already. */
 export function signV4(opts: {
   method: string, url: URL, headers: Record<string, string>, payloadHash: string,
@@ -67,7 +71,7 @@ export function signV4(opts: {
   return `AWS4-HMAC-SHA256 Credential=${opts.accessKeyId}/${scope}, SignedHeaders=${names.join(';')}, Signature=${signature}`
 }
 
-export type Fetch = (url: string, init: { method: string, headers: Record<string, string>, body?: string }) => Promise<Response>
+export type Fetch = (url: string, init: { method: string, headers: Record<string, string>, body?: string | Uint8Array }) => Promise<Response>
 
 export class S3Bucket {
   private readonly cfg:     S3Config
@@ -80,12 +84,12 @@ export class S3Bucket {
     this.clock = clock
   }
 
-  private async call(method: string, key: string, query: Record<string, string> = {}, extra: Record<string, string> = {}, body?: string): Promise<Response> {
+  private async call(method: string, key: string, query: Record<string, string> = {}, extra: Record<string, string> = {}, body?: string | Uint8Array): Promise<Response> {
     const host = `${this.cfg.accountId}.r2.cloudflarestorage.com`
     const url = new URL(`https://${host}/${this.cfg.bucket}/${key.split('/').map(encode).join('/')}`)
     for (const [k, v] of Object.entries(query)) url.searchParams.set(k, v)
     const amzDate = this.clock().toISOString().replace(/[-:]|\.\d{3}/g, '')
-    const payloadHash = sha256(body ?? '')
+    const payloadHash = typeof body === 'string' || body === undefined ? sha256(body ?? '') : UNSIGNED_PAYLOAD
     const headers: Record<string, string> = { ...extra, host, 'x-amz-date': amzDate, 'x-amz-content-sha256': payloadHash }
     headers.authorization = signV4({
       method, url, headers, payloadHash, region: 'auto', service: 's3', amzDate,
@@ -109,6 +113,26 @@ export class S3Bucket {
   async delete(key: string): Promise<void> {
     const r = await this.call('DELETE', key)
     if (!r.ok && r.status !== 404) throw new Error(`DELETE ${key}: ${r.status}`)
+  }
+
+  /**
+   * The door's view of the bucket (`storeImage`, #408) over the S3 API, so a script writes
+   * with the same key layout and write order as the Worker. Metadata names come back
+   * lowercase, as `head` returns them.
+   */
+  imageBucket(): ImageBucket {
+    return {
+      head: async key => {
+        const h = await this.head(key)
+        return h && { customMetadata: h.metadata }
+      },
+      put: async (key, value, options) => {
+        const meta = Object.fromEntries(Object.entries(options?.customMetadata ?? {}).map(([k, v]) => [`x-amz-meta-${k.toLowerCase()}`, v]))
+        const type = options?.httpMetadata?.contentType
+        const r = await this.call('PUT', key, {}, { ...(type ? { 'content-type': type } : {}), ...meta }, value)
+        if (!r.ok) throw new Error(`PUT ${key}: ${r.status}`)
+      },
+    }
   }
 
   /** The copied-list over the S3 API: If-Match / If-None-Match on the PUT. */
