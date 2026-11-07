@@ -61,6 +61,7 @@
           :endpoint="`/api/admin/outline/${item.slug}/sections`"
           @saved="onSectionsSaved"
         />
+        <PhotoEditor kind="outline" :slug="item.slug" />
         <OutlinePeopleEditor
           :slug="item.slug"
           :entries="peopleEntries"
@@ -114,6 +115,7 @@ import { authFetch, useAuth } from '../composables/useAuth.ts'
 import { blocksToHtml } from '../utils/portableText.ts'
 import AdminViewTabs, { type AdminViewMode } from '../components/AdminViewTabs.vue'
 import DescriptionEditor from '../components/DescriptionEditor.vue'
+import PhotoEditor from '../components/PhotoEditor.vue'
 import BundleReviewPanel from '../components/BundleReviewPanel.vue'
 import ImageSlider from '../components/ImageSlider.vue'
 import PersonExternalRefs from '../components/person/PersonExternalRefs.vue'

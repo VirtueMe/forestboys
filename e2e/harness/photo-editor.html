@@ -1,0 +1,16 @@
+<!doctype html>
+<html lang="nb">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Photo editor harness</title>
+  </head>
+  <body>
+    <!--
+      A dev-only page for the end-to-end tests (#414): the real PhotoEditor, talking to /api/admin/person/harness/images,
+      which the test answers. Only the dev server serves it; the production build has one entry, index.html.
+    -->
+    <div id="harness"></div>
+    <script type="module" src="./photo-editor.ts"></script>
+  </body>
+</html>

@@ -59,9 +59,11 @@ export async function replayPage(page: Page, target: PageTarget, options: Replay
   })
   if (options.as === 'admin') {
     await page.route('**/auth/me', route => route.fulfill({ json: STAND_IN_ADMIN }))
-    // What only an admin's page asks for, answered as «nothing»: no open proposals, and a live stream of proposal
+    // What only an admin's page asks for, answered as «nothing»: no open proposals, no own photos, and a live stream of proposal
     // changes that says nothing (a long retry, so the browser does not reconnect again and again).
     await page.route(/\/api\/admin\/[^/]+\/[^/]+\/proposals$/, route => route.fulfill({ json: { openBundles: [], generationPending: false } }))
+    // The photo editor of every edit pane lists the entity's own photos when the page opens (#414): none.
+    await page.route(/\/api\/admin\/[^/]+\/[^/]+\/images$/, route => route.fulfill({ json: { images: [] } }))
     await page.route('**/api/proposals/events**', route => route.fulfill({ contentType: 'text/event-stream', body: 'retry: 3600000\n\n' }))
   } else {
     // A visitor who is not logged in: the public view of the page.

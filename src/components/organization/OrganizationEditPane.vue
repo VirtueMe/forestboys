@@ -19,6 +19,8 @@
       @saved="sections => emit('savedSections', sections)"
     />
 
+    <PhotoEditor v-if="!createMode" kind="organization" :slug="slug" />
+
     <template v-if="!createMode">
       <OrganizationUnitsEditor
         :slug="slug"
@@ -83,6 +85,7 @@ import { useTemplateRef } from 'vue'
 import OrganizationScalarEditor, { type OrgDraft } from './OrganizationScalarEditor.vue'
 import OrganizationUnitsEditor from './OrganizationUnitsEditor.vue'
 import DescriptionEditor from '@/components/DescriptionEditor.vue'
+import PhotoEditor from '@/components/PhotoEditor.vue'
 import RelationListEditor from '@/components/relation/RelationListEditor.vue'
 import { OrgOperationsStrategy, OrgIncidentsStrategy } from '@/components/relation/strategies.ts'
 import type { Section } from '@/components/SectionsEditor.vue'

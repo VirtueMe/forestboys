@@ -16,6 +16,8 @@
       @saved="sections => emit('savedSections', sections)"
     />
 
+    <PhotoEditor kind="event" :slug="event.slug" />
+
     <div class="relations-wrap">
       <EventRelations
         mode="edit"
@@ -45,6 +47,7 @@ import { useTemplateRef } from 'vue'
 import EventScalarEditor, { type EventScalarDraft, type DemoteBlockers } from './EventScalarEditor.vue'
 import EventRelations, { type EventRelationsData } from './EventRelations.vue'
 import DescriptionEditor from '@/components/DescriptionEditor.vue'
+import PhotoEditor from '@/components/PhotoEditor.vue'
 import type { Section } from '@/components/SectionsEditor.vue'
 import type { EventKind, EventNode } from '@/composables/useEventData.ts'
 

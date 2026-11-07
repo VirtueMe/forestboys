@@ -110,6 +110,8 @@ Edge properties:
 
 `portrait | group | action | scene | document | artifact | uniform | landscape`
 
+**Photos added in the app (#414).** An editor adds, captions, reorders, sets the hero of and removes an entity's *own* `HAS_IMAGE` edges in edit mode (`PhotoEditor`, `/api/admin/<kind>/<slug>/images`; editors and admins). The file goes through the shared door (`storeImage`, #408), so `Source.url` is `/images/<id>` and the `Source` is `{id: 'img:upload:<id>', kind: 'photograph', type: 'photograph', license?, attribution?}` with no `sanityKey`. The Sanity sync recognises its photos by `img:sanity:` ids and Sanity keys (`scripts/lib/sanity-image.ts`), so it leaves these alone. A new photo gets the next `order`, and the first photo of an entity is its hero. Removing a photo deletes the edge only: the `Source` and the files stay, since an id is a content hash and the same photo can hang on another entity.
+
 **Propagation rule:** when a query traverses `HAS_IMAGE` from one entity through another (e.g. an Org's gallery aggregating photos from its Units), every propagating hop MUST exclude `WHERE coalesce(h.scope, 'propagate') <> 'entity'`. Direct (own) hops MUST NOT apply this filter.
 
 ### Hierarchical filter rule
