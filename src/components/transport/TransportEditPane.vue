@@ -18,6 +18,8 @@
       :external-error="pendingDescription?.error ?? null"
       @saved="sections => emit('savedSections', sections)"
     />
+
+    <PhotoEditor v-if="!createMode" kind="transport" :slug="slug" />
   </div>
 </template>
 
@@ -33,6 +35,7 @@
 import { useTemplateRef } from 'vue'
 import TransportScalarEditor, { type TransportDraft } from './TransportScalarEditor.vue'
 import DescriptionEditor from '@/components/DescriptionEditor.vue'
+import PhotoEditor from '@/components/PhotoEditor.vue'
 import type { Section } from '@/components/SectionsEditor.vue'
 import type { TransportNode } from '@/composables/useTransportData.ts'
 import { authFetch } from '@/composables/useAuth.ts'

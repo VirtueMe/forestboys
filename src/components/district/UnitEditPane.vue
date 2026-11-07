@@ -19,6 +19,8 @@
       @saved="sections => emit('savedSections', sections)"
     />
 
+    <PhotoEditor v-if="!createMode" kind="unit" :slug="slug" />
+
     <template v-if="!createMode">
       <RelationListEditor
         :parent-slug="slug"
@@ -54,6 +56,7 @@
 import { computed, useTemplateRef } from 'vue'
 import UnitScalarEditor, { type UnitDraft } from './UnitScalarEditor.vue'
 import DescriptionEditor from '@/components/DescriptionEditor.vue'
+import PhotoEditor from '@/components/PhotoEditor.vue'
 import RelationListEditor from '@/components/relation/RelationListEditor.vue'
 import { UnitMembersStrategy, UnitAttendeesStrategy } from '@/components/relation/strategies.ts'
 import type { Section } from '@/components/SectionsEditor.vue'

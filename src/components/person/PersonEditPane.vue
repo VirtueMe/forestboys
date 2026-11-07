@@ -19,6 +19,8 @@
       @saved="sections => emit('savedSections', sections)"
     />
 
+    <PhotoEditor v-if="!createMode" kind="person" :slug="person.slug" />
+
     <template v-if="!createMode">
       <PersonRanksEditor
         v-if="person.type === 'soldier'"
@@ -57,6 +59,7 @@ import { useTemplateRef } from 'vue'
 import PersonScalarEditor, { type ScalarDraft } from './PersonScalarEditor.vue'
 import PersonRanksEditor from './PersonRanksEditor.vue'
 import DescriptionEditor from '@/components/DescriptionEditor.vue'
+import PhotoEditor from '@/components/PhotoEditor.vue'
 import PersonRelations, { type PersonRelationsData } from './PersonRelations.vue'
 import type { Section } from '@/components/SectionsEditor.vue'
 import type { Neo4jPerson } from '@/composables/usePersonData.ts'

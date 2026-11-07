@@ -27,6 +27,8 @@
       @saved="sections => emit('savedSections', sections)"
     />
 
+    <PhotoEditor v-if="!createMode" kind="station" :slug="slug" />
+
     <RelationListEditor
       v-if="!createMode"
       :parent-slug="slug"
@@ -62,6 +64,7 @@ import { useTemplateRef } from 'vue'
 import StationScalarEditor, { type StationDraft } from './StationScalarEditor.vue'
 import StationNamesEditor from './StationNamesEditor.vue'
 import DescriptionEditor from '@/components/DescriptionEditor.vue'
+import PhotoEditor from '@/components/PhotoEditor.vue'
 import RelationListEditor from '@/components/relation/RelationListEditor.vue'
 import { StationStaysStrategy, staySummaryExtra } from '@/components/relation/stayStrategies.ts'
 import type { RelationEntry, RelationTarget } from '@/components/relation/RelationStrategy.ts'

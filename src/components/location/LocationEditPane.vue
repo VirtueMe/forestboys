@@ -19,6 +19,8 @@
       @saved="sections => emit('savedSections', sections)"
     />
 
+    <PhotoEditor v-if="!createMode" kind="location" :slug="slug" />
+
     <RelationListEditor
       v-if="!createMode"
       :parent-slug="slug"
@@ -53,6 +55,7 @@
 import { useTemplateRef } from 'vue'
 import LocationScalarEditor, { type LocationDraft } from './LocationScalarEditor.vue'
 import DescriptionEditor from '@/components/DescriptionEditor.vue'
+import PhotoEditor from '@/components/PhotoEditor.vue'
 import RelationListEditor from '@/components/relation/RelationListEditor.vue'
 import { LocationStaysStrategy, staySummaryExtra } from '@/components/relation/stayStrategies.ts'
 import type { RelationEntry, RelationTarget } from '@/components/relation/RelationStrategy.ts'
