@@ -106,7 +106,7 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, watch, inject } from 'vue'
-import { RouterLink } from 'vue-router'
+import { RouterLink, useRoute } from 'vue-router'
 import { useDetailSlug } from '@/composables/useDetailSlug.ts'
 import { useOutlineData } from '../composables/useOutlineData.ts'
 import { OutlineDataKey } from '../composables/proposalDataInjection.ts'
@@ -124,7 +124,8 @@ import { OutlineMentionsStrategy } from '../components/relation/strategies.ts'
 import type { RelationEntry, RelationTarget } from '../components/relation/RelationStrategy.ts'
 import type { Section } from '../components/SectionsEditor.vue'
 
-const mode = ref<AdminViewMode>('preview')
+// A page just made in /outlines/new opens in edit mode: it has no text yet, so preview would show an empty page.
+const mode = ref<AdminViewMode>(useRoute().query.created ? 'edit' : 'preview')
 
 const detailSlug = useDetailSlug()
 const { user } = useAuth()
@@ -168,7 +169,6 @@ async function load(slug: string): Promise<void> {
 }
 
 async function loadPeople(slug: string): Promise<void> {
-  if (slug === 'new') { peopleEntries.value = []; return }
   try {
     const [entries, targets] = await Promise.all([OutlineMentionsStrategy.fetchEntries(slug), OutlineMentionsStrategy.fetchTargets()])
     peopleEntries.value = entries
