@@ -3,7 +3,7 @@
     <img
       v-for="(img, i) in visible"
       :key="img._key"
-      :src="imgUrl(img, 180)"
+      :src="img.url"
       :alt="`Bilde ${i + 1}`"
       class="thumb"
       loading="lazy"
@@ -17,7 +17,6 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
-import { SANITY_IMG } from '../config/sanity.ts'
 import type { IdbGalleryImage } from '../types/idb.ts'
 
 const props = withDefaults(defineProps<{
@@ -30,11 +29,6 @@ const emit = defineEmits<{ open: [index: number] }>()
 const visible = computed(() => props.images.slice(0, props.visibleCount))
 const extra = computed(() => Math.max(0, props.images.length - props.visibleCount))
 
-function imgUrl(img: IdbGalleryImage, size: number): string {
-  // Ref format: image-{hash}-{WxH}-{ext}  →  {hash}-{WxH}.{ext}
-  const path = img.asset._ref.replace(/^image-/, '').replace(/-([a-z]+)$/, '.$1')
-  return `${SANITY_IMG}/${path}?w=${size}&h=${size}&fit=crop&auto=format`
-}
 </script>
 
 <style scoped>

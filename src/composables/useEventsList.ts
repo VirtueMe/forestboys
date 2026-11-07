@@ -201,9 +201,8 @@ export async function fetchEventDetailFromNeo4j(slug: string): Promise<IdbEventD
 
   const links = toEventLinks(linkRows)
 
-  // Gallery shape mirrors Sanity's; consumers read .url first, asset second.
   const gallery = galleryRows.map((g) => ({
-    asset:   { _ref: g.id, _type: 'reference' as const },
+    _key:    g.id,
     url:     g.url,
     caption: g.caption,
   }))

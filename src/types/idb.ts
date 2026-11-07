@@ -10,7 +10,7 @@ export interface IdbEvent {
 
 export interface IdbGalleryImage {
   _key: string
-  asset: { _ref: string }
+  url: string
   caption?: string
 }
 

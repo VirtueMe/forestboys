@@ -40,9 +40,6 @@ jobs:
       # type-checks functions/, which is what Cloudflare Pages compiles.
       - name: Type-check and build
         run: npm run build
-        env:
-          VITE_SANITY_PROJECT_ID: ${{ vars.VITE_SANITY_PROJECT_ID }}
-          VITE_SANITY_DATASET: ${{ vars.VITE_SANITY_DATASET }}
 
       # The harness pages for the e2e tests (#129, #139) are dev-only; the build has one entry, index.html.
       # This fails if any of them ever gets into the build. A new harness page names itself here.

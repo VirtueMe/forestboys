@@ -1421,7 +1421,7 @@ For Sanity-driven proposals (the non-outline path — when Sanity content
 changes upstream), a local script Benny invokes:
 
 - Reads Sanity (existing helpers in `src/composables/useLocationCache.ts`,
-  `src/config/sanity.ts`) and current Neo4j state
+  `scripts/sync/`) and current Neo4j state
 - Maps each Sanity entity to schema v1 PT shape (see
   `docs/NEO4J-MAPPING.md`)
 - For each PT block, applies the drift 2×2:
