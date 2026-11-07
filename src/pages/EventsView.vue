@@ -14,6 +14,7 @@
           spellcheck="false"
         />
         <button v-if="hasFilter" class="reset-btn" @click="resetFilters">Nullstill</button>
+        <RouterLink v-if="isAdmin && !isDetail" to="/events/new#new" class="new-btn">+ Ny</RouterLink>
       </div>
 
       <select :value="org" :disabled="isDetail" class="filter-select" aria-label="Organisasjon" @change="setOrg(($event.target as HTMLSelectElement).value)">
@@ -131,10 +132,13 @@ import DatePanel  from '../components/DatePanel.vue'
 import CustomSelect from '../components/CustomSelect.vue'
 import AdminEventNewView from './AdminEventNewView.vue'
 import EventTimeline from '../components/event/EventTimeline.vue'
+import { useAuth } from '../composables/useAuth.ts'
 import type { IdbEvent } from '../types/idb.ts'
 
 const route  = useRoute()
 const router = useRouter()
+const { user } = useAuth()
+const isAdmin = computed(() => user.value?.role === 'admin')
 
 /** When the URL hash is `#new`, this page becomes the create form
  *  (mounting AdminEventNewView). The slug in the URL is a placeholder
@@ -401,6 +405,24 @@ onUnmounted(() => {
   white-space: nowrap;
 }
 .reset-btn:hover { border-color: var(--focus); color: var(--focus); }
+
+/* The same button as «+ Ny…» on /registre, at this row's height. */
+.new-btn {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  height: 28px;
+  padding: 0 12px;
+  background: var(--focus);
+  color: #fff;
+  border-radius: var(--radius-md);
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: none;
+  white-space: nowrap;
+  transition: background 120ms ease-out;
+}
+.new-btn:hover { background: var(--faded-red); color: #fff; }
 
 /* ── Scroll container ───────────────────────────────────────── */
 .scroll-container {

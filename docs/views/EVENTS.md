@@ -17,6 +17,7 @@ Original repo: `artemagvanian/milorg-2` (Vue 3, Vite, no Bootstrap, no Tailwind)
 /events                        Hendelsekatalog: filters + timeline + list
 /events/:slug                  Event detail page
 /events/:slug#other-slug       Same page, different event detail visible
+/events/new#new               The create form for an Incident or an Operation (admins; `AdminEventNewView`)
 /directory                     Original table listing (keep as-is)
 ```
 
@@ -54,6 +55,7 @@ One page, one filter state, two views of it.
 .events-page                   ← full width; every section but the timeline is max-width 1320px, centred
   .filters
     .search-input              ← "Søk etter hendelse…"
+    .new-btn                   ← "+ Ny" beside it, admins only, not in detail mode; opens `/events/new#new` (#432)
     CustomSelect               ← org (single-select, 22 orgs)
     CustomSelect               ← district (multi-select, all / org's districts)
   EventTimeline                ← 100% wide, between filters and list (components/event/EventTimeline.vue)
