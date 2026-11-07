@@ -7,7 +7,7 @@
  *   npx tsx scripts/e2e/record-fixtures.ts --only <slug> [--write]   # one page, when the others should stay as they are
  *
  * It opens each page in a browser, as a visitor who is not logged in, and keeps every
- * `POST /api/neo4j/query` and every same-origin `/sanity/` GET with its answer. A page that has an edit mode
+ * `POST /api/neo4j/query` with its answer. A page that has an edit mode
  * is then opened again as an admin (`/auth/me` answered with role `admin`, no login) with «Rediger» chosen, and
  * what the edit mode asks for is kept in the same recording (#140). The registry-wide queries
  * the app runs on start-up (no parameters, thousands of rows) are kept to their first rows, and say so
@@ -20,7 +20,7 @@ import { mkdirSync, writeFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { chromium, type Response } from '@playwright/test'
 import { fixturePath, PAGES, type PageTarget } from '../../e2e/pages.ts'
-import { capRows, requestKey, STAND_IN_ADMIN, type PageRecording, type RecordedGet, type RecordedQuery } from './replay-key.ts'
+import { capRows, requestKey, STAND_IN_ADMIN, type PageRecording, type RecordedQuery } from './replay-key.ts'
 
 const ROOT = join(import.meta.dirname, '..', '..')
 const BASE = process.env.RECORD_BASE ?? 'http://localhost:8788'
@@ -39,7 +39,6 @@ type Browser = Awaited<ReturnType<typeof chromium.launch>>
 async function record(target: PageTarget, browser: Browser): Promise<PageRecording> {
   const { path, slug } = target
   const queries = new Map<string, RecordedQuery>()
-  const gets = new Map<string, RecordedGet>()
   const pending: Promise<void>[] = []
 
   /** Open the page once, as a visitor or as an admin in edit mode, and keep what it asks for. */
@@ -55,12 +54,6 @@ async function record(target: PageTarget, browser: Browser): Promise<PageRecordi
           const body = req.postDataJSON() as { query: string; params?: Record<string, unknown> }
           const json = (await r.json()) as { rows?: unknown[] }
           if (r.ok() && json.rows) queries.set(requestKey(body.query, body.params), capRows(body.query, body.params ?? {}, json.rows, slug))
-        })())
-      } else if (req.method() === 'GET' && url.pathname.startsWith('/sanity/')) {
-        pending.push((async () => {
-          gets.set(url.pathname + url.search, {
-            url: url.pathname + url.search, status: r.status(), contentType: r.headers()['content-type'] ?? 'application/json', body: await r.text(),
-          })
         })())
       }
     })
@@ -85,7 +78,7 @@ async function record(target: PageTarget, browser: Browser): Promise<PageRecordi
   // In the order of their keys, not of their arrival: responses come back in whatever order the timing gives,
   // and a recording that is written in a different order every time shows a change where there is none.
   const byKey = <T,>(m: Map<string, T>) => [...m.entries()].sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0)).map(([, v]) => v)
-  return { path, queries: byKey(queries), gets: byKey(gets) }
+  return { path, queries: byKey(queries) }
 }
 
 const browser = await chromium.launch()
@@ -95,7 +88,7 @@ try {
   for (const target of targets) {
     const recording = await record(target, browser)
     const text = JSON.stringify(recording, null, 1) + '\n'
-    console.log(`${target.path.padEnd(28)} ${String(recording.queries.length).padStart(3)} queries, ${recording.gets.length} sanity gets, ${(text.length / 1024).toFixed(0)} KB`)
+    console.log(`${target.path.padEnd(28)} ${String(recording.queries.length).padStart(3)} queries, ${(text.length / 1024).toFixed(0)} KB`)
     if (recording.queries.length === 0) throw new Error(`${target.path}: no queries were seen. Is the worker running on ${BASE}?`)
     if (WRITE) {
       const file = join(ROOT, fixturePath(target))

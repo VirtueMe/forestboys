@@ -64,7 +64,6 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
-import { SANITY_IMG } from '../config/sanity.ts'
 import type { IdbEventDetail, IdbGalleryImage } from '../types/idb.ts'
 import PhotoStrip from './PhotoStrip.vue'
 
@@ -74,10 +73,7 @@ const emit = defineEmits<{ back: [] }>()
 const gallery = computed<IdbGalleryImage[]>(() => props.event.gallery ?? [])
 
 const heroUrl = computed<string | null>(() => {
-  if (!gallery.value.length) return null
-  const path = gallery.value[0].asset._ref
-    .replace(/^image-/, '').replace(/-([a-z]+)$/, '.$1')
-  return `${SANITY_IMG}/${path}?w=720&h=130&fit=crop&auto=format`
+  return gallery.value[0]?.url ?? null
 })
 
 const meta = computed<string | null>(() => {

@@ -44,7 +44,6 @@ applies to Standard only).
 | Name | What |
 |---|---|
 | `GITHUB_CLIENT_ID` | the id of the GitHub OAuth app (public) |
-| `VITE_SANITY_PROJECT_ID`, `VITE_SANITY_DATASET` | build-time, public: the Sanity project and dataset the client reads |
 
 ## Secrets (dashboard only, Production and Preview)
 

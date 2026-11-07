@@ -337,8 +337,6 @@ run picks up the change, and the next audit run removes the finding.
 
 | Variable | Used by | Purpose |
 |----------|---------|---------|
-| `VITE_SANITY_PROJECT_ID` | Browser | Sanity CDN reads |
-| `VITE_SANITY_DATASET` | Browser | Sanity dataset |
 | `VITE_NEO4J_URI` | Browser | Neo4j Bolt endpoint |
 | `VITE_NEO4J_READER` | Browser | Read-only Neo4j username |
 | `VITE_NEO4J_READER_PASSWORD` | Browser | Read-only Neo4j password |

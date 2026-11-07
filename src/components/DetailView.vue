@@ -64,7 +64,6 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
 import { RouterLink } from 'vue-router'
-import { SANITY_IMG } from '../config/sanity.ts'
 import type { IdbLocation, IdbStation, IdbPerson, IdbEvent, IdbGalleryImage } from '../types/idb.ts'
 import PhotoStrip from './PhotoStrip.vue'
 import ItemCard from './ItemCard.vue'
@@ -92,10 +91,7 @@ const displayTitle = computed<string>(() =>
 const gallery = computed<IdbGalleryImage[]>(() => props.item.gallery ?? [])
 
 const heroUrl = computed<string | null>(() => {
-  if (!gallery.value.length) return null
-  const path = gallery.value[0].asset._ref
-    .replace(/^image-/, '').replace(/-([a-z]+)$/, '.$1')
-  return `${SANITY_IMG}/${path}?w=720&h=130&fit=crop&auto=format`
+  return gallery.value[0]?.url ?? null
 })
 
 const accentColor = computed(() => {

@@ -7,7 +7,7 @@ The public site reads a Neo4j graph. Editing and adding content the ordinary way
 the editors on the entity pages, is the main focus of the site. On the side there is an
 AI-assisted path: a bot proposes edits to entities as bundles, and an admin reviews and
 accepts them. Sanity (the earlier CMS) is synced into the graph daily until cutover;
-the browser reads it only for image urls (Sanity's image CDN).
+the browser does not read it.
 
 Start at `docs/INDEX.md` for every design and architecture document. This file is the
 short map; the docs hold the detail.
@@ -54,7 +54,7 @@ events (operations, incidents), outlines, sources, with descriptions as portable
 - **Read path**: the browser calls `POST /api/neo4j/query` through `src/composables/useNeo4j.ts`. It runs in a read transaction, so Neo4j refuses any write.
 - **Write path**: editors use `/api/admin/*` (one folder per entity kind), which write to the graph directly. This is the main way content changes.
 - **AI-assisted proposals**: the proposal bot (`scripts/bot/`, `scripts/prompts/`) sends bundles of entity edits through `/api/proposals/*`; an admin reviews them and the accepted ones are applied to the graph (`functions/api/admin/proposals`, `docs/PROPOSALS.md`, `docs/BUNDLE-FORMAT.md`).
-- **Sanity**: the browser makes no Sanity data query; `src/config/sanity.ts` only builds image urls (`SANITY_IMG`). `scripts/sync/` copies Sanity changes into the graph (`docs/SANITY-SYNC.md`; CI runs it daily in `.github/workflows/sanity-sync.yml`). Sanity project `7r6kqtqy`, dataset `production`.
+- **Sanity**: the browser makes no Sanity request at all; every photo is served from our bucket (`/images`). `scripts/sync/` copies Sanity changes into the graph (`docs/SANITY-SYNC.md`; CI runs it daily in `.github/workflows/sanity-sync.yml`). Sanity project `7r6kqtqy`, dataset `production`.
 - **Cache**: `src/types/idb.ts` defines the IndexedDB shapes; `useLocationCache.ts` owns the IndexedDB ops and background sync.
 
 ---

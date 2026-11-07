@@ -140,7 +140,6 @@
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue'
 import { useRouter, RouterLink } from 'vue-router'
-import { SANITY_IMG } from '../config/sanity.ts'
 import { blocksToHtml } from '../utils/portableText.ts'
 import { stationHeading as stationHeadingFor } from '../utils/stationHeading.ts'
 import type { IdbEventDetail } from '../types/idb.ts'
@@ -250,14 +249,9 @@ const router = useRouter()
 const currentImageIndex = ref(0)
 watch(() => props.event.slug, () => { currentImageIndex.value = 0 })
 
-interface GalleryItem { asset?: { _ref?: string }; url?: string | null; caption?: string | null }
+interface GalleryItem { url?: string | null; caption?: string | null }
 function imageUrl(img: GalleryItem | undefined): string {
-  if (!img) return ''
-  if (img.url) return img.url
-  const ref = img.asset?._ref ?? ''
-  if (!ref) return ''
-  const path = ref.replace(/^image-/, '').replace(/-([a-z]+)$/, '.$1')
-  return `${SANITY_IMG}/${path}?w=900&auto=format`
+  return img?.url ?? ''
 }
 const currentImageUrl     = computed(() => imageUrl(props.event.gallery?.[currentImageIndex.value] as GalleryItem))
 const currentImageCaption = computed(() => (props.event.gallery?.[currentImageIndex.value] as GalleryItem | undefined)?.caption ?? '')

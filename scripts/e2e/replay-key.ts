@@ -46,19 +46,10 @@ export function capRows(query: string, params: Record<string, unknown>, rows: un
   return { query, params, rows: kept.map(r => r.row), truncatedFrom: rows.length }
 }
 
-/** A same-origin GET that the page made (the Sanity proxy under /sanity/): found again by its path and query. */
-export interface RecordedGet {
-  url: string
-  status: number
-  contentType: string
-  body: string
-}
-
 export interface PageRecording {
   /** The page it was recorded from, as a path. */
   path: string
   queries: RecordedQuery[]
-  gets: RecordedGet[]
 }
 
 export const normalizeQuery = (query: string) => query.replace(/\s+/g, ' ').trim()

@@ -62,13 +62,6 @@ export default defineConfig(({ mode }) => {
     },
     server: {
       cors: true,
-      proxy: {
-        '/sanity': {
-          target: `https://${env.VITE_SANITY_PROJECT_ID}.apicdn.sanity.io`,
-          changeOrigin: true,
-          rewrite: path => path.replace(/^\/sanity/, ''),
-        },
-      },
     },
     plugins: [
       vue(),
@@ -89,14 +82,6 @@ export default defineConfig(({ mode }) => {
           // text files the site serves itself (#223).
           navigateFallbackDenylist: [/^\/auth\//, /^\/api\//, /^\/images\//, /^\/(sitemap\.txt|robots\.txt|manifest\.json)$/],
           runtimeCaching: [
-            {
-              urlPattern: /^https:\/\/\w+\.apicdn\.sanity\.io\//,
-              handler: 'NetworkFirst',
-              options: {
-                cacheName: 'sanity-api',
-                expiration: { maxAgeSeconds: 60 * 60 * 24 },
-              },
-            },
             {
               urlPattern: /^https:\/\/basemaps\.cartocdn\.com\//,
               handler: 'CacheFirst',

@@ -35,7 +35,6 @@ export interface ReplayOptions {
 export async function replayPage(page: Page, target: PageTarget, options: ReplayOptions = {}): Promise<Replay> {
   const recording = JSON.parse(readFileSync(join(ROOT, fixturePath(target)), 'utf8')) as PageRecording
   const queries = new Map(recording.queries.map(q => [requestKey(q.query, q.params), q]))
-  const gets = new Map(recording.gets.map(g => [g.url, g]))
   const misses: string[] = []
 
   // Routes registered later win, so the general ones come first.
@@ -45,12 +44,6 @@ export async function replayPage(page: Page, target: PageTarget, options: Replay
   })
   // The site's name (#153) is not part of a page's content, so it is not recorded: every page gets the defaults.
   await page.route('**/api/site-settings/site', route => route.fulfill({ json: { name: 'Milorg 2 Utforsker', shortName: 'Milorg 2' } }))
-  await page.route('**/sanity/**', route => {
-    const url = new URL(route.request().url())
-    const hit = gets.get(url.pathname + url.search)
-    if (!hit) { misses.push(`GET ${url.pathname + url.search}`); return route.fulfill({ status: 404, json: { error: 'not recorded' } }) }
-    return route.fulfill({ status: hit.status, contentType: hit.contentType, body: hit.body })
-  })
   await page.route('**/api/neo4j/query', route => {
     const body = route.request().postDataJSON() as { query: string; params?: Record<string, unknown> }
     const hit = queries.get(requestKey(body.query, body.params))
