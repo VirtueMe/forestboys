@@ -17,6 +17,7 @@
 /transport                 Fremdriftsmidler list
 /transport/:slug/:child?   Fremdriftsmiddel detail
 /outlines                  Oversikter list
+/outlines/new              Create an outline: title + slug (admins), then the page opens in edit mode (#433)
 /outlines/:slug            Oversikt detail
 /registre                  Registre (stub)
 /about                     Om oss
@@ -46,6 +47,7 @@
 { path: '/transport',               component: TransportView },
 { path: '/transport/:slug/:child?', component: TransportDetail },
 { path: '/outlines',                component: OutlinesView },
+{ path: '/outlines/new',            component: AdminOutlineNewView },
 { path: '/outlines/:slug',          component: OutlineDetail },
 { path: '/registre',                component: RegistreView },
 { path: '/about',                   component: AboutView },

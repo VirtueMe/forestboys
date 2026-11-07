@@ -657,6 +657,16 @@ makes the new bundle, which Jan reviews; the old one stays closed. An outline ab
 changed in Sanity afterwards is therefore a new bundle, nothing special in the sync. None is
 absorbed yet.
 
+**An outline made in the app (#433)** is an outline with no `sanityId`: `POST /api/admin/outline/new`
+makes the node with a slug and a title and nothing else, and that absence is the mark. All three
+scripts select the nodes they update with `sanityId IS NOT NULL` (`GRAPH_QUERY`, the description and
+link syncs), so none of them updates it, and none counts it as «no Sanity document». Its slug is
+taken, though: `sync-outline` reads every outline slug, so a Sanity outline that arrives later with
+the same slug is a `slug taken` error in the report and is not created; the app's outline stays as
+it is. `import-outlines.ts` is the one script that would overwrite it (`MERGE` on the slug), and it
+is a one-shot import. `scripts/lib/outline-sync.neo4j.test.ts` and
+`functions/api/admin/outline/[slug]/index.neo4j.test.ts` hold this.
+
 `N.O.R.I.C.(1) (LINGE) Medlemmer` is left alone by all three: its bundles were made by the
 earlier import, so there is nothing to change there. Gallery and links are in the graph but
 the outline page does not show them yet.

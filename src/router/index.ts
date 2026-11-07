@@ -12,6 +12,7 @@ import TransportView   from '../pages/TransportView.vue'
 import TransportDetail from '../pages/TransportDetail.vue'
 import OutlinesView  from '../pages/OutlinesView.vue'
 import OutlineDetail from '../pages/OutlineDetail.vue'
+import AdminOutlineNewView from '../pages/AdminOutlineNewView.vue'
 import RegistreView  from '../pages/RegistreView.vue'
 import AboutView     from '../pages/AboutView.vue'
 import OrganizationDetail from '../pages/OrganizationDetail.vue'
@@ -65,6 +66,7 @@ const router = createRouter({
     { path: '/transport',               component: TransportView },
     { path: '/transport/:slug/:child?', component: TransportDetail },
     { path: '/outlines',                component: OutlinesView },
+    { path: '/outlines/new',            component: AdminOutlineNewView },
     { path: '/outlines/:slug',          component: OutlineDetail },
     { path: '/organization/:slug',      component: OrganizationDetail },
     { path: '/district/:slug',           component: DistrictDetail },

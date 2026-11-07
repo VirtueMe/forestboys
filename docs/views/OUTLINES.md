@@ -21,6 +21,16 @@ An admin has the tabs *Forhåndsvisning / Rediger / Forslag*. **Rediger** holds:
 | `DescriptionEditor` | the description sections | `PATCH /api/admin/outline/:slug/sections` |
 | `OutlinePeopleEditor` | the mentioned people | `PATCH /api/admin/outline/:slug/people` |
 
+### Create (#433)
+
+An admin makes an outline from **«+ Ny… → Informasjon»** on `/registre`, which opens `/outlines/new`
+(`AdminOutlineNewView`): a title, and a slug made from it that can be edited. «Opprett» posts to
+`POST /api/admin/outline/new` (admin only; 409 for a slug that is taken or an old name of another
+page) and opens `/outlines/<slug>?created=1`, which starts in **Rediger**: the new outline has no text
+yet, so the preview would be empty. The text, the photos and the people are written there, with the
+editors above. The node has no `sanityId`, so the Sanity sync leaves it alone (`SANITY-SYNC.md`,
+*Outlines*).
+
 ### People (#389)
 
 The people are a plain link: a person is in the list or not, with no role, dates, order or note. `OutlinePeopleEditor`

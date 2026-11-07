@@ -8,7 +8,7 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import neo4j from 'neo4j-driver'
 import { neo4jDriver } from './person-sync.ts'
-import { APPLY_QUERY, CREATE_QUERY, GALLERY_QUERY, GRAPH_QUERY, MENTIONS_QUERY, newOutlineProps } from './outline-sync.ts'
+import { APPLY_QUERY, CREATE_QUERY, GALLERY_QUERY, GRAPH_QUERY, MENTIONS_QUERY, SLUGS_QUERY, newOutlineProps } from './outline-sync.ts'
 
 const ENABLED = process.env.NEO4J_TEST === '1'
 const RUN = Math.random().toString(36).slice(2, 8)
@@ -64,6 +64,15 @@ describe.skipIf(!ENABLED)('outline sync writes, against the local Neo4j', () => 
     expect(n(count)).toBe(1)
     const rows = await run(`MATCH (:Outline {sanityId: $id})-[h:HAS_IMAGE]->(i:Source) RETURN i.id AS id, h.order AS order, h.isHero AS hero ORDER BY id`, { id: `${P}oid` })
     expect(rows.map(r => [r.id, n(r.order), r.hero ?? null])).toEqual([[`${P}img-b`, 1, true], [`${P}img-c`, 2, null], [`${P}own`, 3, null]])
+  })
+
+  it('does not match an outline made in the app (no sanityId), but counts its slug as taken (#433)', async () => {
+    await run(`CREATE (:Outline {slug: $slug, canonicalName: 'Laget i appen'})`, { slug: `${P}app` })
+    expect((await run(GRAPH_QUERY)).map(r => r.slug)).not.toContain(`${P}app`)
+    expect((await run(SLUGS_QUERY)).map(r => r.slug)).toContain(`${P}app`)
+    await run(APPLY_QUERY, { rows: [{ id: `${P}app`, props: { canonicalName: 'Sanity' }, stamps: {} }] })
+    const [o] = await run(`MATCH (o:Outline {slug: $slug}) RETURN o.canonicalName AS name`, { slug: `${P}app` })
+    expect(o.name).toBe('Laget i appen')
   })
 
   it('makes a node with its single Description', async () => {
