@@ -1,5 +1,27 @@
 # Changelog
 
+## [0.23.0](https://github.com/VirtueMe/forestboys/compare/v0.22.0...v0.23.0) (2026-11-07)
+
+
+### Features
+
+* **images:** copy the Sanity photos to our bucket ([033f631](https://github.com/VirtueMe/forestboys/commit/033f63148d9681a053f16d5ec6de9c2c593b9d81))
+* **images:** editors add, move, caption and remove photos on any entity ([137f40d](https://github.com/VirtueMe/forestboys/commit/137f40dbd72640421190faec5d4e4c1b7a13b833)), closes [#414](https://github.com/VirtueMe/forestboys/issues/414)
+* **images:** let scripts store photos through the door over S3 ([1b3ecba](https://github.com/VirtueMe/forestboys/commit/1b3ecbafc3527fd45d12ef81760a1e12ba5fc4a6))
+* **images:** the card image upload goes through the shared door ([e60da36](https://github.com/VirtueMe/forestboys/commit/e60da36173763e7021fb213e489e8235c234ab14)), closes [#410](https://github.com/VirtueMe/forestboys/issues/410) [#404](https://github.com/VirtueMe/forestboys/issues/404)
+* **images:** the copied-list manifest ([0b7ab96](https://github.com/VirtueMe/forestboys/commit/0b7ab9609101111d08c23d88777185b0200eb358))
+* **images:** the nightly sync copies new Sanity photos to our bucket ([0e00fe8](https://github.com/VirtueMe/forestboys/commit/0e00fe86624f2870d068fb1c07df318d3c1e12f1))
+* **images:** the storage door and the /images size rule ([40a362b](https://github.com/VirtueMe/forestboys/commit/40a362b7529d4955335c33f483cf0a1c039fd018))
+* **sync:** sync transport galleries from Sanity ([663342b](https://github.com/VirtueMe/forestboys/commit/663342bc1e50fffaead9ba28d1c2037d6e5c2b5d)), closes [#420](https://github.com/VirtueMe/forestboys/issues/420)
+
+
+### Bug fixes
+
+* **images:** compare PNG masters by stored pixels, and say why cjxl failed ([acad08e](https://github.com/VirtueMe/forestboys/commit/acad08ef8c3389e7e93ce0d748b07e6c0a327cb9))
+* **images:** read R2's weak etag as the strong one ([e25624e](https://github.com/VirtueMe/forestboys/commit/e25624ecdf8ff546157a5c5f428f70046aeb9316))
+* **images:** the sync recognises a Sanity photo after the backfill moved its url ([359f03b](https://github.com/VirtueMe/forestboys/commit/359f03bd45000d5b64a14554da2632fa21d87947))
+* **sync:** rewrite every event field from Sanity, so a graph edit cannot block the sync ([ddd43e1](https://github.com/VirtueMe/forestboys/commit/ddd43e1f5122d97b4e21cfc4b630b3b59af61ea5)), closes [#422](https://github.com/VirtueMe/forestboys/issues/422)
+
 ## [0.22.0](https://github.com/VirtueMe/forestboys/compare/v0.21.1...v0.22.0) (2026-11-05)
 
 
