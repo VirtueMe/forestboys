@@ -1,5 +1,5 @@
 <template>
-  <section class="edit-section">
+  <section class="edit-section" @keydown="onListKey">
     <div class="edit-section-head">
       <h2 class="edit-section-heading">
         {{ label }}
@@ -11,7 +11,9 @@
         class="list-toggle"
         :aria-expanded="showAll"
         :aria-controls="listId"
-        @click="showAll = !showAll"
+        aria-keyshortcuts="Alt+ArrowDown Alt+ArrowUp"
+        title="Alt+↓ viser alle, Alt+↑ viser færre"
+        @click="showAll ? compactList() : (showAll = true)"
       >
         {{ showAll ? 'Vis færre' : `Vis alle ${entries.length}` }}
       </button>
@@ -403,6 +405,19 @@ const filteredTargets = computed(() => {
     .filter(t => t.name.toLowerCase().includes(q) || matchingName(q, t.aliases) !== null)
     .slice(0, 20)
 })
+
+// Alt+↓ shows the whole list, Alt+↑ folds it back (and closes the open row, whose picker the short box would cut off).
+function compactList() {
+  showAll.value = false
+  expandedIndex.value = null
+  pickerQuery.value = ''
+  pickerOpen.value = false
+}
+function onListKey(ev: KeyboardEvent) {
+  if (!ev.altKey || ev.ctrlKey || ev.metaKey || ev.shiftKey || !collapsible.value) return
+  if (ev.key === 'ArrowDown') { ev.preventDefault(); showAll.value = true }
+  else if (ev.key === 'ArrowUp') { ev.preventDefault(); compactList() }
+}
 
 function toggleIndex(i: number) {
   expandedIndex.value = expandedIndex.value === i ? null : i
