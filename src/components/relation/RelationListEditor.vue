@@ -7,6 +7,7 @@
       </h2>
       <button
         v-if="collapsible"
+        ref="toggleEl"
         type="button"
         class="list-toggle"
         :aria-expanded="showAll"
@@ -322,6 +323,7 @@ const expandedIndex = ref<number | null>(null)
 // their row and must not be cut off by a short box.
 const listId    = `relation-list-${useId()}`
 const listEl    = useTemplateRef<HTMLUListElement>('listEl')
+const toggleEl  = useTemplateRef<HTMLButtonElement>('toggleEl')
 const showAll   = ref(false)
 const clipHeight = ref<number | null>(null)
 const collapsible = computed(() => props.visibleRows > 0 && props.entries.length > props.visibleRows)
@@ -415,7 +417,13 @@ function compactList() {
 }
 function onListKey(ev: KeyboardEvent) {
   if (!ev.altKey || ev.ctrlKey || ev.metaKey || ev.shiftKey || !collapsible.value) return
-  if (ev.key === 'ArrowDown') { ev.preventDefault(); showAll.value = true }
+  if (ev.key === 'ArrowDown') {
+    ev.preventDefault()
+    // The folded scroll area is the focus stop; once the list is open it is not one, so focus goes to the toggle.
+    const onScroller = ev.target === document.getElementById(listId)
+    showAll.value = true
+    if (onScroller) void nextTick(() => toggleEl.value?.focus())
+  }
   else if (ev.key === 'ArrowUp') { ev.preventDefault(); compactList() }
 }
 
