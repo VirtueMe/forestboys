@@ -112,3 +112,82 @@ test('there is room below the add button', async ({ page }) => {
   // main has 16px of padding of its own: what is left is the list's margin
   expect(main.y + main.height - 16 - (add.y + add.height)).toBeGreaterThanOrEqual(40)
 })
+
+// Alt+↓ shows the whole list and Alt+↑ folds it back (#436), from anywhere inside the list section.
+
+test('the toggle announces the shortcuts', async ({ page }) => {
+  await open(page)
+  await expect(page.getByRole('button', { name: 'Vis alle 25' })).toHaveAttribute('aria-keyshortcuts', 'Alt+ArrowDown Alt+ArrowUp')
+})
+
+test('Alt+↓ shows the whole list and Alt+↑ folds it back', async ({ page }) => {
+  await open(page)
+  await scroller(page).focus()
+  await page.keyboard.press('Alt+ArrowDown')
+  await expect(page.getByRole('button', { name: 'Vis færre' })).toHaveAttribute('aria-expanded', 'true')
+  // the folded scroll area stops being a focus stop once open: focus moves to the toggle, not to the page
+  await expect(page.getByRole('button', { name: 'Vis færre' })).toBeFocused()
+  expect(await visibleRows(page)).toHaveLength(25)
+  await page.keyboard.press('Alt+ArrowUp')
+  await expect(page.getByRole('button', { name: 'Vis alle 25' })).toHaveAttribute('aria-expanded', 'false')
+  expect(await visibleRows(page)).toHaveLength(10)
+})
+
+test('Alt+↓ on an already open list changes nothing, and so does Alt+↑ on a folded one', async ({ page }) => {
+  await open(page)
+  await scroller(page).focus()
+  await page.keyboard.press('Alt+ArrowUp')
+  expect(await visibleRows(page)).toHaveLength(10)
+  await page.keyboard.press('Alt+ArrowDown')
+  await page.keyboard.press('Alt+ArrowDown')
+  expect(await visibleRows(page)).toHaveLength(25)
+})
+
+test('Alt+↑ folds the list and closes the open row', async ({ page }) => {
+  await open(page)
+  await page.locator('.membership-summary').nth(2).click()
+  await expect(page.locator('.membership-item.expanded')).toHaveCount(1)
+  await page.locator('.membership-summary').nth(2).focus()
+  await page.keyboard.press('Alt+ArrowUp')
+  await expect(page.locator('.membership-item.expanded')).toHaveCount(0)
+  await expect(page.getByRole('button', { name: 'Vis alle 25' })).toBeVisible()
+  expect(await visibleRows(page)).toHaveLength(10)
+})
+
+test('the shortcut works from a field inside the list', async ({ page }) => {
+  await open(page)
+  await page.getByRole('button', { name: 'Flytt Person 01' }).click()
+  const input = page.getByRole('textbox', { name: 'Plassering' })
+  await expect(input).toBeFocused()
+  await page.keyboard.press('Alt+ArrowUp')
+  await expect(page.getByRole('button', { name: 'Vis alle 25' })).toBeVisible()
+  await input.focus()
+  await page.keyboard.press('Alt+ArrowDown')
+  await expect(page.getByRole('button', { name: 'Vis færre' })).toBeVisible()
+})
+
+test('other arrow combinations do nothing', async ({ page }) => {
+  await open(page)
+  await scroller(page).focus()
+  for (const combo of ['ArrowDown', 'Shift+Alt+ArrowDown', 'Control+Alt+ArrowDown', 'Alt+ArrowRight']) {
+    await page.keyboard.press(combo)
+    await expect(page.getByRole('button', { name: 'Vis alle 25' })).toHaveAttribute('aria-expanded', 'false')
+  }
+})
+
+test('10 rows or fewer: the shortcuts do nothing', async ({ page }) => {
+  await open(page, '?n=10')
+  await page.locator('.membership-summary').first().focus()
+  await page.keyboard.press('Alt+ArrowUp')
+  await page.keyboard.press('Alt+ArrowDown')
+  expect(await visibleRows(page)).toHaveLength(10)
+  await expect(page.getByRole('button', { name: /^Vis (alle|færre)/ })).toHaveCount(0)
+})
+
+test('10 rows or fewer: Alt+↑ leaves an open row open', async ({ page }) => {
+  await open(page, '?n=10')
+  await page.locator('.membership-summary').first().click()
+  await page.locator('.membership-summary').first().focus()
+  await page.keyboard.press('Alt+ArrowUp')
+  await expect(page.locator('.membership-item.expanded')).toHaveCount(1)
+})
