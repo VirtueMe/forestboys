@@ -1,0 +1,34 @@
+name: PR title
+
+# release-please reads the commit type to pick the version bump and the changelog section.
+# Changes land by pull request, so the title is the message that counts; the rules are the
+# ones the commit-msg hook checks locally (.commitlintrc.json). See #438.
+on:
+  pull_request:
+    types: [opened, edited, synchronize, reopened]
+
+permissions:
+  contents: read
+
+jobs:
+  title:
+    name: Conventional PR title
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - name: Install
+        run: npm ci
+
+      # The title goes in through the environment, never into the script text.
+      - name: Check the title
+        env:
+          PR_TITLE: ${{ github.event.pull_request.title }}
+        run: printf '%s\n' "$PR_TITLE" | npx --no-install commitlint

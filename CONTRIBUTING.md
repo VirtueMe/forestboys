@@ -48,9 +48,11 @@ A pre-commit hook runs `npm run lint`.
 2. **Branch from `main`**, named `<type>/<issue>_<short-slug>`, for example
    `feat/42_person-timeline` or `fix/57_drawer-scroll`.
 3. **Commit with [Conventional Commits](https://www.conventionalcommits.org/)**:
-   `feat`, `fix`, `docs`, `style`, `refactor`, `chore`, `ci`, `tests`, optionally
-   with a scope: `fix(auth): reject expired sessions`. Explain _why_ in the body;
-   the diff already shows _what_.
+   `feat`, `fix`, `perf`, `refactor`, `docs`, `chore`, `ci`, `test`, `style`,
+   optionally with a scope: `fix(auth): reject expired sessions`. Explain _why_
+   in the body; the diff already shows _what_. A `commit-msg` hook (commitlint,
+   `.commitlintrc.json`) refuses any other type, and CI checks the pull request
+   title against the same rules.
 4. **Open a pull request** to `main` with `Closes #<issue>` in the description and a
    short test plan.
 5. **CI must pass.** `main` is protected: changes land through pull requests
