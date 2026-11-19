@@ -4,14 +4,14 @@
     <SectionsEditor ref="sectionsEditor" :sections="draft" />
   </section>
 
-  <footer v-if="!hideSave && dirty" class="edit-save-bar">
+  <footer v-if="!hideSave && dirty && !inRow" class="edit-save-bar">
     <span class="edit-save-prompt">Ser det bra ut?</span>
     <button type="button" class="edit-btn-primary" :disabled="saving" @click="save">
       {{ saving ? 'Lagrer…' : 'Lagre' }}
     </button>
     <button type="button" class="edit-link-revert" :disabled="saving" @click="revert">Angre</button>
   </footer>
-  <div v-if="displayError" class="edit-save-error">{{ displayError }}</div>
+  <div v-if="inlineError" class="edit-save-error">{{ inlineError }}</div>
   <div v-if="linkIssues.length" class="edit-link-issues" :class="{ refused: linksRefused }">
     <p class="edit-link-issues-lead">
       {{ linksRefused ? 'Lenker som ikke fungerer:' : 'Lagret. Disse lenkene fungerer ikke:' }}
@@ -67,6 +67,7 @@
  */
 import { ref, computed, watch } from 'vue'
 import { authFetch } from '@/composables/useAuth.ts'
+import { useSaveSection, throwingSave } from '@/composables/useSaveRegistry.ts'
 import SectionsEditor, { type Section } from '@/components/SectionsEditor.vue'
 import {
   checkContents, fixContents, HEADINGS_REFUSED, headingMessage, setContentHeading, type ContentHeadingProblem,
@@ -201,6 +202,8 @@ function fixAllHeadings() {
 }
 
 const displayError = computed(() => error.value ?? props.externalError ?? null)
+/** In the save row the row shows a failed save; the parent's own notice stays here. */
+const inlineError = computed(() => (inRow ? props.externalError ?? null : displayError.value))
 
 function revert() {
   draft.value = baseline.value.map(cloneSection)
@@ -267,6 +270,17 @@ async function save() {
     saving.value = false
   }
 }
+
+// On a detail page the save row owns the save (#427). `hideSave` (create) keeps it out of the row until the
+// parent navigates to the saved entity and the recovered draft shows up as dirty. Without a registry
+// (a role's popover, the outline page) the editor keeps its own bar.
+const inRow = useSaveSection({
+  id:     'description',
+  get label() { return props.label },
+  dirty:  () => !props.hideSave && dirty.value,
+  save:   throwingSave(save, error),
+  revert,
+})
 
 defineExpose({ draft, dirty })
 </script>
