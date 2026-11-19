@@ -125,14 +125,14 @@
     </div>
   </section>
 
-  <footer v-if="dirty" class="edit-save-bar">
+  <footer v-if="dirty && !inRow" class="edit-save-bar">
     <span class="edit-save-prompt">Ser det bra ut?</span>
     <button type="button" class="edit-btn-primary" :disabled="saving || !canSave" @click="save">
       {{ saving ? 'Lagrer…' : 'Lagre' }}
     </button>
     <button type="button" class="edit-link-revert" :disabled="saving" @click="revert">Angre</button>
   </footer>
-  <div v-if="error" class="edit-save-error">{{ error }}</div>
+  <div v-if="error && !inRow" class="edit-save-error">{{ error }}</div>
 </template>
 
 <script setup lang="ts">
@@ -149,6 +149,7 @@ import { ref, computed, watch } from 'vue'
 import { RouterLink } from 'vue-router'
 import AppModal from '@/components/AppModal.vue'
 import { authFetch } from '@/composables/useAuth.ts'
+import { useSaveSection, throwingSave } from '@/composables/useSaveRegistry.ts'
 import { neo4jQuery } from '@/composables/useNeo4j.ts'
 import { slugify, SLUG_RE } from '@/utils/slug.ts'
 import { linksSummary, type RenamePreview } from '@/utils/renameSummary.ts'
@@ -426,6 +427,15 @@ async function save() {
     saving.value = false
   }
 }
+
+// On a detail page the save row owns the save (#427); without one the editor keeps its own bar.
+const inRow = useSaveSection({
+  id:     'scalar',
+  get label() { return kindLabel.value },
+  dirty,
+  save:   throwingSave(save, error),
+  revert,
+})
 
 defineExpose({ draft, dirty })
 </script>

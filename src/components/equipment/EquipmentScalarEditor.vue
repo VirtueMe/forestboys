@@ -54,14 +54,14 @@
     </div>
   </section>
 
-  <footer v-if="createMode || dirty" class="edit-save-bar">
+  <footer v-if="createMode || (dirty && !inRow)" class="edit-save-bar">
     <span class="edit-save-prompt">{{ createMode ? 'Opprett utstyr?' : 'Ser det bra ut?' }}</span>
     <button type="button" class="edit-btn-primary" :disabled="saving || !canSave" @click="save">
       {{ saving ? (createMode ? 'Oppretter…' : 'Lagrer…') : (createMode ? 'Opprett' : 'Lagre') }}
     </button>
     <button v-if="!createMode" type="button" class="edit-link-revert" :disabled="saving" @click="revert">Angre</button>
   </footer>
-  <div v-if="error" class="edit-save-error">{{ error }}</div>
+  <div v-if="error && !inRow" class="edit-save-error">{{ error }}</div>
 </template>
 
 <script setup lang="ts">
@@ -72,6 +72,7 @@
  */
 import { ref, computed, watch } from 'vue'
 import { authFetch } from '@/composables/useAuth.ts'
+import { useSaveSection, throwingSave } from '@/composables/useSaveRegistry.ts'
 import { neo4jQuery } from '@/composables/useNeo4j.ts'
 import { slugify, SLUG_RE } from '@/utils/slug.ts'
 import { EQUIPMENT_TYPE_LABEL, type EquipmentNode } from '@/composables/useEquipmentData.ts'
@@ -253,6 +254,15 @@ async function save() {
     saving.value = false
   }
 }
+
+// On a detail page the save row owns the save (#427); in create mode, or without a row, the editor keeps its own bar.
+const inRow = !props.createMode && useSaveSection({
+  id:     'scalar',
+  label:  'Utstyr',
+  dirty,
+  save:   throwingSave(save, error),
+  revert,
+})
 
 defineExpose({
   get draft(): EquipmentDraft { return draft.value },

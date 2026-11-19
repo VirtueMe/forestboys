@@ -3,6 +3,7 @@
     <div v-if="loading" class="status">Laster…</div>
     <div v-else-if="notFound" class="status">{{ notFoundText ?? 'Ikke funnet.' }}</div>
     <slot v-else></slot>
+    <SaveRow v-if="!loading && !notFound" />
   </div>
 </template>
 
@@ -13,6 +14,7 @@
  * Handles:
  *   - the page-shell layout (overflow-y scroll, flex column, centered max-width)
  *   - the Laster… / ikke-funnet status states
+ *   - the sticky save row (SaveRow) and the registry the editors report to
  *   - re-fetching on route-param change (keep-alive in App.vue reuses the
  *     component instance across /org/X → /org/Y, so onMounted alone misses it)
  *
@@ -27,6 +29,8 @@ import { useRoute, useRouter } from 'vue-router'
 import { useDetailSlug } from '@/composables/useDetailSlug.ts'
 import { neo4jQuery } from '@/composables/useNeo4j.ts'
 import { aliasRedirect } from '@/utils/aliasRedirect.ts'
+import { provideSaveRegistry } from '@/composables/useSaveRegistry.ts'
+import SaveRow from '@/components/SaveRow.vue'
 
 const props = defineProps<{
   load:         (slug: string) => Promise<void>
@@ -36,6 +40,8 @@ const props = defineProps<{
   pageClass?:   string
 }>()
 
+// The page owns the save row; editors below register with it (#427).
+provideSaveRegistry()
 const detailSlug = useDetailSlug()
 const loading    = ref(false)
 
