@@ -590,6 +590,7 @@ const inRow = useSaveSection({
   id:     listId,
   get label() { return props.label },
   dirty,
+  signature: () => entrySignature(props.entries),
   save:   async () => {
     if (!valid.value) throw new Error(props.validationEmpty)
     await saveInRow()

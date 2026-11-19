@@ -193,6 +193,54 @@ describe('revert', () => {
   })
 })
 
+describe('a failure the user has fixed', () => {
+  it('goes back to unsaved when the content changes', async () => {
+    const r = createSaveRegistry()
+    const content = ref('a')
+    const a = section('a', { save: () => Promise.reject(new Error('Velg enhet')), signature: () => content.value })
+    r.register(a.s)
+    await r.saveAll()
+    expect(r.statusOf('a').state).toBe('failed')
+    expect(r.failedCount.value).toBe(1)
+    content.value = 'b'
+    expect(r.statusOf('a').state).toBe('idle')
+    expect(r.failedCount.value).toBe(0)
+    expect(r.dirtyCount.value).toBe(1)
+    expect(r.listed.value.map(s => s.id)).toEqual(['a'])
+  })
+
+  it('stays failed while the content is the same', async () => {
+    const r = createSaveRegistry()
+    const content = ref('a')
+    r.register(section('a', { save: () => Promise.reject(new Error('x')), signature: () => content.value }).s)
+    await r.saveAll()
+    content.value = 'a'
+    expect(r.statusOf('a').state).toBe('failed')
+  })
+
+  it('stays failed without a signature', async () => {
+    const r = createSaveRegistry()
+    r.register(section('a', { save: () => Promise.reject(new Error('x')) }).s)
+    await r.saveAll()
+    expect(r.statusOf('a').state).toBe('failed')
+  })
+
+  it('can be saved again after the change, and a second failure is a new one', async () => {
+    const r = createSaveRegistry()
+    const content = ref('a')
+    let ok = false
+    r.register(section('a', { save: () => (ok ? Promise.resolve() : Promise.reject(new Error('x'))), signature: () => content.value }).s)
+    await r.saveAll()
+    content.value = 'b'
+    await r.saveAll()
+    expect(r.statusOf('a').state).toBe('failed')
+    expect(r.statusOf('a').error).toBe('x')
+    ok = true
+    await r.saveAll()
+    expect(r.statusOf('a').state).toBe('done')
+  })
+})
+
 describe('throwingSave', () => {
   it('turns an error the editor kept into a rejection', async () => {
     const error = ref<string | null>(null)

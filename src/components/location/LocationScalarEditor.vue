@@ -271,6 +271,7 @@ const inRow = !props.createMode && useSaveSection({
   id:     'scalar',
   label:  'Sted',
   dirty,
+  signature: () => JSON.stringify(draft.value),
   save:   throwingSave(save, error),
   revert,
 })

@@ -29,6 +29,12 @@ export interface SaveSection {
   dirty:  () => boolean
   save:   () => Promise<void>
   revert: () => void
+  /**
+   * Changes whenever the editor's content changes. A section that failed to save goes back to
+   * «unsaved» when it does, so the row does not keep reporting a failure the user has since fixed.
+   * Without it a failure stays until the next save or «Angre».
+   */
+  signature?: () => string
 }
 
 /** What an editor passes in: `dirty` may be a ref or a getter. */
@@ -43,9 +49,11 @@ export interface SectionStatus {
   /** Set when the section starts working; the row shows a timer from it. */
   startedAt:  number | null
   finishedAt: number | null
+  /** The section's `signature()` when it failed. */
+  failedAt:   string | null
 }
 
-const idleStatus = (): SectionStatus => ({ state: 'idle', error: null, startedAt: null, finishedAt: null })
+const idleStatus = (): SectionStatus => ({ state: 'idle', error: null, startedAt: null, finishedAt: null, failedAt: null })
 
 export function createSaveRegistry(now: () => number = Date.now) {
   // Registration order is save order.
@@ -54,7 +62,14 @@ export function createSaveRegistry(now: () => number = Date.now) {
   let running: Promise<void> | null = null
 
   function statusOf(id: string): SectionStatus {
-    return status.get(id) ?? idleStatus()
+    const st = status.get(id)
+    if (!st) return idleStatus()
+    // A failure is about the content that was saved; once that has changed it no longer applies.
+    if (st.state === 'failed' && st.failedAt !== null) {
+      const sig = sections.value.find(s => s.id === id)?.signature
+      if (sig && sig() !== st.failedAt) return idleStatus()
+    }
+    return st
   }
 
   function setStatus(id: string, patch: Partial<SectionStatus>) {
@@ -91,7 +106,10 @@ export function createSaveRegistry(now: () => number = Date.now) {
       if (sections.value.includes(section)) setStatus(section.id, { state: 'done', finishedAt: now() })
     } catch (err) {
       if (sections.value.includes(section)) {
-        setStatus(section.id, { state: 'failed', error: err instanceof Error ? err.message : String(err), finishedAt: now() })
+        setStatus(section.id, {
+          state: 'failed', error: err instanceof Error ? err.message : String(err), finishedAt: now(),
+          failedAt: section.signature?.() ?? null,
+        })
       }
     }
   }
@@ -191,6 +209,7 @@ export function useSaveSection(input: SaveSectionInput): boolean {
     dirty: isRef(dirty) ? () => dirty.value : dirty,
     save: input.save,
     revert: input.revert,
+    signature: input.signature,
   })
   onScopeDispose(stop)
   return true
