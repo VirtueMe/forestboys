@@ -24,12 +24,12 @@
  *   :notFound — boolean / computed  — true when the current slug has no match
  *   :pageClass — string             — extra class for page-specific styles
  */
-import { ref, watch } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
+import { onActivated, onBeforeUnmount, onDeactivated, onMounted, ref, watch } from 'vue'
+import { onBeforeRouteLeave, onBeforeRouteUpdate, useRoute, useRouter } from 'vue-router'
 import { useDetailSlug } from '@/composables/useDetailSlug.ts'
 import { neo4jQuery } from '@/composables/useNeo4j.ts'
 import { aliasRedirect } from '@/utils/aliasRedirect.ts'
-import { provideSaveRegistry } from '@/composables/useSaveRegistry.ts'
+import { mayLeave, provideSaveRegistry } from '@/composables/useSaveRegistry.ts'
 import SaveRow from '@/components/SaveRow.vue'
 
 const props = defineProps<{
@@ -41,7 +41,26 @@ const props = defineProps<{
 }>()
 
 // The page owns the save row; editors below register with it (#427).
-provideSaveRegistry()
+const registry = provideSaveRegistry()
+
+// Leaving with unsaved sections asks first, naming them. Another entity on the same route (`/person/X` → `/person/Y`)
+// is leaving too; the same entity (`:child`, a query) is not. Closing or reloading the tab gets the browser's own prompt.
+onBeforeRouteLeave(() => mayLeave(registry))
+onBeforeRouteUpdate((to, from) => to.params.slug === from.params.slug || mayLeave(registry))
+
+function warnOnUnload(e: BeforeUnloadEvent) {
+  if (!registry.dirtyCount.value) return
+  e.preventDefault()
+  e.returnValue = ''
+}
+// A kept-alive page is not unmounted when it is left, so the listener follows activation too.
+const listen   = () => window.addEventListener('beforeunload', warnOnUnload)
+const unlisten = () => window.removeEventListener('beforeunload', warnOnUnload)
+onMounted(listen)
+onActivated(listen)
+onDeactivated(unlisten)
+onBeforeUnmount(unlisten)
+
 const detailSlug = useDetailSlug()
 const loading    = ref(false)
 

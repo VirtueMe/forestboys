@@ -181,6 +181,28 @@ export function throwingSave(save: () => Promise<void>, error: Ref<string | null
   }
 }
 
+/** «A», «A og B», «A, B og C». */
+function joinLabels(labels: string[]): string {
+  if (labels.length <= 1) return labels.join('')
+  return `${labels.slice(0, -1).join(', ')} og ${labels[labels.length - 1]}`
+}
+
+/** What the page asks before it is left with unsaved sections. */
+export function leaveMessage(labels: string[]): string {
+  return `Du har ulagrede endringer i ${joinLabels(labels)}. Forlate siden uten å lagre?`
+}
+
+/**
+ * May the page be left? Nothing unsaved: yes. Otherwise ask, naming the sections; on yes the
+ * changes are thrown away (the page may be kept alive and would show them again).
+ */
+export function mayLeave(registry: SaveRegistry, ask: (message: string) => boolean = m => window.confirm(m)): boolean {
+  if (!registry.dirtyCount.value) return true
+  if (!ask(leaveMessage(registry.dirtyLabels.value))) return false
+  registry.revertAll()
+  return true
+}
+
 const SaveRegistryKey: InjectionKey<SaveRegistry> = Symbol('saveRegistry')
 
 /** The page calls this once; editors below it find the registry. */

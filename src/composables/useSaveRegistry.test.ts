@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
 import { ref } from 'vue'
-import { createSaveRegistry, throwingSave } from './useSaveRegistry'
+import { createSaveRegistry, leaveMessage, mayLeave, throwingSave } from './useSaveRegistry'
 import type { SaveSection } from './useSaveRegistry'
 
 function section(id: string, over: Partial<SaveSection> & { isDirty?: { value: boolean } } = {}) {
@@ -251,5 +251,40 @@ describe('throwingSave', () => {
   it('resolves when the editor left no error', async () => {
     const error = ref<string | null>(null)
     await expect(throwingSave(() => Promise.resolve(), error)()).resolves.toBeUndefined()
+  })
+})
+
+describe('leaving the page', () => {
+  it('names the sections in plain Norwegian', () => {
+    expect(leaveMessage(['Grunnleggende'])).toBe('Du har ulagrede endringer i Grunnleggende. Forlate siden uten å lagre?')
+    expect(leaveMessage(['Grunnleggende', 'Beskrivelse'])).toContain('i Grunnleggende og Beskrivelse.')
+    expect(leaveMessage(['A', 'B', 'C'])).toContain('i A, B og C.')
+  })
+
+  it('lets go without asking when nothing is unsaved', () => {
+    const r = createSaveRegistry()
+    r.register(section('a', { isDirty: ref(false) }).s)
+    const ask = vi.fn(() => false)
+    expect(mayLeave(r, ask)).toBe(true)
+    expect(ask).not.toHaveBeenCalled()
+  })
+
+  it('asks with the dirty sections, and stays when the answer is no', () => {
+    const r = createSaveRegistry()
+    const a = section('a'); const b = section('b', { isDirty: ref(false) }); const c = section('c')
+    r.register(a.s); r.register(b.s); r.register(c.s)
+    const ask = vi.fn(() => false)
+    expect(mayLeave(r, ask)).toBe(false)
+    expect(ask).toHaveBeenCalledWith(leaveMessage(['a', 'c']))
+    expect(a.log).toEqual([])
+  })
+
+  it('throws the changes away when the answer is yes', () => {
+    const r = createSaveRegistry()
+    const a = section('a'); const c = section('c')
+    r.register(a.s); r.register(c.s)
+    expect(mayLeave(r, () => true)).toBe(true)
+    expect(a.log).toEqual(['revert:a'])
+    expect(c.log).toEqual(['revert:c'])
   })
 })
