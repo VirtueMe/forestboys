@@ -364,7 +364,39 @@ without explicit label for accessibility.
 
 Destructive actions look like `primary` but use `danger` color naming in
 code; same hex. Always confirm destructive actions in a modal — the admin
-surface has no undo.
+surface has no undo (the save row's «Angre» only discards an unsaved draft).
+
+### Save row (`SaveRow.vue`)
+
+One row for every unsaved section of a page in edit mode (#427). The editors
+(description, relation lists, scalar fields, ranks, station names) report to it;
+none has its own save bar. Create mode (`/<kind>/new`) keeps its single save.
+
+- **Bar**: sticks to the bottom of the page's scroll container and takes its own
+  room there, so it never hides the end of the page. `paper-raised`, `1px solid rule`
+  above, `shadow.md`, plus the safe-area inset on phones. Not shown when nothing
+  is unsaved.
+- **Summary** (left, a button that opens the drop-up): chevron `▴` / `▾` in `muted`,
+  then the count («2 seksjoner har ulagrede endringer») in `body-ui` 500 weight,
+  `ink-soft`. At least 44px tall.
+- **«Lagre alt»** (right): the Primary button, 44px tall. Disabled while saving.
+  Hidden once everything is saved.
+- **Drop-up**: opens above the bar in the same sticky box, `paper-raised`, `rule`
+  above, `shadow.md`, at most half the viewport, scrolls inside. One item per section,
+  separated by `1px solid rule`: label (`body-ui` 500, `ink`), state (`label`, `ink-soft`),
+  actions on the right.
+- **States** per section: *Venter*, *Lagrer… N s* (timer), *Lagret*, *Kunne ikke lagres*.
+  Only the failed state uses colour: state text and the server's message below it in `danger`.
+  A saved section that is edited again is unsaved, not «Lagret».
+- **Actions** («Angre», «Prøv igjen») are text links, `label` in `ink-soft`, underlined
+  with `rule`; hover turns text and underline `faded-red`. Not buttons: a section has no
+  third button variant. «Angre» is the one undo in the admin surface, and it only
+  throws away the unsaved draft of one section.
+- After everything is saved the row says «Alt er lagret» for a moment, then empties and
+  closes. A failure keeps the drop-up open.
+- Leaving the page with unsaved sections asks first and names them.
+- One red accent: «Lagre alt», the link hover and the failure text are the only red.
+  No green for «Lagret».
 
 ### Timeline (`EventTimeline.vue`)
 
