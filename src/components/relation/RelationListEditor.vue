@@ -223,7 +223,7 @@
     </div>
   </section>
 
-  <footer v-if="dirty" class="edit-save-bar">
+  <footer v-if="dirty && !inRow" class="edit-save-bar">
     <span class="edit-save-prompt">
       {{ valid ? 'Ser det bra ut?' : validationEmpty }}
     </span>
@@ -237,7 +237,7 @@
     </button>
     <button type="button" class="edit-link-revert" :disabled="saving" @click="revert">Angre</button>
   </footer>
-  <div v-if="error" class="edit-save-error">{{ error }}</div>
+  <div v-if="error && !inRow" class="edit-save-error">{{ error }}</div>
 </template>
 
 <script setup lang="ts">
@@ -245,6 +245,7 @@
 /* eslint-disable vue/no-mutating-props */
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, shallowRef, useId, useTemplateRef, watch, toRef } from 'vue'
 import SectionsEditor, { type Section } from '@/components/SectionsEditor.vue'
+import { useSaveSection, throwingSave } from '@/composables/useSaveRegistry.ts'
 import SourceRefsEditor from '@/components/SourceRefsEditor.vue'
 import type { RelationEntry, RelationStrategy, RelationTarget } from './RelationStrategy.ts'
 import { useRoles, useRoleOptions } from '@/composables/useRoles.ts'
@@ -581,6 +582,20 @@ function revert() {
   expandedIndex.value = null
   error.value = null
 }
+
+// On a detail page the save row owns the save (#427); without a registry the editor keeps its own bar.
+// A row with no target cannot be saved: the row reports it as a failure instead of «Lagret».
+const saveInRow = throwingSave(save, error)
+const inRow = useSaveSection({
+  id:     listId,
+  get label() { return props.label },
+  dirty,
+  save:   async () => {
+    if (!valid.value) throw new Error(props.validationEmpty)
+    await saveInRow()
+  },
+  revert,
+})
 </script>
 
 <style scoped>
