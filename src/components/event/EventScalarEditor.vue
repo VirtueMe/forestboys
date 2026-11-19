@@ -433,6 +433,7 @@ const inRow = useSaveSection({
   id:     'scalar',
   get label() { return kindLabel.value },
   dirty,
+  signature: () => JSON.stringify(draft.value),
   save:   throwingSave(save, error),
   revert,
 })
