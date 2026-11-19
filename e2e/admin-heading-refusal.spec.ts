@@ -29,7 +29,8 @@ test.describe('the heading check on save, in the edit mode of a page', () => {
   const blockStyles = (page: Page, count: number) => editor(page).locator('> *').evaluateAll(
     (els, n) => els.slice(0, n).map(e => e.querySelector('h3, h4, h5, h6')?.tagName ?? 'P'), count,
   )
-  const lagre = (page: Page) => page.getByRole('button', { name: 'Lagre' })
+  // The save row's button (#427); the row's own summary also says «ulagrede», so a bare «Lagre» would match two.
+  const lagre = (page: Page) => page.getByRole('button', { name: 'Lagre alt' })
   const issues = (page: Page) => page.locator('.edit-link-issues-list li')
 
   /** Give the block that contains `text` the level, from the ▾ menu (H4 to H6) as the author does. */
@@ -58,7 +59,7 @@ test.describe('the heading check on save, in the edit mode of a page', () => {
     await setLevel(page, FIRST, 'H5')
     await lagre(page).click()
 
-    await expect(page.locator('.edit-save-error')).toContainText('Noen overskrifter følger ikke strukturen')
+    await expect(page.locator('.save-item-error')).toContainText('Noen overskrifter følger ikke strukturen')   // the row reports the refusal as a failed save
     await expect(issues(page)).toHaveCount(1)
     await expect(issues(page).first()).toContainText('er H5, men kan være høyst H3 her')
     await expect(page.getByRole('button', { name: 'Bruk H3' })).toBeVisible()
