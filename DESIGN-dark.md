@@ -147,6 +147,14 @@ ratios are quoted here: the check is the source. In dark, `muted` and `faded-red
 their first values (`#807867`, `#C8604E`) so the captions, the red text and the primary button
 (`paper` text on `faded-red`) clear AA on all three dark surfaces (#134).
 
+## Save row
+
+The save row (`DESIGN.md`, «Save row») is identical in dark: `paper-raised` bar, `rule`
+above, the Primary button for «Lagre alt», `danger` for failures. Its text pairs are
+already covered by the declared pairs (`secondary-raised`, `caption-raised`,
+`accent-text-raised`, `button-primary`). Its shadow follows the higher-alpha rule below,
+since it is the one surface that floats over content.
+
 ## Shadow adjustment
 
 Dark surfaces swallow black shadows. Dark-mode shadows are **higher alpha**
