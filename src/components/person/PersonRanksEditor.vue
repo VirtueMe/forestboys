@@ -16,14 +16,14 @@
     </p>
   </section>
 
-  <footer v-if="dirty" class="edit-save-bar">
+  <footer v-if="dirty && !inRow" class="edit-save-bar">
     <span class="edit-save-prompt">Ser det bra ut?</span>
     <button type="button" class="edit-btn-primary" :disabled="saving" @click="save">
       {{ saving ? 'Lagrer…' : 'Lagre' }}
     </button>
     <button type="button" class="edit-link-revert" :disabled="saving" @click="revert">Angre</button>
   </footer>
-  <div v-if="error" class="edit-save-error">{{ error }}</div>
+  <div v-if="error && !inRow" class="edit-save-error">{{ error }}</div>
 
   <PersonRankHistoryEditor :slug="slug" :entries="history" :targets="historyTargets" />
 </template>
@@ -46,6 +46,7 @@ import { latestOpen } from '@/components/relation/rankStrategies.ts'
 import type { RelationEntry, RelationTarget } from '@/components/relation/RelationStrategy.ts'
 import type { KnownRank, RankOption } from './types.ts'
 import { authFetch } from '@/composables/useAuth.ts'
+import { useSaveSection, throwingSave } from '@/composables/useSaveRegistry.ts'
 
 const props = defineProps<{
   slug:    string
@@ -100,6 +101,20 @@ async function save() {
     saving.value = false
   }
 }
+
+// On a detail page the save row owns the save (#427); without a registry the editor keeps its own bar.
+const saveInRow = throwingSave(save, error)
+const inRow = useSaveSection({
+  id:        'rank',
+  label:     'Grad',
+  dirty,
+  signature: () => draftSlug.value ?? '',
+  save:      async () => {
+    if (!props.options.some(o => o.slug === draftSlug.value)) throw new Error('Velg grad før du lagrer.')
+    await saveInRow()
+  },
+  revert,
+})
 </script>
 
 <style scoped>

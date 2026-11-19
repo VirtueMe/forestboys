@@ -70,14 +70,14 @@
     <button type="button" class="names-add" @click="add">+ Legg til navn</button>
   </section>
 
-  <footer v-if="dirty" class="edit-save-bar">
+  <footer v-if="dirty && !inRow" class="edit-save-bar">
     <span class="edit-save-prompt">Ser det bra ut?</span>
     <button type="button" class="edit-btn-primary" :disabled="saving || !canSave" @click="save">
       {{ saving ? 'Lagrer…' : 'Lagre' }}
     </button>
     <button type="button" class="edit-link-revert" :disabled="saving" @click="revert">Angre</button>
   </footer>
-  <div v-if="error" class="edit-save-error">{{ error }}</div>
+  <div v-if="error && !inRow" class="edit-save-error">{{ error }}</div>
 </template>
 
 <script setup lang="ts">
@@ -91,6 +91,7 @@
 import { ref, computed, watch } from 'vue'
 import SourceRefsEditor from '@/components/SourceRefsEditor.vue'
 import { authFetch } from '@/composables/useAuth.ts'
+import { useSaveSection, throwingSave } from '@/composables/useSaveRegistry.ts'
 import type { StationName, StationNameType } from '@/composables/useStationData.ts'
 
 const props = defineProps<{
@@ -239,6 +240,22 @@ async function save() {
     saving.value = false
   }
 }
+
+// On a detail page the save row owns the save (#427); without a registry the editor keeps its own bar.
+// A row with a problem cannot be saved: the row reports the first one as a failure instead of «Lagret».
+const saveInRow = throwingSave(save, error)
+const inRow = useSaveSection({
+  id:        'names',
+  label:     'Andre navn',
+  dirty,
+  signature: () => signature(draft.value),
+  save:      async () => {
+    const problem = draft.value.map(rowError).find(m => m !== null)
+    if (problem) throw new Error(problem)
+    await saveInRow()
+  },
+  revert,
+})
 
 defineExpose({
   get dirty(): boolean { return dirty.value },
