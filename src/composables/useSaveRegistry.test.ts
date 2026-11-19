@@ -193,6 +193,28 @@ describe('revert', () => {
   })
 })
 
+describe('flush', () => {
+  it('lets an editor report late typing before «Lagre alt» decides what to save', async () => {
+    const r = createSaveRegistry()
+    const a = section('a')
+    const typed = section('typed', { isDirty: ref(false), flush: () => { typedDirty.value = true } })
+    const typedDirty = typed.isDirty
+    r.register(a.s); r.register(typed.s)
+    expect(r.dirtyCount.value).toBe(1)
+    await r.saveAll()
+    expect(typed.log).toEqual(['save:typed'])
+  })
+
+  it('also before the question about leaving the page', () => {
+    const r = createSaveRegistry()
+    const typed = section('typed', { isDirty: ref(false), flush: () => { typed.isDirty.value = true } })
+    r.register(typed.s)
+    const ask = vi.fn(() => false)
+    expect(mayLeave(r, ask)).toBe(false)
+    expect(ask).toHaveBeenCalledWith(leaveMessage(['typed']))
+  })
+})
+
 describe('a failure the user has fixed', () => {
   it('goes back to unsaved when the content changes', async () => {
     const r = createSaveRegistry()

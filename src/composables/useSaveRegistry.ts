@@ -35,6 +35,11 @@ export interface SaveSection {
    * Without it a failure stays until the next save or «Angre».
    */
   signature?: () => string
+  /**
+   * Pick up what is on the screen. An editor reports typing a moment late; `dirty()` is only right after this.
+   * Called before the registry decides what to save, or whether the page can be left.
+   */
+  flush?: () => void
 }
 
 /** What an editor passes in: `dirty` may be a ref or a getter. */
@@ -131,13 +136,20 @@ export function createSaveRegistry(now: () => number = Date.now) {
     return running
   }
 
+  /** Let every editor report what is on the screen, so `dirty()` is up to date. */
+  function flushAll(): void {
+    for (const s of sections.value) s.flush?.()
+  }
+
   /** «Lagre alt»: every dirty section, in registration order. A failure does not stop the rest. */
   function saveAll(): Promise<void> {
+    flushAll()
     return start(dirtySections.value)
   }
 
   /** Retry, or save, one section on its own. */
   function saveOne(id: string): Promise<void> {
+    flushAll()
     const s = sections.value.find(x => x.id === id)
     return s ? start([s]) : Promise.resolve()
   }
@@ -164,7 +176,7 @@ export function createSaveRegistry(now: () => number = Date.now) {
 
   return {
     sections, listed, dirtySections, dirtyCount, dirtyLabels, failedCount, saving,
-    statusOf, register, saveAll, saveOne, revert, revertAll, dismissDone,
+    statusOf, register, flushAll, saveAll, saveOne, revert, revertAll, dismissDone,
   }
 }
 
@@ -197,6 +209,7 @@ export function leaveMessage(labels: string[]): string {
  * changes are thrown away (the page may be kept alive and would show them again).
  */
 export function mayLeave(registry: SaveRegistry, ask: (message: string) => boolean = m => window.confirm(m)): boolean {
+  registry.flushAll()
   if (!registry.dirtyCount.value) return true
   if (!ask(leaveMessage(registry.dirtyLabels.value))) return false
   registry.revertAll()
@@ -232,6 +245,7 @@ export function useSaveSection(input: SaveSectionInput): boolean {
     save: input.save,
     revert: input.revert,
     signature: input.signature,
+    flush: input.flush,
   })
   onScopeDispose(stop)
   return true

@@ -279,6 +279,7 @@ const inRow = useSaveSection({
   get label() { return props.label },
   dirty:  () => !props.hideSave && dirty.value,
   signature: () => signature(draft.value),
+  flush:  () => sectionsEditor.value?.flush(),
   save:   throwingSave(save, error),
   revert,
 })
