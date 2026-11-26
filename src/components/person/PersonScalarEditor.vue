@@ -380,6 +380,7 @@ defineExpose({ draft, dirty })
   overflow: hidden;
 }
 .type-seg-opt {
+  position: relative;   /* holds the hidden radio inside the page's scroller (#441) */
   display: inline-flex;
   align-items: center;
   padding: var(--space-sm) var(--space-md);

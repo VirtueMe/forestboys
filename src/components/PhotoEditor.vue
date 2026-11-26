@@ -472,6 +472,7 @@ watch(() => [props.kind, props.slug], () => { if (started) void load() })
 .move-steps { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-xs); }
 
 .photo-add {
+  position: relative;   /* holds the hidden input inside the page's scroller (#441) */
   display: inline-flex;
   align-items: center;
   min-height: 44px;
