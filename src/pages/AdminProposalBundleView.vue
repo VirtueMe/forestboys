@@ -3,7 +3,7 @@
     <header class="bundle-header">
       <h1 class="bundle-title">Forslag</h1>
     </header>
-    <BundleReviewPanel :bundle-id="bundleId" @deleted="leaveDeletedBundle(router, bundleId)" />
+    <BundleReviewPanel :bundle-id="bundleId" standalone @deleted="leaveDeletedBundle(router, bundleId)" />
   </section>
 </template>
 
