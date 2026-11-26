@@ -604,6 +604,7 @@ defineExpose({ draft, dirty })
 .blocker-force-btn:hover:not(:disabled) { background: var(--faded-red-soft); border-color: var(--faded-red-soft); }
 .blocker-force-btn:disabled { opacity: 0.5; cursor: not-allowed; }
 .type-seg-opt {
+  position: relative;   /* holds the hidden radio inside the page's scroller (#441) */
   display: inline-flex;
   align-items: center;
   padding: var(--space-sm) var(--space-md);
