@@ -18,6 +18,7 @@ An admin has the tabs *Forhåndsvisning / Rediger / Forslag*. **Rediger** holds:
 | Editor | Writes | Endpoint |
 | --- | --- | --- |
 | Bot («Be om forslag») | a request for a proposal bundle | `/api/proposals/*` |
+| `OutlineSlugEditor` | the address | `POST /api/admin/outline/:slug/rename-preview`, `…/rename` |
 | `DescriptionEditor` | the description sections | `PATCH /api/admin/outline/:slug/sections` |
 | `OutlinePeopleEditor` | the mentioned people | `PATCH /api/admin/outline/:slug/people` |
 
@@ -30,6 +31,19 @@ page) and opens `/outlines/<slug>?created=1`, which starts in **Rediger**: the n
 yet, so the preview would be empty. The text, the photos and the people are written there, with the
 editors above. The node has no `sanityId`, so the Sanity sync leaves it alone (`SANITY-SYNC.md`,
 *Outlines*).
+
+### Rename (#456)
+
+`OutlineSlugEditor` has its own button: «Endre adressen» asks `rename-preview` what would change, and confirming it
+posts `rename`. The page then loads again under the new slug, so unsaved changes in the other editors are lost (the
+question says so). The rename is `renameSlug` (`SCHEMA.md`, *SlugAlias*): the old address leads on, links in
+descriptions are rewritten, and what the outline produced follows (`originOutline`).
+
+Both endpoints answer 409 while a bot job is pending for the outline, or a bundle made from it or changing it has
+something left to decide (`functions/_lib/outline-rename.ts`): those name the outline by slug. An archived bundle made
+before a rename still names the old slug; accepting it after a restore would not mark the outline as absorbed.
+
+The outline sync matches on `sanityId` and never changes a slug, so a rename here stays.
 
 ### People (#389)
 

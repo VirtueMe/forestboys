@@ -2,7 +2,8 @@
  * Renaming a page's slug (#96): one helper for every place that does it.
  *
  * In one transaction it sets the new slug, keeps the old one as a `SlugAlias` (functions/_lib/slug-alias.ts), makes the
- * entity's own description ids follow the slug (`desc:<kind>:<slug>:<order>`), and rewrites the links in descriptions
+ * entity's own description ids follow the slug (`desc:<kind>:<slug>:<order>`), moves an outline's `originOutline`
+ * stamps, and rewrites the links in descriptions
  * that pointed at the old slug (src/utils/linkCheck.ts). `planRename` reads and says what would change, without
  * writing: the editor shows it before the rename is confirmed.
  *
@@ -98,9 +99,15 @@ export async function renameSlug(env: Neo4jEnv, req: RenameRequest, at = new Dat
       statement: `MATCH (d:Description) WHERE elementId(d) = $eid AND d.content = $before SET d.content = $after RETURN count(d) AS n`,
       parameters: { eid: r.eid, before: r.before, after: r.after },
     })),
+    // What accepted bundles made from an outline names it by slug (`originOutline`, readProduced): it follows.
+    // After the rewrites, whose results are read by position.
+    ...(label === 'Outline' ? [
+      { statement: `MATCH (n) WHERE n.originOutline = $from SET n.originOutline = $to`, parameters: { from, to } },
+      { statement: `MATCH ()-[r]->() WHERE r.originOutline = $from SET r.originOutline = $to`, parameters: { from, to } },
+    ] : []),
   ]
   const out = await runCypherTx(env, stmts)
-  const done = out.slice(3).map((rows, i) => (Number(rows[0]?.n ?? 0) === 1 ? plan.rewrites[i] : null))
+  const done = out.slice(3, 3 + plan.rewrites.length).map((rows, i) => (Number(rows[0]?.n ?? 0) === 1 ? plan.rewrites[i] : null))
   const applied = done.filter((r): r is RenamePlan['rewrites'][number] => r !== null)
   return { ok: true, label, from, to, descriptions: applied.length, links: applied.reduce((n, r) => n + r.links, 0), skipped: plan.rewrites.length - applied.length }
 }

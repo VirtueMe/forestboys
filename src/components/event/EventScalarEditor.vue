@@ -71,47 +71,25 @@
 
     <div class="edit-row">
       <label class="edit-label" for="edit-event-slug">Slug</label>
-      <div class="slug-stack">
-        <div class="slug-field">
-          <input
-            id="edit-event-slug"
-            v-model="draft.slug"
-            class="edit-input"
-            :class="{ locked: !slugEditable, [`slug-${slugState}`]: true }"
-            :readonly="!slugEditable"
-            type="text"
-            placeholder="kebab-case"
-          />
-          <button
-            type="button"
-            class="slug-toggle"
-            :aria-label="slugEditable ? 'Lås slug' : 'Rediger slug'"
-            @click="toggleSlugEdit"
-          >
-            {{ slugEditable ? '✓' : '✎' }}
-          </button>
-        </div>
-        <span v-if="slugTaken" class="slug-hint">{{ slugTakenByAlias ? 'Slug er et gammelt navn på en annen side.' : 'Slug finnes allerede for en hendelse eller operasjon.' }}</span>
-      </div>
+      <SlugField
+        id="edit-event-slug"
+        ref="slugField"
+        v-model="draft.slug"
+        :saved="baseline.slug"
+        route="/events/"
+        :labels="['Incident', 'Operation']"
+        taken-message="Slug finnes allerede for en hendelse eller operasjon."
+      />
     </div>
 
-    <AppModal v-model="renameOpen" title="Endre adressen?">
-      <div v-if="renamePlan" class="blocker-modal-body">
-        <p class="blocker-intro">
-          Adressen endres fra
-          <code class="rename-path">/events/{{ renamePlan.from }}</code> til
-          <code class="rename-path">/events/{{ renamePlan.to }}</code>.
-          {{ renamePlan.restoresAlias ? 'Dette var tidligere adressen til siden; henvisningen fra den gamle fjernes.' : 'Den gamle adressen sender leseren videre til den nye.' }}
-        </p>
-        <p class="rename-links">{{ linksSummary(renamePlan) }}</p>
-        <footer class="blocker-actions">
-          <button type="button" class="blocker-cancel" @click="renameOpen = false">Avbryt</button>
-          <button type="button" class="edit-btn-primary" :disabled="saving" @click="confirmRename">
-            Endre adressen og lagre
-          </button>
-        </footer>
-      </div>
-    </AppModal>
+    <RenameConfirm
+      v-model="renameOpen"
+      :plan="renamePlan"
+      route="/events/"
+      confirm-label="Endre adressen og lagre"
+      :busy="saving"
+      @confirm="confirmRename"
+    />
 
     <div class="edit-row">
       <label class="edit-label" for="edit-event-date">Dato</label>
@@ -150,9 +128,9 @@ import { RouterLink } from 'vue-router'
 import AppModal from '@/components/AppModal.vue'
 import { authFetch } from '@/composables/useAuth.ts'
 import { useSaveSection, throwingSave } from '@/composables/useSaveRegistry.ts'
-import { neo4jQuery } from '@/composables/useNeo4j.ts'
-import { slugify, SLUG_RE } from '@/utils/slug.ts'
-import { linksSummary, type RenamePreview } from '@/utils/renameSummary.ts'
+import SlugField from '@/components/SlugField.vue'
+import RenameConfirm from '@/components/RenameConfirm.vue'
+import type { RenamePreview } from '@/utils/renameSummary.ts'
 import type { EventKind, EventNode } from '@/composables/useEventData.ts'
 
 export interface DemoteBlockers {
@@ -198,60 +176,7 @@ const renameOpen   = ref(false)
 const renamePlan   = ref<RenamePreview | null>(null)
 let renameConfirmed = false
 
-const slugEditable = ref(false)
-const slugTaken    = ref(false)
-const slugTakenByAlias = ref(false)
-const slugChecking = ref(false)
-let slugCheckTimer: ReturnType<typeof setTimeout> | null = null
-
-watch(() => draft.value.slug, (s) => {
-  // Reset taken flag whenever the input changes; only the latest value
-  // matters for save eligibility.
-  slugTaken.value    = false
-  slugTakenByAlias.value = false
-  slugChecking.value = false
-  if (slugCheckTimer) clearTimeout(slugCheckTimer)
-  if (s === baseline.value.slug) return       // unchanged — nothing to check
-  if (!SLUG_RE.test(s) || s === 'new') return
-  slugChecking.value = true
-  slugCheckTimer = setTimeout(async () => {
-    try {
-      // A live page, or the old address of another page (#96): either way the slug is taken.
-      const rows = await neo4jQuery<{ slug: string; alias: boolean }>(
-        `MATCH (n {slug: $slug}) WHERE n:Incident OR n:Operation RETURN n.slug AS slug, false AS alias LIMIT 1
-         UNION
-         MATCH (a:SlugAlias {route: '/events/', slug: $slug})-[:ALIAS_OF]->(t) WHERE t.slug <> $own
-         RETURN a.slug AS slug, true AS alias LIMIT 1`,
-        { slug: s, own: baseline.value.slug },
-      )
-      if (draft.value.slug === s) {
-        slugTaken.value        = rows.length > 0
-        slugTakenByAlias.value = rows.some(r => r.alias)
-      }
-    } catch { /* silent — server still validates on PATCH */ }
-    finally {
-      if (draft.value.slug === s) slugChecking.value = false
-    }
-  }, 250)
-})
-
-const slugState = computed<'neutral' | 'invalid' | 'valid'>(() => {
-  const s = draft.value.slug.trim()
-  if (!s || s === baseline.value.slug) return 'neutral'
-  if (!SLUG_RE.test(s) || s === 'new')  return 'invalid'
-  if (slugChecking.value) return 'neutral'
-  if (slugTaken.value)    return 'invalid'
-  return 'valid'
-})
-
-function toggleSlugEdit() {
-  if (!slugEditable.value) {
-    slugEditable.value = true
-  } else {
-    draft.value.slug = slugify(draft.value.slug)
-    slugEditable.value = false
-  }
-}
+const slugField = ref<InstanceType<typeof SlugField> | null>(null)
 
 const hasDemoteBlockers = computed(() =>
   props.demoteBlockers.orgs.length > 0 || props.demoteBlockers.units.length > 0,
@@ -274,8 +199,7 @@ function snapshot() {
   draft.value    = { ...snap }
   baseline.value = { ...snap }
   error.value    = null
-  slugEditable.value = false
-  slugTaken.value    = false
+  slugField.value?.lock()
 }
 watch(() => props.saved, snapshot, { immediate: true, deep: true })
 
@@ -289,8 +213,7 @@ const dirty = computed(() =>
 const canSave = computed(() => {
   if (!dirty.value) return false
   if (draft.value.slug !== baseline.value.slug) {
-    const s = draft.value.slug.trim()
-    if (!SLUG_RE.test(s) || s === 'new' || slugTaken.value) return false
+    if (!slugField.value?.usable) return false
   }
   return true
 })
@@ -362,7 +285,7 @@ async function askRename(slug: string): Promise<void> {
     })
     const out = await res.json().catch(() => ({})) as Partial<RenamePreview> & { error?: string }
     if (!res.ok) {
-      if (res.status === 409) { slugTaken.value = true; slugEditable.value = true }
+      if (res.status === 409) slugField.value?.refuse()
       error.value = out.error ?? `HTTP ${res.status}`
       return
     }
@@ -409,10 +332,7 @@ async function save() {
       })
       const out = await res.json().catch(() => ({})) as SaveResponse
       if (!res.ok) {
-        if (res.status === 409 && body.slug) {
-          slugTaken.value    = true
-          slugEditable.value = true
-        }
+        if (res.status === 409 && body.slug) slugField.value?.refuse()
         error.value = out.error ?? `HTTP ${res.status}`
         return
       }
@@ -486,28 +406,6 @@ defineExpose({ draft, dirty })
   border-color: var(--focus);
 }
 .edit-input-narrow { max-width: 160px; }
-.edit-input.locked { background: var(--paper-sunken); color: var(--muted); font-family: var(--font-mono); font-size: var(--size-mono); }
-.edit-input.slug-valid   { color: var(--moss);   border-color: var(--moss); }
-.edit-input.slug-invalid { color: var(--danger); border-color: var(--danger); }
-
-.slug-stack { display: flex; flex-direction: column; gap: var(--space-xs); }
-.slug-field { display: flex; gap: var(--space-xs); }
-.slug-toggle {
-  flex-shrink: 0;
-  width: 36px;
-  background: var(--paper);
-  border: 1px solid var(--rule);
-  border-radius: var(--radius-md);
-  font-size: var(--size-body-ui);
-  color: var(--ink-soft);
-  cursor: pointer;
-}
-.slug-toggle:hover { background: var(--paper-sunken); color: var(--faded-red); }
-.slug-hint {
-  font-family: var(--font-sans);
-  font-size: var(--size-label);
-  color: var(--danger);
-}
 
 .kind-stack { display: flex; flex-direction: column; gap: var(--space-sm); position: relative; }
 
@@ -541,8 +439,6 @@ defineExpose({ draft, dirty })
 .info-marker:hover,
 .info-marker.open { background: var(--faded-red-soft); }
 
-.rename-path { font-family: var(--font-mono); font-size: var(--size-mono); color: var(--ink); overflow-wrap: anywhere; }
-.rename-links { margin: 0; color: var(--ink); line-height: 1.5; }
 .blocker-modal-body {
   padding: var(--space-md);
   font-family: var(--font-sans);
