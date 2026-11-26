@@ -8,7 +8,7 @@
  * editors take them over. New editor writes target HAS_CONTENT only.
  *
  * Relations:
- *  - (:Person)-[:CREW_OF {role}]->(t)  — Mannskap, role from controlled vocab
+ *  - (:Person)-[:CREW_OF {role, startDate, endDate}]->(t)  — Mannskap, role from the `crew` roles
  *  - (e:Operation|Incident)-[:USED]->(t) — Hendelser
  *  - (t)-[:HAS_IMAGE]->(:Source)       — Galleri
  *  - (t)-[:REFERENCED_IN]->(:Source)   — Lenker
@@ -19,6 +19,8 @@ import type { SlideImage } from '@/components/ImageSlider.vue'
 import type { Section } from '@/components/SectionsEditor.vue'
 import { tidyText } from '@/utils/tidyText'
 import type { EventListItem } from '@/utils/eventList.ts'
+import { TransportCrewStrategy } from '@/components/relation/crewStrategies.ts'
+import type { RelationEntry } from '@/components/relation/RelationStrategy.ts'
 
 export interface TransportNode {
   name:        string
@@ -32,11 +34,6 @@ export interface TransportNode {
   links:       string | null
 }
 
-export interface TransportCrewMember {
-  slug: string
-  name: string
-  role: string | null
-}
 export type TransportEvent = EventListItem
 export interface TransportExternalRef {
   id: string; title: string | null; url: string;
@@ -85,7 +82,7 @@ function rowToSection(r: SectionRow): Section {
 export function useTransportData() {
   const transport     = ref<TransportNode | null>(null)
   const savedSections = ref<Section[]>([])
-  const crew          = ref<TransportCrewMember[]>([])
+  const crew          = ref<RelationEntry[]>([])
   const events        = ref<TransportEvent[]>([])
   const externalRefs  = ref<TransportExternalRef[]>([])
   const galleryImages = ref<SlideImage[]>([])
@@ -150,15 +147,8 @@ export function useTransportData() {
            ORDER BY \`order\``,
           { slug },
         ),
-        // Crew — pilots, dispatchers, etc; role comes from the
-        // controlled-vocab list per the project memory.
-        neo4jQuery<TransportCrewMember>(
-          `MATCH (p:Person)-[r:CREW_OF]->(:Transport {slug: $slug})
-           WHERE p.slug IS NOT NULL
-           RETURN p.slug AS slug, p.canonicalName AS name, r.role AS role
-           ORDER BY r.role, name`,
-          { slug },
-        ),
+        // Crew — one entry per stint, shared with the editor.
+        TransportCrewStrategy.fetchEntries(slug),
         neo4jQuery<TransportEvent>(
           `MATCH (e:Operation|Incident)-[:USED]->(:Transport {slug: $slug})
            WHERE e.slug IS NOT NULL

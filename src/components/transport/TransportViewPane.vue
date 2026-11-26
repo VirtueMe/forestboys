@@ -28,15 +28,16 @@
       </div>
     </details>
 
-    <details v-if="crew.length" class="section" open>
+    <details v-if="!hideEditable && crew.length" class="section" open>
       <summary class="section-summary">
         <h2 class="section-heading">Mannskap ({{ crew.length }})</h2>
       </summary>
       <div class="section-body">
         <div class="relation-list">
-          <div v-for="p in crew" :key="`${p.slug}-${p.role ?? ''}`" class="relation-row">
-            <RouterLink :to="`/person/${p.slug}`" class="person-name-link">{{ p.name }}</RouterLink>
-            <span v-if="p.role" class="relation-role"><RoleLabel :role-key="p.role" /></span>
+          <div v-for="c in crew" :key="c.edgeId ?? c.targetSlug" class="relation-row">
+            <RouterLink :to="`/person/${c.targetSlug}`" class="person-name-link">{{ c.targetName }}</RouterLink>
+            <span v-if="c.role" class="relation-role"><RoleLabel :role-key="c.role" /></span>
+            <span v-if="formatPeriod(c.startDate, c.endDate)" class="relation-period">{{ formatPeriod(c.startDate, c.endDate) }}</span>
           </div>
         </div>
       </div>
@@ -97,9 +98,7 @@
  * `description` (free text), `links` (JSON string). They render as
  * dedicated "arkiv" UI until migrated to HAS_CONTENT and REFERENCED_IN.
  *
- * Crew (CREW_OF) is read-only here; the editor for crew lives on the
- * Person side today (the role chips are already populated from the
- * controlled vocab in person migrations).
+ * Crew (CREW_OF) is edited in TransportEditPane; this lists it.
  */
 import { computed } from 'vue'
 import EventList from '@/components/EventList.vue'
@@ -108,14 +107,16 @@ import ImageSlider, { type SlideImage } from '@/components/ImageSlider.vue'
 import DescriptionPreview from '@/components/DescriptionPreview.vue'
 import LegacyDescription from '@/components/LegacyDescription.vue'
 import RoleLabel from '@/components/role/RoleLabel.vue'
+import type { RelationEntry } from '@/components/relation/RelationStrategy.ts'
+import { formatPeriod } from '@/utils/period.ts'
 import type { Section } from '@/components/SectionsEditor.vue'
-import type { TransportCrewMember, TransportEvent, TransportExternalRef } from '@/composables/useTransportData.ts'
+import type { TransportEvent, TransportExternalRef } from '@/composables/useTransportData.ts'
 
 const props = withDefaults(defineProps<{
   previewSections:   Section[]
   legacyDescription: string | null
   legacyLinksJson:   string | null
-  crew:              TransportCrewMember[]
+  crew:              RelationEntry[]
   events:            TransportEvent[]
   externalRefs:      TransportExternalRef[]
   galleryImages:     SlideImage[]
@@ -218,6 +219,8 @@ const totalLinkCount = computed(() => props.externalRefs.length + legacyLinks.va
   border: 1px solid var(--rule);
   border-radius: 3px;
 }
+
+.relation-period { font-size: 11px; color: var(--muted); font-variant-numeric: tabular-nums; }
 
 .ref-item {
   display: flex;

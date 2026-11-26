@@ -20,22 +20,39 @@
     />
 
     <PhotoEditor v-if="!createMode" kind="transport" :slug="slug" />
+
+    <RelationListEditor
+      v-if="!createMode"
+      :parent-slug="slug"
+      :entries="crewEntries"
+      :targets="crewTargets"
+      :strategy="TransportCrewStrategy"
+      label="Mannskap"
+      add-label="+ Legg til person"
+      empty-label="Ingen mannskap registrert"
+      search-placeholder="Søk person…"
+      picker-chip-aria="Bytt person"
+      validation-empty="Velg person på alle rader før du lagrer."
+      show-role
+      role-scope="crew"
+      :show-description="false"
+    />
   </div>
 </template>
 
 <script setup lang="ts">
 /**
  * TransportEditPane — admin "Rediger" pane for a Transport. Bundles
- * the scalar editor and the Beskrivelse description editor (HAS_CONTENT).
- *
- * No relation editors yet — Transport relations (CREW_OF, USED) are
- * managed from the other side (Person and Event detail pages). When
- * that changes, add them here as RelationListEditor instances.
+ * the scalar editor, the Beskrivelse description editor (HAS_CONTENT) and
+ * Mannskap (CREW_OF). USED is managed from the Event side.
  */
 import { useTemplateRef } from 'vue'
 import TransportScalarEditor, { type TransportDraft } from './TransportScalarEditor.vue'
 import DescriptionEditor from '@/components/DescriptionEditor.vue'
 import PhotoEditor from '@/components/PhotoEditor.vue'
+import RelationListEditor from '@/components/relation/RelationListEditor.vue'
+import { TransportCrewStrategy } from '@/components/relation/crewStrategies.ts'
+import type { RelationEntry, RelationTarget } from '@/components/relation/RelationStrategy.ts'
 import type { Section } from '@/components/SectionsEditor.vue'
 import type { TransportNode } from '@/composables/useTransportData.ts'
 import { authFetch } from '@/composables/useAuth.ts'
@@ -45,6 +62,9 @@ defineProps<{
   slug:           string
   transport:      TransportNode
   savedSections:  Section[]
+  /** CREW_OF edges into this transport — mutated in place on save. */
+  crewEntries:    RelationEntry[]
+  crewTargets:    RelationTarget[]
   createMode?:    boolean
   pendingDescription?: PendingDescription | null
 }>()

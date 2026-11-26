@@ -34,6 +34,8 @@
         :slug="transportSlug"
         :transport="transport"
         :saved-sections="savedSections"
+        :crew-entries="crew"
+        :crew-targets="crewTargets"
         :create-mode="isCreate"
         :pending-description="pendingDescription"
         @saved-scalar="onScalarSaved"
@@ -57,7 +59,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, useTemplateRef, inject } from 'vue'
+import { computed, ref, useTemplateRef, inject, watch } from 'vue'
 import { useTransportData, type TransportNode } from '../composables/useTransportData.ts'
 import { TransportDataKey } from '../composables/proposalDataInjection.ts'
 import { useDetailCreateMode } from '../composables/useDetailCreateMode.ts'
@@ -71,6 +73,8 @@ import TransportHeader   from '../components/transport/TransportHeader.vue'
 import TransportEditPane from '../components/transport/TransportEditPane.vue'
 import TransportViewPane from '../components/transport/TransportViewPane.vue'
 import type { TransportDraft } from '../components/transport/TransportScalarEditor.vue'
+import { TransportCrewStrategy } from '../components/relation/crewStrategies.ts'
+import type { RelationTarget } from '../components/relation/RelationStrategy.ts'
 
 const { user } = useAuth()
 const isAdminTransport = computed(() => user.value?.role === 'admin')
@@ -95,6 +99,13 @@ const {
   crew, events, externalRefs, galleryImages,
   loadTransport, resetTransport,
 } = inject(TransportDataKey, () => useTransportData(), true)
+
+// Person picker for the Mannskap editor — admins only, loaded once.
+const crewTargets = ref<RelationTarget[]>([])
+watch(isAdminTransport, async (admin) => {
+  if (!admin || crewTargets.value.length) return
+  try { crewTargets.value = await TransportCrewStrategy.fetchTargets() } catch { /* picker stays empty */ }
+}, { immediate: true })
 
 const editPane = useTemplateRef<{
   scalarDraft: TransportDraft | null
