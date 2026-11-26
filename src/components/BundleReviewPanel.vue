@@ -13,7 +13,11 @@
       <header class="manifest-head">
         <dl class="manifest-fields">
           <dt>Status</dt><dd><span class="bundle-status" :class="`bundle-status--${status}`">{{ bundleStatusLabel(status) }}</span> <span class="muted">{{ countsText }}</span></dd>
-          <dt>Bundle</dt><dd><code>{{ manifest.bundleId }}</code></dd>
+          <dt>Bundle</dt>
+          <dd>
+            <code>{{ manifest.bundleId }}</code>
+            <RouterLink v-if="!standalone" class="bundle-open" :to="`/admin/proposals/${encodeURIComponent(bundleId)}`">Åpne hele forslaget</RouterLink>
+          </dd>
           <template v-if="manifest.outlineId">
             <dt>Outline</dt><dd><code>{{ manifest.outlineId }}</code> (rev <code>{{ manifest.outlineRev?.slice(0, 8) }}</code>)</dd>
           </template>
@@ -233,6 +237,8 @@ const props = defineProps<{
   bundleId:     string
   olderBundle?: { bundleId: string; createdAt: string }
   newerBundle?: { bundleId: string; createdAt: string }
+  /** Set on the bundle's own page, which must not link to itself. */
+  standalone?:  boolean
 }>()
 const emit = defineEmits<{
   deleted:  []
@@ -490,6 +496,7 @@ async function onDeny(entityId: string) {
   color: var(--ink);
   font-variant-numeric: tabular-nums;
 }
+.bundle-open { display: block; color: var(--focus); }
 .summary {
   margin: 0;
   font-family: var(--font-serif);
