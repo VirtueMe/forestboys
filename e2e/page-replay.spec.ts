@@ -3,23 +3,25 @@ import { openRecordedEditMode, replayPage } from './helpers/replay.ts'
 import { PAGES } from './pages.ts'
 
 // The recorded pages render from their recordings alone (#139). If these fail, the design checks on the pages
-// are checking a page that did not render.
+// are checking a page that did not render. A Vue warning fails them too (#444).
 test.describe('the recorded pages', () => {
   for (const target of PAGES) {
-    test(`${target.kind} «${target.slug}» renders from its recording, with nothing missing`, async ({ page }) => {
+    test(`${target.kind} «${target.slug}» renders from its recording, with nothing missing and no Vue warnings`, async ({ page }) => {
       const replay = await replayPage(page, target)
       await page.goto(target.path)
       await expect(page.locator('h1').first()).toContainText(target.title)
       await page.waitForLoadState('networkidle')
       expect(replay.misses()).toEqual([])
+      expect(replay.warnings()).toEqual([])
     })
   }
 
   // Edit mode asks for more (the lists its pickers offer): the recording holds them too (#140).
   for (const target of PAGES.filter(t => t.edit !== false)) {
-    test(`${target.kind} «${target.slug}» renders in edit mode from its recording, with nothing missing`, async ({ page }) => {
+    test(`${target.kind} «${target.slug}» renders in edit mode from its recording, with nothing missing and no Vue warnings`, async ({ page }) => {
       const replay = await openRecordedEditMode(page, target)
       expect(replay.misses()).toEqual([])
+      expect(replay.warnings()).toEqual([])
     })
   }
 
