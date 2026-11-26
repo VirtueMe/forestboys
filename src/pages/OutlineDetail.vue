@@ -56,6 +56,7 @@
           </p>
           <p v-if="requestError" class="bot-error">{{ requestError }}</p>
         </section>
+        <OutlineSlugEditor :slug="item.slug" @renamed="onRenamed" />
         <DescriptionEditor
           :saved="savedSections"
           :endpoint="`/api/admin/outline/${item.slug}/sections`"
@@ -106,7 +107,9 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, watch, inject } from 'vue'
-import { RouterLink, useRoute } from 'vue-router'
+import { RouterLink, useRoute, useRouter } from 'vue-router'
+import { neo4jQuery } from '../composables/useNeo4j.ts'
+import { aliasRedirect } from '../utils/aliasRedirect.ts'
 import { useDetailSlug } from '@/composables/useDetailSlug.ts'
 import { useOutlineData } from '../composables/useOutlineData.ts'
 import { OutlineDataKey } from '../composables/proposalDataInjection.ts'
@@ -119,15 +122,18 @@ import PhotoEditor from '../components/PhotoEditor.vue'
 import BundleReviewPanel from '../components/BundleReviewPanel.vue'
 import ImageSlider from '../components/ImageSlider.vue'
 import PersonExternalRefs from '../components/person/PersonExternalRefs.vue'
+import OutlineSlugEditor from '../components/outline/OutlineSlugEditor.vue'
 import OutlinePeopleEditor from '../components/outline/OutlinePeopleEditor.vue'
 import { OutlineMentionsStrategy } from '../components/relation/strategies.ts'
 import type { RelationEntry, RelationTarget } from '../components/relation/RelationStrategy.ts'
 import type { Section } from '../components/SectionsEditor.vue'
 
 // A page just made in /outlines/new opens in edit mode: it has no text yet, so preview would show an empty page.
-const mode = ref<AdminViewMode>(useRoute().query.created ? 'edit' : 'preview')
+const route = useRoute()
+const mode = ref<AdminViewMode>(route.query.created ? 'edit' : 'preview')
 
 const detailSlug = useDetailSlug()
+const router = useRouter()
 const { user } = useAuth()
 const isAdmin = computed(() => user.value?.role === 'admin')
 
@@ -159,6 +165,8 @@ async function load(slug: string): Promise<void> {
   peopleEntries.value = []
   try {
     await loadOutline(slug)
+    // A slug that finds nothing may be the old address of an outline that was renamed (#96).
+    if (!item.value && await followAlias()) return
     if (isAdmin.value && item.value) {
       void loadOpenBundles(slug)
       void loadPeople(slug)
@@ -166,6 +174,15 @@ async function load(slug: string): Promise<void> {
   } finally {
     loading.value = false
   }
+}
+
+/** Go where an old address leads now; false when it is no old address. This page is not a `DetailPage`, which does this itself. */
+async function followAlias(): Promise<boolean> {
+  const path = route.path
+  const to = await aliasRedirect(path, neo4jQuery).catch(() => null)
+  if (!to || route.path !== path) return false
+  void router.replace({ path: to, query: route.query, hash: route.hash })
+  return true
 }
 
 async function loadPeople(slug: string): Promise<void> {
@@ -184,6 +201,11 @@ function onPeopleSaved(): void {
   mentions.value = peopleEntries.value
     .map(e => ({ slug: e.targetSlug, name: e.targetName }))
     .sort((a, b) => a.name.localeCompare(b.name, 'nb'))
+}
+
+/** The page's address has changed: go there, which loads it again under the new slug. */
+function onRenamed(slug: string): void {
+  void router.replace(`/outlines/${encodeURIComponent(slug)}`)
 }
 
 function onSectionsSaved(sections: Section[]): void {

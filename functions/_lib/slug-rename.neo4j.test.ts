@@ -173,6 +173,19 @@ describe.skipIf(!ENABLED)('slug rename, against the local Neo4j', () => {
     expect(href).toBe(`/events/${P}box-new`)
   })
 
+  it('renames an outline: what it produced follows, nodes and edges, and nothing from another outline (#456)', async () => {
+    await runCypher(env, `
+      CREATE (:Outline {slug: $o, canonicalName: 'Rapport'})-[:HAS_CONTENT]->(:Description {id: $d, order: 1, content: '[]'})
+      CREATE (a:Person {slug: $a, originOutline: $o})-[:MEMBER_OF {originOutline: $o}]->(u:Unit {slug: $u, originOutline: $other})`,
+      { o: `${P}rep`, other: `${P}rep-other`, d: `desc:Outline:${P}rep:1`, a: `${P}made`, u: `${P}unit` })
+    expect(await renameSlug(env, { label: 'Outline', from: `${P}rep`, to: `${P}report` }, AT)).toMatchObject({ ok: true, skipped: 0 })
+    expect(await count(`MATCH (p:Person {slug: $a, originOutline: $n}) RETURN count(p) AS n`, { a: `${P}made`, n: `${P}report` })).toBe(1)
+    expect(await count(`MATCH (:Person {slug: $a})-[r:MEMBER_OF {originOutline: $n}]->() RETURN count(r) AS n`, { a: `${P}made`, n: `${P}report` })).toBe(1)
+    expect(await count(`MATCH (u:Unit {slug: $u, originOutline: $o}) RETURN count(u) AS n`, { u: `${P}unit`, o: `${P}rep-other` })).toBe(1)
+    expect(await count(`MATCH (:Outline {slug: $n})-[:HAS_CONTENT]->(d:Description {id: $id}) RETURN count(d) AS n`, { n: `${P}report`, id: `desc:Outline:${P}report:1` })).toBe(1)
+    expect(await findAlias(env, '/outlines/', `${P}rep`)).toEqual({ label: 'Outline', slug: `${P}report` })
+  })
+
   it('refuses what cannot be renamed', async () => {
     expect(await renameSlug(env, { label: 'Operation', from: `${P}nothing`, to: `${P}x` })).toMatchObject({ status: 404 })
     expect(await renameSlug(env, { label: 'Operation', from: `${P}old`, to: 'Bad Slug' })).toMatchObject({ status: 400 })
