@@ -479,9 +479,9 @@ async function onDeny(entityId: string) {
 
 .manifest-fields {
   display: grid;
-  grid-template-columns: max-content 1fr;
+  grid-template-columns: max-content minmax(0, 1fr);
   gap: var(--space-xs) var(--space-md);
-  margin: 0 0 var(--space-md);
+  margin: 0;
   font-family: var(--font-sans);
   font-size: var(--size-label);
 }
@@ -495,6 +495,7 @@ async function onDeny(entityId: string) {
   margin: 0;
   color: var(--ink);
   font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;   /* a bundle id has no spaces to break at */
 }
 .bundle-open { display: block; color: var(--focus); }
 .summary {
@@ -504,8 +505,9 @@ async function onDeny(entityId: string) {
   color: var(--ink);
 }
 
-.manifest-head { display: flex; align-items: flex-start; gap: var(--space-md); }
-.manifest-head .manifest-fields { flex: 1; }
+/* The buttons go under the fields when the card has no room for both. */
+.manifest-head { display: flex; flex-wrap: wrap; align-items: flex-start; gap: var(--space-md); margin-bottom: var(--space-md); }
+.manifest-head .manifest-fields { flex: 1 1 20rem; min-width: 0; }
 .bundle-delete {
   font-family: var(--font-sans);
   font-size: var(--size-label);
@@ -638,6 +640,7 @@ async function onDeny(entityId: string) {
 
 .entity-actions {
   display: flex;
+  flex-wrap: wrap;
   gap: var(--space-sm);
 }
 

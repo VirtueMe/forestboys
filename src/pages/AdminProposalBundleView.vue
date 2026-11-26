@@ -19,7 +19,7 @@ const bundleId = String(route.params.bundleId)
 
 <style scoped>
 .bundle-page {
-  max-width: 900px;
+  max-width: min(900px, 100%);
   margin: 0 auto;
   padding: var(--space-md);
 }

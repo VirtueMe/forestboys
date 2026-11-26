@@ -50,6 +50,7 @@ const inProposalPreview = inject(ProposalPreviewKey, false)
   top: 0;
   z-index: 5;
   display: flex;
+  flex-wrap: wrap;
   gap: var(--space-xs);
   padding: var(--space-sm) var(--space-md);
   background: var(--paper-raised);
@@ -75,6 +76,12 @@ const inProposalPreview = inject(ProposalPreviewKey, false)
 .admin-tab.active {
   color: var(--ink);
   border-bottom-color: var(--faded-red);
+}
+
+/* Three tabs in one row on a phone: a wider row makes the whole pane scroll sideways. */
+@media (max-width: 600px) {
+  .admin-tabs { padding-inline: var(--space-sm); }
+  .admin-tab  { padding-inline: var(--space-xs); }
 }
 
 .tab-spinner {
