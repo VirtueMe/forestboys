@@ -1,5 +1,53 @@
 # Changelog
 
+## [0.23.0](https://github.com/VirtueMe/forestboys/compare/v0.22.0...v0.23.0) (2026-11-26)
+
+
+### Features
+
+* **admin:** link from an entity's proposal tab to its bundle ([f955e76](https://github.com/VirtueMe/forestboys/commit/f955e769744fd61866845a1af6516a1339ff6dad))
+* **admin:** rename an outline's slug in the editor ([0ffad83](https://github.com/VirtueMe/forestboys/commit/0ffad832f5e175d1ada78b4fd1649daa6054995d)), closes [#456](https://github.com/VirtueMe/forestboys/issues/456)
+* **editor:** Alt+↓ and Alt+↑ expand and compact relation lists ([b7bb28d](https://github.com/VirtueMe/forestboys/commit/b7bb28da15ad42665afc9bccbd5e8772645692e5)), closes [#436](https://github.com/VirtueMe/forestboys/issues/436)
+* **editor:** ask before leaving a page with unsaved sections ([b55820e](https://github.com/VirtueMe/forestboys/commit/b55820e0608f2588656add5a8dec9810c74a2870))
+* **editor:** one save row that the scalar editors report to ([b985250](https://github.com/VirtueMe/forestboys/commit/b9852508b6655889beeb8f03f672aa2299f5a3fe))
+* **editor:** rank and station-name editors report to the save row ([de0d3aa](https://github.com/VirtueMe/forestboys/commit/de0d3aadb0e507494b76b65edb88341f5e974cde))
+* **editor:** relation lists report to the save row ([52f691d](https://github.com/VirtueMe/forestboys/commit/52f691d5a735c6bf94e5ee45f8622b803258ff5c))
+* **editor:** the description editor reports to the save row ([01c0b58](https://github.com/VirtueMe/forestboys/commit/01c0b58791f1be1349e629a459ac64bf38e06342))
+* **events:** admins get a «+ Ny» button on the events page ([51b3221](https://github.com/VirtueMe/forestboys/commit/51b3221a39451bbb9c4ac299258bc9b19355e497)), closes [#432](https://github.com/VirtueMe/forestboys/issues/432)
+* **images:** copy the Sanity photos to our bucket ([033f631](https://github.com/VirtueMe/forestboys/commit/033f63148d9681a053f16d5ec6de9c2c593b9d81))
+* **images:** editors add, move, caption and remove photos on any entity ([137f40d](https://github.com/VirtueMe/forestboys/commit/137f40dbd72640421190faec5d4e4c1b7a13b833)), closes [#414](https://github.com/VirtueMe/forestboys/issues/414)
+* **images:** let scripts store photos through the door over S3 ([1b3ecba](https://github.com/VirtueMe/forestboys/commit/1b3ecbafc3527fd45d12ef81760a1e12ba5fc4a6))
+* **images:** the card image upload goes through the shared door ([e60da36](https://github.com/VirtueMe/forestboys/commit/e60da36173763e7021fb213e489e8235c234ab14)), closes [#410](https://github.com/VirtueMe/forestboys/issues/410) [#404](https://github.com/VirtueMe/forestboys/issues/404)
+* **images:** the copied-list manifest ([0b7ab96](https://github.com/VirtueMe/forestboys/commit/0b7ab9609101111d08c23d88777185b0200eb358))
+* **images:** the nightly sync copies new Sanity photos to our bucket ([0e00fe8](https://github.com/VirtueMe/forestboys/commit/0e00fe86624f2870d068fb1c07df318d3c1e12f1))
+* **images:** the storage door and the /images size rule ([40a362b](https://github.com/VirtueMe/forestboys/commit/40a362b7529d4955335c33f483cf0a1c039fd018))
+* **outlines:** admins create an outline from «+ Ny… → Informasjon» ([c0eda23](https://github.com/VirtueMe/forestboys/commit/c0eda239cb910331fa63bd72118dfe87b7ea860a)), closes [#433](https://github.com/VirtueMe/forestboys/issues/433)
+* **sync:** sync transport galleries from Sanity ([663342b](https://github.com/VirtueMe/forestboys/commit/663342bc1e50fffaead9ba28d1c2037d6e5c2b5d)), closes [#420](https://github.com/VirtueMe/forestboys/issues/420)
+* **transport:** edit crew with role and dates on the Transport page ([4a8369a](https://github.com/VirtueMe/forestboys/commit/4a8369a9f6a00a732f320f6cbd08f97d8e3e0076)), closes [#446](https://github.com/VirtueMe/forestboys/issues/446)
+
+
+### Bug fixes
+
+* **admin:** keep the proposal panel on screen on phones ([909a018](https://github.com/VirtueMe/forestboys/commit/909a018e7e6507f9a5cb35d311c79bccf1e4f90f))
+* **design:** one scrollbar on pages in edit mode ([d0153ea](https://github.com/VirtueMe/forestboys/commit/d0153eafcd62ef61b3055060b63bfbede2554dfb)), closes [#441](https://github.com/VirtueMe/forestboys/issues/441)
+* **editor:** «Lagre alt» picks up typing the editor has not reported yet ([ebee6b2](https://github.com/VirtueMe/forestboys/commit/ebee6b2b28dcfbc727f997d5ce299f704d98be04))
+* **editor:** a failed section is unsaved again once it is edited ([d7a8133](https://github.com/VirtueMe/forestboys/commit/d7a8133e8822f1c6906d0c4f6e79e26064fc347c))
+* **images:** compare PNG masters by stored pixels, and say why cjxl failed ([acad08e](https://github.com/VirtueMe/forestboys/commit/acad08ef8c3389e7e93ce0d748b07e6c0a327cb9))
+* **images:** read R2's weak etag as the strong one ([e25624e](https://github.com/VirtueMe/forestboys/commit/e25624ecdf8ff546157a5c5f428f70046aeb9316))
+* **images:** the sync recognises a Sanity photo after the backfill moved its url ([359f03b](https://github.com/VirtueMe/forestboys/commit/359f03bd45000d5b64a14554da2632fa21d87947))
+* **sync:** rewrite every event field from Sanity, so a graph edit cannot block the sync ([ddd43e1](https://github.com/VirtueMe/forestboys/commit/ddd43e1f5122d97b4e21cfc4b630b3b59af61ea5)), closes [#422](https://github.com/VirtueMe/forestboys/issues/422)
+* **transport:** import RoleLabel so crew roles render ([bb64d6c](https://github.com/VirtueMe/forestboys/commit/bb64d6c71356f68c9e9bf32cc912266247d3764f))
+
+
+### Refactoring
+
+* **images:** the browser reads photo urls only, Sanity's image config is gone ([8a39c52](https://github.com/VirtueMe/forestboys/commit/8a39c5234c4390fee1769be8d901daee3efd296a)), closes [#411](https://github.com/VirtueMe/forestboys/issues/411) [#406](https://github.com/VirtueMe/forestboys/issues/406)
+
+
+### Documentation
+
+* **design:** the save row ([5c65e6e](https://github.com/VirtueMe/forestboys/commit/5c65e6e8664245447ac9f5b9a6296e57c8a11cce))
+
 ## [0.22.0](https://github.com/VirtueMe/forestboys/compare/v0.21.1...v0.22.0) (2026-11-05)
 
 
