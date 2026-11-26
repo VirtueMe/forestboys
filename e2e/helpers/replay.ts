@@ -21,6 +21,8 @@ const PIXEL = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQ
 export interface Replay {
   /** What the page asked for that the recording does not have. Empty when the recording is whole. */
   misses(): string[]
+  /** What Vue warned about while the page ran (#444): an unresolved component renders nothing and throws nothing. */
+  warnings(): string[]
 }
 
 export interface ReplayOptions {
@@ -36,6 +38,8 @@ export async function replayPage(page: Page, target: PageTarget, options: Replay
   const recording = JSON.parse(readFileSync(join(ROOT, fixturePath(target)), 'utf8')) as PageRecording
   const queries = new Map(recording.queries.map(q => [requestKey(q.query, q.params), q]))
   const misses: string[] = []
+  const warnings: string[] = []
+  page.on('console', msg => { if (msg.text().startsWith('[Vue warn]')) warnings.push(msg.text()) })
 
   // Routes registered later win, so the general ones come first.
   await page.route('**/api/**', route => {
@@ -68,7 +72,7 @@ export async function replayPage(page: Page, target: PageTarget, options: Replay
   await page.route(/^https:\/\/(fonts\.googleapis\.com|fonts\.gstatic\.com|basemaps\.cartocdn\.com|tiles\.basemaps\.cartocdn\.com)\//, route => route.abort())
   await page.route(/^https:\/\/cdn\.sanity\.io\//, route => route.fulfill({ contentType: 'image/png', body: PIXEL }))
 
-  return { misses: () => misses }
+  return { misses: () => misses, warnings: () => warnings }
 }
 
 /** Wait until the page has finished drawing: the network is quiet and the amount of text on it is the same on two looks in a row. */
