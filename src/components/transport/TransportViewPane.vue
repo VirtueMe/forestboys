@@ -94,7 +94,6 @@
  * TransportViewPane — read-only sections of a Transport page.
  *
  * Three legacy data shapes from the Sanity import remain on the node:
-import RoleLabel from '@/components/role/RoleLabel.vue'
  * `description` (free text), `links` (JSON string). They render as
  * dedicated "arkiv" UI until migrated to HAS_CONTENT and REFERENCED_IN.
  *
@@ -108,6 +107,7 @@ import { RouterLink } from 'vue-router'
 import ImageSlider, { type SlideImage } from '@/components/ImageSlider.vue'
 import DescriptionPreview from '@/components/DescriptionPreview.vue'
 import LegacyDescription from '@/components/LegacyDescription.vue'
+import RoleLabel from '@/components/role/RoleLabel.vue'
 import type { Section } from '@/components/SectionsEditor.vue'
 import type { TransportCrewMember, TransportEvent, TransportExternalRef } from '@/composables/useTransportData.ts'
 
