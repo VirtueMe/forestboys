@@ -1,0 +1,6 @@
+# Gitignored files every worktree needs; linked, so the main checkout stays the one copy.
+## links
+# link: .env
+# link: .env.production
+# link: .dev.vars
+# link: .husky/_
