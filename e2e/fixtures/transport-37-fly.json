@@ -16,11 +16,379 @@
    ]
   },
   {
-   "query": "MATCH (p:Person)-[r:CREW_OF]->(:Transport {slug: $slug})\n           WHERE p.slug IS NOT NULL\n           RETURN p.slug AS slug, p.canonicalName AS name, r.role AS role\n           ORDER BY r.role, name",
+   "query": "\n      MATCH (p:Person)\n      RETURN p.slug AS slug,\n             p.canonicalName + CASE WHEN p.birthYear IS NOT NULL THEN ' (' + toString(p.birthYear) + ')' ELSE '' END AS name\n      ORDER BY p.canonicalName\n    ",
+   "params": {},
+   "rows": [
+    {
+     "slug": "1-mekanikar-2-piloter-en-uk-officer-en-britisk-soldat-en-britisk-predikant-og-en-tysk-jode",
+     "name": "1 mekanikar ,2 piloter, en UK Officer, en britisk soldat, en britisk predikant og en tysk Jøde."
+    },
+    {
+     "slug": "1-britiske-soldater",
+     "name": "1 nordmann og 11 britiske soldater"
+    },
+    {
+     "slug": "1-officer-lorentzen",
+     "name": "1. Officer Lorentzen"
+    },
+    {
+     "slug": "1-officer-thomassen",
+     "name": "1. Officer Thomassen"
+    },
+    {
+     "slug": "1-officer-abney",
+     "name": "1.Officer Abney"
+    },
+    {
+     "slug": "10-flyktniner-fra-djupevag-og-3-juletraer",
+     "name": "10 Flyktniner fra Djupevåg og 3 juletrær"
+    },
+    {
+     "slug": "10-norwegian-marine-special-force",
+     "name": "10 Norwegian Marine Special Force"
+    },
+    {
+     "slug": "11-flyktingar-sjøblomsten",
+     "name": "11 flyktingar med MK Sjøblomsten fra Bremanger"
+    },
+    {
+     "slug": "11-flyktningar-mk-skjaergard",
+     "name": "11 flyktningar MK Skjærgard"
+    },
+    {
+     "slug": "11-flyktninger",
+     "name": "11 flyktninger"
+    },
+    {
+     "slug": "11-mann-motig-i",
+     "name": "11 mann MK Motig I"
+    },
+    {
+     "slug": "11-omkomne-war-bride",
+     "name": "11 omkomne \"WAR BRIDE\""
+    },
+    {
+     "slug": "12-flyktningar-med-mk-nor",
+     "name": "12 flyktningar med MK NOR"
+    },
+    {
+     "slug": "12-flyktninger-mk-signal-m-331-a",
+     "name": "12 flyktninger MK SIGNAL M-331-A"
+    },
+    {
+     "slug": "12-flyktninger-med-mk-bofjord",
+     "name": "12 flyktninger med MK Bøfjord"
+    },
+    {
+     "slug": "12-flyktninger-med-mk-traust-stjernen",
+     "name": "12 flyktninger med MK Traust/Stjernen"
+    },
+    {
+     "slug": "13-flyktninger-mk-glinmt",
+     "name": "13 Flyktninger MK GLINMT"
+    },
+    {
+     "slug": "13-flyktninger",
+     "name": "13 Flyktninger"
+    },
+    {
+     "slug": "13-flyktninger-ms-myrland",
+     "name": "13 flyktninger MS MYRLAND"
+    },
+    {
+     "slug": "14-flyktinger-fedje",
+     "name": "14 flyktinger Fedje"
+    },
+    {
+     "slug": "16-totalt-dro-over",
+     "name": "16 totalt dro over"
+    },
+    {
+     "slug": "17-personar-mk-norseman",
+     "name": "17 personar MK Norseman 8/11-41"
+    },
+    {
+     "slug": "19-flyktinger-tananger-til-aberdeen",
+     "name": "19 flyktinger MK Sjøleik"
+    },
+    {
+     "slug": "19-flyktninger-ms-arnafjord",
+     "name": "19 flyktninger MS Arnafjord"
+    },
+    {
+     "slug": "19-flyktninger-fra-hernar",
+     "name": "19 flyktninger fra Hernar"
+    },
+    {
+     "slug": "37-flyktninger-fra-bremnes",
+     "name": "37 flyktninger fra Bremnes"
+    }
+   ],
+   "truncatedFrom": 4217
+  },
+  {
+   "query": "\n      MATCH (p:Person)-[r:CREW_OF]->(:Transport {slug: $slug})\n      WHERE p.slug IS NOT NULL\n      RETURN coalesce(r.id, elementId(r)) AS edgeId, p.slug AS targetSlug, p.canonicalName AS targetName,\n             r.role AS role, r.startDate AS startDate, r.endDate AS endDate\n      ORDER BY role, startDate, targetName\n    ",
    "params": {
     "slug": "37-fly"
    },
    "rows": []
+  },
+  {
+   "query": "\n    MATCH (r:Role)\n    OPTIONAL MATCH (r)-[:HAS_CONTENT]->(d:Description)\n    OPTIONAL MATCH (d)-[:CITES|SOURCED_FROM]->(s:Source)\n    WITH r, d, collect(DISTINCT s.id) AS ids\n    ORDER BY coalesce(d.order, 1)\n    WITH r, [x IN collect(d.content) WHERE x IS NOT NULL] AS sections,\n         reduce(acc = [], l IN collect(ids) | acc + l) AS allIds\n    RETURN r.key AS key, r.name AS name, r.scopes AS scopes, r.attended AS attended, sections,\n           reduce(acc = [], i IN allIds | CASE WHEN i IN acc THEN acc ELSE acc + i END) AS sourceIds\n  ",
+   "params": {},
+   "rows": [
+    {
+     "key": "administrative",
+     "name": "administrativt",
+     "scopes": [
+      "part-of"
+     ],
+     "attended": false,
+     "sections": [],
+     "sourceIds": []
+    },
+    {
+     "key": "air-gunner",
+     "name": "skytter",
+     "scopes": [
+      "crew"
+     ],
+     "attended": false,
+     "sections": [],
+     "sourceIds": []
+    },
+    {
+     "key": "bomb-aimer",
+     "name": "bombesikter",
+     "scopes": [
+      "crew"
+     ],
+     "attended": false,
+     "sections": [],
+     "sourceIds": []
+    },
+    {
+     "key": "co-pilot",
+     "name": "andrepilot",
+     "scopes": [
+      "crew"
+     ],
+     "attended": false,
+     "sections": [],
+     "sourceIds": []
+    },
+    {
+     "key": "courier",
+     "name": "kurér",
+     "scopes": [
+      "membership"
+     ],
+     "attended": false,
+     "sections": [],
+     "sourceIds": []
+    },
+    {
+     "key": "dispatcher",
+     "name": "dispatcher",
+     "scopes": [
+      "crew"
+     ],
+     "attended": false,
+     "sections": [],
+     "sourceIds": []
+    },
+    {
+     "key": "flight-engineer",
+     "name": "flymekaniker",
+     "scopes": [
+      "crew"
+     ],
+     "attended": false,
+     "sections": [],
+     "sourceIds": []
+    },
+    {
+     "key": "hiding",
+     "name": "i skjul",
+     "scopes": [
+      "stationed"
+     ],
+     "attended": false,
+     "sections": [],
+     "sourceIds": []
+    },
+    {
+     "key": "host",
+     "name": "vert",
+     "scopes": [
+      "membership"
+     ],
+     "attended": false,
+     "sections": [],
+     "sourceIds": []
+    },
+    {
+     "key": "imprisoned",
+     "name": "fange",
+     "scopes": [
+      "stationed"
+     ],
+     "attended": false,
+     "sections": [],
+     "sourceIds": []
+    },
+    {
+     "key": "informant",
+     "name": "informant",
+     "scopes": [
+      "membership"
+     ],
+     "attended": false,
+     "sections": [],
+     "sourceIds": []
+    },
+    {
+     "key": "mate",
+     "name": "styrmann",
+     "scopes": [
+      "crew"
+     ],
+     "attended": false,
+     "sections": [],
+     "sourceIds": []
+    },
+    {
+     "key": "member",
+     "name": "medlem",
+     "scopes": [
+      "membership"
+     ],
+     "attended": false,
+     "sections": [],
+     "sourceIds": []
+    },
+    {
+     "key": "navigator",
+     "name": "navigatør",
+     "scopes": [
+      "crew"
+     ],
+     "attended": false,
+     "sections": [],
+     "sourceIds": []
+    },
+    {
+     "key": "operating",
+     "name": "operatør",
+     "scopes": [
+      "stationed"
+     ],
+     "attended": false,
+     "sections": [],
+     "sourceIds": []
+    },
+    {
+     "key": "operational",
+     "name": "operativt",
+     "scopes": [
+      "part-of"
+     ],
+     "attended": false,
+     "sections": [],
+     "sourceIds": []
+    },
+    {
+     "key": "operative",
+     "name": "operatør",
+     "scopes": [
+      "membership"
+     ],
+     "attended": false,
+     "sections": [],
+     "sourceIds": []
+    },
+    {
+     "key": "parent",
+     "name": "overordnet",
+     "scopes": [
+      "part-of"
+     ],
+     "attended": false,
+     "sections": [],
+     "sourceIds": []
+    },
+    {
+     "key": "pilot",
+     "name": "pilot",
+     "scopes": [
+      "crew"
+     ],
+     "attended": false,
+     "sections": [],
+     "sourceIds": []
+    },
+    {
+     "key": "radiotelegraph",
+     "name": "radiotelegrafist",
+     "scopes": [
+      "membership"
+     ],
+     "attended": false,
+     "sections": [],
+     "sourceIds": []
+    },
+    {
+     "key": "skipper",
+     "name": "skipper",
+     "scopes": [
+      "crew"
+     ],
+     "attended": false,
+     "sections": [],
+     "sourceIds": []
+    },
+    {
+     "key": "sponsor",
+     "name": "sponsor",
+     "scopes": [
+      "part-of"
+     ],
+     "attended": false,
+     "sections": [],
+     "sourceIds": []
+    },
+    {
+     "key": "stationed",
+     "name": "stasjonert",
+     "scopes": [
+      "stationed"
+     ],
+     "attended": false,
+     "sections": [],
+     "sourceIds": []
+    },
+    {
+     "key": "wireless-operator",
+     "name": "telegrafist",
+     "scopes": [
+      "crew"
+     ],
+     "attended": false,
+     "sections": [],
+     "sourceIds": []
+    },
+    {
+     "key": "instructor",
+     "name": "instruktør",
+     "scopes": [
+      "stationed"
+     ],
+     "attended": true,
+     "sections": [],
+     "sourceIds": []
+    }
+   ],
+   "truncatedFrom": 26
   },
   {
    "query": "MATCH (t:Transport {slug: $slug})\n           RETURN coalesce(t.canonicalName, t.name) AS name,\n                  t.type        AS type,\n                  coalesce(t.unit, t.rawUnit) AS unit,\n                  t.regser      AS regser,\n                  t.reserve     AS reserve,\n                  t.description AS description,\n                  t.links       AS links",

@@ -143,6 +143,8 @@ The lists an editor orders by hand are the exception: the **people of an event**
 
 ### Crew-role validation
 
+**Not built yet.** Today the editor checks only that `CREW_OF.role` is a `Role` of the `crew` scope (`functions/_lib/crew.ts`); there is no `CrewRole` or `VesselClass` node, and `Transport.type` is free text. The rest of this section is the planned rule.
+
 Whether a `CREW_OF.role` is legal on a given Transport is a single hierarchical traversal — same shape as the Unit hierarchical filter rule:
 
 ```cypher
@@ -237,7 +239,7 @@ Vocabularies:
 | `PARTICIPATED_IN`     | `Operation`                               | `role, startDate, endDate, order`                     |
 | `STATIONED_AT`        | `Location` \| `Station`                  | `id, role, startDate, endDate, state, sourceRef, sourceRefs` — one edge per stay (docs/PERSON-STATIONED-AT.md) |
 | `ATTENDED`            | `Unit {type:"course"}`                    | `startDate, endDate, passed, order` — course attendance; the first three may be null, dates are partial (`YYYY`, `YYYY-MM`, `YYYY-MM-DD`), `passed` is a boolean; `order` is the place in the course (the enrolment order) |
-| `CREW_OF`             | `Transport`                               | `role` (controlled vocab — RAF WWII + SOE dispatcher) |
+| `CREW_OF`             | `Transport`                               | `id, role, startDate, endDate, state, sourceRef` — one edge per stint; `role` is a `Role` key of the `crew` scope (ROLES.md); partial dates |
 | `BORN_AT`             | `Location`                                | —                                                     |
 | `HOME_AT`             | `Location`                                | —                                                     |
 | `HAS_CONTENT`         | `Description`                             | sections                                              |
@@ -565,7 +567,7 @@ Aircraft, fishing boats, MTBs, support craft.
 | `EXTRACTED_FROM`| `Source`       | provenance (legacy) |
 
 **Inbound:**
-- `(:Person)-[:CREW_OF {role}]->(t)` — `role` is a string validated against `CrewRole.APPLIES_TO_CLASS` walked from the Transport's `OF_CLASS`. See **Crew-role validation** under cross-cutting conventions.
+- `(:Person)-[:CREW_OF {role, startDate, endDate}]->(t)` — one edge per stint; `role` is a `Role` key of the `crew` scope. The check against the vessel class is not built yet, see **Crew-role validation** under cross-cutting conventions.
 - `(:Event)-[:USED {order}]->(t)` — `order` is the position in the event's list of transport
 
 **Legacy properties not yet migrated:**
@@ -778,6 +780,10 @@ The controlled vocabulary of vessel crew positions. Promoted from a string-on-ed
 | `dispatcher`         | SOE         | `aircraft` (special-duties variants) |
 | `skipper`            | civilian, Marinen | `vessel`                   |
 | `mate`               | civilian, Marinen | `vessel`                   |
+| `engineer`           | civilian, Marinen | `vessel`                   |
+| `seaman`             | civilian, Marinen | `vessel`                   |
+| `cook`               | civilian, Marinen | `vessel`                   |
+| `passenger`          | —                 | `aircraft`, `vessel`       |
 
 **Rules:**
 - `CREW_OF.role` MUST resolve to a CrewRole `slug`. Free-text strings are rejected at the editor boundary.
