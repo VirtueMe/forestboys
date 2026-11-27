@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.24.0](https://github.com/VirtueMe/forestboys/compare/v0.23.0...v0.24.0) (2026-11-27)
+
+
+### Features
+
+* **event:** assign crew per transport, with roles ([3021acb](https://github.com/VirtueMe/forestboys/commit/3021acbee3a0eb232f6f357f15a0c13e931d39a7))
+
 ## [0.23.0](https://github.com/VirtueMe/forestboys/compare/v0.22.0...v0.23.0) (2026-11-26)
 
 
