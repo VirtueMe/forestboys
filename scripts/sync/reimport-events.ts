@@ -38,6 +38,7 @@ import { loadEnv } from '../lib/env.ts'
 import { neo4jDriver } from '../lib/person-sync.ts'
 import { EVENT_BASELINE, fetchSanityEvents } from '../lib/event-sync.ts'
 import { SINGLE, PARTICIPANT_EDGE, loadLookups, planEvent, slugOf } from '../lib/event-rule.ts'
+import { DROP_STRAY_CREW } from '../../functions/_lib/event-crew-cypher.ts'
 loadEnv()
 
 const write = process.argv.includes('--write')
@@ -225,6 +226,8 @@ async function main() {
           MERGE ${rel} ON CREATE SET r = $props`, { event: x.event, other: x.other, props: x.props }))
       }
       console.log(`Re-attached ${extras.length} graph additions.`)
+      // Crew whose transport or person the import no longer links to the event.
+      await ws.run(DROP_STRAY_CREW)
 
       // ── 6. Baseline + marker ──
       mkdirSync(dirname(resolve(process.cwd(), EVENT_BASELINE)), { recursive: true })

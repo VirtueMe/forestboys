@@ -28,6 +28,12 @@ Changing the slug of an event (edit mode, Slug field) asks first: the editor cal
 
 ---
 
+## Crew per transport (#462)
+
+An event shows, under each transport it used, who served on it and in what role. In edit mode there is a «Mannskap» block inside each transport's row in «Transportmidler», saved with that list. «Flytt» on a crew row sets the order, as in the other ordered lists, and the view follows it. Saving someone there also adds them to the event's people; removing them there leaves them in the people list, while removing them from the people list (or removing the transport) removes their crew rows. «Hent fast mannskap» adds the transport's regular crew whose dates cover the event's date as unsaved rows; it is off for an undated event. Data: `CrewAssignment` in docs/SCHEMA.md.
+
+---
+
 ## `<keep-alive>` — what it means
 
 All views are kept alive in memory. This has concrete implications:

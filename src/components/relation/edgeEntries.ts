@@ -77,11 +77,11 @@ export function edgeRowToEntry(r: EdgeEntryRow): RelationEntry {
 }
 
 /** PATCH the entries, then copy the returned ids onto them (new rows get theirs here). */
-export async function saveEdgeEntries(url: string, key: string, entries: RelationEntry[], items: Record<string, unknown>[]): Promise<void> {
+export async function saveEdgeEntries(url: string, key: string, entries: RelationEntry[], items: Record<string, unknown>[], extra: Record<string, unknown> = {}): Promise<void> {
   const res = await authFetch(url, {
     method:  'PATCH',
     headers: { 'Content-Type': 'application/json' },
-    body:    JSON.stringify({ [key]: items }),
+    body:    JSON.stringify({ ...extra, [key]: items }),
   })
   const body = await res.json().catch(() => ({})) as { error?: string; ids?: string[] }
   if (!res.ok) throw new Error(body.error ?? `HTTP ${res.status}`)

@@ -15,6 +15,7 @@
  */
 
 import { runCypherTx, type Neo4jEnv } from './neo4j.ts'
+import { DROP_STRAY_CREW } from './event-crew-cypher.ts'
 
 export interface EdgeSetSpec {
   /** The node whose list is saved. */
@@ -53,5 +54,7 @@ export async function saveEdgeSet(env: Neo4jEnv, spec: EdgeSetSpec): Promise<voi
           ON MATCH  SET r += x.props`,
       parameters: { anchor: spec.anchor.slug, items, created: ADMIN_EDGE },
     },
+    // Someone taken off an event's people loses their crew assignments there.
+    ...(spec.rel === 'PARTICIPATED_IN' || spec.rel === 'INVOLVED_IN' ? [{ statement: DROP_STRAY_CREW }] : []),
   ])
 }

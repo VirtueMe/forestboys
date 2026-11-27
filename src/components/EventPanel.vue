@@ -94,14 +94,12 @@
       <section v-if="transportEntries.length" class="section">
         <h2 class="section-heading">Transportmiddel</h2>
         <div class="link-list">
-          <RouterLink
-            v-for="t in transportEntries"
-            :key="t.targetSlug"
-            :to="`/transport/${t.targetSlug}`"
-            class="section-link"
-          >
-            {{ t.targetName }}
-          </RouterLink>
+          <div v-for="t in transportEntries" :key="t.targetSlug">
+            <RouterLink :to="`/transport/${t.targetSlug}`" class="section-link">
+              {{ t.targetName }}
+            </RouterLink>
+            <EventCrewList :entries="t.crew ?? []" />
+          </div>
         </div>
       </section>
 
@@ -138,6 +136,7 @@
 </template>
 
 <script setup lang="ts">
+import EventCrewList from './event/EventCrewList.vue'
 import { ref, computed, watch } from 'vue'
 import { useRouter, RouterLink } from 'vue-router'
 import { blocksToHtml } from '../utils/portableText.ts'

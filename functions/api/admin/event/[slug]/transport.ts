@@ -13,6 +13,7 @@
 
 import { requireAdmin } from '~/_lib/require-admin.ts'
 import { runCypher, type Neo4jEnv } from '~/_lib/neo4j.ts'
+import { DROP_STRAY_CREW } from '~/_lib/event-crew-cypher.ts'
 
 interface Env extends Neo4jEnv {
   SESSION_SECRET: string
@@ -56,6 +57,8 @@ export const onRequestPatch: PagesFunction<Env> = async ({ request, env, params 
         )
       `, { slug, slugs })
     }
+    // A transport taken off the event takes its crew assignments with it.
+    await runCypher(env, DROP_STRAY_CREW)
     return json({ ok: true, count: slugs.length })
   } catch (e) {
     return json({ error: (e as Error).message }, 502)

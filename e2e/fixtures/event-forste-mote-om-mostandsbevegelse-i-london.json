@@ -123,12 +123,20 @@
    "params": {},
    "rows": [
     {
+     "slug": "noytralitetsvakthold-oslofjord",
+     "title": "Nøytralitetsvakthold Oslofjord",
+     "date": "1940-04-09",
+     "organization": "Homefleet",
+     "district": "Norge",
+     "thumbnailUrl": "/images/83fcb709fa2e64a8b79900ad0fdb43ac17d04c5e"
+    },
+    {
      "slug": "gulltransporten-1940",
      "title": "GULLTRANSPORTEN 1940",
      "date": "1940-04-09",
      "organization": "Norge",
      "district": "Norge",
-     "thumbnailUrl": "https://cdn.sanity.io/images/7r6kqtqy/production/f0838951baae0532e550001f82b3dc73569bcda9-1200x1093.png"
+     "thumbnailUrl": "/images/f0838951baae0532e550001f82b3dc73569bcda9"
     },
     {
      "slug": "nrk-1",
@@ -136,7 +144,7 @@
      "date": "1940-04-09",
      "organization": "Norge i United Kingdom",
      "district": "United Kingdom",
-     "thumbnailUrl": "https://cdn.sanity.io/images/7r6kqtqy/production/3421e989e5f028f10dd4b23bc7403524659865e5-1040x776.png"
+     "thumbnailUrl": "/images/3421e989e5f028f10dd4b23bc7403524659865e5"
     },
     {
      "slug": "mk-x48",
@@ -160,7 +168,7 @@
      "date": "1940-05-02",
      "organization": "Homefleet",
      "district": "Flukt",
-     "thumbnailUrl": "https://cdn.sanity.io/images/7r6kqtqy/production/c967c4314108e1c0ab8ed6978fbde4d89c4774c8-728x501.png"
+     "thumbnailUrl": "/images/c967c4314108e1c0ab8ed6978fbde4d89c4774c8"
     },
     {
      "slug": "mk-x24",
@@ -176,7 +184,7 @@
      "date": "1940-05-03",
      "organization": "MK Skøyter",
      "district": "06 Skøyter ikke organisert",
-     "thumbnailUrl": "https://cdn.sanity.io/images/7r6kqtqy/production/ca21215c9a308aa7aeba62d2437ac3b35043f47c-1199x884.png"
+     "thumbnailUrl": "/images/ca21215c9a308aa7aeba62d2437ac3b35043f47c"
     },
     {
      "slug": "mk-x011",
@@ -184,7 +192,7 @@
      "date": "1940-05-03",
      "organization": "MK Skøyter",
      "district": "06 Skøyter ikke organisert",
-     "thumbnailUrl": "https://cdn.sanity.io/images/7r6kqtqy/production/34cfb14449a62ffaba9f7308307612d782c41314-600x877.jpg"
+     "thumbnailUrl": "/images/34cfb14449a62ffaba9f7308307612d782c41314"
     },
     {
      "slug": "mk-x25",
@@ -192,7 +200,7 @@
      "date": "1940-05-03",
      "organization": "MK Skøyter",
      "district": "Norge",
-     "thumbnailUrl": "https://cdn.sanity.io/images/7r6kqtqy/production/7b3fe9141904cf8513c26a28a78dd9cfaca56a7a-982x631.png"
+     "thumbnailUrl": "/images/7b3fe9141904cf8513c26a28a78dd9cfaca56a7a"
     },
     {
      "slug": "mk-x007",
@@ -200,7 +208,7 @@
      "date": "1940-05-04",
      "organization": "MK Skøyter",
      "district": "06 Skøyter ikke organisert",
-     "thumbnailUrl": "https://cdn.sanity.io/images/7r6kqtqy/production/1d4db56e339665a72c40b5b32d0469d59fec3865-542x412.png"
+     "thumbnailUrl": "/images/1d4db56e339665a72c40b5b32d0469d59fec3865"
     },
     {
      "slug": "ds-01",
@@ -208,7 +216,7 @@
      "date": "1940-05-05",
      "organization": "MK Skøyter",
      "district": "Norge",
-     "thumbnailUrl": "https://cdn.sanity.io/images/7r6kqtqy/production/2cc011fc563268553ee77aa4e1dd9c0f4fe12215-999x423.png"
+     "thumbnailUrl": "/images/2cc011fc563268553ee77aa4e1dd9c0f4fe12215"
     },
     {
      "slug": "mk-x17",
@@ -216,7 +224,7 @@
      "date": "1940-05-06",
      "organization": "MK Skøyter",
      "district": "Norge",
-     "thumbnailUrl": "https://cdn.sanity.io/images/7r6kqtqy/production/3378c0a196d3ea9fbbceae891eb4de74599be2e3-542x412.png"
+     "thumbnailUrl": "/images/3378c0a196d3ea9fbbceae891eb4de74599be2e3"
     },
     {
      "slug": "mk-x18",
@@ -224,7 +232,7 @@
      "date": "1940-05-07",
      "organization": "Grupper",
      "district": "Norge",
-     "thumbnailUrl": "https://cdn.sanity.io/images/7r6kqtqy/production/3378c0a196d3ea9fbbceae891eb4de74599be2e3-542x412.png"
+     "thumbnailUrl": "/images/3378c0a196d3ea9fbbceae891eb4de74599be2e3"
     },
     {
      "slug": "mk-x19",
@@ -232,7 +240,7 @@
      "date": "1940-05-07",
      "organization": "Grupper",
      "district": "Norge",
-     "thumbnailUrl": "https://cdn.sanity.io/images/7r6kqtqy/production/3378c0a196d3ea9fbbceae891eb4de74599be2e3-542x412.png"
+     "thumbnailUrl": "/images/3378c0a196d3ea9fbbceae891eb4de74599be2e3"
     },
     {
      "slug": "mk-x26",
@@ -240,7 +248,7 @@
      "date": "1940-05-07",
      "organization": "MK Skøyter",
      "district": "Norge",
-     "thumbnailUrl": "https://cdn.sanity.io/images/7r6kqtqy/production/a2138f5769d3cbb03e5ca3e86978afd684316fe2-642x521.png"
+     "thumbnailUrl": "/images/a2138f5769d3cbb03e5ca3e86978afd684316fe2"
     },
     {
      "slug": "mk-x27",
@@ -248,7 +256,7 @@
      "date": "1940-05-07",
      "organization": "MK Skøyter",
      "district": "Norge",
-     "thumbnailUrl": "https://cdn.sanity.io/images/7r6kqtqy/production/25e6153d642a0fb9e642db6aeddc591d521d8cef-888x446.png"
+     "thumbnailUrl": "/images/25e6153d642a0fb9e642db6aeddc591d521d8cef"
     },
     {
      "slug": "mk-x33",
@@ -280,11 +288,11 @@
      "date": "1940-05-09",
      "organization": "Grupper",
      "district": "Norge",
-     "thumbnailUrl": "https://cdn.sanity.io/images/7r6kqtqy/production/3378c0a196d3ea9fbbceae891eb4de74599be2e3-542x412.png"
+     "thumbnailUrl": "/images/3378c0a196d3ea9fbbceae891eb4de74599be2e3"
     },
     {
      "slug": "mk-x23",
-     "title": "MK X23 MK Reidar til Lerwick",
+     "title": "MK X23 MK Reidar",
      "date": "1940-05-10",
      "organization": "MK Skøyter",
      "district": "Norge",
@@ -296,7 +304,7 @@
      "date": "1940-05-15",
      "organization": "SIS",
      "district": "01- SIS-XU",
-     "thumbnailUrl": "https://cdn.sanity.io/images/7r6kqtqy/production/b12f5fed03a2e2ead16fd67cc2918e65428085e2-5448x1618.png"
+     "thumbnailUrl": "/images/b12f5fed03a2e2ead16fd67cc2918e65428085e2"
     },
     {
      "slug": "msp-nid01",
@@ -304,7 +312,7 @@
      "date": "1940-05-17",
      "organization": "MSP Marinens skøyteavdeling Petershead",
      "district": "01- SIS-XU",
-     "thumbnailUrl": "https://cdn.sanity.io/images/7r6kqtqy/production/160f6be8cbd156c1004d491bf6643f6fee1def22-2000x667.png"
+     "thumbnailUrl": "/images/160f6be8cbd156c1004d491bf6643f6fee1def22"
     },
     {
      "slug": "mk-snal-h-50-am",
@@ -312,15 +320,7 @@
      "date": "1940-05-19",
      "organization": "Flyktninger",
      "district": "06 Skøyter ikke organisert",
-     "thumbnailUrl": "https://cdn.sanity.io/images/7r6kqtqy/production/13a9b670feb9385079514b84cb96ed5749c8fbf2-542x412.png"
-    },
-    {
-     "slug": "mk-x003",
-     "title": "MK X003 MS Vega til Balta",
-     "date": "1940-05-20",
-     "organization": "MK Skøyter",
-     "district": "Norge",
-     "thumbnailUrl": "https://cdn.sanity.io/images/7r6kqtqy/production/60bd5dc3f82fb8ca0e5d2d3b8061f32ece699e73-1190x731.png"
+     "thumbnailUrl": "/images/13a9b670feb9385079514b84cb96ed5749c8fbf2"
     },
     {
      "slug": "forste-mote-om-mostandsbevegelse-i-london",
@@ -331,7 +331,7 @@
      "thumbnailUrl": null
     }
    ],
-   "truncatedFrom": 2307
+   "truncatedFrom": 2382
   },
   {
    "query": "\n      MATCH (e:Operation|Incident {slug: $slug})-[r:USED]->(t:Transport)\n      WITH t, min(coalesce(r.order, 999)) AS pos\n      RETURN t.slug AS targetSlug, coalesce(t.canonicalName, t.name) AS targetName\n      ORDER BY pos, targetName\n",
@@ -450,7 +450,7 @@
      "name": "3 Godly"
     }
    ],
-   "truncatedFrom": 1161
+   "truncatedFrom": 1174
   },
   {
    "query": "MATCH (n {slug: $slug})\n       WHERE n:Incident OR n:Operation\n       RETURN CASE WHEN 'Operation' IN labels(n) THEN 'operation' ELSE 'incident' END AS kind,\n              coalesce(n.codeName, n.canonicalName, n.title) AS name,\n              n.date AS date",
@@ -485,6 +485,14 @@
    "query": "\n    MATCH (o:Organization)\n    RETURN o.slug AS slug, o.canonicalName AS name\n    ORDER BY o.canonicalName\n  ",
    "params": {},
    "rows": [
+    {
+     "slug": "14-naval-intelligence-dept",
+     "name": "14 Naval Intelligence Dept."
+    },
+    {
+     "slug": "2a",
+     "name": "2A"
+    },
     {
      "slug": "avd-d-mi-iv",
      "name": "Avd D. \"Mi IV\""
@@ -576,17 +584,9 @@
     {
      "slug": "raf-rcaf-raaf-rnzaf",
      "name": "RAF/RCAF/RAAF/RNZAF"
-    },
-    {
-     "slug": "rnnsu-royal-norwegian-naval-special-unit",
-     "name": "RNNSU  Royal Norwegian Naval Special Unit "
-    },
-    {
-     "slug": "sas",
-     "name": "SAS"
     }
    ],
-   "truncatedFrom": 33
+   "truncatedFrom": 35
   },
   {
    "query": "\n    MATCH (op:Operation {slug: $slug})-[:FROM]->(l:Location)\n    RETURN l.slug AS targetSlug, coalesce(l.canonicalName, l.title) AS targetName\n    LIMIT 1\n  ",
@@ -644,6 +644,10 @@
    "query": "\n    MATCH (op:Operation)\n    RETURN op.slug AS slug, op.codeName AS name\n    ORDER BY op.codeName\n  ",
    "params": {},
    "rows": [
+    {
+     "slug": "2a-inspeksjon-hele-norge",
+     "name": "2A inspeksjon hele Norge 30/7-24/11-42"
+    },
     {
      "slug": "aba-141142",
      "name": "ABA 141142"
@@ -741,15 +745,11 @@
      "name": "AM 048 SOE Operation GANNET I Anvil"
     },
     {
-     "slug": "am-050-1",
-     "name": "AM 050 SOE Operation CARHAMPTON 1"
-    },
-    {
      "slug": "forste-mote-om-mostandsbevegelse-i-london",
      "name": "Første møte om Motstandsbevegelse i London"
     }
    ],
-   "truncatedFrom": 2307
+   "truncatedFrom": 2382
   },
   {
    "query": "\n      MATCH (p:Person)\n      RETURN p.slug AS slug,\n             p.canonicalName + CASE WHEN p.birthYear IS NOT NULL THEN ' (' + toString(p.birthYear) + ')' ELSE '' END AS name\n      ORDER BY p.canonicalName\n    ",
@@ -768,6 +768,10 @@
      "name": "1. Officer Lorentzen"
     },
     {
+     "slug": "1-officer-thomassen",
+     "name": "1. Officer Thomassen"
+    },
+    {
      "slug": "1-officer-abney",
      "name": "1.Officer Abney"
     },
@@ -780,6 +784,14 @@
      "name": "10 Norwegian Marine Special Force"
     },
     {
+     "slug": "11-flyktingar-sjøblomsten",
+     "name": "11 flyktingar med MK Sjøblomsten fra Bremanger"
+    },
+    {
+     "slug": "11-flyktningar-mk-skjaergard",
+     "name": "11 flyktningar MK Skjærgard"
+    },
+    {
      "slug": "11-flyktninger",
      "name": "11 flyktninger"
     },
@@ -790,6 +802,14 @@
     {
      "slug": "11-omkomne-war-bride",
      "name": "11 omkomne \"WAR BRIDE\""
+    },
+    {
+     "slug": "12-flyktningar-med-mk-nor",
+     "name": "12 flyktningar med MK NOR"
+    },
+    {
+     "slug": "12-flyktninger-mk-signal-m-331-a",
+     "name": "12 flyktninger MK SIGNAL M-331-A"
     },
     {
      "slug": "12-flyktninger-med-mk-bofjord",
@@ -808,6 +828,10 @@
      "name": "13 Flyktninger"
     },
     {
+     "slug": "13-flyktninger-ms-myrland",
+     "name": "13 flyktninger MS MYRLAND"
+    },
+    {
      "slug": "14-flyktinger-fedje",
      "name": "14 flyktinger Fedje"
     },
@@ -816,12 +840,12 @@
      "name": "16 totalt dro over"
     },
     {
-     "slug": "16-flyktninger-fra-vefsn",
-     "name": "17 flyktninger fra Vefsn"
+     "slug": "17-personar-mk-norseman",
+     "name": "17 personar MK Norseman 8/11-41"
     },
     {
      "slug": "19-flyktinger-tananger-til-aberdeen",
-     "name": "19 flyktinger Tananger til Aberdeen"
+     "name": "19 flyktinger MK Sjøleik"
     },
     {
      "slug": "19-flyktninger-ms-arnafjord",
@@ -830,33 +854,16 @@
     {
      "slug": "19-flyktninger-fra-hernar",
      "name": "19 flyktninger fra Hernar"
-    },
-    {
-     "slug": "19-kjente",
-     "name": "19 kjente"
-    },
-    {
-     "slug": "1st-officer-campbell",
-     "name": "1st Officer Campbell"
-    },
-    {
-     "slug": "1st-offiser-fowler",
-     "name": "1st Offiser Fowler"
-    },
-    {
-     "slug": "1st-off-tennyson",
-     "name": "1st off Tennyson BOAC"
-    },
-    {
-     "slug": "2-barn-aud-og-maria-dronen",
-     "name": "2 barn, Aud og Marta Drønen"
-    },
-    {
-     "slug": "2-britiske-offiserer",
-     "name": "2 britiske offiserer"
     }
    ],
-   "truncatedFrom": 3960
+   "truncatedFrom": 4217
+  },
+  {
+   "query": "\n    MATCH (p:Person)-[:SERVED_AS]->(a:CrewAssignment)-[:ON_EVENT]->(e {slug: $slug}), (a)-[:ABOARD]->(t:Transport)\n    WHERE (e:Operation OR e:Incident) AND (e)-[:USED]->(t) AND (p)-[:PARTICIPATED_IN|INVOLVED_IN]->(e)\n    RETURN t.slug AS transportSlug, a.id AS id, p.slug AS personSlug, p.canonicalName AS personName, a.role AS role\n    ORDER BY coalesce(a.order, 999), personName\n  ",
+   "params": {
+    "slug": "forste-mote-om-mostandsbevegelse-i-london"
+   },
+   "rows": []
   },
   {
    "query": "MATCH (p:Person)-[r:INVOLVED_IN|PARTICIPATED_IN]->(:`Operation` {slug: $slug})\n       WITH p, min(coalesce(r.order, 999)) AS pos\n       RETURN p.slug AS slug, p.canonicalName AS name\n       ORDER BY pos, name",
@@ -949,10 +956,50 @@
    "params": {},
    "rows": [
     {
-     "key": "operative",
-     "name": "operatør",
+     "key": "administrative",
+     "name": "administrativt",
      "scopes": [
-      "membership"
+      "part-of"
+     ],
+     "attended": false,
+     "sections": [],
+     "sourceIds": []
+    },
+    {
+     "key": "air-gunner",
+     "name": "skytter",
+     "scopes": [
+      "crew"
+     ],
+     "attended": false,
+     "sections": [],
+     "sourceIds": []
+    },
+    {
+     "key": "bomb-aimer",
+     "name": "bombesikter",
+     "scopes": [
+      "crew"
+     ],
+     "attended": false,
+     "sections": [],
+     "sourceIds": []
+    },
+    {
+     "key": "co-pilot",
+     "name": "andrepilot",
+     "scopes": [
+      "crew"
+     ],
+     "attended": false,
+     "sections": [],
+     "sourceIds": []
+    },
+    {
+     "key": "cook",
+     "name": "kokk",
+     "scopes": [
+      "crew"
      ],
      "attended": false,
      "sections": [],
@@ -969,90 +1016,30 @@
      "sourceIds": []
     },
     {
-     "key": "radiotelegraph",
-     "name": "radiotelegrafist",
+     "key": "dispatcher",
+     "name": "dispatcher",
      "scopes": [
-      "membership"
+      "crew"
      ],
      "attended": false,
      "sections": [],
      "sourceIds": []
     },
     {
-     "key": "host",
-     "name": "vert",
+     "key": "engineer",
+     "name": "maskinist",
      "scopes": [
-      "membership"
+      "crew"
      ],
      "attended": false,
      "sections": [],
      "sourceIds": []
     },
     {
-     "key": "informant",
-     "name": "informant",
+     "key": "flight-engineer",
+     "name": "flymekaniker",
      "scopes": [
-      "membership"
-     ],
-     "attended": false,
-     "sections": [],
-     "sourceIds": []
-    },
-    {
-     "key": "member",
-     "name": "medlem",
-     "scopes": [
-      "membership"
-     ],
-     "attended": false,
-     "sections": [],
-     "sourceIds": []
-    },
-    {
-     "key": "administrative",
-     "name": "administrativt",
-     "scopes": [
-      "part-of"
-     ],
-     "attended": false,
-     "sections": [],
-     "sourceIds": []
-    },
-    {
-     "key": "operational",
-     "name": "operativt",
-     "scopes": [
-      "part-of"
-     ],
-     "attended": false,
-     "sections": [],
-     "sourceIds": []
-    },
-    {
-     "key": "sponsor",
-     "name": "sponsor",
-     "scopes": [
-      "part-of"
-     ],
-     "attended": false,
-     "sections": [],
-     "sourceIds": []
-    },
-    {
-     "key": "parent",
-     "name": "overordnet",
-     "scopes": [
-      "part-of"
-     ],
-     "attended": false,
-     "sections": [],
-     "sourceIds": []
-    },
-    {
-     "key": "stationed",
-     "name": "stasjonert",
-     "scopes": [
-      "stationed"
+      "crew"
      ],
      "attended": false,
      "sections": [],
@@ -1069,6 +1056,16 @@
      "sourceIds": []
     },
     {
+     "key": "host",
+     "name": "vert",
+     "scopes": [
+      "membership"
+     ],
+     "attended": false,
+     "sections": [],
+     "sourceIds": []
+    },
+    {
      "key": "imprisoned",
      "name": "fange",
      "scopes": [
@@ -1079,12 +1076,42 @@
      "sourceIds": []
     },
     {
-     "key": "training",
-     "name": "opplæring",
+     "key": "informant",
+     "name": "informant",
      "scopes": [
-      "stationed"
+      "membership"
      ],
-     "attended": true,
+     "attended": false,
+     "sections": [],
+     "sourceIds": []
+    },
+    {
+     "key": "mate",
+     "name": "styrmann",
+     "scopes": [
+      "crew"
+     ],
+     "attended": false,
+     "sections": [],
+     "sourceIds": []
+    },
+    {
+     "key": "member",
+     "name": "medlem",
+     "scopes": [
+      "membership"
+     ],
+     "attended": false,
+     "sections": [],
+     "sourceIds": []
+    },
+    {
+     "key": "navigator",
+     "name": "navigatør",
+     "scopes": [
+      "crew"
+     ],
+     "attended": false,
      "sections": [],
      "sourceIds": []
     },
@@ -1099,16 +1126,87 @@
      "sourceIds": []
     },
     {
-     "key": "instructor",
-     "name": "instruktør",
+     "key": "operational",
+     "name": "operativt",
      "scopes": [
-      "stationed"
+      "part-of"
      ],
-     "attended": true,
+     "attended": false,
+     "sections": [],
+     "sourceIds": []
+    },
+    {
+     "key": "operative",
+     "name": "operatør",
+     "scopes": [
+      "membership"
+     ],
+     "attended": false,
+     "sections": [],
+     "sourceIds": []
+    },
+    {
+     "key": "parent",
+     "name": "overordnet",
+     "scopes": [
+      "part-of"
+     ],
+     "attended": false,
+     "sections": [],
+     "sourceIds": []
+    },
+    {
+     "key": "passenger",
+     "name": "passasjer",
+     "scopes": [
+      "crew"
+     ],
+     "attended": false,
+     "sections": [],
+     "sourceIds": []
+    },
+    {
+     "key": "pilot",
+     "name": "pilot",
+     "scopes": [
+      "crew"
+     ],
+     "attended": false,
+     "sections": [],
+     "sourceIds": []
+    },
+    {
+     "key": "radiotelegraph",
+     "name": "radiotelegrafist",
+     "scopes": [
+      "membership"
+     ],
+     "attended": false,
+     "sections": [],
+     "sourceIds": []
+    },
+    {
+     "key": "seaman",
+     "name": "matros",
+     "scopes": [
+      "crew"
+     ],
+     "attended": false,
+     "sections": [],
+     "sourceIds": []
+    },
+    {
+     "key": "skipper",
+     "name": "skipper",
+     "scopes": [
+      "crew"
+     ],
+     "attended": false,
      "sections": [],
      "sourceIds": []
     }
-   ]
+   ],
+   "truncatedFrom": 30
   },
   {
    "query": "\n    MATCH (s:Station)\n    RETURN s.slug AS slug, coalesce(s.canonicalName, s.title) AS name,\n           [(s)-[:HAS_NAME]->(n:Name) | n.value] AS aliases\n    ORDER BY name\n  ",
@@ -1137,6 +1235,11 @@
     {
      "slug": "burghead-shgj",
      "name": "Burghead SHGJ",
+     "aliases": []
+    },
+    {
+     "slug": "cat-firth-shetland",
+     "name": "Cat Firth Shetland",
      "aliases": []
     },
     {
@@ -1233,14 +1336,9 @@
      "slug": "loch-ewe",
      "name": "Loch Ewe",
      "aliases": []
-    },
-    {
-     "slug": "lunna-voe",
-     "name": "Lunna Voe SHGJ",
-     "aliases": []
     }
    ],
-   "truncatedFrom": 147
+   "truncatedFrom": 173
   },
   {
    "query": "\n    MATCH (t:Transport)\n    RETURN t.slug AS slug, coalesce(t.canonicalName, t.name) AS name\n    ORDER BY name\n  ",
@@ -1347,7 +1445,7 @@
      "name": "Consolidated Catalina I B PBY-5B 170 FP314 KK-A \"Viking\""
     }
    ],
-   "truncatedFrom": 1082
+   "truncatedFrom": 1124
   },
   {
    "query": "\n    MATCH (u:Unit)\n    RETURN u.slug AS slug, u.canonicalName AS name\n    ORDER BY u.canonicalName\n  ",
@@ -1454,7 +1552,7 @@
      "name": "Kompani Linge — Kurs I"
     }
    ],
-   "truncatedFrom": 73
+   "truncatedFrom": 74
   },
   {
    "query": "\n      MATCH (u:Unit)-[:PARTICIPATED_IN]->(op:Operation {slug: $slug})\n      RETURN u.slug AS targetSlug, u.canonicalName AS targetName\n      ORDER BY targetName\n    ",

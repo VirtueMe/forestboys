@@ -44,6 +44,8 @@ export interface RelationEntry {
   /** Evidence for the edge's claim — SourceRef strings (`<source-id>#page:47`),
    *  distinct from the note's citations. Only relations with `show-sources`. */
   sourceRefs?:    string[]
+  /** Event transport only: who served on it during the event, one row per assignment. */
+  crew?:          RelationEntry[]
   /**
    * Proposal-preview sidecar (live consumers ignore both):
    *   - `pendingFromBundle` — set on entries fabricated from an `add-edge`

@@ -58,7 +58,7 @@ descriptions:
 | `membership` | `Person -[:MEMBER_OF]-> Unit / Organization` | Medlemskap |
 | `part-of` | `Unit -[:PART_OF]-> Organization` | Enhet i organisasjon |
 | `stationed` | `Person -[:STATIONED_AT]-> Location / Station` | Stasjonert på |
-| `crew` | Person on a Transport | Mannskap |
+| `crew` | Person on a Transport (`CREW_OF`) or in an event's crew (`CrewAssignment`) | Mannskap |
 | `involvement` | `Person -[:INVOLVED_IN]-> Incident` | Involvert i hendelse |
 
 **R3 — Edges keep storing the key.** `role: 'courier'` on the edge, as
