@@ -549,6 +549,23 @@ Example — STS 3 was renamed STS 47 at the same site: the Station `STS 03 Stodh
 
 ---
 
+### CrewAssignment
+
+Who served on a transport during one Operation or Incident (#462). A node, because it joins three things.
+
+**Identity**: `id` (UUID) · **Properties**: `role` (`Role` key of the `crew` scope, or null), `order` (1-based place in that transport's crew list on that event), `state`, `sourceRef`
+
+- `(:Person)-[:SERVED_AS]->(a)`
+- `(a)-[:ON_EVENT]->(:Operation|Incident)`
+- `(a)-[:ABOARD]->(:Transport)`
+
+**Rules** (`functions/_lib/event-crew.ts`):
+- It holds only while the person is among the event's people (`PARTICIPATED_IN` / `INVOLVED_IN`) and the event `USED` the transport. Assigning crew adds the person to the event's people; removing the assignment leaves them there.
+- Every write that removes one of those links, or deletes one of the three nodes, runs `DROP_STRAY_CREW` (`functions/_lib/event-crew-cypher.ts`): the editors, bundle apply and the event sync.
+- Nothing stores a slug, so a rename needs nothing.
+
+---
+
 ### Transport
 
 **Identity**: `slug` · **Display**: `canonicalName` (legacy `name` on un-migrated nodes)
@@ -569,6 +586,7 @@ Aircraft, fishing boats, MTBs, support craft.
 **Inbound:**
 - `(:Person)-[:CREW_OF {role, startDate, endDate}]->(t)` — one edge per stint; `role` is a `Role` key of the `crew` scope. The check against the vessel class is not built yet, see **Crew-role validation** under cross-cutting conventions.
 - `(:Event)-[:USED {order}]->(t)` — `order` is the position in the event's list of transport
+- `(:CrewAssignment)-[:ABOARD]->(t)` — crew on one event, see **CrewAssignment**. `CREW_OF` is the regular crew only.
 
 **Legacy properties not yet migrated:**
 

@@ -2,6 +2,7 @@
   <!-- Edit mode: relation editors -->
   <template v-if="mode === 'edit'">
     <RelationListEditor
+      ref="personEditor"
       :parent-slug="slug"
       :entries="data.person.entries"
       :targets="data.person.targets"
@@ -14,6 +15,7 @@
       picker-chip-aria="Bytt person"
       validation-empty="Velg person for alle oppføringer før du lagrer."
       :show-dates="false"
+      @saved="onPeopleSaved"
     />
 
     <RelationListEditor
@@ -81,10 +83,11 @@
     />
 
     <RelationListEditor
+      ref="transportEditor"
       :parent-slug="slug"
       :entries="data.transport.entries"
       :targets="data.transport.targets"
-      :strategy="EventTransportStrategy"
+      :strategy="EventTransportCrewStrategy"
       label="Transportmidler"
       add-label="+ Legg til transportmiddel"
       reorderable
@@ -94,7 +97,14 @@
       validation-empty="Velg transportmiddel for alle oppføringer før du lagrer."
       :show-dates="false"
       :show-description="false"
-    />
+      :signature-extra="crewSignature"
+      :summary-extra="crewSummary"
+      @saved="adoptCrew"
+    >
+      <template #extra-fields="{ entry }">
+        <EventCrewFields :entry="entry" :targets="data.person.targets" :date="date" />
+      </template>
+    </RelationListEditor>
 
     <template v-if="kind === 'operation'">
       <RelationListEditor
@@ -244,7 +254,7 @@
     <RelationListView
       v-if="data.transport.entries.length"
       :entries="data.transport.entries"
-      :strategy="EventTransportStrategy"
+      :strategy="EventTransportCrewStrategy"
       label="Transportmidler"
       @open="e => activeEntry = e"
     />
@@ -291,15 +301,17 @@
  * Hierarchy slots vary: incidents have sub-incidents only; operations have
  * both op→incidents and sub-operations.
  */
-import { ref, computed } from 'vue'
+import { ref, computed, useTemplateRef } from 'vue'
 import RelationListEditor from '@/components/relation/RelationListEditor.vue'
 import RelationListView   from '@/components/relation/RelationListView.vue'
 import RelationInfoPopup  from '@/components/relation/RelationInfoPopup.vue'
+import EventCrewFields    from './EventCrewFields.vue'
+import { EventTransportCrewStrategy } from '@/components/relation/eventCrew.ts'
 import {
   PersonInvolvementStrategy, PersonParticipationStrategy,
   SubIncidentsStrategy, SubOperationsStrategy, OperationIncidentsStrategy,
   IncidentInOperationStrategy,
-  OperationOrganizationsStrategy, OperationUnitsStrategy, EventTransportStrategy,
+  OperationOrganizationsStrategy, OperationUnitsStrategy,
   OperationFromLocationStrategy, OperationToLocationStrategy,
   OperationFromStationStrategy,  OperationToStationStrategy,
   IncidentAtLocationStrategy,    IncidentAtStationStrategy,
@@ -330,6 +342,8 @@ const props = defineProps<{
   slug: string
   kind: EventKind
   data: EventRelationsData
+  /** The event's date: which of a transport's regular crew «Hent fast mannskap» takes. */
+  date?: string | null
 }>()
 
 const personStrategy = computed(() =>
@@ -340,4 +354,26 @@ const personLabel = computed(() =>
 )
 
 const activeEntry = ref<RelationEntry | null>(null)
+
+// The people and transport lists are saved one at a time and each save can change the other: keep them in step
+// without reloading over unsaved changes.
+const personEditor    = useTemplateRef<InstanceType<typeof RelationListEditor> | null>('personEditor')
+const transportEditor = useTemplateRef<InstanceType<typeof RelationListEditor> | null>('transportEditor')
+
+const crewSignature = (t: RelationEntry) => JSON.stringify((t.crew ?? []).map(c => [c.targetSlug, c.role ?? null]))
+const crewSummary   = (t: RelationEntry) => t.crew?.length ? `${t.crew.length} mannskap` : ''
+
+/** Saving crew added these people to the event on the server. */
+function adoptCrew() {
+  const have = new Set(props.data.person.entries.map(e => e.targetSlug))
+  const added = new Map(props.data.transport.entries.flatMap(t => t.crew ?? [])
+    .filter(c => !have.has(c.targetSlug)).map(c => [c.targetSlug, c]))
+  personEditor.value?.adopt([...added.values()].map(c => ({ ...c, edgeId: null, role: undefined })))
+}
+
+/** Someone taken off the people list has lost their saved crew assignments. */
+function onPeopleSaved() {
+  const have = new Set(props.data.person.entries.map(e => e.targetSlug))
+  transportEditor.value?.patch(t => { t.crew = t.crew?.filter(c => !c.edgeId || have.has(c.targetSlug)) })
+}
 </script>

@@ -17,11 +17,12 @@ import {
   PersonInvolvementStrategy, PersonParticipationStrategy,
   SubIncidentsStrategy, SubOperationsStrategy, OperationIncidentsStrategy,
   IncidentInOperationStrategy,
-  OperationOrganizationsStrategy, OperationUnitsStrategy, EventTransportStrategy,
+  OperationOrganizationsStrategy, OperationUnitsStrategy,
   OperationFromLocationStrategy, OperationToLocationStrategy,
   OperationFromStationStrategy,  OperationToStationStrategy,
   IncidentAtLocationStrategy, IncidentAtStationStrategy,
 } from '@/components/relation/strategies.ts'
+import { EventTransportCrewStrategy } from '@/components/relation/eventCrew.ts'
 
 export type EventKind = 'incident' | 'operation'
 
@@ -233,8 +234,8 @@ export function useEventData() {
     gallery.value       = galleryRows
     links.value         = toEventLinks(linkRows)
     ;[transportEntries.value, transportTargets.value] = await Promise.all([
-      EventTransportStrategy.fetchEntries(slug),
-      EventTransportStrategy.fetchTargets(),
+      EventTransportCrewStrategy.fetchEntries(slug),
+      EventTransportCrewStrategy.fetchTargets(),
     ])
 
     if (row.kind === 'incident') {

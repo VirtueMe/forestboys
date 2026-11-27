@@ -100,14 +100,12 @@
         <section v-if="displayTransport.length" class="section">
           <h2 class="section-heading">Transportmiddel</h2>
           <div class="transport-list">
-            <RouterLink
-              v-for="t in displayTransport"
-              :key="t.slug"
-              :to="`/transport/${t.slug}`"
-              class="section-link"
-            >
-              {{ t.name }}
-            </RouterLink>
+            <div v-for="t in displayTransport" :key="t.slug">
+              <RouterLink :to="`/transport/${t.slug}`" class="section-link">
+                {{ t.name }}
+              </RouterLink>
+              <EventCrewList :entries="crewOf(t.slug)" />
+            </div>
           </div>
         </section>
 
@@ -181,6 +179,7 @@ import { EventDataKey } from '../composables/proposalDataInjection.ts'
 import { blocksToHtml } from '../utils/portableText.ts'
 import RelationListView   from '../components/relation/RelationListView.vue'
 import RelationInfoPopup  from '../components/relation/RelationInfoPopup.vue'
+import EventCrewList      from '../components/event/EventCrewList.vue'
 import {
   PersonInvolvementStrategy, PersonParticipationStrategy,
 } from '../components/relation/strategies.ts'
@@ -277,6 +276,7 @@ const displayTransport = computed(() =>
   transportEntries.value.map((t) => ({ slug: t.targetSlug, name: t.targetName })),
 )
 const displayGallery = gallery
+const crewOf = (slug: string) => transportEntries.value.find(t => t.targetSlug === slug)?.crew ?? []
 const descriptionHtml = computed<string>(() => {
   const parts: string[] = []
   for (const s of savedSections.value) {

@@ -25,6 +25,7 @@
  */
 
 import { runCypher, runCypherTx, type Neo4jEnv } from '~/_lib/neo4j.ts'
+import { DROP_STRAY_CREW } from '~/_lib/event-crew-cypher.ts'
 import { aliasTaken, aliasTakenMessage, routeOf } from '~/_lib/slug-alias.ts'
 import { renameSlug } from '~/_lib/slug-rename.ts'
 import { stableSha } from '~/_lib/stable-sha.ts'
@@ -456,6 +457,12 @@ export async function applyEntityOps(
 
   const setKind = payload.ops.find((o): o is Extract<BundleOp, { op: 'set-kind' }> => o.op === 'set-kind')
   if (setKind && kind !== 'Operation' && kind !== 'Incident') throw new Error(`set-kind: ${entityId} is not an Operation/Incident`)
+
+  // A removed link or entity can leave a crew assignment with nothing to stand on (functions/_lib/event-crew-cypher.ts).
+  const breaksCrew = payload.ops.some(o =>
+    (o.op === 'remove-edge' && ['USED', 'PARTICIPATED_IN', 'INVOLVED_IN'].includes(o.type)) ||
+    (o.op === 'delete-entity' && ['Person', 'Transport', 'Operation', 'Incident'].includes(kind)))
+  if (breaksCrew) txStatements.push({ statement: DROP_STRAY_CREW })
 
   // Run the batched non-modify-block ops as one transaction.
   if (txStatements.length) {

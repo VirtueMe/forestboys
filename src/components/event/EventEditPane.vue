@@ -24,6 +24,7 @@
         :slug="event.slug"
         :kind="event.kind"
         :data="data"
+        :date="event.date"
       />
     </div>
   </div>

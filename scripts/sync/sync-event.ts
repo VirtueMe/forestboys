@@ -43,6 +43,7 @@ import {
   PARTICIPANT_EDGE, SINGLE, descriptionProps, eventImages, eventLinks, loadLookups, planEvent, ref, refs, slugOf, str,
   writeEvent, type Lookups,
 } from '../lib/event-rule.ts'
+import { DROP_STRAY_CREW } from '../../functions/_lib/event-crew-cypher.ts'
 import { isSanityImage } from '../lib/sanity-image.ts'
 loadEnv()
 
@@ -320,6 +321,8 @@ async function main() {
           OPTIONAL MATCH (b:Description {id: 'desc:event:' + $id})-[:ABOUT]->(e)
           DETACH DELETE a, b, e`, { id: g.sanityId }))
       }
+      // People and transport taken off an event take their crew assignments with them.
+      await ws.run(DROP_STRAY_CREW)
       const newest = sanityDocs.map(d => d._updatedAt).reduce((a, b) => (b > a ? b : a))
       await ws.run(`MERGE (s:SyncState {source: 'sanity', type: 'event'}) SET s.importedUpTo = $newest, s.at = datetime()`, { newest })
       console.log(`Applied: ${changed.length} changed, ${created.length} new, ${acceptDelete.size} deleted. SyncState event.importedUpTo = ${newest}`)
